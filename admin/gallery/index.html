@@ -2,55 +2,12 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Test Galerie</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 20px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 15px;
-    }
-    .photo-item {
-      background: #fff;
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .gallery-photo {
-      max-width: 100%;
-      height: auto;
-      border-radius: 4px;
-    }
-  </style>
+  <title>Galerie</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Galerie – Test</h1>
-  <div class="gallery-grid">
-    <div class="photo-item">
-      <img class="gallery-photo" src="https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/IMG_7781.JPG" alt="IMG_7781.JPG">
-      <p>IMG_7781.JPG</p>
-    </div>
-    <div class="photo-item">
-      <img class="gallery-photo" src="https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/sky-1107579.jpg" alt="sky-1107579.jpg">
-      <p>sky-1107579.jpg</p>
-    </div>
-    <div class="photo-item">
-      <img class="gallery-photo" src="https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/sky-1107952_1920.jpg" alt="sky-1107952_1920.jpg">
-      <p>sky-1107952_1920.jpg</p>
-    </div>
-    <div class="photo-item">
-      <img class="gallery-photo" src="https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/ts_file1442.jpg" alt="ts_file1442.jpg">
-      <p>ts_file1442.jpg</p>
-    </div>
-  </div>
+  <h1>Galerie</h1>
+  <div id="gallery" class="gallery-grid"></div>
+  <script src="app.js"></script>
 </body>
 </html>
