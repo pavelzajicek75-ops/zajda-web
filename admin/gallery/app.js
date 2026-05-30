@@ -1,36 +1,22 @@
-document.getElementById("uploadForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  const res = await fetch("/api/upload", { method: "POST", body: formData });
-  const data = await res.json();
-
-  if (data.success) {
-    const gallery = document.getElementById("gallery");
+async function loadPhotos() {
+  const res = await fetch("/api/photos");
+  const photos = await res.json();
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML = "";
+  photos.forEach(photo => {
     const container = document.createElement("div");
     container.className = "photo-item";
 
-    // Tady je klíč: použít URL z backendu
     const img = document.createElement("img");
-    img.src = data.url;
-    img.alt = data.fileName;
+    img.src = photo.url;   // <<< musí být URL, ne jen name
+    img.alt = photo.name;
     img.className = "gallery-photo";
 
     const caption = document.createElement("p");
-    caption.textContent = data.fileName;
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "Smazat";
-    delBtn.onclick = async () => {
-      await fetch(`/api/delete?file=${data.fileName}`);
-      loadPhotos();
-    };
+    caption.textContent = photo.name;
 
     container.appendChild(img);
     container.appendChild(caption);
-    container.appendChild(delBtn);
     gallery.appendChild(container);
-  }
-
-  // pro jistotu načteme znovu celý seznam
-  loadPhotos();
-});
+  });
+}
