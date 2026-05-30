@@ -4,7 +4,8 @@ export async function onRequest(context) {
   const photos = list.objects.map(obj => ({
     id: obj.key,
     name: obj.key.split("/").pop(),
-    url: `https://pub-9ba0c4a1d5fc4ddabafac51f4f45d139.r2.dev/${obj.key}`
+    // Důležité: prefix bucketu
+    url: `https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/zajda-photos/${obj.key}`
   }));
   return new Response(JSON.stringify(photos), {
     headers: { "Content-Type": "application/json" }
