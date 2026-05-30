@@ -9,7 +9,10 @@ export async function onRequestPost(context) {
   await env.PHOTOS.put(fileName, file.stream(), {
     httpMetadata: { contentType: file.type }
   });
-  return new Response(JSON.stringify({ success: true, fileName }), {
+
+  const url = `https://pub-9ba0c4a1d5fc4ddabafac51f4f45d139.r2.dev/${fileName}`;
+
+  return new Response(JSON.stringify({ success: true, fileName, url }), {
     headers: { "Content-Type": "application/json" }
   });
 }
