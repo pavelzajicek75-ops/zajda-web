@@ -3,12 +3,13 @@ async function loadPhotos() {
   const photos = await res.json();
   const gallery = document.getElementById("gallery");
   gallery.innerHTML = "";
+
   photos.forEach(photo => {
     const container = document.createElement("div");
     container.className = "photo-item";
 
     const img = document.createElement("img");
-    img.src = photo.url;   // <<< musí být URL, ne jen name
+    img.src = photo.url;   // URL z API
     img.alt = photo.name;
     img.className = "gallery-photo";
 
@@ -20,3 +21,5 @@ async function loadPhotos() {
     gallery.appendChild(container);
   });
 }
+
+document.addEventListener("DOMContentLoaded", loadPhotos);
