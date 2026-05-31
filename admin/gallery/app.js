@@ -2,6 +2,8 @@ async function loadGallery() {
   const response = await fetch("/api/photos");
   const photos = await response.json();
 
+  console.log("Načtené fotky:", photos);
+
   const gallery = document.getElementById("gallery");
   gallery.innerHTML = "";
 
