@@ -1,21 +1,22 @@
+/ functions/api/upload.js
 export async function onRequestPost(context) {
   const { R2 } = context.env;
 
-  const formData = await context.request.formData();
-  const file = formData.get("file");
+  const form = await context.request.formData();
+  const file = form.get("file");
 
   if (!file) {
     return new Response("Missing file", { status: 400 });
   }
 
-  const arrayBuffer = await file.arrayBuffer();
-  const key = file.name;
+  const buffer = await file.arrayBuffer();
 
-  await R2.put(key, arrayBuffer, {
+  await R2.put(file.name, buffer, {
     httpMetadata: { contentType: file.type }
+    // customMetadata: { exif: "...", tags: "..." }  // připravené místo
   });
 
-  return new Response(JSON.stringify({ success: true, key }), {
+  return new Response(JSON.stringify({ success: true }), {
     headers: { "Content-Type": "application/json" }
   });
 }
