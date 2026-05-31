@@ -3,8 +3,16 @@
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body.light {
   background: #f3f4f6;
   color: #333;
+}
+
+body.dark {
+  background: #111827;
+  color: #e5e7eb;
 }
 
 /* ====== TOPBAR ====== */
@@ -19,14 +27,23 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 
+body.dark #topbar {
+  background: #0f172a;
+}
+
 #topbar h1 {
   margin: 0;
   font-size: 22px;
   font-weight: 600;
 }
 
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .controls button {
-  margin-right: 10px;
   padding: 7px 14px;
   border: none;
   border-radius: 6px;
@@ -39,6 +56,15 @@ body {
 
 .controls button:hover {
   background: #e5e5e5;
+}
+
+body.dark .controls button {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+body.dark .controls button:hover {
+  background: #374151;
 }
 
 .stats {
@@ -76,6 +102,19 @@ body {
   transition: 0.2s;
 }
 
+body.dark .item img {
+  box-shadow: 0 3px 10px rgba(0,0,0,0.6);
+}
+
+.item .label {
+  margin-top: 6px;
+  font-size: 13px;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ====== CHECKBOX ====== */
 
 .item input[type="checkbox"] {
@@ -87,10 +126,41 @@ body {
   z-index: 10;
 }
 
-/* Vizuální označení fotky */
+/* ====== SELECTED ANIMATION ====== */
+
 .item.selected img {
   outline: 4px solid #ffcc00;
   transform: scale(1.05);
+  animation: pulse 0.25s ease-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1.0); }
+  50% { transform: scale(1.07); }
+  100% { transform: scale(1.05); }
+}
+
+/* ====== DELETE ICON ====== */
+
+.delete-icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.delete-icon:hover {
+  background: rgba(220,38,38,0.9);
 }
 
 /* ====== VIEW MODES ====== */
@@ -116,9 +186,42 @@ body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
+body.dark .list .item {
+  background: #1f2937;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+}
+
 .list img {
   width: 140px;
   margin-right: 20px;
+}
+
+.list .list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.list .list-name {
+  font-weight: 600;
+}
+
+.list .list-size {
+  font-size: 13px;
+  color: #666;
+}
+
+body.dark .list .list-size {
+  color: #9ca3af;
+}
+
+.list .list-exif {
+  font-size: 12px;
+  color: #555;
+}
+
+body.dark .list .list-exif {
+  color: #9ca3af;
 }
 
 /* ====== MODAL ====== */
@@ -149,19 +252,51 @@ body {
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
+body.dark #modalContent {
+  background: #111827;
+  color: #e5e7eb;
+}
+
 #modalImg {
   width: 100%;
   border-radius: 8px;
   margin-bottom: 15px;
 }
 
+#modalInfo {
+  margin-bottom: 15px;
+}
+
+#modalName {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+#modalResolution {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
 #modalExif {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
   background: #f7f7f7;
   padding: 12px;
   border-radius: 6px;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
+}
+
+body.dark #modalExif {
+  background: #1f2937;
+}
+
+#modalTags {
+  font-size: 13px;
+  color: #555;
+}
+
+body.dark #modalTags {
+  color: #9ca3af;
 }
 
 #closeModal {
