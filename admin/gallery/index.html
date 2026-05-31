@@ -2,51 +2,55 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Galerie</title>
-  <link rel="stylesheet" href="/admin/gallery/style.css">
+  <title>Dark Profi Galerie</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="light">
+<body class="dark">
 
-<header id="topbar">
-  <h1>Galerie</h1>
+  <header>
+    <h1>📸 Galerie</h1>
 
-  <div class="controls">
-    <button id="modeGrid">🟦 Mřížka</button>
-    <button id="modeLarge">🟩 Velké</button>
-    <button id="modeList">📄 Seznam</button>
+    <div class="toolbar">
+      <button id="uploadBtn">Nahrát</button>
+      <button id="deleteSelectedBtn">Smazat vybrané</button>
+      <button id="refreshBtn">Obnovit</button>
 
-    <button id="selectAllBtn">✅ Vybrat vše</button>
+      <div class="modes">
+        <button id="modeGrid">Grid</button>
+        <button id="modeLarge">Large</button>
+        <button id="modeList">List</button>
+      </div>
 
-    <button id="uploadBtn">📤 Upload</button>
-    <button id="deleteSelectedBtn">🗑️ Smazat vybrané</button>
-    <button id="refreshBtn">🔄 Obnovit</button>
-
-    <button id="themeToggle">🌙 Dark / Light</button>
-
-    <input type="file" id="fileInput" multiple style="display:none">
-  </div>
-
-  <div class="stats">
-    <div><span id="photoCount">0 fotek</span> • <span id="photoSize">0 MB</span></div>
-    <div><span id="selectedCount">Vybráno: 0</span></div>
-  </div>
-</header>
-
-<div id="gallery"></div>
-
-<div id="modal" class="hidden">
-  <div id="modalContent">
-    <img id="modalImg">
-    <div id="modalInfo">
-      <div id="modalName"></div>
-      <div id="modalResolution"></div>
-      <div id="modalExif"></div>
-      <div id="modalTags"></div>
+      <button id="selectAllBtn">Vybrat vše</button>
     </div>
-    <button id="closeModal">Zavřít</button>
-  </div>
-</div>
+  </header>
 
-<script src="/admin/gallery/app.js"></script>
+  <section id="stats">
+    <span id="photoCount">0 fotek</span>
+    <span id="photoSize">0 MB</span>
+    <span id="selectedCount">Vybráno: 0</span>
+  </section>
+
+  <main id="gallery" class="grid"></main>
+
+  <input type="file" id="fileInput" multiple hidden>
+
+  <!-- MODAL -->
+  <div id="modal" class="hidden">
+    <div id="modalContent">
+      <img id="modalImg" src="">
+      <h2 id="modalName"></h2>
+
+      <div class="info">
+        <p><strong>Rozlišení:</strong> <span id="modalResolution"></span></p>
+        <p><strong>EXIF:</strong> <span id="modalExif"></span></p>
+        <p><strong>Tagy:</strong> <span id="modalTags"></span></p>
+      </div>
+
+      <button id="closeModal">Zavřít</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
