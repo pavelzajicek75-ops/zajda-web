@@ -1,7 +1,5 @@
-/ functions/api/photos.js
 export async function onRequest(context) {
   const { R2 } = context.env;
-
   const list = await R2.list();
 
   const photos = [];
@@ -12,18 +10,10 @@ export async function onRequest(context) {
 
     if (obj.customMetadata) {
       if (obj.customMetadata.exif) {
-        try {
-          exif = JSON.parse(obj.customMetadata.exif);
-        } catch (e) {
-          exif = {};
-        }
+        try { exif = JSON.parse(obj.customMetadata.exif); } catch {}
       }
       if (obj.customMetadata.tags) {
-        try {
-          tags = JSON.parse(obj.customMetadata.tags);
-        } catch (e) {
-          tags = [];
-        }
+        try { tags = JSON.parse(obj.customMetadata.tags); } catch {}
       }
     }
 
@@ -42,7 +32,5 @@ export async function onRequest(context) {
     totalCount: photos.length,
     totalSize,
     photos
-  }), {
-    headers: { "Content-Type": "application/json" }
-  });
+  }), { headers: { "Content-Type": "application/json" } });
 }
