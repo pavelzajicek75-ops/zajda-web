@@ -1,16 +1,12 @@
-export async function onRequest() {
-  // Sem doplň názvy všech fotek v R2
-  const photos = [
-    "IMG_7781.JPG",
-    "IMG_7782.JPG",
-    "IMG_7783.JPG"
-  ];
+export async function onRequest(context) {
+  const { R2 } = context.env;
 
-  const urls = photos.map(name => ({
-    url: `https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/${name}`
+  const list = await R2.list();
+  const photos = list.objects.map(obj => ({
+    url: `https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/${obj.key}`
   }));
 
-  return new Response(JSON.stringify(urls), {
+  return new Response(JSON.stringify(photos), {
     headers: { "Content-Type": "application/json" }
   });
 }
