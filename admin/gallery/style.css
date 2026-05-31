@@ -24,11 +24,6 @@ body {
   font-weight: bold;
 }
 
-.stats {
-  font-size: 14px;
-  opacity: 0.9;
-}
-
 #gallery {
   padding: 20px;
   display: flex;
@@ -36,36 +31,20 @@ body {
   gap: 15px;
 }
 
-/* Režim: mřížka */
-.grid img {
+.item {
+  position: relative;
+}
+
+.item img {
   width: 250px;
   border-radius: 6px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
-/* Režim: velké náhledy */
-.large img {
-  width: 450px;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-}
-
-/* Režim: seznam */
-.list {
-  flex-direction: column;
-}
-
-.list .item {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  background: white;
-  padding: 10px;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-.list img {
-  width: 120px;
-  border-radius: 4px;
+.item input[type="checkbox"] {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
 }
