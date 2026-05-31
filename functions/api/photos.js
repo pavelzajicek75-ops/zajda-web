@@ -32,5 +32,7 @@ export async function onRequest(context) {
     totalCount: photos.length,
     totalSize,
     photos
-  }), { headers: { "Content-Type": "application/json" } });
+  }), {
+    headers: { "Content-Type": "application/json" }
+  });
 }
