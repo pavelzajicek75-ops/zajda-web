@@ -1,3 +1,4 @@
+/ functions/api/delete.js
 export async function onRequestPost(context) {
   const { R2 } = context.env;
   const data = await context.request.json();
