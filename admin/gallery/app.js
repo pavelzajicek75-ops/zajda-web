@@ -1,7 +1,6 @@
 let selected = new Set();
 let mode = "grid";
 let allPhotos = [];
-let theme = "light";
 
 function formatSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(2) + " MB";
@@ -19,16 +18,13 @@ async function loadGallery() {
   allPhotos = data.photos || [];
 
   const gallery = document.getElementById("gallery");
-  const photoCount = document.getElementById("photoCount");
-  const photoSize = document.getElementById("photoSize");
-
   gallery.className = mode;
   gallery.innerHTML = "";
   selected.clear();
   updateSelectedCount();
 
-  photoCount.textContent = `${data.totalCount} fotek`;
-  photoSize.textContent = formatSize(data.totalSize);
+  document.getElementById("photoCount").textContent = `${data.totalCount} fotek`;
+  document.getElementById("photoSize").textContent = formatSize(data.totalSize);
 
   allPhotos.forEach(photo => {
     const item = document.createElement("div");
@@ -99,21 +95,9 @@ function openModal(photo) {
   document.getElementById("modalExif").textContent =
     `ISO: ${photo.exif?.iso || "-"} | Clona: ${photo.exif?.aperture || "-"} | Čas: ${photo.exif?.exposure || "-"}`;
   document.getElementById("modalTags").textContent =
-    `Tagy: ${photo.tags?.join(", ") || "-"}`;
+    `${photo.tags?.join(", ") || "-"}`;
 
   document.getElementById("modal").classList.remove("hidden");
-}
-
-function toggleTheme() {
-  theme = theme === "light" ? "dark" : "light";
-  document.body.className = theme;
-}
-
-function selectAll() {
-  selected.clear();
-  allPhotos.forEach(p => selected.add(p.name));
-  updateSelectedCount();
-  loadGallery();
 }
 
 window.addEventListener("load", () => {
@@ -149,6 +133,9 @@ window.addEventListener("load", () => {
     document.getElementById("modal").classList.add("hidden");
   });
 
-  document.getElementById("themeToggle").addEventListener("click", toggleTheme);
-  document.getElementById("selectAllBtn").addEventListener("click", selectAll);
+  document.getElementById("selectAllBtn").addEventListener("click", () => {
+    selected = new Set(allPhotos.map(p => p.name));
+    updateSelectedCount();
+    loadGallery();
+  });
 });
