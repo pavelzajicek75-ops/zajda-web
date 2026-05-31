@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "include": [
+    "/api/*"
+  ],
+  "exclude": [
+    "/admin/gallery/*",
+    "/admin/gallery/index.html",
+    "/admin/gallery/style.css",
+    "/admin/gallery/app.js",
+    "/*.*"
+  ]
+}
