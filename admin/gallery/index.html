@@ -7,7 +7,23 @@
 </head>
 <body>
 
-  <h1>Galerie</h1>
+  <header id="topbar">
+    <h1>Galerie</h1>
+
+    <div class="controls">
+      <button id="modeGrid">🟦 Mřížka</button>
+      <button id="modeLarge">🟩 Velké náhledy</button>
+      <button id="modeList">📄 Seznam</button>
+
+      <button id="refreshBtn">🔄 Obnovit</button>
+    </div>
+
+    <div class="stats">
+      <span id="photoCount">0 fotek</span>
+      <span id="photoSize">0 MB</span>
+    </div>
+  </header>
+
   <div id="gallery"></div>
 
   <script src="/admin/gallery/app.js"></script>
