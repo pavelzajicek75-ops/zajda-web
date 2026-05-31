@@ -8,9 +8,9 @@ async function loadGallery() {
   photos.forEach(photo => {
     const img = document.createElement("img");
     img.src = photo.url;
-    img.alt = photo.name;
+    img.alt = "Photo";
     gallery.appendChild(img);
   });
 }
 
-loadGallery();
+document.addEventListener("DOMContentLoaded", loadGallery);
