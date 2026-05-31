@@ -1,5 +1,3 @@
-/* ====== GLOBAL ====== */
-
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
@@ -15,8 +13,6 @@ body.dark {
   color: #e5e7eb;
 }
 
-/* ====== TOPBAR ====== */
-
 #topbar {
   display: flex;
   justify-content: space-between;
@@ -29,12 +25,6 @@ body.dark {
 
 body.dark #topbar {
   background: #0f172a;
-}
-
-#topbar h1 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
 }
 
 .controls {
@@ -73,16 +63,12 @@ body.dark .controls button:hover {
   text-align: right;
 }
 
-/* ====== GALLERY ====== */
-
 #gallery {
   padding: 20px;
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
 }
-
-/* ====== ITEM ====== */
 
 .item {
   position: relative;
@@ -106,17 +92,6 @@ body.dark .item img {
   box-shadow: 0 3px 10px rgba(0,0,0,0.6);
 }
 
-.item .label {
-  margin-top: 6px;
-  font-size: 13px;
-  max-width: 260px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ====== CHECKBOX ====== */
-
 .item input[type="checkbox"] {
   position: absolute;
   top: 10px;
@@ -125,8 +100,6 @@ body.dark .item img {
   height: 22px;
   z-index: 10;
 }
-
-/* ====== SELECTED ANIMATION ====== */
 
 .item.selected img {
   outline: 4px solid #ffcc00;
@@ -139,8 +112,6 @@ body.dark .item img {
   50% { transform: scale(1.07); }
   100% { transform: scale(1.05); }
 }
-
-/* ====== DELETE ICON ====== */
 
 .delete-icon {
   position: absolute;
@@ -163,15 +134,8 @@ body.dark .item img {
   background: rgba(220,38,38,0.9);
 }
 
-/* ====== VIEW MODES ====== */
-
-.grid img {
-  width: 260px;
-}
-
-.large img {
-  width: 480px;
-}
+.grid img { width: 260px; }
+.large img { width: 480px; }
 
 .list {
   flex-direction: column;
@@ -202,29 +166,11 @@ body.dark .list .item {
   gap: 4px;
 }
 
-.list .list-name {
-  font-weight: 600;
-}
-
-.list .list-size {
-  font-size: 13px;
-  color: #666;
-}
-
-body.dark .list .list-size {
-  color: #9ca3af;
-}
-
-.list .list-exif {
-  font-size: 12px;
-  color: #555;
-}
-
-body.dark .list .list-exif {
-  color: #9ca3af;
-}
-
-/* ====== MODAL ====== */
+.list .list-name { font-weight: 600; }
+.list .list-size { font-size: 13px; color: #666; }
+body.dark .list .list-size { color: #9ca3af; }
+.list .list-exif { font-size: 12px; color: #555; }
+body.dark .list .list-exif { color: #9ca3af; }
 
 #modal {
   position: fixed;
@@ -238,9 +184,7 @@ body.dark .list .list-exif {
   align-items: center;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 
 #modalContent {
   background: white;
@@ -263,20 +207,6 @@ body.dark #modalContent {
   margin-bottom: 15px;
 }
 
-#modalInfo {
-  margin-bottom: 15px;
-}
-
-#modalName {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-#modalResolution {
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
 #modalExif {
   font-size: 14px;
   line-height: 1.6;
@@ -286,18 +216,7 @@ body.dark #modalContent {
   margin-bottom: 8px;
 }
 
-body.dark #modalExif {
-  background: #1f2937;
-}
-
-#modalTags {
-  font-size: 13px;
-  color: #555;
-}
-
-body.dark #modalTags {
-  color: #9ca3af;
-}
+body.dark #modalExif { background: #1f2937; }
 
 #closeModal {
   padding: 8px 16px;
@@ -309,6 +228,5 @@ body.dark #modalTags {
   font-weight: 600;
 }
 
-#closeModal:hover {
-  background: #004f94;
-}
+#closeModal:hover { background: #004f94; }
+
