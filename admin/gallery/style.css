@@ -1,50 +1,179 @@
+/* ====== GLOBAL ====== */
+
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f4f4;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f3f4f6;
+  color: #333;
 }
+
+/* ====== TOPBAR ====== */
 
 #topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #0078d7;
+  background: #0067c0;
   color: white;
-  padding: 10px 20px;
+  padding: 12px 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+#topbar h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
 }
 
 .controls button {
   margin-right: 10px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: white;
-  color: #0078d7;
+  color: #0067c0;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 600;
+  transition: 0.2s;
 }
+
+.controls button:hover {
+  background: #e5e5e5;
+}
+
+.stats {
+  font-size: 14px;
+  opacity: 0.9;
+  text-align: right;
+}
+
+/* ====== GALLERY ====== */
 
 #gallery {
   padding: 20px;
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 18px;
 }
+
+/* ====== ITEM ====== */
 
 .item {
   position: relative;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.item:hover {
+  transform: scale(1.03);
 }
 
 .item img {
-  width: 250px;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  width: 260px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+  transition: 0.2s;
 }
+
+/* ====== CHECKBOX ====== */
 
 .item input[type="checkbox"] {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 10px;
+  left: 10px;
   width: 22px;
   height: 22px;
+  z-index: 10;
+}
+
+/* Vizuální označení fotky */
+.item.selected img {
+  outline: 4px solid #ffcc00;
+  transform: scale(1.05);
+}
+
+/* ====== VIEW MODES ====== */
+
+.grid img {
+  width: 260px;
+}
+
+.large img {
+  width: 480px;
+}
+
+.list {
+  flex-direction: column;
+}
+
+.list .item {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.list img {
+  width: 140px;
+  margin-right: 20px;
+}
+
+/* ====== MODAL ====== */
+
+#modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hidden {
+  display: none;
+}
+
+#modalContent {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 700px;
+  max-height: 90%;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+#modalImg {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+#modalExif {
+  font-size: 15px;
+  line-height: 1.6;
+  background: #f7f7f7;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+#closeModal {
+  padding: 8px 16px;
+  background: #0067c0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+#closeModal:hover {
+  background: #004f94;
 }
