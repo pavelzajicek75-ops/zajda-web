@@ -1,12 +1,16 @@
-document.addEventListener("DOMContentLoaded", async () => {
-  const res = await fetch("/api/photos");
-  const photos = await res.json();
+async function loadGallery() {
+  const response = await fetch("/api/photos");
+  const photos = await response.json();
+
   const gallery = document.getElementById("gallery");
+  gallery.innerHTML = "";
 
   photos.forEach(photo => {
     const img = document.createElement("img");
-    img.src = `https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev/${photo.name}`;
+    img.src = photo.url;
     img.alt = photo.name;
     gallery.appendChild(img);
   });
-});
+}
+
+loadGallery();
