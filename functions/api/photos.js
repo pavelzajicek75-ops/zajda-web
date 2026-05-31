@@ -1,4 +1,5 @@
 export async function onRequest() {
+  // Sem doplň názvy všech fotek v R2
   const photos = [
     "IMG_7781.JPG",
     "IMG_7782.JPG",
