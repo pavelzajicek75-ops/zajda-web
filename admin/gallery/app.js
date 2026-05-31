@@ -1,4 +1,4 @@
-let currentMode = "grid";
+let selected = new Set();
 
 function formatSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(2) + " MB";
@@ -13,31 +13,54 @@ async function loadGallery() {
   const photoSize = document.getElementById("photoSize");
 
   gallery.innerHTML = "";
-  gallery.className = currentMode;
+  selected.clear();
 
   photoCount.textContent = `${data.totalCount} fotek`;
   photoSize.textContent = formatSize(data.totalSize);
 
   data.photos.forEach(photo => {
-    if (currentMode === "list") {
-      const item = document.createElement("div");
-      item.className = "item";
+    const item = document.createElement("div");
+    item.className = "item";
 
-      const img = document.createElement("img");
-      img.src = photo.url;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) selected.add(photo.name);
+      else selected.delete(photo.name);
+    });
 
-      const info = document.createElement("div");
-      info.textContent = `${photo.name} — ${formatSize(photo.size)}`;
+    const img = document.createElement("img");
+    img.src = photo.url;
 
-      item.appendChild(img);
-      item.appendChild(info);
-      gallery.appendChild(item);
-    } else {
-      const img = document.createElement("img");
-      img.src = photo.url;
-      gallery.appendChild(img);
-    }
+    item.appendChild(checkbox);
+    item.appendChild(img);
+    gallery.appendChild(item);
   });
+}
+
+async function uploadFiles(files) {
+  for (const file of files) {
+    const form = new FormData();
+    form.append("file", file);
+
+    await fetch("/api/upload", {
+      method: "POST",
+      body: form
+    });
+  }
+  loadGallery();
+}
+
+async function deleteSelected() {
+  if (selected.size === 0) return;
+
+  await fetch("/api/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keys: [...selected] })
+  });
+
+  loadGallery();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -45,18 +68,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("refreshBtn").addEventListener("click", loadGallery);
 
-  document.getElementById("modeGrid").addEventListener("click", () => {
-    currentMode = "grid";
-    loadGallery();
+  document.getElementById("uploadBtn").addEventListener("click", () => {
+    document.getElementById("fileInput").click();
   });
 
-  document.getElementById("modeLarge").addEventListener("click", () => {
-    currentMode = "large";
-    loadGallery();
+  document.getElementById("fileInput").addEventListener("change", (e) => {
+    uploadFiles(e.target.files);
   });
 
-  document.getElementById("modeList").addEventListener("click", () => {
-    currentMode = "list";
-    loadGallery();
-  });
+  document.getElementById("deleteSelectedBtn").addEventListener("click", deleteSelected);
 });
