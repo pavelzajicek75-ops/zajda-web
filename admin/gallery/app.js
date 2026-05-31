@@ -227,3 +227,4 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("themeToggle").addEventListener("click", toggleTheme);
   document.getElementById("selectAllBtn").addEventListener("click", selectAll);
 });
+
