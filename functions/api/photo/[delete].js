@@ -19,6 +19,7 @@ export async function onRequestDelete(context) {
     );
 
   } catch (err) {
-    return new Response("Delete failed: " + err.message, { status: 500 });
+    console.error("Delete error:", err);
+    return new Response("Internal Server Error", { status: 500 });
   }
 }
