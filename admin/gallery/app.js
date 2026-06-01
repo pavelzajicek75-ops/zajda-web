@@ -2,10 +2,6 @@ let selected = new Set();
 let mode = "grid";
 let allPhotos = [];
 
-function formatSize(bytes) {
-  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-}
-
 function updateSelectedCount() {
   document.getElementById("selectedCount").textContent =
     `Vybráno: ${selected.size}`;
@@ -23,8 +19,10 @@ async function loadGallery() {
   selected.clear();
   updateSelectedCount();
 
-  document.getElementById("photoCount").textContent = `${data.totalCount} fotek`;
-  document.getElementById("photoSize").textContent = formatSize(data.totalSize);
+  document.getElementById("photoCount").textContent =
+    `${data.totalCount} fotek`;
+  document.getElementById("photoSize").textContent =
+    `${(data.totalSize / 1024 / 1024).toFixed(2)} MB`;
 
   allPhotos.forEach(photo => {
     const item = document.createElement("div");
@@ -34,13 +32,12 @@ async function loadGallery() {
     checkbox.type = "checkbox";
     checkbox.addEventListener("click", e => {
       e.stopPropagation();
-      if (checkbox.checked) selected.add(photo.name);
-      else selected.delete(photo.name);
+      checkbox.checked ? selected.add(photo.name) : selected.delete(photo.name);
       updateSelectedCount();
     });
 
     const img = document.createElement("img");
-    img.src = `/api/photo/${photo.name}`;
+    img.src = `/api/photo/${encodeURIComponent(photo.name)}`;
     img.addEventListener("click", () => openModal(photo));
 
     const del = document.createElement("button");
@@ -51,19 +48,37 @@ async function loadGallery() {
       await deletePhoto(photo.name);
     });
 
+    const info = document.createElement("div");
+    info.className = "info";
+
+    const exif = photo.exif || {};
+    info.innerHTML = `
+      <strong>${photo.name}</strong><br>
+      ${photo.width}×${photo.height}<br>
+      ISO ${exif.iso ?? "-"}, f/${exif.aperture ?? "-"}, ${exif.exposure ?? "-"}
+    `;
+
     item.appendChild(checkbox);
     item.appendChild(img);
-    item.appendChild(del);
+
+    if (mode === "list") {
+      item.appendChild(info);
+      item.appendChild(del);
+    } else {
+      item.appendChild(del);
+      item.appendChild(info);
+    }
 
     gallery.appendChild(item);
   });
 }
 
 async function deletePhoto(name) {
-  await fetch(`/api/delete?name=${encodeURIComponent(name)}`, {
+  const res = await fetch(`/api/delete?name=${encodeURIComponent(name)}`, {
     method: "DELETE"
   });
-  loadGallery();
+
+  if (res.ok) loadGallery();
 }
 
 async function deleteSelected() {
@@ -77,7 +92,7 @@ async function deleteSelected() {
 
 async function uploadFiles(files) {
   const form = new FormData();
-  for (const file of files) form.append("file", file);
+  for (const f of files) form.append("file", f);
 
   await fetch("/api/upload", {
     method: "POST",
@@ -88,14 +103,15 @@ async function uploadFiles(files) {
 }
 
 function openModal(photo) {
-  document.getElementById("modalImg").src = `/api/photo/${photo.name}`;
+  document.getElementById("modalImg").src =
+    `/api/photo/${encodeURIComponent(photo.name)}`;
   document.getElementById("modalName").textContent = photo.name;
   document.getElementById("modalResolution").textContent =
     `${photo.width} × ${photo.height}`;
+
+  const exif = photo.exif || {};
   document.getElementById("modalExif").textContent =
-    `ISO: ${photo.exif?.iso || "-"} | Clona: ${photo.exif?.aperture || "-"} | Čas: ${photo.exif?.exposure || "-"}`;
-  document.getElementById("modalTags").textContent =
-    `${photo.tags?.join(", ") || "-"}`;
+    `ISO ${exif.iso ?? "-"}, f/${exif.aperture ?? "-"}, ${exif.exposure ?? "-"}`;
 
   document.getElementById("modal").classList.remove("hidden");
 }
@@ -103,41 +119,19 @@ function openModal(photo) {
 window.addEventListener("load", () => {
   loadGallery();
 
-  document.getElementById("refreshBtn").addEventListener("click", loadGallery);
-  document.getElementById("deleteSelectedBtn").addEventListener("click", deleteSelected);
+  document.getElementById("refreshBtn").onclick = loadGallery;
+  document.getElementById("deleteSelectedBtn").onclick = deleteSelected;
 
-  document.getElementById("uploadBtn").addEventListener("click", () => {
+  document.getElementById("uploadBtn").onclick = () =>
     document.getElementById("fileInput").click();
-  });
 
-  document.getElementById("fileInput").addEventListener("change", e => {
+  document.getElementById("fileInput").onchange = e =>
     uploadFiles(e.target.files);
-  });
 
-  document.getElementById("modeGrid").addEventListener("click", () => {
-    mode = "grid";
-    loadGallery();
-  });
+  document.getElementById("modeGrid").onclick = () => { mode = "grid"; loadGallery(); };
+  document.getElementById("modeLarge").onclick = () => { mode = "large"; loadGallery(); };
+  document.getElementById("modeList").onclick = () => { mode = "list"; loadGallery(); };
 
-  document.getElementById("modeLarge").addEventListener("click", () => {
-    mode = "large";
-    loadGallery();
-  });
-
-  document.getElementById("modeList").addEventListener("click", () => {
-    mode = "list";
-    loadGallery();
-  });
-
-  document.getElementById("closeModal").addEventListener("click", () => {
+  document.getElementById("closeModal").onclick = () =>
     document.getElementById("modal").classList.add("hidden");
-  });
-
-  document.getElementById("selectAllBtn").addEventListener("click", () => {
-    selected = new Set(allPhotos.map(p => p.name));
-    updateSelectedCount();
-    loadGallery();
-  });
 });
-// rebuild
-// rebuild v24
