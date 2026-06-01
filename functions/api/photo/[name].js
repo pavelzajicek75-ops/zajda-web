@@ -23,3 +23,4 @@ export async function onRequestDelete(context) {
     return new Response("Delete failed: " + err.message, { status: 500 });
   }
 }
+// rebuild delete v2
