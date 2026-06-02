@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Editor fotek</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background: #1e1e1e;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        #left {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+        }
+
+        #canvas {
+            max-width: 95%;
+            max-height: 95%;
+            background: black;
+        }
+
+        #right {
+            width: 320px;
+            background: #222;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #444;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        .slider-block {
+            margin-bottom: 20px;
+        }
+
+        input[type=range] {
+            width: 100%;
+        }
+
+        #toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 320px;
+            height: 50px;
+            background: #333;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 10px;
+            border-bottom: 2px solid #444;
+        }
+
+        #toolbar button {
+            padding: 8px 14px;
+            background: #555;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        #toolbar button:hover {
+            background: #777;
+        }
+
+        #galleryModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #galleryBox {
+            width: 80%;
+            height: 80%;
+            background: #222;
+            padding: 20px;
+            overflow-y: auto;
+            border-radius: 8px;
+        }
+
+        .thumb {
+            width: 160px;
+            height: 160px;
+            object-fit: cover;
+            margin: 10px;
+            cursor: pointer;
+            border: 2px solid #444;
+        }
+    </style>
+</head>
+<body>
+
+<div id="toolbar">
+    <button onclick="openGallery()">Otevřít z galerie</button>
+    <button onclick="saveToGallery()">Uložit</button>
+    <button onclick="resetImage()">Reset</button>
+</div>
+
+<div id="left">
+    <canvas id="canvas"></canvas>
+</div>
+
+<div id="right">
+    <h2>Nástroje</h2>
+
+    <div class="slider-block">
+        Jas
+        <input type="range" id="brightness" min="-100" max="100" value="0">
+    </div>
+
+    <div class="slider-block">
+        Kontrast
+        <input type="range" id="contrast" min="-100" max="100" value="0">
+    </div>
+
+    <div class="slider-block">
+        Sytost
+        <input type="range" id="saturation" min="-100" max="100" value="0">
+    </div>
+
+    <div class="slider-block">
+        Teplota
+        <input type="range" id="temperature" min="-100" max="100" value="0">
+    </div>
+
+    <div class="slider-block">
+        Ostrost
+        <input type="range" id="sharpness" min="0" max="10" value="0">
+    </div>
+</div>
+
+<div id="galleryModal">
+    <div id="galleryBox"></div>
+</div>
+
+<script src="editor.js"></script>
+</body>
+</html>
