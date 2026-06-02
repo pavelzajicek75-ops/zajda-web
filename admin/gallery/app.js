@@ -1,16 +1,21 @@
+// /admin/gallery/app.js
+
 const gallery = document.getElementById("gallery");
 
 async function loadGallery() {
     gallery.innerHTML = "<p>Načítám...</p>";
 
-    const res = await fetch("/api/photo");
-    const photos = await res.json();
+    let res = await fetch("/api/photo");
+    let photos = await res.json();
 
     gallery.innerHTML = "";
 
     photos.forEach(p => {
-        // Ignoruj neobrázkové soubory (např. .json, .txt)
-        if (!p.filename.match(/\.(jpg|jpeg|png|webp)$/i)) return;
+        // 1) Ignoruj neobrázkové soubory
+        if (!p.filename.match(/\.(jpg|jpeg|png|webp|gif)$/i)) {
+            console.warn("Ignoruji neobrázek:", p.filename);
+            return;
+        }
 
         const item = document.createElement("div");
         item.className = "item";
@@ -20,9 +25,11 @@ async function loadGallery() {
         img.className = "thumb";
         img.alt = p.filename;
 
+        // 2) Pokud se obrázek nenačte → nezastaví to galerii
         img.onerror = () => {
-            console.warn("Chyba načítání:", p.filename);
-            item.style.opacity = "0.3";
+            console.error("Chyba načítání obrázku:", p.url);
+            img.style.opacity = "0.3";
+            img.title = "Chyba načítání";
         };
 
         const name = document.createElement("div");
