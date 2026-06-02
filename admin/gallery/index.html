@@ -2,53 +2,21 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Galerie – Admin</title>
-  <link rel="stylesheet" href="style.css">
+
+  <!-- ABSOLUTNÍ CESTA – POVINNÉ -->
+  <link rel="stylesheet" href="/admin/gallery/style.css">
 </head>
-<body class="dark">
+<body>
 
-  <header>
-    <h1>📸 Galerie fotek</h1>
+  <h1>Galerie – Admin</h1>
 
-    <div class="toolbar">
-      <button id="uploadBtn">Nahrát</button>
-      <button id="deleteSelectedBtn">Smazat vybrané</button>
-      <button id="refreshBtn">Obnovit</button>
+  <div id="gallery"></div>
 
-      <div class="modes">
-        <button id="modeGrid">Grid</button>
-        <button id="modeLarge">Large</button>
-        <button id="modeList">Seznam</button>
-      </div>
+  <button id="deleteSelected">Smazat vybrané</button>
 
-      <button id="selectAllBtn">Vybrat vše</button>
-    </div>
-  </header>
-
-  <section id="stats">
-    <span id="photoCount">0 fotek</span>
-    <span id="photoSize">0 MB</span>
-    <span id="selectedCount">Vybráno: 0</span>
-  </section>
-
-  <main id="gallery" class="grid"></main>
-
-  <input type="file" id="fileInput" multiple hidden>
-
-  <div id="modal" class="hidden">
-    <div id="modalContent">
-      <img id="modalImg" src="">
-      <h2 id="modalName"></h2>
-
-      <div class="info">
-        <p><strong>Rozlišení:</strong> <span id="modalResolution"></span></p>
-        <p><strong>EXIF:</strong> <span id="modalExif"></span></p>
-      </div>
-
-      <button id="closeModal">Zavřít</button>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+  <!-- ABSOLUTNÍ CESTA – POVINNÉ -->
+  <script src="/admin/gallery/app.js"></script>
 </body>
 </html>
