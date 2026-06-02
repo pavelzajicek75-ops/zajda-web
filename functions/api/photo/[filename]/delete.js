@@ -1,17 +1,8 @@
-export async function onRequestDelete({ params, env }) {
-  const { filename } = params;
-  const bucket = env.zajda_photos;
+export async function onRequest(context) {
+    const bucket = context.env.zajda_photos;
+    const { filename } = context.params;
 
-  try {
     await bucket.delete(filename);
-    return new Response(JSON.stringify({ success: true, deleted: filename }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
+
+    return new Response("OK");
 }
