@@ -59,6 +59,7 @@
             padding: 0 10px;
             gap: 10px;
             border-bottom: 2px solid #444;
+            z-index: 10;
         }
 
         #toolbar button {
@@ -81,6 +82,7 @@
             display: none;
             justify-content: center;
             align-items: center;
+            z-index: 20;
         }
 
         #galleryBox {
@@ -100,6 +102,28 @@
             cursor: pointer;
             border: 2px solid #444;
         }
+
+        #statusBar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 320px;
+            height: 24px;
+            background: #111;
+            color: #aaa;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        #right h3 {
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 4px;
+        }
     </style>
 </head>
 <body>
@@ -108,6 +132,7 @@
     <button onclick="openGallery()">Otevřít z galerie</button>
     <button onclick="saveToGallery()">Uložit</button>
     <button onclick="resetImage()">Reset</button>
+    <button onclick="backToGallery()">Zpět do galerie</button>
 </div>
 
 <div id="left">
@@ -115,7 +140,10 @@
 </div>
 
 <div id="right">
-    <h2>Nástroje</h2>
+    <h2>Editor fotek</h2>
+    <div id="fileInfo">Soubor: žádný</div>
+
+    <h3>Úpravy</h3>
 
     <div class="slider-block">
         Jas
@@ -141,6 +169,10 @@
         Ostrost
         <input type="range" id="sharpness" min="0" max="10" value="0">
     </div>
+</div>
+
+<div id="statusBar">
+    <span id="statusText">Připraveno</span>
 </div>
 
 <div id="galleryModal">
