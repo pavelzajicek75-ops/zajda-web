@@ -1,65 +1,39 @@
-// /admin/gallery/app.js
+<!-- rebuild -->
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+  <title>Dark Profi Galerie</title>
+  <title>Galerie – Admin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="dark">
 
-const galleryContainer = document.getElementById("gallery");
+<header>
+    <h1>📸 Galerie</h1>
+    <h1>📸 Galerie fotek</h1>
 
-async function loadGallery() {
-    galleryContainer.innerHTML = "<p>Načítám...</p>";
+<div class="toolbar">
+<button id="uploadBtn">Nahrát</button>
+@@ -19,7 +18,7 @@ <h1>📸 Galerie</h1>
+<div class="modes">
+<button id="modeGrid">Grid</button>
+<button id="modeLarge">Large</button>
+        <button id="modeList">List</button>
+        <button id="modeList">Seznam</button>
+</div>
 
-    const res = await fetch("/api/photo");
-    const photos = await res.json();
+<button id="selectAllBtn">Vybrat vše</button>
+@@ -45,7 +44,6 @@ <h2 id="modalName"></h2>
+<div class="info">
+<p><strong>Rozlišení:</strong> <span id="modalResolution"></span></p>
+<p><strong>EXIF:</strong> <span id="modalExif"></span></p>
+        <p><strong>Tagy:</strong> <span id="modalTags"></span></p>
+</div>
 
-    galleryContainer.innerHTML = "";
-
-    photos.forEach(p => {
-        const item = document.createElement("div");
-        item.className = "photo-item";
-
-        const img = document.createElement("img");
-        img.src = p.url;
-        img.className = "thumb";
-
-        const filename = document.createElement("div");
-        filename.textContent = p.filename;
-        filename.className = "filename";
-
-        const btnRow = document.createElement("div");
-        btnRow.className = "btn-row";
-
-        // SMAZAT
-        const del = document.createElement("button");
-        del.textContent = "Smazat";
-        del.onclick = () => deletePhoto(p.filename);
-
-        // UPRAVIT
-        const edit = document.createElement("button");
-        edit.textContent = "Upravit";
-        edit.onclick = () => {
-            window.location.href = `/admin/editor/?file=${encodeURIComponent(p.filename)}`;
-        };
-
-        btnRow.appendChild(edit);
-        btnRow.appendChild(del);
-
-        item.appendChild(img);
-        item.appendChild(filename);
-        item.appendChild(btnRow);
-
-        galleryContainer.appendChild(item);
-    });
-}
-
-async function deletePhoto(filename) {
-    if (!confirm(`Opravdu smazat ${filename}?`)) return;
-
-    const res = await fetch(`/api/photo/${filename}`, {
-        method: "DELETE"
-    });
-
-    if (res.ok) {
-        loadGallery();
-    } else {
-        alert("Chyba při mazání.");
-    }
-}
-
-loadGallery();
+<button id="closeModal">Zavřít</button>
+@@ -55,4 +53,3 @@ <h2 id="modalName"></h2>
+<script src="app.js"></script>
+</body>
+</html>
+<!-- rebuild v24 -->
