@@ -1,43 +1,65 @@
+// /admin/gallery/app.js
+
+const galleryContainer = document.getElementById("gallery");
+
 async function loadGallery() {
-  const res = await fetch("/api/photo");
-  const photos = await res.json();
+    galleryContainer.innerHTML = "<p>Načítám...</p>";
 
-  const gallery = document.getElementById("gallery");
-  gallery.innerHTML = "";
+    const res = await fetch("/api/photo");
+    const photos = await res.json();
 
-  photos.forEach(filename => {
-    const div = document.createElement("div");
-    div.className = "photo-item";
+    galleryContainer.innerHTML = "";
 
-    const img = document.createElement("img");
-    img.src = `/api/photo/${filename}`;
-    img.alt = filename;
+    photos.forEach(p => {
+        const item = document.createElement("div");
+        item.className = "photo-item";
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = filename;
+        const img = document.createElement("img");
+        img.src = p.url;
+        img.className = "thumb";
 
-    div.appendChild(img);
-    div.appendChild(checkbox);
-    gallery.appendChild(div);
-  });
-}
+        const filename = document.createElement("div");
+        filename.textContent = p.filename;
+        filename.className = "filename";
 
-async function deleteSelected() {
-  const checkboxes = document.querySelectorAll("input[type=checkbox]:checked");
+        const btnRow = document.createElement("div");
+        btnRow.className = "btn-row";
 
-  for (const cb of checkboxes) {
-    const filename = cb.value;
+        // SMAZAT
+        const del = document.createElement("button");
+        del.textContent = "Smazat";
+        del.onclick = () => deletePhoto(p.filename);
 
-    await fetch(`/api/photo/${filename}/delete`, {
-      method: "DELETE"
+        // UPRAVIT
+        const edit = document.createElement("button");
+        edit.textContent = "Upravit";
+        edit.onclick = () => {
+            window.location.href = `/admin/editor/?file=${encodeURIComponent(p.filename)}`;
+        };
+
+        btnRow.appendChild(edit);
+        btnRow.appendChild(del);
+
+        item.appendChild(img);
+        item.appendChild(filename);
+        item.appendChild(btnRow);
+
+        galleryContainer.appendChild(item);
     });
-  }
-
-  await loadGallery();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("deleteSelected").addEventListener("click", deleteSelected);
-  loadGallery();
-});
+async function deletePhoto(filename) {
+    if (!confirm(`Opravdu smazat ${filename}?`)) return;
+
+    const res = await fetch(`/api/photo/${filename}`, {
+        method: "DELETE"
+    });
+
+    if (res.ok) {
+        loadGallery();
+    } else {
+        alert("Chyba při mazání.");
+    }
+}
+
+loadGallery();
