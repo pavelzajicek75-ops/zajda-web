@@ -3,8 +3,6 @@ compatibility_date = "2024-01-01"
 
 pages_build_output_dir = "."
 
-[vars]
-
 [[r2_buckets]]
 binding = "zajda_photos"
 bucket_name = "zajda-photos"
