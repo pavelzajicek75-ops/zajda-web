@@ -9,12 +9,21 @@ async function loadGallery() {
     gallery.innerHTML = "";
 
     photos.forEach(p => {
+        // Ignoruj neobrázkové soubory (např. .json, .txt)
+        if (!p.filename.match(/\.(jpg|jpeg|png|webp)$/i)) return;
+
         const item = document.createElement("div");
         item.className = "item";
 
         const img = document.createElement("img");
         img.src = p.url;
         img.className = "thumb";
+        img.alt = p.filename;
+
+        img.onerror = () => {
+            console.warn("Chyba načítání:", p.filename);
+            item.style.opacity = "0.3";
+        };
 
         const name = document.createElement("div");
         name.textContent = p.filename;
