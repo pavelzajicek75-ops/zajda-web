@@ -88,9 +88,10 @@ header {
 }
 
 #gallery.list img {
-  width: 80px;
-  height: 60px;
+  width: 160px;
+  height: 120px;
   border-radius: 6px;
+  object-fit: cover;
 }
 
 #gallery.list .info {
