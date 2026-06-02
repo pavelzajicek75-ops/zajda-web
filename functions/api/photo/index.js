@@ -1,6 +1,5 @@
 export async function onRequest(context) {
     const bucket = context.env.zajda_photos;
-
     const list = await bucket.list();
 
     const items = list.objects.map(obj => ({
