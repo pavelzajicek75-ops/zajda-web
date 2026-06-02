@@ -37,6 +37,7 @@ async function deleteSelected() {
   await loadGallery();
 }
 
-document.getElementById("deleteSelected").addEventListener("click", deleteSelected);
-
-loadGallery();
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("deleteSelected").addEventListener("click", deleteSelected);
+  loadGallery();
+});
