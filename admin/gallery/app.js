@@ -1,39 +1,41 @@
-<!-- rebuild -->
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-<meta charset="UTF-8">
-  <title>Dark Profi Galerie</title>
-  <title>Galerie – Admin</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body class="dark">
+const gallery = document.getElementById("gallery");
 
-<header>
-    <h1>📸 Galerie</h1>
-    <h1>📸 Galerie fotek</h1>
+async function loadGallery() {
+    gallery.innerHTML = "<p>Načítám...</p>";
 
-<div class="toolbar">
-<button id="uploadBtn">Nahrát</button>
-@@ -19,7 +18,7 @@ <h1>📸 Galerie</h1>
-<div class="modes">
-<button id="modeGrid">Grid</button>
-<button id="modeLarge">Large</button>
-        <button id="modeList">List</button>
-        <button id="modeList">Seznam</button>
-</div>
+    const res = await fetch("/api/photo");
+    const photos = await res.json();
 
-<button id="selectAllBtn">Vybrat vše</button>
-@@ -45,7 +44,6 @@ <h2 id="modalName"></h2>
-<div class="info">
-<p><strong>Rozlišení:</strong> <span id="modalResolution"></span></p>
-<p><strong>EXIF:</strong> <span id="modalExif"></span></p>
-        <p><strong>Tagy:</strong> <span id="modalTags"></span></p>
-</div>
+    gallery.innerHTML = "";
 
-<button id="closeModal">Zavřít</button>
-@@ -55,4 +53,3 @@ <h2 id="modalName"></h2>
-<script src="app.js"></script>
-</body>
-</html>
-<!-- rebuild v24 -->
+    photos.forEach(p => {
+        const item = document.createElement("div");
+        item.className = "item";
+
+        const img = document.createElement("img");
+        img.src = p.url;
+        img.className = "thumb";
+
+        const name = document.createElement("div");
+        name.textContent = p.filename;
+
+        const del = document.createElement("button");
+        del.textContent = "Smazat";
+        del.onclick = () => deletePhoto(p.filename);
+
+        item.appendChild(img);
+        item.appendChild(name);
+        item.appendChild(del);
+
+        gallery.appendChild(item);
+    });
+}
+
+async function deletePhoto(filename) {
+    if (!confirm("Smazat " + filename + "?")) return;
+
+    await fetch(`/api/photo/${filename}/delete`, { method: "POST" });
+    loadGallery();
+}
+
+loadGallery();
