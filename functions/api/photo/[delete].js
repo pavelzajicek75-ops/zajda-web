@@ -1,8 +1,10 @@
+// delete v8 – final, plně funkční mazání z R2
+
 export async function onRequestDelete(context) {
   const { env, params } = context;
   const bucket = env.R2_BUCKET;
-
   const filename = params.delete;
+
   if (!filename) {
     return new Response("Missing filename", { status: 400 });
   }
