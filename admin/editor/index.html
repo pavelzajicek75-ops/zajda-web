@@ -1,57 +1,49 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <title>Editor fotek</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Editor fotek</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="editor">
+    <div id="left">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div id="right">
+      <h2>Úpravy</h2>
+      <div class="controls">
+        <label>Jas</label><input type="range" id="brightness" min="0" max="200" value="100">
+        <label>Kontrast</label><input type="range" id="contrast" min="0" max="200" value="100">
+        <label>Saturace</label><input type="range" id="saturation" min="0" max="200" value="100">
+        <label>Živost</label><input type="range" id="vibrance" min="-100" max="100" value="0">
+        <label>Ostrost</label><input type="range" id="sharpness" min="0" max="10" value="0">
+        <label>Šum</label><input type="range" id="denoise" min="0" max="10" value="0">
+      </div>
 
-<h1>Editor fotek</h1>
-<div id="filename"></div>
+      <h2>AI funkce</h2>
+      <div class="buttons">
+        <button id="aiEnhance">AI Vylepšit</button>
+        <button id="hdr">HDR</button>
+        <button id="portrait">Portrét</button>
+        <button id="upscale">Zvětšit 2×</button>
+      </div>
 
-<canvas id="canvas"></canvas>
+      <h2>Otočení / Ořez</h2>
+      <div class="buttons">
+        <button id="rotateLeft">↺</button>
+        <button id="rotateRight">↻</button>
+        <button id="cropMode">Ořez</button>
+        <button id="applyCrop">Použít ořez</button>
+      </div>
 
-<div id="controls">
-
-    <h2>Základní úpravy</h2>
-    Jas: <input type="range" id="brightness" min="0" max="200" value="100"><br>
-    Kontrast: <input type="range" id="contrast" min="0" max="200" value="100"><br>
-    Saturace: <input type="range" id="saturation" min="0" max="200" value="100"><br>
-    Živost: <input type="range" id="vibrance" min="-100" max="100" value="0"><br>
-
-    <h2>Ostrost</h2>
-    <input type="range" id="sharpness" min="0" max="10" value="0">
-
-    <h2>Odstranění šumu</h2>
-    <input type="range" id="denoise" min="0" max="10" value="0">
-
-    <h2>Filtry</h2>
-    <button class="filter" data-filter="none">Žádný</button>
-    <button class="filter" data-filter="warm">Teplý</button>
-    <button class="filter" data-filter="cool">Studený</button>
-    <button class="filter" data-filter="bw">ČB</button>
-
-    <h2>AI</h2>
-    <button id="aiEnhance">AI Vylepšit</button>
-    <button id="hdr">HDR</button>
-    <button id="portrait">Portrét</button>
-    <button id="upscale">AI Zvětšit 2×</button>
-
-    <h2>Otočení</h2>
-    <button id="rotateLeft">↺ Vlevo</button>
-    <button id="rotateRight">↻ Vpravo</button>
-
-    <h2>Ořez</h2>
-    <button id="cropMode">Zapnout ořez</button>
-    <button id="applyCrop">Použít ořez</button>
-
-    <h2>Uložení</h2>
-    <button id="save">💾 Uložit</button>
-    <button id="back">← Zpět do galerie</button>
-
-</div>
-
-<script src="editor.js"></script>
+      <h2>Uložení</h2>
+      <div class="buttons">
+        <button id="save">💾 Uložit</button>
+        <button id="back">← Zpět</button>
+      </div>
+    </div>
+  </div>
+  <script src="editor.js"></script>
 </body>
 </html>
