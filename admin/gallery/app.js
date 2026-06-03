@@ -15,7 +15,7 @@ async function loadGallery() {
         item.className = "item";
 
         const img = document.createElement("img");
-        img.src = p.url + "?t=" + Date.now(); // obejde cache
+        img.src = p.url + "&t=" + Date.now(); // obejde cache
         img.className = "thumb";
 
         const name = document.createElement("div");
@@ -43,7 +43,7 @@ async function loadGallery() {
 async function deletePhoto(filename) {
     if (!confirm("Smazat " + filename + "?")) return;
 
-    await fetch(`/api/photo/${filename}`, { method: "DELETE" });
+    await fetch(`/api/photo/${encodeURIComponent(filename)}`, { method: "DELETE" });
     loadGallery();
 }
 
