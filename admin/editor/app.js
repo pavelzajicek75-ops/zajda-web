@@ -29,7 +29,10 @@ const state = {
   temperature: 0,
   clarity: 0,
   vignette: 0,
-  cropRatio: null // "4:3", "3:4", ...
+  shadows: 0,
+  highlights: 0,
+  cropRatio: null, // "4:3", "3:4", ...
+  freeCropMode: false
 };
 
 img.onload = () => {
@@ -72,7 +75,9 @@ const sliders = [
   "saturation",
   "temperature",
   "clarity",
-  "vignette"
+  "vignette",
+  "shadows",
+  "highlights"
 ];
 
 sliders.forEach(name => {
@@ -88,10 +93,11 @@ sliders.forEach(name => {
   });
 });
 
-// Ořez – auto center podle poměru
+// Ořez – poměrový
 function applyCrop(ratio) {
   if (!ratio || ratio === "free") {
     state.cropRatio = null;
+    state.freeCropMode = true;
     canvas.width = originalW;
     canvas.height = originalH;
     redraw();
@@ -99,6 +105,7 @@ function applyCrop(ratio) {
     return;
   }
 
+  state.freeCropMode = false;
   state.cropRatio = ratio;
 
   const [rw, rh] = ratio.split(":").map(Number);
@@ -124,7 +131,6 @@ function applyCrop(ratio) {
   canvas.width = cropW;
   canvas.height = cropH;
 
-  // vykreslíme výřez + filtry
   redraw(x, y, cropW, cropH);
   updateVersionInfo();
 }
@@ -136,6 +142,98 @@ document.querySelectorAll(".btnCrop").forEach(btn => {
   });
 });
 
+// VOLNÝ OŘEZ – drag na canvasu (funguje jen když freeCropMode = true)
+let isDragging = false;
+let dragStart = null;
+let dragBox = null;
+
+function getPos(evt) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left;
+  const y = (evt.touches ? evt.touches[0].clientY : evt.clientY) - rect.top;
+  return { x: x * (canvas.width / rect.width), y: y * (canvas.height / rect.height) };
+}
+
+function drawDragOverlay() {
+  redraw(); // překreslí fotku s filtry
+  if (!dragBox) return;
+
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(dragBox.x, dragBox.y, dragBox.w, dragBox.h);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(dragBox.x, dragBox.y, dragBox.w, dragBox.h);
+  ctx.restore();
+}
+
+function startDrag(evt) {
+  if (!state.freeCropMode) return;
+  evt.preventDefault();
+  isDragging = true;
+  const p = getPos(evt);
+  dragStart = p;
+  dragBox = { x: p.x, y: p.y, w: 0, h: 0 };
+  drawDragOverlay();
+}
+
+function moveDrag(evt) {
+  if (!isDragging || !dragBox) return;
+  evt.preventDefault();
+  const p = getPos(evt);
+  dragBox.w = p.x - dragStart.x;
+  dragBox.h = p.y - dragStart.y;
+
+  // normalizace do kladných hodnot
+  const x = Math.min(dragStart.x, p.x);
+  const y = Math.min(dragStart.y, p.y);
+  const w = Math.abs(dragBox.w);
+  const h = Math.abs(dragBox.h);
+  dragBox = { x, y, w, h };
+
+  drawDragOverlay();
+}
+
+function endDrag(evt) {
+  if (!isDragging || !dragBox) return;
+  evt.preventDefault();
+  isDragging = false;
+
+  if (dragBox.w < 10 || dragBox.h < 10) {
+    dragBox = null;
+    redraw();
+    return;
+  }
+
+  // aplikace volného ořezu
+  const cropX = dragBox.x;
+  const cropY = dragBox.y;
+  const cropW = dragBox.w;
+  const cropH = dragBox.h;
+
+  canvas.width = cropW;
+  canvas.height = cropH;
+
+  // přepočet do originálu – freeCropMode vždy začíná z full image
+  const scaleX = originalW / canvas.width;
+  const scaleY = originalH / canvas.height;
+
+  // ale protože jsme kreslili 1:1 na full image, můžeme použít přímo cropX/Y v originálních souřadnicích
+  redraw(cropX, cropY, cropW, cropH);
+  dragBox = null;
+  updateVersionInfo();
+}
+
+canvas.addEventListener("mousedown", startDrag);
+canvas.addEventListener("mousemove", moveDrag);
+canvas.addEventListener("mouseup", endDrag);
+canvas.addEventListener("mouseleave", endDrag);
+
+canvas.addEventListener("touchstart", startDrag, { passive: false });
+canvas.addEventListener("touchmove", moveDrag, { passive: false });
+canvas.addEventListener("touchend", endDrag, { passive: false });
+
 // Přepočet filtrů a překreslení
 function redraw(cropX = 0, cropY = 0, cropW = null, cropH = null) {
   if (!cropW || !cropH) {
@@ -143,14 +241,11 @@ function redraw(cropX = 0, cropY = 0, cropW = null, cropH = null) {
     cropH = originalH;
   }
 
-  // základní filtry přes ctx.filter
   const b = 1 + state.brightness / 100;
   const c = 1 + state.contrast / 100;
   const s = 1 + state.saturation / 100;
-  const exp = Math.pow(2, state.exposure); // expoziční násobek
-
-  // teplota – posun hue
-  const hue = state.temperature * 0.5; // ±25°
+  const exp = Math.pow(2, state.exposure);
+  const hue = state.temperature * 0.5;
 
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -170,7 +265,28 @@ function redraw(cropX = 0, cropY = 0, cropW = null, cropH = null) {
 
   ctx.restore();
 
-  // jednoduchá vinětace
+  // stíny / světla – jednoduchá korekce
+  if (state.shadows !== 0 || state.highlights !== 0) {
+    const sh = state.shadows / 100;
+    const hi = state.highlights / 100;
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      if (lum < 80 && sh !== 0) {
+        data[i] += sh * 60;
+        data[i + 1] += sh * 60;
+        data[i + 2] += sh * 60;
+      } else if (lum > 180 && hi !== 0) {
+        data[i] -= hi * 60;
+        data[i + 1] -= hi * 60;
+        data[i + 2] -= hi * 60;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  // vinětace
   if (state.vignette !== 0) {
     const strength = state.vignette / 100;
     const grd = ctx.createRadialGradient(
@@ -189,7 +305,7 @@ function redraw(cropX = 0, cropY = 0, cropW = null, cropH = null) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // clarity – jednoduchý lokální kontrast (lehké doostření)
+  // clarity
   if (state.clarity !== 0) {
     const tmp = document.createElement("canvas");
     tmp.width = canvas.width;
@@ -204,7 +320,7 @@ function redraw(cropX = 0, cropY = 0, cropW = null, cropH = null) {
     ctx.globalCompositeOperation = "source-over";
   }
 
-  // vibrance – jednoduchý hack: lehce zvýšit saturaci jen při kladné hodnotě
+  // vibrance
   if (state.vibrance !== 0) {
     const vib = 1 + state.vibrance / 200;
     const tmp = document.createElement("canvas");
@@ -219,7 +335,7 @@ function redraw(cropX = 0, cropY = 0, cropW = null, cropH = null) {
 
 // odhad velikosti
 function estimateSize(w, h) {
-  const bytes = w * h * 3 * 0.15; // JPEG ~15 % z raw RGB
+  const bytes = w * h * 3 * 0.15;
   return (bytes / (1024 * 1024)).toFixed(2);
 }
 
