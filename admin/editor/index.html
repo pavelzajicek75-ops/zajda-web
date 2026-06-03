@@ -16,6 +16,25 @@
 
 <main id="layout">
   <section id="canvasWrap">
+    <div id="cropOverlay">
+      <div class="crop-handle handle-n"></div>
+      <div class="crop-handle handle-s"></div>
+      <div class="crop-handle handle-e"></div>
+      <div class="crop-handle handle-w"></div>
+
+      <div class="crop-handle handle-ne"></div>
+      <div class="crop-handle handle-nw"></div>
+      <div class="crop-handle handle-se"></div>
+      <div class="crop-handle handle-sw"></div>
+
+      <div id="cropGrid">
+        <div class="grid-line v1"></div>
+        <div class="grid-line v2"></div>
+        <div class="grid-line h1"></div>
+        <div class="grid-line h2"></div>
+      </div>
+    </div>
+
     <canvas id="canvas"></canvas>
   </section>
 
@@ -101,12 +120,11 @@
         <button class="btnCrop" data-ratio="16:9">16:9</button>
         <button class="btnCrop" data-ratio="9:16">9:16</button>
       </div>
-      <p class="hint">Volný ořez: táhni prstem/myší přes fotku.</p>
+      <p class="hint">Mřížka 3×3 je vždy viditelná. Táhni rohy nebo strany.</p>
     </div>
 
     <hr>
-
-    <div id="versions">
+  <div id="versions">
       <h2>Verze k uložení</h2>
 
       <div class="version">
