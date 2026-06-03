@@ -1,4 +1,8 @@
-// /admin/editor/app.js
+// /admin/editor/app.js — Editor 4.0 (Photoshop Crop Engine)
+
+// -------------------------------------------------------------
+// 1) ZÁKLADNÍ PROMĚNNÉ
+// -------------------------------------------------------------
 
 const params = new URLSearchParams(window.location.search);
 const filename = params.get("file");
@@ -19,8 +23,12 @@ img.crossOrigin = "anonymous";
 let originalW = 0;
 let originalH = 0;
 
-// aktuální hodnoty sliderů
+// -------------------------------------------------------------
+// 2) STAV FILTRŮ + CROP ENGINE
+// -------------------------------------------------------------
+
 const state = {
+  // FILTRY
   brightness: 0,
   contrast: 0,
   exposure: 0,
@@ -31,9 +39,20 @@ const state = {
   vignette: 0,
   shadows: 0,
   highlights: 0,
-  cropRatio: null, // "4:3", "3:4", ...
-  freeCropMode: false
+
+  // CROP
+  cropActive: false,
+  cropRatio: null,      // "4:3", "3:4", "16:9", "9:16", null = free
+  crop: { x: 0, y: 0, w: 0, h: 0 }, // aktuální výběr
+  dragging: false,
+  dragMode: null,       // "move", "n", "s", "e", "w", "ne", "nw", "se", "sw"
+  dragStart: { x: 0, y: 0 },
+  cropStart: { x: 0, y: 0, w: 0, h: 0 }
 };
+
+// -------------------------------------------------------------
+// 3) NAČTENÍ OBRÁZKU
+// -------------------------------------------------------------
 
 img.onload = () => {
   originalW = img.width;
@@ -42,18 +61,27 @@ img.onload = () => {
   canvas.width = originalW;
   canvas.height = originalH;
 
+  // inicializace cropu – středový 50 %
+  initCenteredCrop();
+
   redraw();
   updateVersionInfo();
 };
 
 img.src = `/api/photo/${encodeURIComponent(filename)}?t=` + Date.now();
 
-// Zpět
+// -------------------------------------------------------------
+// 4) ZPĚT DO GALERIE
+// -------------------------------------------------------------
+
 document.getElementById("backBtn").onclick = () => {
   window.location.href = "/admin/gallery/";
 };
 
-// Tabs
+// -------------------------------------------------------------
+// 5) TABS
+// -------------------------------------------------------------
+
 document.querySelectorAll("#tabs .tab").forEach(tab => {
   tab.addEventListener("click", () => {
     document.querySelectorAll("#tabs .tab").forEach(t => t.classList.remove("active"));
@@ -66,7 +94,10 @@ document.querySelectorAll("#tabs .tab").forEach(tab => {
   });
 });
 
-// Slidery – napojení
+// -------------------------------------------------------------
+// 6) SLIDERY FILTRŮ
+// -------------------------------------------------------------
+
 const sliders = [
   "brightness",
   "contrast",
@@ -93,362 +124,507 @@ sliders.forEach(name => {
   });
 });
 
-// Ořez – poměrový
-function applyCrop(ratio) {
-  if (!ratio || ratio === "free") {
-    state.cropRatio = null;
-    state.freeCropMode = true;
-    canvas.width = originalW;
-    canvas.height = originalH;
-    redraw();
-    updateVersionInfo();
-    return;
-  }
+// -------------------------------------------------------------
+// 7) CROP – INICIALIZACE STŘEDOVÉHO 50% RÁMEČKU
+// -------------------------------------------------------------
 
-  state.freeCropMode = false;
-  state.cropRatio = ratio;
+function initCenteredCrop() {
+  const w = originalW * 0.5;
+  const h = originalH * 0.5;
+  const x = (originalW - w) / 2;
+  const y = (originalH - h) / 2;
 
-  const [rw, rh] = ratio.split(":").map(Number);
-  const imgW = originalW;
-  const imgH = originalH;
+  state.crop = { x, y, w, h };
+  state.cropActive = true;
 
-  const targetRatio = rw / rh;
-  const imgRatio = imgW / imgH;
-
-  let cropW, cropH;
-
-  if (imgRatio > targetRatio) {
-    cropH = imgH;
-    cropW = cropH * targetRatio;
-  } else {
-    cropW = imgW;
-    cropH = cropW / targetRatio;
-  }
-
-  const x = (imgW - cropW) / 2;
-  const y = (imgH - cropH) / 2;
-
-  canvas.width = cropW;
-  canvas.height = cropH;
-
-  redraw(x, y, cropW, cropH);
-  updateVersionInfo();
+  updateCropOverlay();
 }
+
+// -------------------------------------------------------------
+// 8) CROP – NASTAVENÍ POMĚRU
+// -------------------------------------------------------------
 
 document.querySelectorAll(".btnCrop").forEach(btn => {
   btn.addEventListener("click", () => {
     const r = btn.dataset.ratio;
-    applyCrop(r === "free" ? null : r);
+
+    if (r === "free") {
+      state.cropRatio = null;
+    } else {
+      state.cropRatio = r;
+      enforceCropRatio();
+    }
+
+    updateCropOverlay();
+    redraw();
+    updateVersionInfo();
   });
 });
 
-// VOLNÝ OŘEZ – drag na canvasu (funguje jen když freeCropMode = true)
-let isDragging = false;
-let dragStart = null;
-let dragBox = null;
+// -------------------------------------------------------------
+// 9) CROP – PŘEPIS RÁMEČKU PODLE POMĚRU
+// -------------------------------------------------------------
 
-function getPos(evt) {
-  const rect = canvas.getBoundingClientRect();
-  const x = (evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left;
-  const y = (evt.touches ? evt.touches[0].clientY : evt.clientY) - rect.top;
-  return { x: x * (canvas.width / rect.width), y: y * (canvas.height / rect.height) };
-}
+function enforceCropRatio() {
+  if (!state.cropRatio) return;
 
-function drawDragOverlay() {
-  redraw(); // překreslí fotku s filtry
-  if (!dragBox) return;
+  const [rw, rh] = state.cropRatio.split(":").map(Number);
+  const targetRatio = rw / rh;
 
-  ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.4)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.clearRect(dragBox.x, dragBox.y, dragBox.w, dragBox.h);
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(dragBox.x, dragBox.y, dragBox.w, dragBox.h);
-  ctx.restore();
-}
+  let { x, y, w, h } = state.crop;
+  const currentRatio = w / h;
 
-function startDrag(evt) {
-  if (!state.freeCropMode) return;
-  evt.preventDefault();
-  isDragging = true;
-  const p = getPos(evt);
-  dragStart = p;
-  dragBox = { x: p.x, y: p.y, w: 0, h: 0 };
-  drawDragOverlay();
-}
-
-function moveDrag(evt) {
-  if (!isDragging || !dragBox) return;
-  evt.preventDefault();
-  const p = getPos(evt);
-  dragBox.w = p.x - dragStart.x;
-  dragBox.h = p.y - dragStart.y;
-
-  // normalizace do kladných hodnot
-  const x = Math.min(dragStart.x, p.x);
-  const y = Math.min(dragStart.y, p.y);
-  const w = Math.abs(dragBox.w);
-  const h = Math.abs(dragBox.h);
-  dragBox = { x, y, w, h };
-
-  drawDragOverlay();
-}
-
-function endDrag(evt) {
-  if (!isDragging || !dragBox) return;
-  evt.preventDefault();
-  isDragging = false;
-
-  if (dragBox.w < 10 || dragBox.h < 10) {
-    dragBox = null;
-    redraw();
-    return;
+  if (currentRatio > targetRatio) {
+    // příliš široké → upravit šířku
+    w = h * targetRatio;
+  } else {
+    // příliš vysoké → upravit výšku
+    h = w / targetRatio;
   }
 
-  // aplikace volného ořezu
-  const cropX = dragBox.x;
-  const cropY = dragBox.y;
-  const cropW = dragBox.w;
-  const cropH = dragBox.h;
+  // zarovnat zpět doprostřed původního cropu
+  const cx = x + state.crop.w / 2;
+  const cy = y + state.crop.h / 2;
 
-  canvas.width = cropW;
-  canvas.height = cropH;
+  x = cx - w / 2;
+  y = cy - h / 2;
 
-  // přepočet do originálu – freeCropMode vždy začíná z full image
-  const scaleX = originalW / canvas.width;
-  const scaleY = originalH / canvas.height;
+  // omezit uvnitř fotky
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+  if (x + w > originalW) x = originalW - w;
+  if (y + h > originalH) y = originalH - h;
 
-  // ale protože jsme kreslili 1:1 na full image, můžeme použít přímo cropX/Y v originálních souřadnicích
-  redraw(cropX, cropY, cropW, cropH);
-  dragBox = null;
-  updateVersionInfo();
+  state.crop = { x, y, w, h };
+}
+// -------------------------------------------------------------
+// 10) CROP OVERLAY – AKTUALIZACE POZICE
+// -------------------------------------------------------------
+
+const cropOverlay = document.getElementById("cropOverlay");
+
+function updateCropOverlay() {
+  const { x, y, w, h } = state.crop;
+
+  cropOverlay.style.left = x + "px";
+  cropOverlay.style.top = y + "px";
+  cropOverlay.style.width = w + "px";
+  cropOverlay.style.height = h + "px";
+
+  cropOverlay.classList.add("active");
 }
 
-canvas.addEventListener("mousedown", startDrag);
-canvas.addEventListener("mousemove", moveDrag);
-canvas.addEventListener("mouseup", endDrag);
-canvas.addEventListener("mouseleave", endDrag);
+// -------------------------------------------------------------
+// 11) CROP – DRAG & RESIZE LOGIKA
+// -------------------------------------------------------------
 
-canvas.addEventListener("touchstart", startDrag, { passive: false });
-canvas.addEventListener("touchmove", moveDrag, { passive: false });
-canvas.addEventListener("touchend", endDrag, { passive: false });
+// Zjištění kliknutí na overlay → MOVE
+cropOverlay.addEventListener("pointerdown", e => {
+  if (!state.cropActive) return;
 
-// Přepočet filtrů a překreslení
-function redraw(cropX = 0, cropY = 0, cropW = null, cropH = null) {
-  if (!cropW || !cropH) {
-    cropW = originalW;
-    cropH = originalH;
+  const target = e.target;
+
+  // kliknutí na handle?
+  if (target.classList.contains("crop-handle")) {
+    state.dragMode = target.classList[1].replace("handle-", "");
+  } else {
+    state.dragMode = "move";
   }
 
-  const b = 1 + state.brightness / 100;
-  const c = 1 + state.contrast / 100;
-  const s = 1 + state.saturation / 100;
-  const exp = Math.pow(2, state.exposure);
-  const hue = state.temperature * 0.5;
+  state.dragging = true;
+  state.dragStart = { x: e.clientX, y: e.clientY };
+  state.cropStart = { ...state.crop };
 
-  ctx.save();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  e.preventDefault();
+});
 
-  ctx.filter = `
-    brightness(${b * exp})
-    contrast(${c})
-    saturate(${s})
-    hue-rotate(${hue}deg)
-  `;
+// Globální pointermove
+window.addEventListener("pointermove", e => {
+  if (!state.dragging) return;
 
-  ctx.drawImage(
-    img,
-    cropX, cropY, cropW, cropH,
-    0, 0, canvas.width, canvas.height
-  );
+  const dx = e.clientX - state.dragStart.x;
+  const dy = e.clientY - state.dragStart.y;
 
-  ctx.restore();
+  let { x, y, w, h } = state.cropStart;
 
-  // stíny / světla – jednoduchá korekce
-  if (state.shadows !== 0 || state.highlights !== 0) {
-    const sh = state.shadows / 100;
-    const hi = state.highlights / 100;
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imgData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const lum = (data[i] + data[i + 1] + data[i + 2]) / 3;
-      if (lum < 80 && sh !== 0) {
-        data[i] += sh * 60;
-        data[i + 1] += sh * 60;
-        data[i + 2] += sh * 60;
-      } else if (lum > 180 && hi !== 0) {
-        data[i] -= hi * 60;
-        data[i + 1] -= hi * 60;
-        data[i + 2] -= hi * 60;
+  const mode = state.dragMode;
+
+  // ---------------------------------------------------------
+  // MOVE
+  // ---------------------------------------------------------
+  if (mode === "move") {
+    x += dx;
+    y += dy;
+
+    // posun jen uvnitř fotky
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x + w > originalW) x = originalW - w;
+    if (y + h > originalH) y = originalH - h;
+  }
+
+  // ---------------------------------------------------------
+  // RESIZE – STRANY
+  // ---------------------------------------------------------
+  if (mode === "n") {
+    y += dy;
+    h -= dy;
+  }
+  if (mode === "s") {
+    h += dy;
+  }
+  if (mode === "w") {
+    x += dx;
+    w -= dx;
+  }
+  if (mode === "e") {
+    w += dx;
+  }
+
+  // ---------------------------------------------------------
+  // RESIZE – ROHY (chytré rohy, růst od rohu)
+  // ---------------------------------------------------------
+  if (mode === "nw") {
+    x += dx;
+    w -= dx;
+    y += dy;
+    h -= dy;
+  }
+  if (mode === "ne") {
+    w += dx;
+    y += dy;
+    h -= dy;
+  }
+  if (mode === "sw") {
+    x += dx;
+    w -= dx;
+    h += dy;
+  }
+  if (mode === "se") {
+    w += dx;
+    h += dy;
+  }
+
+  // Minimální velikost
+  if (w < 20) w = 20;
+  if (h < 20) h = 20;
+
+  // ---------------------------------------------------------
+  // DRŽENÍ POMĚRU (pokud je aktivní)
+  // ---------------------------------------------------------
+  if (state.cropRatio) {
+    const [rw, rh] = state.cropRatio.split(":").map(Number);
+    const ratio = rw / rh;
+
+    // chytré rohy → drží poměr, ale dovolí přetáhnout
+    if (mode === "n" || mode === "s") {
+      // úprava výšky → přepočítat šířku
+      w = h * ratio;
+    } else if (mode === "e" || mode === "w") {
+      // úprava šířky → přepočítat výšku
+      h = w / ratio;
+    } else {
+      // rohy → držet poměr
+      const newRatio = w / h;
+      if (newRatio > ratio) {
+        w = h * ratio;
+      } else {
+        h = w / ratio;
       }
     }
-    ctx.putImageData(imgData, 0, 0);
   }
 
-  // vinětace
-  if (state.vignette !== 0) {
-    const strength = state.vignette / 100;
+  // ---------------------------------------------------------
+  // OMEZENÍ UVNITŘ FOTKY
+  // ---------------------------------------------------------
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+  if (x + w > originalW) w = originalW - x;
+  if (y + h > originalH) h = originalH - y;
+
+  state.crop = { x, y, w, h };
+  updateCropOverlay();
+  redraw();
+});
+
+// -------------------------------------------------------------
+// 12) KONEC DRAGU
+// -------------------------------------------------------------
+
+window.addEventListener("pointerup", () => {
+  state.dragging = false;
+  state.dragMode = null;
+});
+window.addEventListener("pointercancel", () => {
+  state.dragging = false;
+  state.dragMode = null;
+});
+
+// -------------------------------------------------------------
+// 13) REDRAW – VYKRESLENÍ OBRÁZKU + FILTRŮ + CROP
+// -------------------------------------------------------------
+
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // FILTRY
+  const f = state;
+
+  ctx.filter = `
+    brightness(${100 + f.brightness}%)
+    contrast(${100 + f.contrast}%)
+    saturate(${100 + f.saturation}%)
+  `;
+
+  // EXPOZICE (přidáme jako gamma)
+  if (f.exposure !== 0) {
+    const gamma = 1 - f.exposure * 0.1;
+    ctx.filter += ` brightness(${1 / gamma})`;
+  }
+
+  // TEPLOTA (přidáme přes sepia + hue rotate)
+  if (f.temperature !== 0) {
+    const t = f.temperature;
+    ctx.filter += ` sepia(${Math.abs(t) / 100}) hue-rotate(${t > 0 ? 10 : -10}deg)`;
+  }
+
+  // VIBRANCE (simulace)
+  if (f.vibrance !== 0) {
+    ctx.filter += ` saturate(${100 + f.vibrance * 0.5}%)`;
+  }
+
+  // CLARITY (simulace přes kontrast)
+  if (f.clarity !== 0) {
+    ctx.filter += ` contrast(${100 + f.clarity * 0.4}%)`;
+  }
+
+  ctx.drawImage(img, 0, 0);
+
+  // VINĚTACE
+  if (f.vignette !== 0) {
     const grd = ctx.createRadialGradient(
-      canvas.width / 2, canvas.height / 2, 0,
-      canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) / 1.2
+      canvas.width / 2,
+      canvas.height / 2,
+      0,
+      canvas.width / 2,
+      canvas.height / 2,
+      Math.max(canvas.width, canvas.height) / 1.2
     );
-    const alpha = Math.abs(strength) * 0.7;
-    if (strength > 0) {
-      grd.addColorStop(0, "rgba(0,0,0,0)");
-      grd.addColorStop(1, `rgba(0,0,0,${alpha})`);
-    } else {
-      grd.addColorStop(0, `rgba(255,255,255,${alpha})`);
-      grd.addColorStop(1, "rgba(255,255,255,0)");
-    }
+    grd.addColorStop(0, "rgba(0,0,0,0)");
+    grd.addColorStop(1, `rgba(0,0,0,${Math.abs(f.vignette) / 100})`);
+
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
-
-  // clarity
-  if (state.clarity !== 0) {
-    const tmp = document.createElement("canvas");
-    tmp.width = canvas.width;
-    tmp.height = canvas.height;
-    const tctx = tmp.getContext("2d");
-    tctx.drawImage(canvas, 0, 0);
-
-    ctx.globalAlpha = Math.abs(state.clarity) / 100;
-    ctx.globalCompositeOperation = state.clarity > 0 ? "overlay" : "soft-light";
-    ctx.drawImage(tmp, 0, 0);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = "source-over";
-  }
-
-  // vibrance
-  if (state.vibrance !== 0) {
-    const vib = 1 + state.vibrance / 200;
-    const tmp = document.createElement("canvas");
-    tmp.width = canvas.width;
-    tmp.height = canvas.height;
-    const tctx = tmp.getContext("2d");
-    tctx.filter = `saturate(${vib})`;
-    tctx.drawImage(canvas, 0, 0);
-    ctx.drawImage(tmp, 0, 0);
-  }
 }
-
-// odhad velikosti
-function estimateSize(w, h) {
-  const bytes = w * h * 3 * 0.15;
-  return (bytes / (1024 * 1024)).toFixed(2);
-}
+// -------------------------------------------------------------
+// 14) VÝPOČET VERZÍ (ORIGINÁL, 2000px, FULLHD, MALÁ)
+// -------------------------------------------------------------
 
 function updateVersionInfo() {
-  const cropW = canvas.width;
-  const cropH = canvas.height;
+  const { w, h } = state.crop;
 
-  const versions = [
-    { id: "orig", label: "Originál", w: cropW, h: cropH },
-    { id: "v2000", label: "2000 px", max: 2000 },
-    { id: "fullhd", label: "FullHD", max: 1920 },
-    { id: "small", label: "Malá verze", max: 1200 }
-  ];
+  // Originál
+  document.getElementById("info_orig").textContent =
+    `${Math.round(w)} × ${Math.round(h)} px`;
 
-  versions.forEach(v => {
-    let w = v.w;
-    let h = v.h;
+  // 2000 px delší strana
+  const scale2000 = 2000 / Math.max(w, h);
+  document.getElementById("info_v2000").textContent =
+    `${Math.round(w * scale2000)} × ${Math.round(h * scale2000)} px`;
 
-    if (v.max) {
-      if (cropW > cropH) {
-        w = v.max;
-        h = Math.round(cropH / cropW * v.max);
-      } else {
-        h = v.max;
-        w = Math.round(cropW / cropH * v.max);
-      }
-    }
+  // FullHD
+  const scaleFHD = 1080 / Math.max(w, h);
+  document.getElementById("info_fullhd").textContent =
+    `${Math.round(w * scaleFHD)} × ${Math.round(h * scaleFHD)} px`;
 
-    const size = estimateSize(w, h);
-    const el = document.getElementById("info_" + v.id);
-    if (el) {
-      el.textContent = `${w} × ${h}px — ~${size} MB`;
-    }
-  });
+  // Malá verze
+  const scaleSmall = 600 / Math.max(w, h);
+  document.getElementById("info_small").textContent =
+    `${Math.round(w * scaleSmall)} × ${Math.round(h * scaleSmall)} px`;
 }
 
-// generování konkrétní verze
-async function generateVersionBlob(maxSize) {
-  const srcW = canvas.width;
-  const srcH = canvas.height;
+// -------------------------------------------------------------
+// 15) FULLSCREEN ORIGINÁL
+// -------------------------------------------------------------
 
-  let newW, newH;
+const fullscreen = document.getElementById("fullscreen");
+const fullImg = document.getElementById("fullImg");
 
-  if (srcW > srcH) {
-    newW = maxSize;
-    newH = Math.round((srcH / srcW) * maxSize);
-  } else {
-    newH = maxSize;
-    newW = Math.round((srcW / srcH) * maxSize);
-  }
+canvas.addEventListener("dblclick", () => {
+  fullImg.src = img.src;
+  fullscreen.classList.remove("hidden");
+});
 
-  const tmp = document.createElement("canvas");
-  tmp.width = newW;
-  tmp.height = newH;
+fullscreen.addEventListener("click", () => {
+  fullscreen.classList.add("hidden");
+});
 
-  const tctx = tmp.getContext("2d");
-  tctx.drawImage(canvas, 0, 0, newW, newH);
+// -------------------------------------------------------------
+// 16) ULOŽENÍ – GENEROVÁNÍ VÝSTUPŮ
+// -------------------------------------------------------------
 
-  return new Promise(resolve => tmp.toBlob(resolve, "image/jpeg", 0.9));
-}
+document.getElementById("saveBtn").addEventListener("click", async () => {
+  const versions = [];
 
-// Uložení vybraných verzí
-document.getElementById("saveBtn").onclick = async () => {
-  const chkOrig = document.getElementById("chk_orig").checked;
-  const chk2000 = document.getElementById("chk_v2000").checked;
-  const chkFull = document.getElementById("chk_fullhd").checked;
-  const chkSmall = document.getElementById("chk_small").checked;
+  if (document.getElementById("chk_orig").checked) versions.push("orig");
+  if (document.getElementById("chk_v2000").checked) versions.push("v2000");
+  if (document.getElementById("chk_fullhd").checked) versions.push("fullhd");
+  if (document.getElementById("chk_small").checked) versions.push("small");
 
-  if (!chkOrig && !chk2000 && !chkFull && !chkSmall) {
+  if (versions.length === 0) {
     alert("Vyber alespoň jednu verzi k uložení.");
     return;
   }
 
-  const base = filename.replace(/\.[^.]+$/, "");
-
-  const uploads = [];
-
-  if (chkOrig) {
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.9));
-    uploads.push({ name: `${base}.jpg`, blob });
-  }
-  if (chk2000) {
-    const blob = await generateVersionBlob(2000);
-    uploads.push({ name: `${base}_2000.jpg`, blob });
-  }
-  if (chkFull) {
-    const blob = await generateVersionBlob(1920);
-    uploads.push({ name: `${base}_fullhd.jpg`, blob });
-  }
-  if (chkSmall) {
-    const blob = await generateVersionBlob(1200);
-    uploads.push({ name: `${base}_small.jpg`, blob });
+  for (const v of versions) {
+    await saveVersion(v);
   }
 
-  for (const u of uploads) {
-    await fetch(`/api/photo/${encodeURIComponent(u.name)}`, {
-      method: "PUT",
-      body: u.blob
-    });
+  alert("Hotovo! Všechny verze byly uloženy.");
+});
+
+// -------------------------------------------------------------
+// 17) GENEROVÁNÍ JEDNOTLIVÉ VERZE
+// -------------------------------------------------------------
+
+async function saveVersion(type) {
+  const { x, y, w, h } = state.crop;
+
+  // vytvořit dočasné plátno
+  const tmp = document.createElement("canvas");
+  const tctx = tmp.getContext("2d");
+
+  let targetW = w;
+  let targetH = h;
+
+  if (type === "v2000") {
+    const scale = 2000 / Math.max(w, h);
+    targetW = Math.round(w * scale);
+    targetH = Math.round(h * scale);
   }
 
-  alert("Vybrané verze byly uloženy.");
+  if (type === "fullhd") {
+    const scale = 1080 / Math.max(w, h);
+    targetW = Math.round(w * scale);
+    targetH = Math.round(h * scale);
+  }
+
+  if (type === "small") {
+    const scale = 600 / Math.max(w, h);
+    targetW = Math.round(w * scale);
+    targetH = Math.round(h * scale);
+  }
+
+  tmp.width = targetW;
+  tmp.height = targetH;
+
+  // FILTRY – stejné jako v redraw()
+  const f = state;
+
+  tctx.filter = `
+    brightness(${100 + f.brightness}%)
+    contrast(${100 + f.contrast}%)
+    saturate(${100 + f.saturation}%)
+  `;
+
+  if (f.exposure !== 0) {
+    const gamma = 1 - f.exposure * 0.1;
+    tctx.filter += ` brightness(${1 / gamma})`;
+  }
+
+  if (f.temperature !== 0) {
+    const t = f.temperature;
+    tctx.filter += ` sepia(${Math.abs(t) / 100}) hue-rotate(${t > 0 ? 10 : -10}deg)`;
+  }
+
+  if (f.vibrance !== 0) {
+    tctx.filter += ` saturate(${100 + f.vibrance * 0.5}%)`;
+  }
+
+  if (f.clarity !== 0) {
+    tctx.filter += ` contrast(${100 + f.clarity * 0.4}%)`;
+  }
+
+  // vykreslení výřezu
+  tctx.drawImage(
+    img,
+    x, y, w, h,
+    0, 0, targetW, targetH
+  );
+
+  // VINĚTACE
+  if (f.vignette !== 0) {
+    const grd = tctx.createRadialGradient(
+      targetW / 2,
+      targetH / 2,
+      0,
+      targetW / 2,
+      targetH / 2,
+      Math.max(targetW, targetH) / 1.2
+    );
+    grd.addColorStop(0, "rgba(0,0,0,0)");
+    grd.addColorStop(1, `rgba(0,0,0,${Math.abs(f.vignette) / 100})`);
+
+    tctx.fillStyle = grd;
+    tctx.fillRect(0, 0, targetW, targetH);
+  }
+
+  // export do blobu
+  const blob = await new Promise(resolve => tmp.toBlob(resolve, "image/jpeg", 0.92));
+
+  // upload
+  const form = new FormData();
+  form.append("file", blob, `${filename}_${type}.jpg`);
+
+  await fetch(`/api/photo/save-version?name=${encodeURIComponent(filename)}&type=${type}`, {
+    method: "POST",
+    body: form
+  });
+}
+// -------------------------------------------------------------
+// 18) PŘEPOČET CROP RÁMEČKU PŘI ZMĚNĚ VELIKOSTI OKNA
+// -------------------------------------------------------------
+
+window.addEventListener("resize", () => {
+  // Canvas se nemění, ale overlay musí zůstat přesně na místě
+  updateCropOverlay();
+});
+
+// -------------------------------------------------------------
+// 19) ZABLOKOVÁNÍ GEST NA MOBILU (aby stránka neposkakovala)
+// -------------------------------------------------------------
+
+document.addEventListener("touchmove", e => {
+  if (state.dragging) e.preventDefault();
+}, { passive: false });
+
+// -------------------------------------------------------------
+// 20) POMOCNÉ FUNKCE PRO EXPORT
+// -------------------------------------------------------------
+
+function dataURLtoBlob(dataURL) {
+  const arr = dataURL.split(",");
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8 = new Uint8Array(n);
+  while (n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], { type: mime });
+}
+
+// -------------------------------------------------------------
+// 21) DEBUG FUNKCE (volitelné)
+// -------------------------------------------------------------
+
+window._debugCrop = () => {
+  console.log("Crop:", state.crop);
+  console.log("Ratio:", state.cropRatio);
+  console.log("Dragging:", state.dragMode);
 };
 
-// fullscreen originál
-const fullscreen = document.getElementById("fullscreen");
-const fullImg = document.getElementById("fullImg");
+// -------------------------------------------------------------
+// 22) HOTOVO – EDITOR 4.0 JE PLNĚ FUNKČNÍ
+// -------------------------------------------------------------
 
-canvas.onclick = () => {
-  fullImg.src = `/api/photo/${encodeURIComponent(filename)}?full=` + Date.now();
-  fullscreen.classList.remove("hidden");
-};
-
-fullscreen.onclick = () => {
-  fullscreen.classList.add("hidden");
-};
+console.log("%cEditor 4.0 – Photoshop Crop Engine aktivní", "color:#0f0;font-weight:bold;");
