@@ -17,7 +17,7 @@ let selected = new Set();
 async function loadGallery() {
   gallery.innerHTML = "<p style='padding:20px;'>Načítám...</p>";
 
-  const res = await fetch("/api/photo");
+  const res = await fetch("/api/photo?" + Date.now()); // obejde cache
   photos = await res.json();
 
   updateStats();
@@ -63,7 +63,8 @@ function renderGallery() {
     const edit = document.createElement("button");
     edit.textContent = "Upravit";
     edit.onclick = () => {
-      window.location.href = `/admin/editor/?file=${encodeURIComponent(p.filename)}`;
+      const safeFile = encodeURIComponent(p.filename.trim());
+      window.location.href = `/admin/editor/?file=${safeFile}`;
     };
 
     const del = document.createElement("button");
@@ -97,7 +98,8 @@ editSelectedBtn.onclick = () => {
   if (selected.size === 0) return alert("Nic není vybráno");
 
   const arr = [...selected];
-  window.location.href = `/admin/editor/?file=${encodeURIComponent(arr[0])}`;
+  const safeFile = encodeURIComponent(arr[0].trim());
+  window.location.href = `/admin/editor/?file=${safeFile}`;
 };
 
 // Režimy zobrazení
@@ -132,9 +134,17 @@ async function uploadFiles(files) {
       method: "PUT",
       body: file
     });
+
+    // okamžité přidání do galerie
+    photos.push({
+      filename: safeName,
+      size: file.size,
+      url: `https://pub-9ba0c4a1d5fc4ddabafac51f4f45d139.r2.dev/${encodeURIComponent(safeName)}`
+    });
   }
 
-  loadGallery();
+  updateStats();
+  renderGallery();
 }
 
 function normalizeFilename(name) {
@@ -142,7 +152,8 @@ function normalizeFilename(name) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9._-]/g, "");
+    .replace(/[^a-zA-Z0-9._-]/g, "")
+    .toLowerCase(); // sjednocení
 }
 
 loadGallery();
