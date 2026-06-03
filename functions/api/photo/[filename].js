@@ -38,3 +38,4 @@ export async function onRequestDelete(context) {
   await bucket.delete(decoded);
   return new Response("OK");
 }
+
