@@ -38,7 +38,6 @@ let effects = {
     filter: "none"
 };
 
-// crop
 let cropMode = false;
 let cropStart = null;
 let cropEnd = null;
@@ -112,7 +111,6 @@ function drawImage() {
     }
 }
 
-// jednoduchý sharpen kernel
 function applySharpness() {
     const w = canvas.width;
     const h = canvas.height;
