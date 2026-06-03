@@ -6,8 +6,35 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Galerie fotek</h1>
-  <div id="gallery"></div>
+
+  <header id="topbar">
+    <div id="leftInfo">
+      <h1>Galerie fotek</h1>
+      <div id="stats">
+        <span id="photoCount">0 fotek</span> • 
+        <span id="totalSize">0 MB</span>
+      </div>
+    </div>
+
+    <div id="actions">
+      <button id="uploadBtn">📤 Nahrát fotky</button>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+
+      <button id="deleteSelected">🗑️ Smazat vybrané</button>
+      <button id="editSelected">✏️ Upravit vybrané</button>
+
+      <select id="viewMode">
+        <option value="grid">Mřížka</option>
+        <option value="list">Seznam</option>
+        <option value="large">Velké náhledy</option>
+      </select>
+    </div>
+  </header>
+
+  <div id="dropzone">Přetáhni sem fotky…</div>
+
+  <div id="gallery" class="grid"></div>
+
   <script src="app.js"></script>
 </body>
 </html>
