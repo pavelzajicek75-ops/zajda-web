@@ -17,7 +17,7 @@ let selected = new Set();
 async function loadGallery() {
   gallery.innerHTML = "<p style='padding:20px;'>Načítám...</p>";
 
-  const res = await fetch("/api/photo?" + Date.now()); // obejde cache
+  const res = await fetch("/api/photo?" + Date.now());
   photos = await res.json();
 
   updateStats();
@@ -50,7 +50,7 @@ function renderGallery() {
     };
 
     const img = document.createElement("img");
-    img.src = p.url + "?t=" + Date.now();
+    img.src = `/api/photo/${encodeURIComponent(p.filename)}?t=` + Date.now();
     img.className = "thumb";
 
     const name = document.createElement("div");
@@ -77,7 +77,6 @@ function renderGallery() {
   });
 }
 
-// Hromadné mazání
 deleteSelectedBtn.onclick = async () => {
   if (selected.size === 0) return alert("Nic není vybráno");
 
@@ -93,7 +92,6 @@ deleteSelectedBtn.onclick = async () => {
   renderGallery();
 };
 
-// Hromadná editace
 editSelectedBtn.onclick = () => {
   if (selected.size === 0) return alert("Nic není vybráno");
 
@@ -102,19 +100,16 @@ editSelectedBtn.onclick = () => {
   window.location.href = `/admin/editor/?file=${safeFile}`;
 };
 
-// Režimy zobrazení
 viewModeSelect.onchange = () => {
   gallery.className = viewModeSelect.value;
 };
 
-// Upload – tlačítko
 uploadBtn.onclick = () => fileInput.click();
 
 fileInput.onchange = async () => {
   await uploadFiles(fileInput.files);
 };
 
-// Upload – drag & drop
 document.body.ondragover = e => {
   e.preventDefault();
   dropzone.style.display = "block";
@@ -135,11 +130,10 @@ async function uploadFiles(files) {
       body: file
     });
 
-    // okamžité přidání do galerie
     photos.push({
       filename: safeName,
       size: file.size,
-      url: `/api/photo/${encodeURIComponent(obj.key)}`
+      url: `/api/photo/${encodeURIComponent(safeName)}`
     });
   }
 
@@ -153,7 +147,7 @@ function normalizeFilename(name) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, "_")
     .replace(/[^a-zA-Z0-9._-]/g, "")
-    .toLowerCase(); // sjednocení
+    .trim();
 }
 
 loadGallery();
