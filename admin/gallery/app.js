@@ -33,24 +33,6 @@ function updateStats() {
   totalSizeEl.textContent = `${mb} MB`;
 }
 
-async function loadExif(filename, container) {
-  const res = await fetch(`/api/exif/${encodeURIComponent(filename)}`);
-  if (!res.ok) return;
-
-  const exif = await res.json();
-
-  container.innerHTML = `
-    <div class="exif">
-      ${exif.date ? `<div>📅 ${exif.date}</div>` : ""}
-      ${exif.model ? `<div>📷 ${exif.model}</div>` : ""}
-      ${exif.focal ? `<div>🔭 ${exif.focal}</div>` : ""}
-      ${exif.aperture ? `<div>🔘 f/${exif.aperture}</div>` : ""}
-      ${exif.shutter ? `<div>⏱ ${exif.shutter}s</div>` : ""}
-      ${exif.iso ? `<div>🎚 ISO ${exif.iso}</div>` : ""}
-    </div>
-  `;
-}
-
 function renderGallery() {
   gallery.innerHTML = "";
 
@@ -75,10 +57,6 @@ function renderGallery() {
     name.className = "name";
     name.textContent = p.filename;
 
-    const exifBox = document.createElement("div");
-    exifBox.className = "exifBox";
-    loadExif(p.filename, exifBox);
-
     const controls = document.createElement("div");
     controls.className = "controls";
 
@@ -93,7 +71,7 @@ function renderGallery() {
     del.onclick = () => deletePhoto(p.filename);
 
     controls.append(edit, del);
-    item.append(checkbox, img, name, exifBox, controls);
+    item.append(checkbox, img, name, controls);
     gallery.appendChild(item);
   });
 }
