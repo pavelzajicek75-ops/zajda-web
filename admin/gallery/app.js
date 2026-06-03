@@ -139,7 +139,7 @@ async function uploadFiles(files) {
     photos.push({
       filename: safeName,
       size: file.size,
-      url: `https://pub-9ba0c4a1d5fc4ddabafac51f4f45d139.r2.dev/${encodeURIComponent(safeName)}`
+      url: `/api/photo/${encodeURIComponent(obj.key)}`
     });
   }
 
