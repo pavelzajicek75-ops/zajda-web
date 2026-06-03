@@ -1,3 +1,5 @@
+// /functions/api/photo/index.js
+
 export async function onRequest(context) {
     const bucket = context.env.zajda_photos;
 
