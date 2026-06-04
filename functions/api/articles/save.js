@@ -1,35 +1,52 @@
+// /functions/api/article/save.js
 export async function onRequestPost(context) {
-  const { request, env } = context
-  const data = await request.json()
+  const { request, env } = context;
+  const bucket = env.zajda_articles;
 
-  if (!data.title || !data.section || !data.subsection || !data.content) {
-    return new Response(JSON.stringify({ error: "Missing required fields" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" }
-    })
+  const body = await request.json();
+
+  let id = body.id;
+  if (!id) {
+    id = crypto.randomUUID();
   }
 
-  const bucket = env.zajda_articles
-  const object = await bucket.get("articles.json")
-  let articles = object ? JSON.parse(await object.text()) : []
+  const article = {
+    id,
+    title: body.title,
+    section: body.section,
+    subsection: body.subsection,
+    place: body.place,
+    date: body.date,
+    content: body.content,
+    created: body.created || new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
 
-  const newArticle = {
-    id: crypto.randomUUID(),
-    title: data.title,
-    section: data.section,
-    subsection: data.subsection,
-    place: data.place,
-    content: data.content,
-    created: data.created || new Date().toISOString()
-  }
-
-  articles.push(newArticle)
-  await bucket.put("articles.json", JSON.stringify(articles, null, 2), {
+  // uložit článek jako samostatný soubor
+  await bucket.put(`articles/${id}.json`, JSON.stringify(article, null, 2), {
     httpMetadata: { contentType: "application/json" }
-  })
+  });
 
-  return new Response(JSON.stringify({ success: true }), {
-    status: 200,
+  // aktualizovat seznam článků
+  const listFile = await bucket.get("articles.json");
+  let list = [];
+
+  if (listFile) {
+    list = JSON.parse(await listFile.text());
+  }
+
+  const index = list.findIndex(a => a.id === id);
+  if (index >= 0) {
+    list[index] = article;
+  } else {
+    list.push(article);
+  }
+
+  await bucket.put("articles.json", JSON.stringify(list, null, 2), {
+    httpMetadata: { contentType: "application/json" }
+  });
+
+  return new Response(JSON.stringify({ success: true, id }), {
     headers: { "Content-Type": "application/json" }
-  })
+  });
 }
