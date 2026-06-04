@@ -3,30 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor článků</title>
-  <link rel="stylesheet" href="/admin/clanky/editor.css">
+  <link rel="stylesheet" href="/admin/clanky/style.css">
 </head>
 <body>
 
 <div class="editor-container">
-
   <div class="editor-left">
     <h2>Editor článku</h2>
 
-    <label for="title"><strong>Název článku</strong></label>
+    <label><strong>Název článku</strong></label>
     <input id="title" type="text" class="input">
 
-    <label for="category"><strong>Kategorie</strong></label>
+    <label><strong>Kategorie</strong></label>
     <select id="category" class="input"></select>
 
-    <label for="perex"><strong>Perex</strong></label>
+    <label><strong>Perex</strong></label>
     <textarea id="perex" class="input"></textarea>
 
-    <label for="editor"><strong>Obsah článku</strong></label>
+    <label><strong>Obsah článku</strong></label>
     <div id="editor" class="editor-area" contenteditable="true"></div>
 
     <div class="toolbar">
-      <button type="button" onclick="openPhotoModal()">📸 Vložit fotku</button>
-      <button type="button" onclick="saveArticle()">💾 Uložit článek</button>
+      <button onclick="openPhotoModal()">📸 Vložit fotku</button>
+      <button onclick="saveArticle()">💾 Uložit článek</button>
     </div>
   </div>
 
@@ -34,10 +33,9 @@
     <h3>Náhled článku</h3>
     <div id="preview"></div>
   </div>
-
 </div>
 
-<!-- MODAL S GALERIÍ -->
+<!-- MODAL -->
 <div id="photoModal" class="modal hidden">
   <div class="modal-content">
     <span class="close" onclick="closePhotoModal()">&times;</span>
@@ -45,6 +43,6 @@
   </div>
 </div>
 
-<script src="/admin/clanky/editor.js"></script>
+<script src="/admin/clanky/app.js"></script>
 </body>
 </html>
