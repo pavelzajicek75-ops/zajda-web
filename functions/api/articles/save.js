@@ -1,14 +1,51 @@
 export async function onRequestPost(context) {
-  const form = await context.request.formData();
-  const data = JSON.parse(form.get("data"));
-  const slug = form.get("slug");
-  const editKey = form.get("editKey");
+  try {
+    const { request, env } = context
+    const data = await request.json()
 
-  const key = editKey || `articles/${data.section}/${data.subsection}/${slug}.json`;
+    // Ověření povinných polí
+    if (!data.title || !data.category || !data.perex || !data.content) {
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      })
+    }
 
-  await context.env.ARTICLES_BUCKET.put(key, JSON.stringify(data), {
-    httpMetadata: { contentType: "application/json" }
-  });
+    // Načtení existujícího JSON souboru z R2
+    const bucket = env.zajda_articles
+    const object = await bucket.get("articles.json")
+    let articles = []
 
-  return new Response("OK");
+    if (object) {
+      const text = await object.text()
+      articles = JSON.parse(text)
+    }
+
+    // Přidání nového článku
+    const newArticle = {
+      id: crypto.randomUUID(),
+      title: data.title,
+      category: data.category,
+      perex: data.perex,
+      content: data.content,
+      created: data.created || Date.now()
+    }
+
+    articles.push(newArticle)
+
+    // Uložení zpět do R2
+    await bucket.put("articles.json", JSON.stringify(articles, null, 2), {
+      httpMetadata: { contentType: "application/json" }
+    })
+
+    return new Response(JSON.stringify({ success: true, id: newArticle.id }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    })
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    })
+  }
 }
