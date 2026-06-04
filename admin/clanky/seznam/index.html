@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Seznam článků</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 20px; }
+    .row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 1fr auto auto;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #ddd;
+      align-items: center;
+    }
+    button { padding: 6px 10px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<h1>Seznam článků</h1>
+<div id="list">Načítám...</div>
+
+<script src="./list.js"></script>
+</body>
+</html>
