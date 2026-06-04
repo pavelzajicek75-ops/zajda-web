@@ -11,8 +11,15 @@ function closeGallery() {
 /* === VLOŽENÍ FOTKY === */
 function insertPhoto(url) {
   const editor = document.getElementById("editor");
-  editor.innerHTML += `<img src="${url}" class="article-photo">`;
+  const img = document.createElement("img");
+  img.src = url;
+  img.className = "article-photo";
+  img.style.width = "70%";
+  img.setAttribute("draggable", "true");
+
+  editor.appendChild(img);
   closeGallery();
+
   attachImageTools();
 }
 
@@ -43,21 +50,37 @@ function attachImageTools() {
 
     img.draggable = true;
     img.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("text/html", img.outerHTML);
-      img.remove();
+      e.dataTransfer.setData("text/plain", img.src);
+      img.classList.add("dragging");
+    });
+
+    img.addEventListener("dragend", () => {
+      img.classList.remove("dragging");
     });
   });
 
   const editor = document.getElementById("editor");
+
   editor.addEventListener("dragover", e => e.preventDefault());
+
   editor.addEventListener("drop", e => {
     e.preventDefault();
-    const html = e.dataTransfer.getData("text/html");
-    if (html) {
-      const range = document.caretRangeFromPoint(e.clientX, e.clientY);
-      range.insertNode(document.createRange().createContextualFragment(html));
-      attachImageTools();
-    }
+    const dragging = document.querySelector(".dragging");
+    if (!dragging) return;
+
+    const range = document.caretPositionFromPoint(e.clientX, e.clientY);
+    const node = range.offsetNode;
+    const offset = range.offset;
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+
+    const newRange = document.createRange();
+    newRange.setStart(node, offset);
+    newRange.collapse(true);
+    selection.addRange(newRange);
+
+    selection.getRangeAt(0).insertNode(dragging);
   });
 }
 
