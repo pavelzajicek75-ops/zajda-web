@@ -1,28 +1,28 @@
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
   background: #111;
   color: #eee;
+  font-family: Arial, sans-serif;
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
   background: #222;
   padding: 10px;
   border-bottom: 2px solid #ff6600;
+  display: flex;
+  gap: 10px;
 }
 
 .topbar button {
   background: #333;
   border: 1px solid #444;
   color: #ff6600;
-  padding: 8px 12px;
+  padding: 10px 15px;
   cursor: pointer;
   border-radius: 4px;
 }
 
-.editor-container {
+.editor-form {
   padding: 20px;
 }
 
@@ -42,7 +42,6 @@ body {
   border: 1px solid #444;
   padding: 15px;
   overflow-y: auto;
-  color: #fff;
 }
 
 /* MODAL */
