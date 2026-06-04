@@ -1,22 +1,33 @@
-// /functions/api/sections/list.js
+// /functions/api/articles/list.js
 export async function onRequestGet(context) {
   const { env } = context;
   const bucket = env.zajda_articles;
 
-  const obj = await bucket.get("sections.json");
-  let sections = [];
+  try {
+    // Načtení souboru articles.json z R2
+    const object = await bucket.get("articles.json");
+    if (!object) {
+      return new Response(JSON.stringify({ articles: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
 
-  if (obj) {
-    sections = JSON.parse(await obj.text());
-  } else {
-    sections = [
-      { name: "Aktuality", subsections: ["Obecné", "Důležité"] },
-      { name: "Reportáže", subsections: ["Sport", "Kultura"] }
-    ];
+    const text = await object.text();
+    const articles = JSON.parse(text);
+
+    // Seřazení článků podle data (nejnovější nahoře)
+    articles.sort((a, b) => new Date(b.created) - new Date(a.created));
+
+    // Vrácení seznamu článků
+    return new Response(JSON.stringify({ articles }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
-
-  return new Response(JSON.stringify({ sections }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" }
-  });
 }
