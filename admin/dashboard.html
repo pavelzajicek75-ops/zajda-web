@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body onload="checkLogin(); loadStats(); loadArticles();">
+
+<div class="sidebar">
+  <h2>Admin</h2>
+  <ul>
+    <li><a href="/admin/dashboard.html" class="active">Dashboard</a></li>
+    <li><a href="/admin/clanky/index.html">Články</a></li>
+    <li><a href="/admin/fotky/index.html">Fotky</a></li>
+    <li><a href="/admin/citaty/index.html">Citáty</a></li>
+    <li><a href="/admin/nastaveni.html">Nastavení</a></li>
+    <li><a href="#" onclick="logout()">Odhlásit se</a></li>
+  </ul>
+</div>
+
+<div class="main">
+  <h1>Admin – Moje diagnóza, můj vesmír</h1>
+
+  <div class="stats">
+    <div class="stat-box">
+      <h3>Celkem článků</h3>
+      <div id="articlesCount">–</div>
+    </div>
+    <div class="stat-box">
+      <h3>Počet fotek</h3>
+      <div id="photosCount">–</div>
+    </div>
+    <div class="stat-box">
+      <h3>Aktivní citáty</h3>
+      <div id="quotesCount">–</div>
+    </div>
+    <div class="stat-box">
+      <h3>Uživatelé online</h3>
+      <div id="usersCount">–</div>
+    </div>
+  </div>
+
+  <h2>Poslední články</h2>
+  <table class="articles-table">
+    <thead>
+      <tr>
+        <th>Název</th>
+        <th>Kategorie</th>
+        <th>Jazyk</th>
+        <th>Datum</th>
+        <th>Akce</th>
+      </tr>
+    </thead>
+    <tbody id="articlesList"></tbody>
+  </table>
+</div>
+
+<script src="/admin/dashboard.js"></script>
+</body>
+</html>
