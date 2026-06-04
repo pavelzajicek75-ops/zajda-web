@@ -33,6 +33,15 @@ function updateStats() {
   totalSizeEl.textContent = `${mb} MB`;
 }
 
+// 🔥 DOPLNĚNO — vložení fotky do editoru článků
+function selectPhoto(url) {
+  if (window.parent && typeof window.parent.insertPhoto === "function") {
+    window.parent.insertPhoto(url);
+  } else {
+    alert("Editor článků není dostupný.");
+  }
+}
+
 function renderGallery() {
   gallery.innerHTML = "";
 
@@ -52,6 +61,12 @@ function renderGallery() {
     const img = document.createElement("img");
     img.src = `/api/photo/${encodeURIComponent(p.filename)}?t=` + Date.now();
     img.className = "thumb";
+
+    // 🔥 DOPLNĚNO — kliknutí vloží fotku do článku
+    img.onclick = () => {
+      const url = `/api/photo/${encodeURIComponent(p.filename)}`;
+      selectPhoto(url);
+    };
 
     const name = document.createElement("div");
     name.className = "name";
