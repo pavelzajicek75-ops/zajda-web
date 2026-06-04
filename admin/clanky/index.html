@@ -14,17 +14,20 @@
     <label><strong>Název článku</strong></label>
     <input id="title" type="text" class="input">
 
-    <label><strong>Kategorie</strong></label>
-    <select id="category" class="input"></select>
+    <label><strong>Sekce</strong></label>
+    <select id="section" class="input"></select>
 
-    <label><strong>Perex</strong></label>
-    <textarea id="perex" class="input"></textarea>
+    <label><strong>Podsekce</strong></label>
+    <select id="subsection" class="input"></select>
+
+    <label><strong>Úvod</strong></label>
+    <textarea id="intro" class="input"></textarea>
 
     <label><strong>Obsah článku</strong></label>
     <div id="editor" class="editor-area" contenteditable="true"></div>
 
     <div class="toolbar">
-      <button onclick="openPhotoModal()">📸 Vložit fotku</button>
+      <button onclick="openGallery()">📸 Vložit fotku</button>
       <button onclick="saveArticle()">💾 Uložit článek</button>
     </div>
   </div>
@@ -36,9 +39,9 @@
 </div>
 
 <!-- MODAL -->
-<div id="photoModal" class="modal hidden">
+<div id="galleryModal" class="modal hidden">
   <div class="modal-content">
-    <span class="close" onclick="closePhotoModal()">&times;</span>
+    <span class="close" onclick="closeGallery()">&times;</span>
     <iframe src="/admin/galerie" class="photo-frame"></iframe>
   </div>
 </div>
