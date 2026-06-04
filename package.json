@@ -1,0 +1,10 @@
+{
+  "name": "zajda-web",
+  "version": "1.0.0",
+  "description": "Static site for zajda-web",
+  "scripts": {
+    "build": "echo 'Static site build complete'"
+  },
+  "author": "Pavel Zajíček",
+  "license": "MIT"
+}
