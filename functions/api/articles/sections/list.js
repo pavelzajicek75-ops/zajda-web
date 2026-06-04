@@ -1,27 +1,27 @@
 // /functions/api/articles/sections/list.js
-export async function onRequestGet() {
 
+export async function onRequestGet(context) {
+  // ZATÍM statické sekce – můžeš později uložit do R2
   const sections = [
     {
-      name: "Fotografování",
-      subsections: ["Portréty", "Krajiny", "Zvířata", "Reportáž"]
+      name: "Cestování",
+      subsections: ["Evropa", "Asie", "Afrika", "Amerika"]
     },
     {
-      name: "Cestování",
-      subsections: ["Evropa", "Svět", "Tipy na cesty"]
+      name: "Fotografie",
+      subsections: ["Portréty", "Příroda", "Města", "Zvířata"]
+    },
+    {
+      name: "Osobní",
+      subsections: ["Myšlenky", "Zážitky", "Denník"]
     },
     {
       name: "Projekty",
-      subsections: ["Osobní projekty", "Dlouhodobé projekty"]
-    },
-    {
-      name: "Zajda / About",
-      subsections: ["O mně", "Můj příběh"]
+      subsections: ["Web", "Design", "Technologie"]
     }
   ];
 
   return new Response(JSON.stringify({ sections }), {
-    status: 200,
     headers: { "Content-Type": "application/json" }
   });
 }
