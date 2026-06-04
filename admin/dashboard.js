@@ -1,5 +1,3 @@
-// /admin/dashboard.js
-
 function checkLogin() {
   if (!sessionStorage.getItem("adminToken")) {
     window.location.href = "/admin/login.html";
