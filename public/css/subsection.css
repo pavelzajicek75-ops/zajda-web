@@ -1,0 +1,8 @@
+@import url("/css/section.css");
+
+.subsection-title {
+  font-size: 32px;
+  margin: 40px auto 20px;
+  max-width: 900px;
+  font-family: system-ui, sans-serif;
+}
