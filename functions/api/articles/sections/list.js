@@ -1,19 +1,24 @@
 // /functions/api/articles/sections/list.js
-export async function onRequestGet(context) {
-  const { env } = context;
-  const bucket = env.zajda_articles;
+export async function onRequestGet() {
 
-  const obj = await bucket.get("sections.json");
-  let sections = [];
-
-  if (obj) {
-    sections = JSON.parse(await obj.text());
-  } else {
-    sections = [
-      { name: "Aktuality", subsections: ["Obecné"] },
-      { name: "Reportáže", subsections: ["Sport", "Kultura"] }
-    ];
-  }
+  const sections = [
+    {
+      name: "Fotografování",
+      subsections: ["Portréty", "Krajiny", "Zvířata", "Reportáž"]
+    },
+    {
+      name: "Cestování",
+      subsections: ["Evropa", "Svět", "Tipy na cesty"]
+    },
+    {
+      name: "Projekty",
+      subsections: ["Osobní projekty", "Dlouhodobé projekty"]
+    },
+    {
+      name: "Zajda / About",
+      subsections: ["O mně", "Můj příběh"]
+    }
+  ];
 
   return new Response(JSON.stringify({ sections }), {
     status: 200,
