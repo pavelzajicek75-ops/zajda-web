@@ -1,0 +1,44 @@
+.section-title {
+  font-size: 32px;
+  margin: 40px auto 20px;
+  max-width: 900px;
+  font-family: system-ui, sans-serif;
+}
+
+.articles {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.article-card {
+  display: flex;
+  gap: 20px;
+  text-decoration: none;
+  color: black;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 20px;
+}
+
+.article-card img.thumb {
+  width: 180px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.article-card .info h2 {
+  margin: 0 0 10px 0;
+  font-size: 22px;
+}
+
+.article-card .meta {
+  font-size: 14px;
+  color: #777;
+}
+
+.article-card .meta span + span::before {
+  content: " • ";
+}
