@@ -115,12 +115,11 @@ async function loadArticle() {
   await loadSections(a.section, a.subsection);
 }
 
-// --- Otevření galerie ---
+// --- Galerie ---
 function openGallery() {
   document.getElementById("galleryModal").classList.remove("hidden");
 }
 
-// --- Zavření galerie ---
 function closeGallery() {
   document.getElementById("galleryModal").classList.add("hidden");
 }
