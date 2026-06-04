@@ -1,0 +1,44 @@
+body {
+  font-family: system-ui, sans-serif;
+  padding: 20px;
+}
+
+#title, #section, #subsection, #date, #place, #leadImage, #leadCaption {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+#editor {
+  height: 400px;
+  background: white;
+  margin-bottom: 20px;
+}
+
+button {
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+#gallery-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#gallery-popup.hidden {
+  display: none;
+}
+
+#gallery img {
+  width: 150px;
+  margin: 10px;
+  cursor: pointer;
+  border: 2px solid white;
+}
