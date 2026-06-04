@@ -3,40 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor článků</title>
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/admin/clanky/editor.css">
 </head>
 <body>
 
-  <h1>Editor článků</h1>
+<div class="editor-container">
 
-  <input id="title" type="text" placeholder="Název článku">
+  <div class="editor-left">
+    <h2>Editor článku</h2>
 
-  <select id="section">
-    <option value="cestovani">Cestování</option>
-    <option value="fotografie">Fotografie</option>
-    <option value="projekty">Projekty</option>
-    <option value="zajda">Zajda</option>
-  </select>
+    <label for="title"><strong>Název článku</strong></label>
+    <input id="title" type="text" class="input">
 
-  <input id="subsection" type="text" placeholder="Podsekce (např. usa2026)">
-  <input id="date" type="date">
-  <input id="place" type="text" placeholder="Místo">
+    <label for="category"><strong>Kategorie</strong></label>
+    <select id="category" class="input"></select>
 
-  <input id="leadImage" type="text" placeholder="Úvodní fotka (název z galerie)">
-  <input id="leadCaption" type="text" placeholder="Popisek úvodní fotky">
+    <label for="perex"><strong>Perex</strong></label>
+    <textarea id="perex" class="input"></textarea>
 
-  <div id="editor"></div>
+    <label for="editor"><strong>Obsah článku</strong></label>
+    <div id="editor" class="editor-area" contenteditable="true"></div>
 
-  <button id="insert-photo">Vložit fotku z galerie</button>
-  <button id="save">Uložit článek</button>
-
-  <div id="gallery-popup" class="hidden">
-    <div id="gallery"></div>
+    <div class="toolbar">
+      <button type="button" onclick="openPhotoModal()">📸 Vložit fotku</button>
+      <button type="button" onclick="saveArticle()">💾 Uložit článek</button>
+    </div>
   </div>
 
-  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-  <script src="./app.js"></script>
+  <div class="editor-right">
+    <h3>Náhled článku</h3>
+    <div id="preview"></div>
+  </div>
 
+</div>
+
+<!-- MODAL S GALERIÍ -->
+<div id="photoModal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close" onclick="closePhotoModal()">&times;</span>
+    <iframe src="/admin/galerie" class="photo-frame"></iframe>
+  </div>
+</div>
+
+<script src="/admin/clanky/editor.js"></script>
 </body>
 </html>
