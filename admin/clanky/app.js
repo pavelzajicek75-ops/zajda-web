@@ -1,62 +1,46 @@
-// Otevření galerie
+// /admin/clanky/app.js
+
+// === OTEVŘENÍ A ZAVŘENÍ GALERIE ===
 function openGallery() {
-  document.getElementById("galleryModal").classList.remove("hidden")
+  document.getElementById("galleryModal").classList.remove("hidden");
 }
 
-// Zavření galerie
 function closeGallery() {
-  document.getElementById("galleryModal").classList.add("hidden")
+  document.getElementById("galleryModal").classList.add("hidden");
 }
 
-// Voláno z galerie: window.parent.insertPhoto(url)
+// === FUNKCE, KTEROU VOLÁ GALERIE ===
 function insertPhoto(url) {
-  const editor = document.getElementById("editor")
-  editor.innerHTML += `<img src="${url}" class="article-photo">`
-  updatePreview()
-  closeGallery()
+  const editor = document.getElementById("editor");
+  editor.innerHTML += `<img src="${url}" class="article-photo">`;
+  updatePreview();
+  closeGallery();
 }
 
-// Načtení sekcí a podsekcí
-async function loadSections() {
-  const res = await fetch("/functions/api/sections/list")
-  if (!res.ok) return
-  const data = await res.json()
-  const sectionSelect = document.getElementById("section")
-  const subsectionSelect = document.getElementById("subsection")
+// === DRAG & DROP PODPORA ===
+const editor = document.getElementById("editor");
 
-  sectionSelect.innerHTML = ""
-  data.sections.forEach(sec => {
-    const opt = document.createElement("option")
-    opt.value = sec.name
-    opt.textContent = sec.name
-    sectionSelect.appendChild(opt)
-  })
+editor.addEventListener("dragover", e => e.preventDefault());
+editor.addEventListener("drop", e => {
+  e.preventDefault();
+  const url = e.dataTransfer.getData("text/plain");
+  if (url) insertPhoto(url);
+});
 
-  sectionSelect.addEventListener("change", () => {
-    const selected = data.sections.find(s => s.name === sectionSelect.value)
-    subsectionSelect.innerHTML = ""
-    selected.subsections.forEach(sub => {
-      const opt = document.createElement("option")
-      opt.value = sub
-      opt.textContent = sub
-      subsectionSelect.appendChild(opt)
-    })
-  })
-}
-
-// Náhled článku
+// === NÁHLED ČLÁNKU ===
 function updatePreview() {
-  const title = document.getElementById("title").value
-  const place = document.getElementById("place").value
-  const content = document.getElementById("editor").innerHTML
+  const title = document.getElementById("title").value;
+  const place = document.getElementById("place").value;
+  const content = document.getElementById("editor").innerHTML;
+
   document.getElementById("preview").innerHTML = `
     <h1>${title}</h1>
     <p><em>${place}</em></p>
     ${content}
-  `
+  `;
 }
 
-// Uložení článku
+// === ULOŽENÍ ČLÁNKU ===
 async function saveArticle() {
   const data = {
     title: document.getElementById("title").value,
@@ -65,20 +49,18 @@ async function saveArticle() {
     place: document.getElementById("place").value,
     content: document.getElementById("editor").innerHTML,
     created: new Date().toISOString()
-  }
+  };
 
   const res = await fetch("/functions/api/article/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
-  })
+  });
 
   if (!res.ok) {
-    alert("❌ Chyba při ukládání článku!")
-    return
+    alert("❌ Chyba při ukládání článku!");
+    return;
   }
 
-  alert("✅ Článek uložen!")
+  alert("✅ Článek uložen!");
 }
-
-document.addEventListener("DOMContentLoaded", loadSections)
