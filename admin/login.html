@@ -6,12 +6,24 @@
   <link rel="stylesheet" href="/admin/style.css">
 </head>
 <body class="login-body">
-  <div class="login-box">
-    <h1>Admin – Moje diagnóza, můj vesmír</h1>
-    <input id="username" type="text" placeholder="Uživatel">
+
+<div class="login-box">
+  <h1>Admin přihlášení</h1>
+
+  <input id="username" type="text" placeholder="Uživatel">
+
+  <div class="password-row">
     <input id="password" type="password" placeholder="Heslo">
-    <button onclick="login()">Přihlásit se</button>
+    <button class="show-btn" onclick="togglePassword()">👁️</button>
   </div>
-  <script src="/admin/login.js"></script>
+
+  <button class="login-btn" onclick="login()">Přihlásit se</button>
+
+  <div class="change-pass">
+    <a href="/admin/password.html">Změnit heslo</a>
+  </div>
+</div>
+
+<script src="/admin/login.js"></script>
 </body>
 </html>
