@@ -1,23 +1,22 @@
+// /functions/api/sections/list.js
 export async function onRequestGet(context) {
-  const list = [];
-  const objects = await context.env.ARTICLES_BUCKET.list({
-    prefix: "articles/"
-  });
+  const { env } = context;
+  const bucket = env.zajda_articles;
 
-  for (const obj of objects.objects) {
-    const file = await context.env.ARTICLES_BUCKET.get(obj.key);
-    const json = await file.json();
+  const obj = await bucket.get("sections.json");
+  let sections = [];
 
-    list.push({
-      key: obj.key,
-      title: json.title,
-      section: json.section,
-      subsection: json.subsection,
-      date: json.date
-    });
+  if (obj) {
+    sections = JSON.parse(await obj.text());
+  } else {
+    sections = [
+      { name: "Aktuality", subsections: ["Obecné", "Důležité"] },
+      { name: "Reportáže", subsections: ["Sport", "Kultura"] }
+    ];
   }
 
-  list.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  return Response.json(list);
+  return new Response(JSON.stringify({ sections }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" }
+  });
 }
