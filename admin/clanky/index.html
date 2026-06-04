@@ -3,58 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor článků</title>
-  <link rel="stylesheet" href="/admin/clanky/style.css?v=3">
+  <link rel="stylesheet" href="/admin/clanky/style.css?v=4">
 </head>
 <body>
 
 <div class="topbar">
-  <div class="toolbar-left">
-    <button onclick="openGallery()" title="Vložit fotku">📸</button>
-    <button onclick="saveArticle()" title="Uložit článek">💾</button>
-    <button onclick="previewArticle()" title="Náhled článku">👁️</button>
-    <button onclick="goBack()" title="Zpět">↩️</button>
-  </div>
-
-  <div class="toolbar-center">
-    <button onclick="format('bold')"><b>B</b></button>
-    <button onclick="format('italic')"><i>I</i></button>
-    <button onclick="format('underline')"><u>U</u></button>
-    <button onclick="format('insertUnorderedList')">•</button>
-    <button onclick="format('insertOrderedList')">1.</button>
-    <button onclick="format('justifyLeft')">⬅️</button>
-    <button onclick="format('justifyCenter')">↔️</button>
-    <button onclick="format('justifyRight')">➡️</button>
-    <button onclick="insertLink()">🔗</button>
-    <button onclick="insertQuote()">❝</button>
-    <button onclick="insertHR()">─</button>
-  </div>
+  <button onclick="openGallery()">📸 Fotky</button>
+  <button onclick="saveArticle()">💾 Uložit</button>
+  <button onclick="previewArticle()">👁️ Náhled</button>
+  <button onclick="goBack()">↩️ Zpět</button>
 </div>
 
-<div class="editor-container">
-  <div class="editor-form">
+<div class="editor-form">
 
-    <label><strong>Název článku</strong></label>
-    <input id="title" type="text" class="input">
+  <label>Název článku</label>
+  <input id="title" type="text" class="input">
 
-    <label><strong>Sekce</strong></label>
-    <select id="section" class="input"></select>
+  <label>Sekce</label>
+  <select id="section" class="input"></select>
 
-    <label><strong>Podsekce</strong></label>
-    <div class="row">
-      <select id="subsection" class="input"></select>
-      <button type="button" class="mini-btn" onclick="addSubsection()">+ podsekce</button>
-    </div>
-
-    <label><strong>Místo</strong></label>
-    <input id="place" type="text" class="input">
-
-    <label><strong>Datum</strong></label>
-    <input id="date" type="date" class="input">
-
-    <label><strong>Obsah článku</strong></label>
-    <div id="editor" class="editor-area" contenteditable="true"></div>
-
+  <label>Podsekce</label>
+  <div class="row">
+    <select id="subsection" class="input"></select>
+    <button onclick="addSubsection()" class="mini-btn">+ podsekce</button>
   </div>
+
+  <label>Místo</label>
+  <input id="place" type="text" class="input">
+
+  <label>Datum</label>
+  <input id="date" type="date" class="input">
+
+  <label>Obsah článku</label>
+  <div id="editor" class="editor-area" contenteditable="true"></div>
+
 </div>
 
 <!-- MODAL GALERIE -->
@@ -65,6 +47,6 @@
   </div>
 </div>
 
-<script src="/admin/clanky/app.js?v=3"></script>
+<script src="/admin/clanky/app.js?v=4"></script>
 </body>
 </html>
