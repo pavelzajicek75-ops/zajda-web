@@ -10,7 +10,7 @@ export async function onRequestGet(context) {
     if (obj) {
       sections = JSON.parse(await obj.text());
     } else {
-      // Fallback – výchozí sekce
+      // Výchozí fallback, pokud soubor neexistuje
       sections = [
         { name: "Aktuality", subsections: ["Obecné"] },
         { name: "Reportáže", subsections: ["Sport", "Kultura"] },
