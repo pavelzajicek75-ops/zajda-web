@@ -7,25 +7,22 @@
 </head>
 <body>
 
-<!-- 🔥 MODERNÍ TOPBAR -->
 <div class="topbar">
   <div class="toolbar-left">
-    <button onclick="openGallery()">📸</button>
-    <button onclick="saveArticle()">💾</button>
+    <button onclick="openGallery()" title="Vložit fotku">📸</button>
+    <button onclick="saveArticle()" title="Uložit článek">💾</button>
+    <button onclick="previewArticle()" title="Náhled článku">👁️</button>
+    <button onclick="goBack()" title="Zpět">↩️</button>
   </div>
-
   <div class="toolbar-center">
     <button onclick="format('bold')"><b>B</b></button>
     <button onclick="format('italic')"><i>I</i></button>
     <button onclick="format('underline')"><u>U</u></button>
-
     <button onclick="format('insertUnorderedList')">•</button>
     <button onclick="format('insertOrderedList')">1.</button>
-
     <button onclick="format('justifyLeft')">⬅️</button>
     <button onclick="format('justifyCenter')">↔️</button>
     <button onclick="format('justifyRight')">➡️</button>
-
     <button onclick="insertLink()">🔗</button>
     <button onclick="insertQuote()">❝</button>
     <button onclick="insertHR()">─</button>
@@ -34,7 +31,6 @@
 
 <div class="editor-container">
   <div class="editor-form">
-
     <label><strong>Název článku</strong></label>
     <input id="title" type="text" class="input">
 
@@ -49,11 +45,9 @@
 
     <label><strong>Obsah článku</strong></label>
     <div id="editor" class="editor-area" contenteditable="true"></div>
-
   </div>
 </div>
 
-<!-- MODAL S GALERIÍ -->
 <div id="galleryModal" class="modal hidden">
   <div class="modal-content">
     <span class="close" onclick="closeGallery()">&times;</span>
