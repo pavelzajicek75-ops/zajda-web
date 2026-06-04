@@ -1,10 +1,23 @@
+// /functions/api/article/get.js
 export async function onRequestGet(context) {
-  const url = new URL(context.request.url);
-  const key = url.searchParams.get("key");
+  const { request, env } = context;
+  const bucket = env.zajda_articles;
 
-  const file = await context.env.ARTICLES_BUCKET.get(key);
-  if (!file) return new Response("Not found", { status: 404 });
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id");
 
-  const json = await file.json();
-  return Response.json(json);
+  if (!id) {
+    return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
+  }
+
+  const file = await bucket.get(`articles/${id}.json`);
+  if (!file) {
+    return new Response(JSON.stringify({ error: "Not found" }), { status: 404 });
+  }
+
+  const article = JSON.parse(await file.text());
+
+  return new Response(JSON.stringify(article), {
+    headers: { "Content-Type": "application/json" }
+  });
 }
