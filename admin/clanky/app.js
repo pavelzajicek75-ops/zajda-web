@@ -1,6 +1,6 @@
 // /admin/clanky/app.js
 
-/* === GALERIE === */
+// --- GALERIE ---
 function openGallery() {
   document.getElementById("galleryModal").classList.remove("hidden");
 }
@@ -8,47 +8,54 @@ function closeGallery() {
   document.getElementById("galleryModal").classList.add("hidden");
 }
 
-/* === VLOŽENÍ FOTKY === */
+// volá galerie: window.parent.insertPhoto(url)
 function insertPhoto(url) {
   const editor = document.getElementById("editor");
   const img = document.createElement("img");
   img.src = url;
   img.className = "article-photo";
   img.style.width = "70%";
-  img.setAttribute("draggable", "true");
-
+  img.draggable = true;
   editor.appendChild(img);
   closeGallery();
-
   attachImageTools();
 }
 
-/* === TEXTOVÝ TOOLBAR === */
+// --- TEXTOVÝ TOOLBAR ---
 function format(cmd) {
+  const editor = document.getElementById("editor");
+  editor.focus();
   document.execCommand(cmd, false, null);
 }
 
 function insertLink() {
   const url = prompt("Zadej URL:");
-  if (url) document.execCommand("createLink", false, url);
+  if (!url) return;
+  const editor = document.getElementById("editor");
+  editor.focus();
+  document.execCommand("createLink", false, url);
 }
 
 function insertQuote() {
+  const editor = document.getElementById("editor");
+  editor.focus();
   document.execCommand("formatBlock", false, "blockquote");
 }
 
 function insertHR() {
+  const editor = document.getElementById("editor");
+  editor.focus();
   document.execCommand("insertHorizontalRule");
 }
 
-/* === OBRÁZKY: MAZÁNÍ, ZMĚNA VELIKOSTI, PŘESUN === */
+// --- OBRÁZKY: MAZÁNÍ, ZMĚNA VELIKOSTI, PŘESUN ---
 function attachImageTools() {
-  const imgs = document.querySelectorAll("#editor img.article-photo");
+  const editor = document.getElementById("editor");
+  const imgs = editor.querySelectorAll("img.article-photo");
 
   imgs.forEach(img => {
     img.onclick = e => showImageTools(img, e);
 
-    img.draggable = true;
     img.addEventListener("dragstart", e => {
       e.dataTransfer.setData("text/plain", img.src);
       img.classList.add("dragging");
@@ -59,28 +66,28 @@ function attachImageTools() {
     });
   });
 
-  const editor = document.getElementById("editor");
-
   editor.addEventListener("dragover", e => e.preventDefault());
 
   editor.addEventListener("drop", e => {
     e.preventDefault();
-    const dragging = document.querySelector(".dragging");
+    const dragging = editor.querySelector("img.dragging");
     if (!dragging) return;
 
-    const range = document.caretPositionFromPoint(e.clientX, e.clientY);
-    const node = range.offsetNode;
-    const offset = range.offset;
+    const range = document.caretPositionFromPoint
+      ? document.caretPositionFromPoint(e.clientX, e.clientY)
+      : document.caretRangeFromPoint(e.clientX, e.clientY);
 
-    const selection = window.getSelection();
-    selection.removeAllRanges();
+    if (!range) return;
 
-    const newRange = document.createRange();
-    newRange.setStart(node, offset);
-    newRange.collapse(true);
-    selection.addRange(newRange);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
 
-    selection.getRangeAt(0).insertNode(dragging);
+    const r = document.createRange();
+    r.setStart(range.offsetNode || range.startContainer, range.offset || range.startOffset);
+    r.collapse(true);
+    sel.addRange(r);
+
+    sel.getRangeAt(0).insertNode(dragging);
   });
 }
 
@@ -91,11 +98,13 @@ function showImageTools(img, e) {
   const box = document.createElement("div");
   box.className = "img-tools";
   box.style.left = e.pageX + "px";
-  box.style.top = e.pageY - 60 + "px";
+  box.style.top = (e.pageY - 70) + "px";
+
+  const current = parseInt(img.style.width) || 70;
 
   box.innerHTML = `
-    <label>Velikost: <span id="sizeVal">${parseInt(img.style.width) || 70}%</span></label>
-    <input id="sizeRange" type="range" min="30" max="100" value="${parseInt(img.style.width) || 70}">
+    <div>Velikost: <span id="sizeVal">${current}%</span></div>
+    <input id="sizeRange" type="range" min="30" max="100" value="${current}">
     <button id="delImg">🗑️ Smazat</button>
   `;
 
@@ -116,24 +125,101 @@ function showImageTools(img, e) {
   };
 }
 
-/* === ULOŽENÍ ČLÁNKU === */
+// --- SEKCE / PODSEKCE ---
+async function loadSections() {
+  try {
+    const res = await fetch("/functions/api/sections/list");
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const sectionSelect = document.getElementById("section");
+    const subsectionSelect = document.getElementById("subsection");
+
+    sectionSelect.innerHTML = "";
+    subsectionSelect.innerHTML = "";
+
+    data.sections.forEach(sec => {
+      const opt = document.createElement("option");
+      opt.value = sec.name;
+      opt.textContent = sec.name;
+      sectionSelect.appendChild(opt);
+    });
+
+    sectionSelect.onchange = () => {
+      const selected = data.sections.find(s => s.name === sectionSelect.value);
+      subsectionSelect.innerHTML = "";
+      if (!selected) return;
+      selected.subsections.forEach(sub => {
+        const opt = document.createElement("option");
+        opt.value = sub;
+        opt.textContent = sub;
+        subsectionSelect.appendChild(opt);
+      });
+    };
+
+    sectionSelect.dispatchEvent(new Event("change"));
+  } catch (e) {
+    console.error("Sections load error", e);
+  }
+}
+
+// --- ULOŽENÍ ČLÁNKU ---
 async function saveArticle() {
-  const data = {
-    title: document.getElementById("title").value,
+  const payload = {
+    title: document.getElementById("title").value.trim(),
     section: document.getElementById("section").value,
     subsection: document.getElementById("subsection").value,
-    place: document.getElementById("place").value,
+    place: document.getElementById("place").value.trim(),
     content: document.getElementById("editor").innerHTML,
     created: new Date().toISOString()
   };
 
+  if (!payload.title || !payload.section || !payload.subsection || !payload.content) {
+    alert("Vyplň název, sekci, podsekci a obsah.");
+    return;
+  }
+
   const res = await fetch("/functions/api/article/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
   });
 
-  if (!res.ok) return alert("❌ Chyba při ukládání článku!");
+  if (!res.ok) {
+    const t = await res.text();
+    console.error(t);
+    alert("❌ Chyba při ukládání článku.");
+    return;
+  }
 
-  alert("✅ Článek uložen!");
+  alert("✅ Článek uložen.");
 }
+
+// --- NÁHLED ČLÁNKU (rychlý) ---
+function previewArticle() {
+  const title = document.getElementById("title").value;
+  const place = document.getElementById("place").value;
+  const content = document.getElementById("editor").innerHTML;
+
+  const w = window.open("", "_blank");
+  w.document.write(`
+    <html><head><meta charset="utf-8"><title>${title}</title></head>
+    <body style="font-family:Segoe UI,Arial,sans-serif;max-width:900px;margin:40px auto;line-height:1.7;">
+      <h1>${title}</h1>
+      <p><em>${place}</em></p>
+      ${content}
+    </body></html>
+  `);
+  w.document.close();
+}
+
+// --- ZPĚT ---
+function goBack() {
+  history.back();
+}
+
+// --- INIT ---
+document.addEventListener("DOMContentLoaded", () => {
+  loadSections();
+  attachImageTools();
+});
