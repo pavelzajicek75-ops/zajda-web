@@ -1,0 +1,39 @@
+---
+const { section, subsection, slug } = Astro.params;
+const key = `articles/${section}/${subsection}/${slug}.json`;
+
+const res = await fetch(`/api/articles/get?key=${encodeURIComponent(key)}`);
+if (!res.ok) throw new Error("Článek nenalezen");
+const article = await res.json();
+---
+
+<html lang="cs">
+  <head>
+    <link rel="stylesheet" href="/css/article.css">
+  </head>
+  <body>
+    <article class="article">
+      <header>
+        <h1>{article.title}</h1>
+        <div class="meta">
+          <span>{article.date}</span>
+          <span>{article.place}</span>
+          <span>{article.section} / {article.subsection}</span>
+        </div>
+
+        {article.leadImage && (
+          <figure class="lead">
+            <img src={`/photos/${article.leadImage}`} alt={article.title} />
+            {article.leadCaption && (
+              <figcaption>{article.leadCaption}</figcaption>
+            )}
+          </figure>
+        )}
+      </header>
+
+      <div class="content" set:html={article.content}></div>
+    </article>
+
+    <script src="/js/lightbox.js"></script>
+  </body>
+</html>
