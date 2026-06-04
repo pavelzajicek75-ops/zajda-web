@@ -1,26 +1,27 @@
-function openPhotoModal() {
-  document.getElementById("photoModal").classList.remove("hidden")
+function openGallery() {
+  document.getElementById("galleryModal").classList.remove("hidden")
 }
 
-function closePhotoModal() {
-  document.getElementById("photoModal").classList.add("hidden")
+function closeGallery() {
+  document.getElementById("galleryModal").classList.add("hidden")
 }
 
+// Voláno z galerie: window.parent.insertPhoto(url)
 function insertPhoto(url) {
   const editor = document.getElementById("editor")
   editor.innerHTML += `<img src="${url}" class="article-photo">`
   updatePreview()
-  closePhotoModal()
+  closeGallery()
 }
 
 function updatePreview() {
   const title = document.getElementById("title").value
-  const perex = document.getElementById("perex").value
+  const intro = document.getElementById("intro").value
   const content = document.getElementById("editor").innerHTML
 
   document.getElementById("preview").innerHTML = `
     <h1>${title}</h1>
-    <p><em>${perex}</em></p>
+    <p>${intro}</p>
     ${content}
   `
 }
@@ -28,13 +29,14 @@ function updatePreview() {
 async function saveArticle() {
   const data = {
     title: document.getElementById("title").value,
-    category: document.getElementById("category").value,
-    perex: document.getElementById("perex").value,
+    section: document.getElementById("section").value,
+    subsection: document.getElementById("subsection").value,
+    intro: document.getElementById("intro").value,
     content: document.getElementById("editor").innerHTML,
     created: Date.now()
   }
 
-  const res = await fetch("/functions/api/articles/save", {
+  const res = await fetch("/functions/api/article/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data)
@@ -47,7 +49,3 @@ async function saveArticle() {
 
   alert("✅ Článek uložen!")
 }
-
-document.addEventListener("input", (e) => {
-  if (["title", "perex", "editor"].includes(e.target.id)) updatePreview()
-})
