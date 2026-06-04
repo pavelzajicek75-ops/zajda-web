@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor článků</title>
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <h1>Editor článků</h1>
+
+  <input id="title" type="text" placeholder="Název článku">
+
+  <select id="section">
+    <option value="cestovani">Cestování</option>
+    <option value="fotografie">Fotografie</option>
+    <option value="projekty">Projekty</option>
+    <option value="zajda">Zajda</option>
+  </select>
+
+  <input id="subsection" type="text" placeholder="Podsekce (např. usa2026)">
+  <input id="date" type="date">
+  <input id="place" type="text" placeholder="Místo">
+
+  <input id="leadImage" type="text" placeholder="Úvodní fotka (název z galerie)">
+  <input id="leadCaption" type="text" placeholder="Popisek úvodní fotky">
+
+  <div id="editor"></div>
+
+  <button id="insert-photo">Vložit fotku z galerie</button>
+  <button id="save">Uložit článek</button>
+
+  <div id="gallery-popup" class="hidden">
+    <div id="gallery"></div>
+  </div>
+
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script src="./app.js"></script>
+
+</body>
+</html>
