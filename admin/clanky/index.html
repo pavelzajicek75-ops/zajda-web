@@ -7,91 +7,44 @@
 </head>
 <body>
 
-<div class="editor-container">
+<div class="editor-wrapper">
 
-  <div class="editor-left">
+  <div class="topbar">
     <h2>Editor článku</h2>
-
-    <label><strong>Název článku</strong></label>
-    <input id="title" type="text" class="input">
-
-    <label><strong>Sekce</strong></label>
-    <select id="section" class="input"></select>
-
-    <label><strong>Podsekce</strong></label>
-    <select id="subsection" class="input"></select>
-
-    <label><strong>Místo</strong></label>
-    <input id="place" type="text" class="input">
-
-    <label><strong>Obsah článku</strong></label>
-    <div id="editor" class="editor-area" contenteditable="true"></div>
-
-    <div class="toolbar">
-      <button onclick="openGallery()">📸 Vložit fotku</button>
-      <button onclick="saveArticle()">💾 Uložit článek</button>
+    <div class="zoom-control">
+      <label>Zoom:</label>
+      <input id="zoomRange" type="range" min="80" max="140" value="100">
+      <span id="zoomVal">100%</span>
     </div>
   </div>
 
-  <div class="editor-right">
-    <h3>Náhled článku</h3>
-    <div id="preview"></div>
+  <div class="editor-main">
+    <div class="editor-form">
+      <label><strong>Název článku</strong></label>
+      <input id="title" type="text" class="input">
+
+      <label><strong>Sekce</strong></label>
+      <select id="section" class="input"></select>
+
+      <label><strong>Podsekce</strong></label>
+      <select id="subsection" class="input"></select>
+
+      <label><strong>Místo</strong></label>
+      <input id="place" type="text" class="input">
+
+      <label><strong>Obsah článku</strong></label>
+      <div id="editor" class="editor-area" contenteditable="true"></div>
+
+      <div class="toolbar">
+        <button onclick="openGallery()">📸 Vložit fotku</button>
+        <button onclick="saveArticle()">💾 Uložit článek</button>
+      </div>
+    </div>
   </div>
 
 </div>
 
 <!-- MODAL S GALERIÍ -->
-<div id="galleryModal" class="modal hidden">
-  <div class="modal-content">
-    <span class="close" onclick="closeGallery()">&times;</span>
-    <iframe src="/admin/gallery" class="photo-frame"></iframe>
-  </div>
-</div>
-
-<script src="/admin/clanky/app.js"></script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-  <meta charset="UTF-8">
-  <title>Editor článků</title>
-  <link rel="stylesheet" href="/admin/clanky/style.css">
-</head>
-<body>
-
-<div class="editor-container">
-  <div class="editor-left">
-    <h2>Editor článku</h2>
-
-    <label><strong>Název článku</strong></label>
-    <input id="title" type="text" class="input">
-
-    <label><strong>Sekce</strong></label>
-    <select id="section" class="input"></select>
-
-    <label><strong>Podsekce</strong></label>
-    <select id="subsection" class="input"></select>
-
-    <label><strong>Místo</strong></label>
-    <input id="place" type="text" class="input">
-
-    <label><strong>Obsah článku</strong></label>
-    <div id="editor" class="editor-area" contenteditable="true"></div>
-
-    <div class="toolbar">
-      <button onclick="openGallery()">📸 Vložit fotku</button>
-      <button onclick="saveArticle()">💾 Uložit článek</button>
-    </div>
-  </div>
-
-  <div class="editor-right">
-    <h3>Náhled článku</h3>
-    <div id="preview"></div>
-  </div>
-</div>
-
-<!-- MODAL -->
 <div id="galleryModal" class="modal hidden">
   <div class="modal-content">
     <span class="close" onclick="closeGallery()">&times;</span>
