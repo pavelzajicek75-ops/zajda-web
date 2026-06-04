@@ -1,32 +1,99 @@
 // /admin/clanky/app.js
 
+/* === GALERIE === */
 function openGallery() {
   document.getElementById("galleryModal").classList.remove("hidden");
 }
-
 function closeGallery() {
   document.getElementById("galleryModal").classList.add("hidden");
 }
 
-// === FUNKCE, KTEROU VOLÁ GALERIE ===
+/* === VLOŽENÍ FOTKY === */
 function insertPhoto(url) {
   const editor = document.getElementById("editor");
   editor.innerHTML += `<img src="${url}" class="article-photo">`;
   closeGallery();
+  attachImageTools();
 }
 
-// === ZOOM OVLÁDÁNÍ ===
-const zoomRange = document.getElementById("zoomRange");
-const zoomVal = document.getElementById("zoomVal");
-const editorArea = document.getElementById("editor");
+/* === TEXTOVÝ TOOLBAR === */
+function format(cmd) {
+  document.execCommand(cmd, false, null);
+}
 
-zoomRange.oninput = () => {
-  const zoom = zoomRange.value;
-  zoomVal.textContent = zoom + "%";
-  editorArea.style.zoom = zoom / 100;
-};
+function insertLink() {
+  const url = prompt("Zadej URL:");
+  if (url) document.execCommand("createLink", false, url);
+}
 
-// === ULOŽENÍ ČLÁNKU ===
+function insertQuote() {
+  document.execCommand("formatBlock", false, "blockquote");
+}
+
+function insertHR() {
+  document.execCommand("insertHorizontalRule");
+}
+
+/* === OBRÁZKY: MAZÁNÍ, ZMĚNA VELIKOSTI, PŘESUN === */
+function attachImageTools() {
+  const imgs = document.querySelectorAll("#editor img.article-photo");
+
+  imgs.forEach(img => {
+    img.onclick = e => showImageTools(img, e);
+
+    img.draggable = true;
+    img.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("text/html", img.outerHTML);
+      img.remove();
+    });
+  });
+
+  const editor = document.getElementById("editor");
+  editor.addEventListener("dragover", e => e.preventDefault());
+  editor.addEventListener("drop", e => {
+    e.preventDefault();
+    const html = e.dataTransfer.getData("text/html");
+    if (html) {
+      const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+      range.insertNode(document.createRange().createContextualFragment(html));
+      attachImageTools();
+    }
+  });
+}
+
+function showImageTools(img, e) {
+  const old = document.querySelector(".img-tools");
+  if (old) old.remove();
+
+  const box = document.createElement("div");
+  box.className = "img-tools";
+  box.style.left = e.pageX + "px";
+  box.style.top = e.pageY - 60 + "px";
+
+  box.innerHTML = `
+    <label>Velikost: <span id="sizeVal">${parseInt(img.style.width) || 70}%</span></label>
+    <input id="sizeRange" type="range" min="30" max="100" value="${parseInt(img.style.width) || 70}">
+    <button id="delImg">🗑️ Smazat</button>
+  `;
+
+  document.body.appendChild(box);
+
+  const slider = document.getElementById("sizeRange");
+  const val = document.getElementById("sizeVal");
+  const del = document.getElementById("delImg");
+
+  slider.oninput = () => {
+    img.style.width = slider.value + "%";
+    val.textContent = slider.value + "%";
+  };
+
+  del.onclick = () => {
+    img.remove();
+    box.remove();
+  };
+}
+
+/* === ULOŽENÍ ČLÁNKU === */
 async function saveArticle() {
   const data = {
     title: document.getElementById("title").value,
@@ -43,10 +110,7 @@ async function saveArticle() {
     body: JSON.stringify(data)
   });
 
-  if (!res.ok) {
-    alert("❌ Chyba při ukládání článku!");
-    return;
-  }
+  if (!res.ok) return alert("❌ Chyba při ukládání článku!");
 
   alert("✅ Článek uložen!");
 }
