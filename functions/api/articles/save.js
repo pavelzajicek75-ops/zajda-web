@@ -18,9 +18,9 @@ export async function onRequestPost(context) {
     title: data.title,
     section: data.section,
     subsection: data.subsection,
-    intro: data.intro,
+    place: data.place,
     content: data.content,
-    created: data.created || Date.now()
+    created: data.created || new Date().toISOString()
   }
 
   articles.push(newArticle)
