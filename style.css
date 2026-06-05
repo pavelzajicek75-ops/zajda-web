@@ -3,50 +3,42 @@ body {
   background: #0d0d0d;
   color: #eee;
   font-family: Arial, sans-serif;
+  overflow-x: hidden;
 }
 
-/* HERO */
-.hero {
-  height: 70vh;
-  background: url('/assets/bg-stars.jpg') center/cover no-repeat fixed;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
+/* KONTEJNER PRO LÉTAJÍCÍ CITÁTY */
+#floatingQuotesContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
 }
 
-.hero-text h1 {
-  font-size: 60px;
-  color: #ff6600;
-  margin: 0;
-  text-shadow: 0 0 20px #ff6600;
-}
-
-/* LÉTAJÍCÍ CITÁTY */
-.flying-words {
-  margin-top: 30px;
-  display: flex;
-  gap: 25px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.flying-words span {
-  color: #fff;
-  font-size: 18px;
+/* JEDNOTLIVÝ CITÁT */
+.floating-quote {
+  position: absolute;
   max-width: 260px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 10px 15px;
   background: rgba(0,0,0,0.4);
-  animation: float 5s infinite ease-in-out;
+  border-radius: 8px;
+  animation: drift 12s infinite linear;
+  pointer-events: auto;
   cursor: pointer;
   transition: 0.3s;
 }
 
-@keyframes float {
-  0% { transform: translateY(0); opacity: 0.6; }
-  50% { transform: translateY(-15px); opacity: 1; }
-  100% { transform: translateY(0); opacity: 0.6; }
+.quote-cz {
+  font-size: 18px;
+  color: #fff;
+}
+
+.quote-en {
+  font-size: 13px;
+  color: #bbb;
+  margin-top: 4px;
 }
 
 /* Hvězdný efekt */
@@ -56,24 +48,30 @@ body {
   color: #000 !important;
 }
 
-/* JAZYKOVÝ PŘEPÍNAČ */
-.lang-switch {
-  margin-top: 25px;
+/* Animace pohybu */
+@keyframes drift {
+  0% { transform: translateY(0) translateX(0); opacity: 0.4; }
+  50% { transform: translateY(-80px) translateX(40px); opacity: 1; }
+  100% { transform: translateY(0) translateX(0); opacity: 0.4; }
 }
 
-.lang-switch button {
-  background: #111;
-  border: 1px solid #444;
-  color: #ccc;
-  padding: 6px 12px;
-  margin: 0 5px;
-  cursor: pointer;
-  border-radius: 4px;
+/* HERO */
+.hero {
+  height: 60vh;
+  background: url('/assets/bg-stars.jpg') center/cover no-repeat fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 10;
 }
 
-.lang-switch button.active {
-  border-color: #ff6600;
+.hero-text h1 {
+  font-size: 60px;
   color: #ff6600;
+  margin: 0;
+  text-shadow: 0 0 20px #ff6600;
 }
 
 /* MENU */
@@ -82,6 +80,8 @@ body {
   padding: 15px;
   text-align: center;
   border-bottom: 2px solid #ff6600;
+  position: relative;
+  z-index: 10;
 }
 
 .menu a {
@@ -99,6 +99,8 @@ body {
 .blok {
   padding: 50px;
   border-bottom: 1px solid #222;
+  position: relative;
+  z-index: 10;
 }
 
 .blok.dark {
@@ -130,16 +132,6 @@ body {
   color: #ff6600;
 }
 
-/* CITÁT */
-.quote {
-  font-size: 26px;
-  background: #1a1a1a;
-  padding: 25px;
-  border-left: 4px solid #ff6600;
-  border-radius: 8px;
-  text-align: center;
-}
-
 /* FOTKA */
 .random-photo {
   width: 100%;
@@ -156,4 +148,6 @@ footer {
   padding: 20px;
   background: #111;
   border-top: 2px solid #ff6600;
+  position: relative;
+  z-index: 10;
 }
