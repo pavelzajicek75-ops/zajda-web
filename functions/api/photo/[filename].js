@@ -4,6 +4,10 @@ export async function onRequest(context) {
   const { params, env } = context;
   const bucket = env.zajda_photos;
 
+  if (!bucket) {
+    return new Response("R2 bucket zajda_photos is not bound", { status: 500 });
+  }
+
   const file = await bucket.get(params.filename);
 
   if (!file) {
