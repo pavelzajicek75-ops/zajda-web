@@ -1,7 +1,7 @@
 // /app.js
 
 async function loadFloatingQuotes() {
-  const res = await fetch("/functions/api/quotes/list");
+  const res = await fetch("/api/quotes/list");
   const data = await res.json();
   const quotes = data.quotes || [];
 
