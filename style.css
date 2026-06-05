@@ -1,63 +1,159 @@
 body {
   margin: 0;
-  font-family: "Segoe UI", sans-serif;
-  background: #0d1117;
-  color: #e6edf3;
+  background: #0d0d0d;
+  color: #eee;
+  font-family: Arial, sans-serif;
 }
 
-header {
-  padding: 80px 20px 40px;
+/* HERO */
+.hero {
+  height: 70vh;
+  background: url('/assets/bg-stars.jpg') center/cover no-repeat fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   text-align: center;
 }
 
-.hero {
-  font-size: 48px;
-  font-weight: 700;
+.hero-text h1 {
+  font-size: 60px;
+  color: #ff6600;
+  margin: 0;
+  text-shadow: 0 0 20px #ff6600;
 }
 
-.static {
-  color: #8b949e;
-}
-
-.dynamic {
-  color: #58a6ff;
-  margin-left: 10px;
-}
-
-nav {
+/* LÉTAJÍCÍ CITÁTY */
+.flying-words {
+  margin-top: 30px;
   display: flex;
+  gap: 25px;
   justify-content: center;
-  gap: 30px;
-  padding: 20px;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
+  flex-wrap: wrap;
 }
 
-nav a {
-  color: #e6edf3;
-  text-decoration: none;
+.flying-words span {
+  color: #fff;
   font-size: 18px;
-  font-weight: 600;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.4);
+  animation: float 5s infinite ease-in-out;
+  cursor: pointer;
+  transition: 0.3s;
 }
 
-nav a:hover {
-  color: #58a6ff;
+@keyframes float {
+  0% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-15px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 0.6; }
 }
 
-.block {
-  padding: 80px 20px;
-  max-width: 900px;
+/* Hvězdný efekt */
+.star-glow {
+  box-shadow: 0 0 25px 10px #ffd700 !important;
+  background: #fff8dc !important;
+  color: #000 !important;
+}
+
+/* JAZYKOVÝ PŘEPÍNAČ */
+.lang-switch {
+  margin-top: 25px;
+}
+
+.lang-switch button {
+  background: #111;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 6px 12px;
+  margin: 0 5px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.lang-switch button.active {
+  border-color: #ff6600;
+  color: #ff6600;
+}
+
+/* MENU */
+.menu {
+  background: #111;
+  padding: 15px;
+  text-align: center;
+  border-bottom: 2px solid #ff6600;
+}
+
+.menu a {
+  color: #ccc;
+  margin: 0 20px;
+  text-decoration: none;
+  font-size: 20px;
+}
+
+.menu a:hover {
+  color: #ff6600;
+}
+
+/* BLOKY */
+.blok {
+  padding: 50px;
+  border-bottom: 1px solid #222;
+}
+
+.blok.dark {
+  background: #111;
+}
+
+/* ČLÁNKY */
+.articles {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.article {
+  background: #1a1a1a;
+  padding: 20px;
+  border-left: 4px solid #ff6600;
+  border-radius: 8px;
+  transition: 0.3s;
+}
+
+.article:hover {
+  transform: translateX(10px);
+  background: #222;
+}
+
+.article h3 {
+  margin: 0 0 10px 0;
+  color: #ff6600;
+}
+
+/* CITÁT */
+.quote {
+  font-size: 26px;
+  background: #1a1a1a;
+  padding: 25px;
+  border-left: 4px solid #ff6600;
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* FOTKA */
+.random-photo {
+  width: 100%;
+  max-width: 600px;
+  border-radius: 10px;
+  border: 3px solid #ff6600;
+  display: block;
   margin: auto;
 }
 
-.block h2 {
-  font-size: 32px;
-  margin-bottom: 10px;
+/* FOOTER */
+footer {
+  text-align: center;
+  padding: 20px;
+  background: #111;
+  border-top: 2px solid #ff6600;
 }
-
-.block p {
-  font-size: 18px;
-  color: #8b949e;
-}
-
-/* rebuild main v1 */
