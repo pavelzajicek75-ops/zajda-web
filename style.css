@@ -6,7 +6,7 @@ body {
   overflow-x: hidden;
 }
 
-/* CITÁTY */
+/* CITÁTY – hvězdy po celé stránce */
 #floatingQuotesContainer {
   position: fixed;
   top: 0;
@@ -47,7 +47,7 @@ body {
   color: #000;
 }
 
-/* Animace pohybu */
+/* pohyb */
 @keyframes drift {
   0% { transform: translateY(0) translateX(0); opacity: 0.4; }
   50% { transform: translateY(-100px) translateX(60px); opacity: 1; }
