@@ -6,7 +6,7 @@ body {
   overflow-x: hidden;
 }
 
-/* CITÁTY – hvězdy po celé stránce */
+/* CITÁTY */
 #floatingQuotesContainer {
   position: fixed;
   top: 0;
@@ -30,24 +30,12 @@ body {
   transition: 0.3s;
 }
 
-.quote-cz {
-  font-size: 18px;
-  color: #fff;
-}
-
-.quote-en {
-  font-size: 13px;
-  color: #bbb;
-  margin-top: 4px;
-}
-
 .star-glow {
   box-shadow: 0 0 25px 10px #ffd700;
   background: #fff8dc;
   color: #000;
 }
 
-/* pohyb */
 @keyframes drift {
   0% { transform: translateY(0) translateX(0); opacity: 0.4; }
   50% { transform: translateY(-100px) translateX(60px); opacity: 1; }
