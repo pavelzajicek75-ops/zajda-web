@@ -2,52 +2,51 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title id="htmlTitle">Moje diagnóza, můj vesmír</title>
-  <link rel="stylesheet" href="/style.css?v=30">
+  <title>Moje diagnóza, můj vesmír</title>
+  <link rel="stylesheet" href="/style.css?v=60">
 </head>
 <body>
 
+<!-- LÉTAJÍCÍ CITÁTY PO CELÉ STRÁNCE -->
+<div id="floatingQuotesContainer"></div>
+
 <header class="hero">
   <div class="hero-text">
-    <h1 id="siteTitle"></h1>
-
-    <!-- LÉTAJÍCÍ CITÁTY -->
-    <div id="flyingQuotes" class="flying-words"></div>
-
-    <!-- JAZYKOVÝ PŘEPÍNAČ -->
-    <div class="lang-switch">
-      <button id="langCs" onclick="setLang('cs')">CZ</button>
-      <button id="langEn" onclick="setLang('en')">EN</button>
-    </div>
+    <h1>Moje diagnóza, můj vesmír</h1>
   </div>
 </header>
 
 <nav class="menu">
-  <a href="#clanky" id="navArticles"></a>
-  <a href="#citaty" id="navQuotes"></a>
-  <a href="#galerie" id="navGallery"></a>
-  <a href="#kontakt" id="navContact"></a>
+  <a href="#travel">Cestování</a>
+  <a href="#photo">Fotografie</a>
+  <a href="#projects">Projekty</a>
+  <a href="#about">Zajda</a>
 </nav>
 
-<section id="clanky" class="blok">
-  <h2 id="sectionArticlesTitle"></h2>
-  <div id="articlesList" class="articles"></div>
+<section id="travel" class="blok">
+  <h2>Cestování</h2>
+  <div id="travelArticles" class="articles"></div>
 </section>
 
-<section id="citaty" class="blok dark">
-  <h2 id="sectionQuotesTitle"></h2>
-  <div id="quoteBox" class="quote"></div>
-</section>
-
-<section id="galerie" class="blok">
-  <h2 id="sectionGalleryTitle"></h2>
+<section id="photo" class="blok dark">
+  <h2>Fotografie</h2>
   <img id="randomPhoto" class="random-photo" src="" alt="">
 </section>
 
-<footer id="kontakt">
-  <p id="footerText"></p>
+<section id="projects" class="blok">
+  <h2>Projekty</h2>
+  <div id="projectArticles" class="articles"></div>
+</section>
+
+<section id="about" class="blok dark">
+  <h2>Zajda</h2>
+  <div id="aboutContent"></div>
+</section>
+
+<footer>
+  <p>© 2026 Moje diagnóza, můj vesmír</p>
 </footer>
 
-<script src="/app.js?v=30"></script>
+<script src="/app.js?v=60"></script>
 </body>
 </html>
