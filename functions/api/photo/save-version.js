@@ -1,63 +1,42 @@
-// GET handler – aby curl nevracel 404
-export async function onRequestGet() {
-  return new Response("Missing file or name", { status: 400 });
-}
+// /functions/api/photo/save-version.js
 
-// POST handler – hlavní funkce pro ukládání verzí fotek
-export async function onRequestPost(context) {
+export async function onRequest(context) {
+  const { request, env } = context;
+  const bucket = env.zajda_photos;
+
+  if (!bucket) {
+    return new Response("R2 bucket zajda_photos is not bound", { status: 500 });
+  }
+
+  if (request.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  let data;
   try {
-    const { request, env } = context;
+    data = await request.json();
+  } catch (err) {
+    return new Response("Invalid JSON", { status: 400 });
+  }
 
-    // Ověření R2 bindingu
-    if (!env.zajda_photos) {
-      return new Response("R2 binding 'zajda_photos' is missing", { status: 500 });
-    }
+  const { name, file } = data;
 
-    // Načtení form-data
-    const form = await request.formData();
-    const file = form.get("file");
-    const name = form.get("name");
-    const version = form.get("version") || "original";
+  if (!name || !file) {
+    return new Response("Missing file or name", { status: 400 });
+  }
 
-    // Validace
-    if (!file || !name) {
-      return new Response("Missing file or name", { status: 400 });
-    }
+  try {
+    const binary = Uint8Array.from(atob(file), c => c.charCodeAt(0));
 
-    // Převod souboru na ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-
-    // Cesta v R2
-    const key = `versions/${name}/${version}.jpg`;
-
-    // Uložení do R2
-    await env.zajda_photos.put(key, arrayBuffer, {
-      httpMetadata: {
-        contentType: file.type || "image/jpeg"
-      }
+    await bucket.put(name, binary, {
+      httpMetadata: { contentType: "image/jpeg" }
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        saved: key
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" }
+    });
 
   } catch (err) {
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: err.message
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    return new Response("Upload failed: " + err.message, { status: 500 });
   }
 }
