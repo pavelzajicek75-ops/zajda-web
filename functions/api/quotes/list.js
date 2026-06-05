@@ -12,7 +12,6 @@ export async function onRequest(context) {
     const file = await bucket.get(fileName);
 
     if (!file) {
-      // Pokud soubor neexistuje, vrátíme prázdné pole
       return new Response(JSON.stringify({ quotes: [] }), {
         headers: { "Content-Type": "application/json" }
       });
@@ -46,7 +45,6 @@ export async function onRequest(context) {
     });
   }
 
-  // --- Ostatní metody ---
   return new Response(JSON.stringify({ error: "Method not allowed" }), {
     status: 405,
     headers: { "Content-Type": "application/json" }
