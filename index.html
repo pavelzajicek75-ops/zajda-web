@@ -2,45 +2,52 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Zajda Web</title>
-  <link rel="stylesheet" href="style.css">
+  <title id="htmlTitle">Moje diagnóza, můj vesmír</title>
+  <link rel="stylesheet" href="/style.css?v=30">
 </head>
 <body>
 
-  <header>
-    <h1 class="hero">
-      <span class="static">Zajda dělá</span>
-      <span class="dynamic" id="dynamicText">fotky</span>
-    </h1>
-  </header>
+<header class="hero">
+  <div class="hero-text">
+    <h1 id="siteTitle"></h1>
 
-  <nav>
-    <a href="#photography">Photography</a>
-    <a href="#travel">Travel</a>
-    <a href="#projects">Projects</a>
-    <a href="#about">About</a>
-  </nav>
+    <!-- LÉTAJÍCÍ CITÁTY -->
+    <div id="flyingQuotes" class="flying-words"></div>
 
-  <section id="photography" class="block">
-    <h2>Photography</h2>
-    <p>Moje nejlepší fotky, projekty a galerie.</p>
-  </section>
+    <!-- JAZYKOVÝ PŘEPÍNAČ -->
+    <div class="lang-switch">
+      <button id="langCs" onclick="setLang('cs')">CZ</button>
+      <button id="langEn" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+</header>
 
-  <section id="travel" class="block">
-    <h2>Travel</h2>
-    <p>Cestování, zážitky, fotky z cest.</p>
-  </section>
+<nav class="menu">
+  <a href="#clanky" id="navArticles"></a>
+  <a href="#citaty" id="navQuotes"></a>
+  <a href="#galerie" id="navGallery"></a>
+  <a href="#kontakt" id="navContact"></a>
+</nav>
 
-  <section id="projects" class="block">
-    <h2>Projects</h2>
-    <p>Moje projekty, weby, aplikace a nápady.</p>
-  </section>
+<section id="clanky" class="blok">
+  <h2 id="sectionArticlesTitle"></h2>
+  <div id="articlesList" class="articles"></div>
+</section>
 
-  <section id="about" class="block">
-    <h2>About Zajda</h2>
-    <p>Kdo jsem, co dělám a proč.</p>
-  </section>
+<section id="citaty" class="blok dark">
+  <h2 id="sectionQuotesTitle"></h2>
+  <div id="quoteBox" class="quote"></div>
+</section>
 
-  <script src="script.js"></script>
+<section id="galerie" class="blok">
+  <h2 id="sectionGalleryTitle"></h2>
+  <img id="randomPhoto" class="random-photo" src="" alt="">
+</section>
+
+<footer id="kontakt">
+  <p id="footerText"></p>
+</footer>
+
+<script src="/app.js?v=30"></script>
 </body>
 </html>
