@@ -16,10 +16,7 @@ async function loadFloatingQuotes() {
     div.style.left = Math.random() * 90 + "vw";
     div.style.animationDelay = (Math.random() * 10) + "s";
 
-    div.innerHTML = `
-      <div class="quote-cz">${q}</div>
-      <div class="quote-en">${q}</div>
-    `;
+    div.innerHTML = `<div>${q}</div>`;
 
     div.addEventListener("mouseenter", () => {
       div.classList.add("star-glow");
