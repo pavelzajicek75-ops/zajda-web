@@ -1,106 +1,69 @@
 // /app.js
 
-let currentLang = 'cs';
+// --- LÉTAJÍCÍ CITÁTY PO CELÉ STRÁNCE ---
+async function loadFloatingQuotes() {
+  const res = await fetch("/functions/api/quotes/list");
+  const data = await res.json();
+  const quotes = data.quotes || [];
 
-const texts = {
-  cs: {
-    siteTitle: "Moje diagnóza, můj vesmír",
-    navArticles: "Články",
-    navQuotes: "Citáty",
-    navGallery: "Fotky",
-    navContact: "Kontakt",
-    sectionArticlesTitle: "Nejnovější články",
-    sectionQuotesTitle: "Dnešní citát",
-    sectionGalleryTitle: "Náhodná fotka",
-    footerText: "© 2026 Moje diagnóza, můj vesmír"
-  },
-  en: {
-    siteTitle: "My Diagnosis, My Universe",
-    navArticles: "Articles",
-    navQuotes: "Quotes",
-    navGallery: "Photos",
-    navContact: "Contact",
-    sectionArticlesTitle: "Latest Articles",
-    sectionQuotesTitle: "Quote of the Day",
-    sectionGalleryTitle: "Random Photo",
-    footerText: "© 2026 My Diagnosis, My Universe"
-  }
-};
+  const container = document.getElementById("floatingQuotesContainer");
+  container.innerHTML = "";
 
-function applyLang() {
-  const t = texts[currentLang];
+  quotes.forEach((q, i) => {
+    const div = document.createElement("div");
+    div.className = "floating-quote";
 
-  document.getElementById("siteTitle").textContent = t.siteTitle;
-  document.getElementById("navArticles").textContent = t.navArticles;
-  document.getElementById("navQuotes").textContent = t.navQuotes;
-  document.getElementById("navGallery").textContent = t.navGallery;
-  document.getElementById("navContact").textContent = t.navContact;
-  document.getElementById("sectionArticlesTitle").textContent = t.sectionArticlesTitle;
-  document.getElementById("sectionQuotesTitle").textContent = t.sectionQuotesTitle;
-  document.getElementById("sectionGalleryTitle").textContent = t.sectionGalleryTitle;
-  document.getElementById("footerText").textContent = t.footerText;
+    // náhodná pozice
+    div.style.top = Math.random() * 90 + "vh";
+    div.style.left = Math.random() * 90 + "vw";
+    div.style.animationDelay = (Math.random() * 5) + "s";
 
-  document.getElementById("langCs").classList.toggle("active", currentLang === "cs");
-  document.getElementById("langEn").classList.toggle("active", currentLang === "en");
+    div.innerHTML = `
+      <div class="quote-cz">${q.cz}</div>
+      <div class="quote-en">${q.en}</div>
+    `;
+
+    // hvězdný efekt
+    div.addEventListener("mouseenter", () => {
+      div.classList.add("star-glow");
+      setTimeout(() => {
+        div.classList.remove("star-glow");
+      }, 3000);
+    });
+
+    container.appendChild(div);
+  });
 }
 
-function setLang(lang) {
-  currentLang = lang;
-  applyLang();
-  loadArticles();
-  loadQuote();
-  loadFlyingQuotes();
-}
-
-// --- ČLÁNKY ---
-async function loadArticles() {
-  const res = await fetch(`/functions/api/articles/list?lang=${currentLang}`);
+// --- ČLÁNKY: CESTOVÁNÍ ---
+async function loadTravelArticles() {
+  const res = await fetch("/functions/api/articles/list?section=travel");
   const data = await res.json();
 
-  const box = document.getElementById("articlesList");
+  const box = document.getElementById("travelArticles");
   box.innerHTML = "";
 
-  (data.articles || []).slice(0, 5).forEach(a => {
+  (data.articles || []).forEach(a => {
     const div = document.createElement("div");
     div.className = "article";
-    const dateStr = a.date ? new Date(a.date).toLocaleDateString(currentLang === 'cs' ? "cs-CZ" : "en-GB") : "";
-    div.innerHTML = `
-      <h3>${a.title}</h3>
-      <small>${a.section} / ${a.subsection} — ${dateStr}</small>
-      <p>${(a.content || "").replace(/<[^>]+>/g, "").substring(0, 200)}...</p>
-    `;
+    div.innerHTML = `<h3>${a.title}</h3><p>${a.content.substring(0,150)}...</p>`;
     box.appendChild(div);
   });
 }
 
-// --- DNEŠNÍ CITÁT ---
-async function loadQuote() {
-  const res = await fetch(`/functions/api/quotes/random?lang=${currentLang}`);
+// --- ČLÁNKY: PROJEKTY ---
+async function loadProjectArticles() {
+  const res = await fetch("/functions/api/articles/list?section=projects");
   const data = await res.json();
-  document.getElementById("quoteBox").textContent = data.quote || "";
-}
 
-// --- LÉTAJÍCÍ CITÁTY ---
-async function loadFlyingQuotes() {
-  const res = await fetch(`/functions/api/quotes/list?lang=${currentLang}`);
-  const data = await res.json();
-  const quotes = data.quotes || [];
-
-  const box = document.getElementById("flyingQuotes");
+  const box = document.getElementById("projectArticles");
   box.innerHTML = "";
 
-  quotes.slice(0, 5).forEach(q => {
-    const span = document.createElement("span");
-    span.textContent = q.text || q;
-
-    span.addEventListener("mouseenter", () => {
-      span.classList.add("star-glow");
-      setTimeout(() => {
-        span.classList.remove("star-glow");
-      }, 3000);
-    });
-
-    box.appendChild(span);
+  (data.articles || []).forEach(a => {
+    const div = document.createElement("div");
+    div.className = "article";
+    div.innerHTML = `<h3>${a.title}</h3><p>${a.content.substring(0,150)}...</p>`;
+    box.appendChild(div);
   });
 }
 
@@ -117,9 +80,8 @@ async function loadRandomPhoto() {
 
 // --- INIT ---
 document.addEventListener("DOMContentLoaded", () => {
-  applyLang();
-  loadArticles();
-  loadQuote();
-  loadFlyingQuotes();
+  loadFloatingQuotes();
+  loadTravelArticles();
+  loadProjectArticles();
   loadRandomPhoto();
 });
