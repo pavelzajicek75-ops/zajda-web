@@ -17,8 +17,8 @@ async function loadFloatingQuotes() {
     div.style.animationDelay = (Math.random() * 10) + "s";
 
     div.innerHTML = `
-      <div class="quote-cz">${q.cz}</div>
-      <div class="quote-en">${q.en}</div>
+      <div class="quote-cz">${q}</div>
+      <div class="quote-en">${q}</div>
     `;
 
     div.addEventListener("mouseenter", () => {
