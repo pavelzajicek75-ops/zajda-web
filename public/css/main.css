@@ -45,7 +45,8 @@ header {
   font-size: 14px;
   opacity: 0;
   color: #aaaaaa;
-  white-space: pre-line;           /* 🔥 umožní dvouřádkové citáty */
+  white-space: normal;             /* 🔥 umožní zalomení textu */
+  line-height: 1.2;                /* 🔥 hezký dvouřádkový vzhled */
   transition:
     opacity 2.8s ease,
     transform 1.2s ease,
