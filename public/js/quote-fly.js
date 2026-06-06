@@ -6,7 +6,12 @@ async function loadQuotes() {
 
   const container = document.getElementById("quotesContainer");
 
+  let activeQuotes = 0;
+  const MAX_QUOTES = 10;
+
   function spawnQuote() {
+    if (activeQuotes >= MAX_QUOTES) return;
+
     const q = data.quotes[Math.floor(Math.random() * data.quotes.length)];
 
     const el = document.createElement("div");
@@ -17,22 +22,22 @@ async function loadQuotes() {
     const startX = Math.random() * window.innerWidth;
     const startY = Math.random() * window.innerHeight;
 
-    // náhodný směr a rychlost
-    const dx = (Math.random() - 0.5) * 0.4; // horizontální rychlost
-    const dy = (Math.random() - 0.5) * 0.4; // vertikální rychlost
+    // náhodný směr a rychlost (rychlejší než předtím)
+    const dx = (Math.random() - 0.5) * 1.2; 
+    const dy = (Math.random() - 0.5) * 1.2;
 
     el.style.left = `${startX}px`;
     el.style.top = `${startY}px`;
     el.style.opacity = 0;
 
     container.appendChild(el);
+    activeQuotes++;
 
     // fade-in
     setTimeout(() => {
-      el.style.opacity = 0.6;
+      el.style.opacity = 0.7;
     }, 100);
 
-    // animace pohybu
     let x = startX;
     let y = startY;
 
@@ -44,16 +49,24 @@ async function loadQuotes() {
       el.style.top = `${y}px`;
 
       // fade-out + odstranění
-      if (x < -200 || x > window.innerWidth + 200 || y < -200 || y > window.innerHeight + 200) {
+      if (
+        x < -300 || 
+        x > window.innerWidth + 300 || 
+        y < -300 || 
+        y > window.innerHeight + 300
+      ) {
         el.style.opacity = 0;
         clearInterval(interval);
-        setTimeout(() => el.remove(), 1000);
+        setTimeout(() => {
+          el.remove();
+          activeQuotes--;
+        }, 800);
       }
-    }, 30);
+    }, 25); // rychlejší pohyb
   }
 
-  // generuj nový citát každých 1.5 sekundy
-  setInterval(spawnQuote, 1500);
+  // generuj nový citát každých 1.2 sekundy
+  setInterval(spawnQuote, 1200);
   spawnQuote();
 }
 
