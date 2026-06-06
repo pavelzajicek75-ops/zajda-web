@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor článku – Admin</title>
-  <link rel="stylesheet" href="/admin/style.css?v=9">
+  <link rel="stylesheet" href="/admin/style.css?v=10">
 
   <style>
     .form-block { margin-bottom: 20px; }
@@ -103,11 +103,11 @@
     <label>Podsekce</label>
     <select id="subsection"></select>
 
-    <button onclick="showNewSub()" style="margin-top:10px;">+ Nová podsekce</button>
+    <button type="button" onclick="showNewSub()" style="margin-top:10px;">+ Nová podsekce</button>
 
     <div id="newSubWrap">
       <input type="text" id="newSubName" placeholder="Název nové podsekce">
-      <button onclick="addNewSub()">Přidat</button>
+      <button type="button" onclick="addNewSub()">Přidat</button>
     </div>
   </div>
 
@@ -115,14 +115,14 @@
     <label>Obsah článku</label>
 
     <div id="toolbar">
-      <button onclick="format('bold')">B</button>
-      <button onclick="format('italic')">I</button>
-      <button onclick="formatBlock('h1')">H1</button>
-      <button onclick="formatBlock('h2')">H2</button>
-      <button onclick="formatBlock('h3')">H3</button>
-      <button onclick="format('insertUnorderedList')">•</button>
-      <button onclick="openGallery()">🖼 Galerie</button>
-      <button onclick="saveArticle()">💾 Uložit</button>
+      <button type="button" onclick="format('bold')">B</button>
+      <button type="button" onclick="format('italic')">I</button>
+      <button type="button" onclick="formatBlock('h1')">H1</button>
+      <button type="button" onclick="formatBlock('h2')">H2</button>
+      <button type="button" onclick="formatBlock('h3')">H3</button>
+      <button type="button" onclick="format('insertUnorderedList')">•</button>
+      <button type="button" onclick="openGallery()">🖼 Galerie</button>
+      <button type="button" onclick="saveArticle()">💾 Uložit</button>
     </div>
 
     <div id="editor" contenteditable="true"></div>
@@ -130,8 +130,8 @@
 
 </div>
 
-<script src="/admin/auth.js?v=9"></script>
-<script src="/admin/clanky/edit.js?v=9"></script>
+<script src="/admin/auth.js?v=10"></script>
+<script src="/admin/clanky/edit.js?v=10"></script>
 
 </body>
 </html>
