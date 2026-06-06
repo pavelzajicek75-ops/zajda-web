@@ -8,10 +8,10 @@ export async function initPhotoPicker() {
   modal.style.left = "0";
   modal.style.width = "100%";
   modal.style.height = "100%";
-  modal.style.background = "rgba(0,0,0,0.8)";
+  modal.style.background = "rgba(0,0,0,0.9)";
   modal.style.zIndex = "9999";
   modal.style.overflow = "auto";
-  modal.style.padding = "20px";
+  modal.style.padding = "40px";
 
   document.body.appendChild(modal);
 
@@ -20,26 +20,35 @@ export async function initPhotoPicker() {
     const data = await res.json();
 
     modal.innerHTML = "";
+    const grid = document.createElement("div");
+    grid.style.display = "flex";
+    grid.style.flexWrap = "wrap";
+    grid.style.gap = "20px";
+    grid.style.justifyContent = "center";
+
     data.photos.forEach(p => {
       const img = document.createElement("img");
       img.src = p.url;
-      img.style.width = "150px";
-      img.style.margin = "10px";
+      img.style.width = "180px";
+      img.style.height = "120px";
+      img.style.objectFit = "cover";
+      img.style.borderRadius = "8px";
       img.style.cursor = "pointer";
       img.onclick = () => {
         insertPhotoToEditor(p.url);
         modal.style.display = "none";
       };
-      modal.appendChild(img);
+      grid.appendChild(img);
     });
 
     const closeBtn = document.createElement("button");
     closeBtn.textContent = "Zavřít";
     closeBtn.style.display = "block";
-    closeBtn.style.margin = "20px auto";
+    closeBtn.style.margin = "30px auto";
     closeBtn.onclick = () => (modal.style.display = "none");
-    modal.appendChild(closeBtn);
 
+    modal.appendChild(grid);
+    modal.appendChild(closeBtn);
     modal.style.display = "block";
   };
 
