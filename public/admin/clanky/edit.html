@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor článku</title>
+  <link rel="stylesheet" href="/css/admin.css">
+  <script type="module" src="/js/editor-article.js"></script>
+</head>
+<body>
+
+  <div class="admin-container">
+    <h1>Editor článku</h1>
+
+    <label>Název článku:</label>
+    <input id="title">
+
+    <label>Místo:</label>
+    <input id="place">
+
+    <label>Datum:</label>
+    <input id="date" type="date">
+
+    <label>Sekce:</label>
+    <select id="section"></select>
+
+    <label>Podsekce:</label>
+    <select id="subsection"></select>
+
+    <input id="newSub" placeholder="Nová podsekce">
+    <button id="addSubBtn">Přidat podsekci</button>
+
+    <label>Obsah článku:</label>
+    <div class="toolbar">
+      <button id="boldBtn">B</button>
+      <button id="h1Btn">H1</button>
+      <button id="h2Btn">H2</button>
+      <button id="h3Btn">H3</button>
+      <button id="galleryBtn">Galerie</button>
+    </div>
+
+    <textarea id="content"></textarea>
+
+    <button id="saveBtn">Uložit článek</button>
+  </div>
+
+</body>
+</html>
