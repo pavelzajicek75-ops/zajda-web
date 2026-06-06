@@ -7,15 +7,8 @@ export async function loadQuote() {
 
     const q = data.quotes[Math.floor(Math.random() * data.quotes.length)];
 
-    const el = document.getElementById("quoteBox");
-    if (!el) return;
-
-    el.innerHTML = `
-      <div style="font-size:22px; color:#ffffff; text-align:center; margin-top:20px;">
-        ${q.text}
-        <div style="margin-top:8px; font-size:18px; opacity:0.7;">${q.author}</div>
-      </div>
-    `;
+    document.getElementById("quoteBox").textContent = q.text;
+    document.getElementById("quoteAuthor").textContent = q.author;
   } catch (e) {
     console.error("Chyba při načítání citátu:", e);
   }
