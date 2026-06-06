@@ -4,10 +4,12 @@ export async function onRequest(context) {
   const id = url.searchParams.get("id");
 
   const object = await env.QUOTES_R2.get("quotes.json");
-  if (!object) return new Response(JSON.stringify({ ok: false }), { status: 404 });
+  if (!object) {
+    return new Response(JSON.stringify({ ok: false }), { status: 404 });
+  }
 
-  const data = JSON.parse(await object.text());
-  const filtered = data.filter(q => q.id !== id);
+  const quotes = JSON.parse(await object.text());
+  const filtered = quotes.filter(q => q.id !== id);
 
   await env.QUOTES_R2.put("quotes.json", JSON.stringify(filtered));
 
