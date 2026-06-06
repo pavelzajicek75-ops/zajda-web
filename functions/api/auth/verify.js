@@ -1,15 +1,12 @@
 // /functions/api/auth/verify.js
 
-const JWT_SECRET = "super-tajne-heslo-zajda"; // stejný jako v login.js
+const JWT_SECRET = "super-tajne-heslo-zajda"; // MUSÍ být stejný jako v login.js
 
-function base64UrlToBytes(base64Url) {
-  base64Url = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-  const pad = base64Url.length % 4;
-  if (pad) base64Url += "=".repeat(4 - pad);
-  const bin = atob(base64Url);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
+function base64UrlDecode(str) {
+  str = str.replace(/-/g, "+").replace(/_/g, "/");
+  const pad = str.length % 4;
+  if (pad) str += "=".repeat(4 - pad);
+  return Uint8Array.from(atob(str), c => c.charCodeAt(0));
 }
 
 async function verifyJwt(token, secret) {
@@ -17,22 +14,20 @@ async function verifyJwt(token, secret) {
   if (parts.length !== 3) return null;
 
   const [headerB64, payloadB64, signatureB64] = parts;
-  const data = `${headerB64}.${payloadB64}`;
 
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(secret);
-  const msgData = encoder.encode(data);
-  const sigBytes = base64UrlToBytes(signatureB64);
-
   const key = await crypto.subtle.importKey(
     "raw",
-    keyData,
+    encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["verify"]
   );
 
-  const valid = await crypto.subtle.verify("HMAC", key, sigBytes, msgData);
+  const data = encoder.encode(`${headerB64}.${payloadB64}`);
+  const signature = base64UrlDecode(signatureB64);
+
+  const valid = await crypto.subtle.verify("HMAC", key, signature, data);
   if (!valid) return null;
 
   const payloadJson = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
@@ -45,38 +40,21 @@ async function verifyJwt(token, secret) {
 }
 
 export async function onRequest(context) {
-  const { request } = context;
-
-  if (request.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
-
-  const auth = request.headers.get("Authorization") || "";
+  const auth = context.request.headers.get("Authorization") || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
 
   if (!token) {
-    return new Response(JSON.stringify({ valid: false }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" }
-    });
+    return Response.json({ valid: false }, { status: 401 });
   }
 
   try {
     const payload = await verifyJwt(token, JWT_SECRET);
     if (!payload) {
-      return new Response(JSON.stringify({ valid: false }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      });
+      return Response.json({ valid: false }, { status: 401 });
     }
 
-    return new Response(JSON.stringify({ valid: true, username: payload.username }), {
-      headers: { "Content-Type": "application/json" }
-    });
+    return Response.json({ valid: true, username: payload.username });
   } catch (err) {
-    return new Response(JSON.stringify({ valid: false }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" }
-    });
+    return Response.json({ valid: false }, { status: 401 });
   }
 }
