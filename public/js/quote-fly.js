@@ -10,18 +10,16 @@ async function loadQuotes() {
   const MAX_QUOTES = 10;
 
   function splitQuote(text) {
-    if (text.length <= 40) return text; // krátké necháme
+    if (text.length <= 40) return text;
 
     const mid = Math.floor(text.length / 2);
-
-    // najdeme nejbližší mezeru kolem středu
     let splitPos = text.indexOf(" ", mid);
     if (splitPos === -1) splitPos = mid;
 
     const part1 = text.slice(0, splitPos).trim();
     const part2 = text.slice(splitPos).trim();
 
-    return part1 + "\n" + part2;
+    return part1 + "<br>" + part2;   // 🔥 HTML zalomení
   }
 
   function spawnQuote() {
@@ -32,8 +30,8 @@ async function loadQuotes() {
     const el = document.createElement("div");
     el.className = "quote";
 
-    // 🔥 automatické rozdělení dlouhých citátů
-    el.textContent = splitQuote(q.text);
+    // 🔥 použijeme HTML, aby <br> fungovalo
+    el.innerHTML = splitQuote(q.text);
 
     const startX = Math.random() * window.innerWidth;
     const startY = Math.random() * window.innerHeight;
