@@ -42,29 +42,29 @@ header {
 
 .quote {
   position: absolute;
-  font-size: 14px;                 /* 🔥 malé písmo při letu */
+  font-size: 14px;
   opacity: 0;
-  color: #aaaaaa;                  /* 🔥 slabší barva při letu */
+  color: #aaaaaa;
+  white-space: pre-line;           /* 🔥 umožní dvouřádkové citáty */
   transition:
-    opacity 2.8s ease,             /* 🔥 ještě pomalejší rozsvěcení */
-    transform 1.2s ease,           /* 🔥 plynulejší */
-    text-shadow 2.0s ease,         /* 🔥 pomalé rozsvěcení glow */
-    color 2.0s ease;               /* 🔥 pomalá změna barvy */
+    opacity 2.8s ease,
+    transform 1.2s ease,
+    text-shadow 2.0s ease,
+    color 2.0s ease;
   pointer-events: auto;
-  white-space: nowrap;
 }
 
-/* ===== HOVER – JASNÉ ROZSVÍCENÍ, 20 PX ===== */
+/* ===== HOVER – 20 PX, SILNÝ GLOW ===== */
 .quote:hover {
   opacity: 1 !important;
-  font-size: 20px;                 /* 🔥 větší písmo při zvýraznění */
-  transform: scale(1.08);          /* 🔥 minimální zvětšení, téměř žádné */
-  color: #ffffff;                  /* 🔥 jasná bílá */
+  font-size: 20px;
+  transform: scale(1.08);
+  color: #ffffff;
   text-shadow:
-    0 0 60px #ffffff,              /* 🔥 silný bílý glow */
-    0 0 110px #ff9900,             /* 🔥 oranžový glow */
-    0 0 160px #ff5500,             /* 🔥 hlubší oranžový glow */
-    0 0 220px #ff2200;             /* 🔥 červený žár – supernova efekt */
+    0 0 60px #ffffff,
+    0 0 110px #ff9900,
+    0 0 160px #ff5500,
+    0 0 220px #ff2200;
 }
 
 /* ===== DOLNÍ 4 SEKCE ===== */
