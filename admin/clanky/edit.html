@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor článku – Admin</title>
-  <link rel="stylesheet" href="/admin/style.css?v=6">
+  <link rel="stylesheet" href="/admin/style.css?v=7">
 
   <style>
     .form-block { margin-bottom: 20px; }
@@ -38,11 +38,11 @@
 
     #editor {
       width: 100%;
-      min-height: 500px;
+      min-height: 600px;
       background: #111;
       color: #eee;
       border: 1px solid #333;
-      padding: 15px;
+      padding: 20px;
       border-radius: 4px;
       outline: none;
       font-size: 18px;
@@ -53,11 +53,6 @@
       max-width: 100%;
       margin: 10px 0;
       border-radius: 6px;
-    }
-
-    #editor h1, #editor h2, #editor h3 {
-      margin-top: 20px;
-      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -85,6 +80,16 @@
   </div>
 
   <div class="form-block">
+    <label>Místo</label>
+    <input type="text" id="place">
+  </div>
+
+  <div class="form-block">
+    <label>Datum</label>
+    <input type="date" id="date">
+  </div>
+
+  <div class="form-block">
     <label>Sekce</label>
     <select id="section"></select>
   </div>
@@ -104,7 +109,7 @@
       <button onclick="formatBlock('h2')">H2</button>
       <button onclick="formatBlock('h3')">H3</button>
       <button onclick="format('insertUnorderedList')">•</button>
-      <button onclick="insertImage()">🖼 Obrázek</button>
+      <button onclick="openGallery()">🖼 Galerie</button>
       <button onclick="saveArticle()">💾 Uložit</button>
     </div>
 
@@ -113,8 +118,8 @@
 
 </div>
 
-<script src="/admin/auth.js?v=6"></script>
-<script src="/admin/clanky/edit.js?v=6"></script>
+<script src="/admin/auth.js?v=7"></script>
+<script src="/admin/clanky/edit.js?v=7"></script>
 
 </body>
 </html>
