@@ -4,32 +4,47 @@ let articleId = null;
 let sections = [];
 
 document.addEventListener("DOMContentLoaded", () => {
+  init();
+});
+
+async function init() {
   const params = new URLSearchParams(window.location.search);
   articleId = params.get("id") || null;
 
-  loadSections();
-  loadArticle();
-});
+  await loadSections();   // nejdřív sekce
+  await loadArticle();    // pak článek
+}
 
 // --------------------------------------------------
 // SECTIONS + SUBSECTIONS
 // --------------------------------------------------
 async function loadSections() {
-  const res = await authenticatedFetch("/api/sections/list");
-  sections = await res.json();
+  try {
+    const res = await authenticatedFetch("/api/sections/list");
+    if (!res || !res.ok) {
+      console.error("Chyba při načítání sekcí", res && res.status);
+      return;
+    }
 
-  const sectionSelect = document.getElementById("section");
-  sectionSelect.innerHTML = "";
+    sections = await res.json();
+    if (!Array.isArray(sections)) sections = [];
 
-  sections.forEach(sec => {
-    const opt = document.createElement("option");
-    opt.value = sec.id;
-    opt.textContent = sec.name_cz;
-    sectionSelect.appendChild(opt);
-  });
+    const sectionSelect = document.getElementById("section");
+    sectionSelect.innerHTML = "";
 
-  sectionSelect.addEventListener("change", updateSubsections);
-  updateSubsections();
+    sections.forEach(sec => {
+      const opt = document.createElement("option");
+      opt.value = sec.id;
+      opt.textContent = sec.name_cz || sec.name || sec.id;
+      sectionSelect.appendChild(opt);
+    });
+
+    sectionSelect.addEventListener("change", updateSubsections);
+    updateSubsections();
+
+  } catch (err) {
+    console.error("Chyba při načítání sekcí:", err);
+  }
 }
 
 function updateSubsections() {
@@ -39,7 +54,9 @@ function updateSubsections() {
   const subSelect = document.getElementById("subsection");
   subSelect.innerHTML = "";
 
-  (section.subsections || []).forEach(sub => {
+  if (!section || !Array.isArray(section.subsections)) return;
+
+  section.subsections.forEach(sub => {
     const opt = document.createElement("option");
     opt.value = sub.id;
     opt.textContent = sub.name;
@@ -48,7 +65,7 @@ function updateSubsections() {
 }
 
 // --------------------------------------------------
-// ADD NEW SUBSECTION
+// NOVÁ PODSEKCE
 // --------------------------------------------------
 function showNewSub() {
   document.getElementById("newSubWrap").style.display = "block";
@@ -58,25 +75,38 @@ async function addNewSub() {
   const name = document.getElementById("newSubName").value.trim();
   const sectionId = document.getElementById("section").value;
 
-  if (!name) return alert("Zadej název podsekce");
+  if (!name) {
+    alert("Zadej název podsekce");
+    return;
+  }
 
-  const res = await authenticatedFetch("/api/sections/add-subsection", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sectionId, name })
-  });
+  try {
+    const res = await authenticatedFetch("/api/sections/add-subsection", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sectionId, name })
+    });
 
-  const newSub = await res.json();
+    if (!res.ok) {
+      alert("Chyba při ukládání podsekce");
+      return;
+    }
 
-  // přidej do seznamu
-  const section = sections.find(s => s.id === sectionId);
-  section.subsections.push(newSub);
+    const newSub = await res.json();
 
-  updateSubsections();
-  document.getElementById("subsection").value = newSub.id;
+    const section = sections.find(s => s.id === sectionId);
+    if (!section.subsections) section.subsections = [];
+    section.subsections.push(newSub);
 
-  document.getElementById("newSubWrap").style.display = "none";
-  document.getElementById("newSubName").value = "";
+    updateSubsections();
+    document.getElementById("subsection").value = newSub.id;
+
+    document.getElementById("newSubWrap").style.display = "none";
+    document.getElementById("newSubName").value = "";
+
+  } catch (err) {
+    console.error("Chyba při přidávání podsekce:", err);
+  }
 }
 
 // --------------------------------------------------
@@ -85,16 +115,30 @@ async function addNewSub() {
 async function loadArticle() {
   if (!articleId) return;
 
-  const res = await authenticatedFetch(`/api/articles/get?id=${articleId}`);
-  const data = await res.json();
+  try {
+    const res = await authenticatedFetch(`/api/articles/get?id=${articleId}`);
+    if (!res.ok) return;
 
-  document.getElementById("title").value = data.title || "";
-  document.getElementById("place").value = data.place || "";
-  document.getElementById("date").value = data.date || "";
-  document.getElementById("section").value = data.section || "";
-  updateSubsections();
-  document.getElementById("subsection").value = data.subsection || "";
-  document.getElementById("editor").innerHTML = data.content || "";
+    const data = await res.json();
+
+    document.getElementById("title").value = data.title || "";
+    document.getElementById("place").value = data.place || "";
+    document.getElementById("date").value = data.date || "";
+
+    if (data.section) {
+      document.getElementById("section").value = data.section;
+      updateSubsections();
+    }
+
+    if (data.subsection) {
+      document.getElementById("subsection").value = data.subsection;
+    }
+
+    document.getElementById("editor").innerHTML = data.content || "";
+
+  } catch (err) {
+    console.error("Chyba při načítání článku:", err);
+  }
 }
 
 // --------------------------------------------------
@@ -111,14 +155,24 @@ async function saveArticle() {
     content: document.getElementById("editor").innerHTML.trim()
   };
 
-  const res = await authenticatedFetch("/api/articles/save", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+  try {
+    const res = await authenticatedFetch("/api/articles/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
 
-  alert("Článek uložen");
-  window.location.href = "/admin/clanky/index.html";
+    if (!res.ok) {
+      alert("Chyba při ukládání článku");
+      return;
+    }
+
+    alert("Článek uložen");
+    window.location.href = "/admin/clanky/index.html";
+
+  } catch (err) {
+    console.error("Chyba při ukládání článku:", err);
+  }
 }
 
 // --------------------------------------------------
@@ -136,11 +190,15 @@ function formatBlock(tag) {
 // GALLERY POPUP
 // --------------------------------------------------
 function openGallery() {
-  window.open("/admin/gallery/picker.html", "galleryPicker", "width=900,height=700");
+  window.open(
+    "/admin/gallery/picker.html",
+    "galleryPicker",
+    "width=900,height=700"
+  );
 }
 
 window.addEventListener("message", e => {
-  if (e.data.type === "imageSelected") {
+  if (e.data && e.data.type === "imageSelected" && e.data.url) {
     document.execCommand("insertHTML", false, `<img src="${e.data.url}">`);
   }
 });
