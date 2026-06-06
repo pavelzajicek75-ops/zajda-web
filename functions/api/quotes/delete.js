@@ -1,14 +1,15 @@
 export async function onRequest(context) {
   const { request, env } = context;
-
   const url = new URL(request.url);
   const id = url.searchParams.get("id");
 
-  if (!id) {
-    return new Response(JSON.stringify({ error: "Missing ID" }), { status: 400 });
-  }
+  const object = await env.QUOTES_R2.get("quotes.json");
+  if (!object) return new Response(JSON.stringify({ ok: false }), { status: 404 });
 
-  await env.QUOTES.delete(id);
+  const data = JSON.parse(await object.text());
+  const filtered = data.filter(q => q.id !== id);
+
+  await env.QUOTES_R2.put("quotes.json", JSON.stringify(filtered));
 
   return new Response(JSON.stringify({ ok: true }), {
     headers: { "Content-Type": "application/json" }
