@@ -69,6 +69,8 @@ async function loadArticle() {
     const data = await res.json();
 
     document.getElementById("title").value = data.title || "";
+    document.getElementById("place").value = data.place || "";
+    document.getElementById("date").value = data.date || "";
     document.getElementById("section").value = data.section || "";
     updateSubsections();
     document.getElementById("subsection").value = data.subsection || "";
@@ -86,6 +88,8 @@ async function saveArticle() {
   const body = {
     id: articleId,
     title: document.getElementById("title").value.trim(),
+    place: document.getElementById("place").value.trim(),
+    date: document.getElementById("date").value,
     section: document.getElementById("section").value,
     subsection: document.getElementById("subsection").value,
     content: document.getElementById("editor").innerHTML.trim()
@@ -122,9 +126,14 @@ function formatBlock(tag) {
   document.execCommand("formatBlock", false, tag);
 }
 
-function insertImage() {
-  const url = prompt("URL obrázku:");
-  if (!url) return;
-
-  document.execCommand("insertHTML", false, `<img src="${url}">`);
+// --------------------------------------------------
+// OBRÁZKY Z GALERIE
+// --------------------------------------------------
+function openGallery() {
+  const win = window.open("/admin/gallery/picker.html", "galleryPicker", "width=900,height=700");
+  window.addEventListener("message", e => {
+    if (e.data.type === "imageSelected") {
+      document.execCommand("insertHTML", false, `<img src="${e.data.url}">`);
+    }
+  });
 }
