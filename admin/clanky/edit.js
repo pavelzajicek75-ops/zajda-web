@@ -15,40 +15,31 @@ document.addEventListener("DOMContentLoaded", () => {
 // SECTIONS + SUBSECTIONS
 // --------------------------------------------------
 async function loadSections() {
-  try {
-    const res = await authenticatedFetch("/api/sections/list");
-    if (!res) return;
+  const res = await authenticatedFetch("/api/sections/list");
+  sections = await res.json();
 
-    sections = await res.json();
+  const sectionSelect = document.getElementById("section");
+  sectionSelect.innerHTML = "";
 
-    const sectionSelect = document.getElementById("section");
-    sectionSelect.innerHTML = "";
+  sections.forEach(sec => {
+    const opt = document.createElement("option");
+    opt.value = sec.id;
+    opt.textContent = sec.name_cz;
+    sectionSelect.appendChild(opt);
+  });
 
-    sections.forEach(sec => {
-      const opt = document.createElement("option");
-      opt.value = sec.id;
-      opt.textContent = sec.name;
-      sectionSelect.appendChild(opt);
-    });
-
-    sectionSelect.addEventListener("change", updateSubsections);
-    updateSubsections();
-
-  } catch (err) {
-    console.error("Chyba při načítání sekcí:", err);
-  }
+  sectionSelect.addEventListener("change", updateSubsections);
+  updateSubsections();
 }
 
 function updateSubsections() {
   const sectionId = document.getElementById("section").value;
-  const section = sections.find(s => s.id == sectionId);
+  const section = sections.find(s => s.id === sectionId);
 
   const subSelect = document.getElementById("subsection");
   subSelect.innerHTML = "";
 
-  if (!section || !section.subsections) return;
-
-  section.subsections.forEach(sub => {
+  (section.subsections || []).forEach(sub => {
     const opt = document.createElement("option");
     opt.value = sub.id;
     opt.textContent = sub.name;
@@ -57,28 +48,53 @@ function updateSubsections() {
 }
 
 // --------------------------------------------------
+// ADD NEW SUBSECTION
+// --------------------------------------------------
+function showNewSub() {
+  document.getElementById("newSubWrap").style.display = "block";
+}
+
+async function addNewSub() {
+  const name = document.getElementById("newSubName").value.trim();
+  const sectionId = document.getElementById("section").value;
+
+  if (!name) return alert("Zadej název podsekce");
+
+  const res = await authenticatedFetch("/api/sections/add-subsection", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sectionId, name })
+  });
+
+  const newSub = await res.json();
+
+  // přidej do seznamu
+  const section = sections.find(s => s.id === sectionId);
+  section.subsections.push(newSub);
+
+  updateSubsections();
+  document.getElementById("subsection").value = newSub.id;
+
+  document.getElementById("newSubWrap").style.display = "none";
+  document.getElementById("newSubName").value = "";
+}
+
+// --------------------------------------------------
 // LOAD ARTICLE
 // --------------------------------------------------
 async function loadArticle() {
   if (!articleId) return;
 
-  try {
-    const res = await authenticatedFetch(`/api/articles/get?id=${articleId}`);
-    if (!res) return;
+  const res = await authenticatedFetch(`/api/articles/get?id=${articleId}`);
+  const data = await res.json();
 
-    const data = await res.json();
-
-    document.getElementById("title").value = data.title || "";
-    document.getElementById("place").value = data.place || "";
-    document.getElementById("date").value = data.date || "";
-    document.getElementById("section").value = data.section || "";
-    updateSubsections();
-    document.getElementById("subsection").value = data.subsection || "";
-    document.getElementById("editor").innerHTML = data.content || "";
-
-  } catch (err) {
-    console.error("Chyba při načítání článku:", err);
-  }
+  document.getElementById("title").value = data.title || "";
+  document.getElementById("place").value = data.place || "";
+  document.getElementById("date").value = data.date || "";
+  document.getElementById("section").value = data.section || "";
+  updateSubsections();
+  document.getElementById("subsection").value = data.subsection || "";
+  document.getElementById("editor").innerHTML = data.content || "";
 }
 
 // --------------------------------------------------
@@ -95,28 +111,18 @@ async function saveArticle() {
     content: document.getElementById("editor").innerHTML.trim()
   };
 
-  try {
-    const res = await authenticatedFetch("/api/articles/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
+  const res = await authenticatedFetch("/api/articles/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
 
-    if (!res.ok) {
-      alert("Chyba při ukládání článku.");
-      return;
-    }
-
-    alert("Článek uložen.");
-    window.location.href = "/admin/clanky/index.html";
-
-  } catch (err) {
-    console.error("Chyba při ukládání:", err);
-  }
+  alert("Článek uložen");
+  window.location.href = "/admin/clanky/index.html";
 }
 
 // --------------------------------------------------
-// WYSIWYG FUNKCE
+// WYSIWYG
 // --------------------------------------------------
 function format(cmd) {
   document.execCommand(cmd, false, null);
@@ -127,14 +133,10 @@ function formatBlock(tag) {
 }
 
 // --------------------------------------------------
-// OBRÁZKY Z GALERIE (POPUP)
+// GALLERY POPUP
 // --------------------------------------------------
 function openGallery() {
-  window.open(
-    "/admin/gallery/picker.html",
-    "galleryPicker",
-    "width=900,height=700"
-  );
+  window.open("/admin/gallery/picker.html", "galleryPicker", "width=900,height=700");
 }
 
 window.addEventListener("message", e => {
