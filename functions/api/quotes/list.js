@@ -8,8 +8,8 @@ export async function onRequest(context) {
     });
   }
 
-  const data = await object.text();
-  const quotes = JSON.parse(data);
+  const text = await object.text();
+  const quotes = JSON.parse(text);
 
   return new Response(JSON.stringify({ quotes }), {
     headers: { "Content-Type": "application/json" }
