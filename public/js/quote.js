@@ -13,9 +13,11 @@ export async function loadQuote() {
     const author = q.author || "";
 
     // Vlož čistý text (žádné object object)
-    document.getElementById("quoteBox").textContent = text;
-    document.getElementById("quoteAuthor").textContent = author;
+    const quoteBox = document.getElementById("quoteBox");
+    const quoteAuthor = document.getElementById("quoteAuthor");
 
+    if (quoteBox) quoteBox.textContent = text;
+    if (quoteAuthor) quoteAuthor.textContent = author;
   } catch (e) {
     console.error("Chyba při načítání citátu:", e);
   }
