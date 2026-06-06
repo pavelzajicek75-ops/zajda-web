@@ -1,27 +1,19 @@
-function checkLogin() {
-  if (!sessionStorage.getItem("adminToken")) {
-    window.location.href = "/admin/login.html";
-  }
-}
+// /admin/dashboard.js
 
-function logout() {
-  sessionStorage.removeItem("adminToken");
-  window.location.href = "/admin/login.html";
-}
+// ŽÁDNÉ checkLogin(), ŽÁDNÉ redirecty – to řeší auth.js
 
 async function loadStats() {
   try {
-    const [articles, photos, quotes, users] = await Promise.all([
-      fetch("/functions/api/articles/list").then(r => r.json()),
-      fetch("/functions/api/photos/list").then(r => r.json()),
-      fetch("/functions/api/quotes/list").then(r => r.json()),
-      fetch("/functions/api/users/online").then(r => r.json())
-    ]);
+    const res = await authenticatedFetch("/api/admin/stats");
+    if (!res) return;
 
-    document.getElementById("articlesCount").textContent = articles.articles?.length || 0;
-    document.getElementById("photosCount").textContent = photos.photos?.length || 0;
-    document.getElementById("quotesCount").textContent = quotes.quotes?.length || 0;
-    document.getElementById("usersCount").textContent = users.online || 0;
+    const data = await res.json();
+
+    document.getElementById("articlesCount").textContent = data.articles || 0;
+    document.getElementById("photosCount").textContent = data.photos || 0;
+    document.getElementById("quotesCount").textContent = data.quotes || 0;
+    document.getElementById("usersCount").textContent = data.users || 0;
+
   } catch (err) {
     console.error("Chyba při načítání statistik:", err);
   }
@@ -29,36 +21,26 @@ async function loadStats() {
 
 async function loadArticles() {
   try {
-    const res = await fetch("/functions/api/articles/list");
+    const res = await authenticatedFetch("/api/articles/list");
+    if (!res) return;
+
     const data = await res.json();
     const tbody = document.getElementById("articlesList");
     tbody.innerHTML = "";
 
-    data.articles.slice(0, 5).forEach(a => {
+    data.articles.forEach(article => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${a.title}</td>
-        <td>${a.section}</td>
-        <td>${a.lang || "CZ"}</td>
-        <td>${a.date ? new Date(a.date).toLocaleDateString("cs-CZ") : ""}</td>
-        <td>
-          <button onclick="editArticle('${a.id}')">✏️</button>
-          <button onclick="deleteArticle('${a.id}')">🗑️</button>
-        </td>
+        <td>${article.title}</td>
+        <td>${article.category}</td>
+        <td>${article.lang}</td>
+        <td>${article.date}</td>
+        <td><a href="/admin/clanky/edit.html?id=${article.id}">Upravit</a></td>
       `;
       tbody.appendChild(tr);
     });
+
   } catch (err) {
     console.error("Chyba při načítání článků:", err);
   }
-}
-
-function editArticle(id) {
-  window.location.href = `/admin/clanky/index.html?id=${id}`;
-}
-
-function deleteArticle(id) {
-  if (!confirm("Opravdu smazat článek?")) return;
-  fetch(`/functions/api/articles/delete?id=${id}`, { method: "DELETE" })
-    .then(() => loadArticles());
 }
