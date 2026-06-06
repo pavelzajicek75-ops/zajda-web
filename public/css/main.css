@@ -1,3 +1,4 @@
+/* ===== ZÁKLAD ===== */
 body {
   margin: 0;
   padding: 0;
@@ -7,6 +8,7 @@ body {
   color: white;
 }
 
+/* ===== NADPIS ===== */
 header {
   text-align: center;
   margin-top: 40px;
@@ -27,28 +29,38 @@ header {
   opacity: 0.8;
 }
 
+/* ===== LÍTACÍ CITÁTY ===== */
 #quotesContainer {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .quote {
   position: absolute;
-  font-size: 20px;
-  opacity: 0.4;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  font-size: 22px;
+  opacity: 0;
+  color: #ffffff;
+  transition: opacity 1.5s ease, transform 0.3s ease, text-shadow 0.3s ease;
   pointer-events: auto;
+  white-space: nowrap;
 }
 
+/* ===== HOVER EFEKT – VÝRAZNĚJŠÍ ===== */
 .quote:hover {
-  opacity: 1;
-  transform: scale(1.2);
+  opacity: 1 !important;
+  transform: scale(1.45);
+  text-shadow: 
+    0 0 25px #ffffff,
+    0 0 40px #ff6600,
+    0 0 60px #ff6600;
 }
 
+/* ===== DOLNÍ 4 SEKCE ===== */
 footer {
   position: absolute;
   bottom: 40px;
@@ -58,13 +70,15 @@ footer {
   gap: 40px;
   font-size: 22px;
   opacity: 0.9;
+  z-index: 10;
 }
 
 .section {
   cursor: pointer;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, text-shadow 0.3s ease;
 }
 
 .section:hover {
   opacity: 1;
+  text-shadow: 0 0 15px #ffffff;
 }
