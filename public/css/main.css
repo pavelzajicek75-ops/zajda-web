@@ -42,22 +42,27 @@ header {
 
 .quote {
   position: absolute;
-  font-size: 22px;
+  font-size: 16px;              /* 🔥 menší písmo když nelítá pod myší */
   opacity: 0;
   color: #ffffff;
-  transition: opacity 1.5s ease, transform 0.3s ease, text-shadow 0.3s ease;
+  transition:
+    opacity 1.8s ease,          /* 🔥 pomalejší rozsvícení */
+    transform 0.6s ease,        /* 🔥 pomalejší zvětšení */
+    text-shadow 0.8s ease;      /* 🔥 pomalejší glow */
   pointer-events: auto;
   white-space: nowrap;
 }
 
-/* ===== HOVER EFEKT – VÝRAZNĚJŠÍ ===== */
+/* ===== HOVER – VÝRAZNÉ ROZSVÍCENÍ ===== */
 .quote:hover {
   opacity: 1 !important;
-  transform: scale(1.45);
-  text-shadow: 
-    0 0 25px #ffffff,
-    0 0 40px #ff6600,
-    0 0 60px #ff6600;
+  transform: scale(1.8);        /* 🔥 větší zvětšení */
+  font-size: 26px;              /* 🔥 větší písmo při hoveru */
+  text-shadow:
+    0 0 30px #ffffff,
+    0 0 60px #ff6600,
+    0 0 90px #ff3300,
+    0 0 120px #ff0000;          /* 🔥 extrémní glow */
 }
 
 /* ===== DOLNÍ 4 SEKCE ===== */
