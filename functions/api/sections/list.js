@@ -1,30 +1,34 @@
 export async function onRequest(context) {
+  const { env } = context;
+
+  // načti uložené podsekce
+  const raw = await env.SUBSECTIONS.get("all");
+  const stored = raw ? JSON.parse(raw) : {};
+
   const sections = [
     {
-      id: "fotografie",
-      name: "Fotografie",
-      subsections: [
-        { id: "krajina", name: "Krajina" },
-        { id: "portrét", name: "Portrét" },
-        { id: "street", name: "Street" }
-      ]
-    },
-    {
       id: "cestovani",
-      name: "Cestování",
-      subsections: [
-        { id: "evropa", name: "Evropa" },
-        { id: "asii", name: "Asie" },
-        { id: "cr", name: "ČR" }
-      ]
+      name_cz: "Cestování",
+      name_en: "Travel",
+      subsections: stored.cestovani || []
     },
     {
-      id: "osobni",
-      name: "Osobní",
-      subsections: [
-        { id: "zivot", name: "Život" },
-        { id: "diagnoza", name: "Diagnóza" }
-      ]
+      id: "fotografovani",
+      name_cz: "Fotografování",
+      name_en: "Photography",
+      subsections: stored.fotografovani || []
+    },
+    {
+      id: "projekty",
+      name_cz: "Projekty",
+      name_en: "Projects",
+      subsections: stored.projekty || []
+    },
+    {
+      id: "zajda",
+      name_cz: "Zajda – O mně",
+      name_en: "About",
+      subsections: stored.zajda || []
     }
   ];
 
