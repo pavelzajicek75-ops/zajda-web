@@ -1,85 +1,88 @@
 // ============================================
-// BEZPEČNÉ PŘIHLÁŠENÍ S JWT
+// CENTRÁLNÍ ADMIN AUTENTIZACE – FINÁLNÍ VERZE
 // ============================================
 
-let authToken = localStorage.getItem("adminToken");
-
-// Kontrola přihlášení
-function checkAuth() {
-  const token = localStorage.getItem("adminToken");
-  if (!token) {
-    window.location.href = "/admin/login.html";
-    return false;
-  }
-  return true;
+// Získání tokenu
+function getToken() {
+  return localStorage.getItem("adminToken");
 }
 
-// Přihlášení
-async function login(username, password) {
+// Ověření tokenu přes backend
+async function verifyToken() {
+  const token = getToken();
+  if (!token) return false;
+
   try {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch("/api/auth/verify", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
     });
 
+    if (!res.ok) return false;
+
     const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Login failed");
-    }
-
-    // Ulož token
-    localStorage.setItem("adminToken", data.token);
-    authToken = data.token;
-    
-    return { success: true, username: data.username };
+    return data.valid === true;
   } catch (err) {
-    return { success: false, error: err.message };
+    return false;
   }
+}
+
+// Přesměrování na login
+function redirectToLogin() {
+  window.location.href = "/admin/login.html";
 }
 
 // Odhlášení
 function logout() {
   localStorage.removeItem("adminToken");
-  window.location.href = "/admin/login.html";
+  redirectToLogin();
 }
 
-// Zobraz uživatele
+// Zobrazení jména uživatele
 function displayUsername() {
-  const token = localStorage.getItem("adminToken");
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const usernameEl = document.getElementById("username");
-      if (usernameEl) {
-        usernameEl.textContent = payload.username;
-      }
-    } catch (err) {
-      console.error("Error parsing token:", err);
+  const token = getToken();
+  if (!token) return;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const usernameEl = document.getElementById("username");
+    if (usernameEl) {
+      usernameEl.textContent = payload.username;
     }
+  } catch (err) {
+    console.error("Token decode error:", err);
   }
 }
 
-// API request s autentifikací
+// API request s JWT
 async function authenticatedFetch(url, options = {}) {
-  const token = localStorage.getItem("adminToken");
+  const token = getToken();
   if (!token) {
-    window.location.href = "/admin/login.html";
+    redirectToLogin();
     return null;
   }
 
   const headers = options.headers || {};
   headers["Authorization"] = `Bearer ${token}`;
 
-  return fetch(url, {
-    ...options,
-    headers
-  });
+  return fetch(url, { ...options, headers });
 }
 
-// Inicializuj při loadování
-window.addEventListener("DOMContentLoaded", () => {
-  checkAuth();
+// Inicializace na každé admin stránce
+window.addEventListener("DOMContentLoaded", async () => {
+  const path = window.location.pathname;
+
+  // Login stránka se neověřuje
+  if (path === "/admin/login.html") return;
+
+  const valid = await verifyToken();
+  if (!valid) {
+    redirectToLogin();
+    return;
+  }
+
   displayUsername();
 });
