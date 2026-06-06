@@ -2,6 +2,15 @@ name = "zajda-web"
 compatibility_date = "2026-06-02"
 
 pages_build_output_dir = "."
+
 [[r2_buckets]]
 binding = "zajda_photos"
 bucket_name = "zajda-photos"
+
+[[r2_buckets]]
+binding = "zajda_quotes"
+bucket_name = "zajda-quotes"
+
+[[r2_buckets]]
+binding = "zajda_articles"
+bucket_name = "zajda-articles"
