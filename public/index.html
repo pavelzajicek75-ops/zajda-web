@@ -3,51 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zajda Web</title>
+  <title>Moje diagnóza, můj vesmír</title>
   <link rel="stylesheet" href="/css/subsection.css" />
   <style>
     body {
-      background-color: #000;
+      background: radial-gradient(circle at center, #000 60%, #050505 100%);
       color: #fff;
       font-family: "Segoe UI", sans-serif;
       margin: 0;
       padding: 0;
-      text-align: center;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
+
     header {
-      font-size: 32px;
-      font-weight: 600;
-      margin-top: 40px;
+      font-size: 36px;
+      font-weight: 700;
+      color: #ff6600;
+      text-shadow: 0 0 15px #ff6600;
+      margin-bottom: 60px;
     }
+
     #quoteBox {
-      margin-top: 30px;
-      font-size: 22px;
+      font-size: 26px;
       line-height: 1.4;
+      max-width: 800px;
+      margin: 0 auto;
+      transition: opacity 1s ease;
     }
+
     #quoteAuthor {
+      margin-top: 12px;
+      font-size: 20px;
+      opacity: 0.7;
+      transition: opacity 1s ease;
+    }
+
+    #quoteEnglish {
       margin-top: 8px;
       font-size: 18px;
-      opacity: 0.7;
-    }
-    section {
-      margin-top: 60px;
+      color: #aaa;
+      font-style: italic;
     }
   </style>
 </head>
 <body>
-  <header>Zajda Web</header>
+  <header>Moje diagnóza, můj vesmír</header>
 
-  <!-- Citát -->
   <div id="quoteBox"></div>
   <div id="quoteAuthor"></div>
-
-  <!-- Články -->
-  <section id="articlesSection">
-    <h2>Články</h2>
-    <div id="articlesList"></div>
-  </section>
+  <div id="quoteEnglish"></div>
 
   <script type="module" src="/js/quote.js"></script>
-  <script type="module" src="/js/articles.js"></script>
 </body>
 </html>
