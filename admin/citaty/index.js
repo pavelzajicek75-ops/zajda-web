@@ -55,10 +55,9 @@ async function saveQuote() {
   const text = document.getElementById("quoteText").value.trim();
   const author = document.getElementById("quoteAuthor").value.trim();
 
-  const endpoint = id ? "/api/quotes/update" : "/api/quotes/add";
   const body = id ? { id, text, author } : { text, author };
 
-  const res = await authenticatedFetch(endpoint, {
+  const res = await authenticatedFetch("/api/quotes/save", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
@@ -78,4 +77,3 @@ async function deleteQuote(id) {
   const res = await authenticatedFetch(`/api/quotes/delete?id=${id}`);
   if (res.ok) loadQuotes();
 }
-
