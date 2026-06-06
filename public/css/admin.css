@@ -1,0 +1,78 @@
+body {
+  background: #0b0c10;
+  color: #eee;
+  font-family: "Segoe UI", sans-serif;
+  margin: 0;
+  padding: 40px;
+}
+
+.admin-container {
+  max-width: 900px;
+  margin: auto;
+  background: #1f2833;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+}
+
+h1 {
+  color: #66fcf1;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: 600;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border: none;
+  border-radius: 5px;
+  background: #c5c6c7;
+  color: #0b0c10;
+  font-size: 15px;
+}
+
+textarea {
+  height: 250px;
+  resize: vertical;
+}
+
+button {
+  background: #45a29e;
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  margin-top: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #66fcf1;
+  color: #0b0c10;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.toolbar button {
+  flex: 1;
+  background: #1f2833;
+  border: 1px solid #45a29e;
+  color: #66fcf1;
+}
+
+.toolbar button:hover {
+  background: #45a29e;
+  color: #fff;
+}
