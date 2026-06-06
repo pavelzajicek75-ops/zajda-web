@@ -127,13 +127,18 @@ function formatBlock(tag) {
 }
 
 // --------------------------------------------------
-// OBRÁZKY Z GALERIE
+// OBRÁZKY Z GALERIE (POPUP)
 // --------------------------------------------------
 function openGallery() {
-  const win = window.open("/admin/gallery/picker.html", "galleryPicker", "width=900,height=700");
-  window.addEventListener("message", e => {
-    if (e.data.type === "imageSelected") {
-      document.execCommand("insertHTML", false, `<img src="${e.data.url}">`);
-    }
-  });
+  window.open(
+    "/admin/gallery/picker.html",
+    "galleryPicker",
+    "width=900,height=700"
+  );
 }
+
+window.addEventListener("message", e => {
+  if (e.data.type === "imageSelected") {
+    document.execCommand("insertHTML", false, `<img src="${e.data.url}">`);
+  }
+});
