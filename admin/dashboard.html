@@ -5,7 +5,8 @@
   <title>Admin – Moje diagnóza, můj vesmír</title>
   <link rel="stylesheet" href="/admin/style.css?v=2">
 </head>
-<body onload="checkLogin(); loadStats(); loadArticles();">
+
+<body>
 
 <div class="sidebar">
   <h2>Admin</h2>
@@ -56,6 +57,11 @@
   </table>
 </div>
 
+<!-- MUSÍ BÝT PRVNÍ -->
+<script src="/admin/auth.js?v=2"></script>
+
+<!-- POTOM dashboard logika -->
 <script src="/admin/dashboard.js?v=2"></script>
+
 </body>
 </html>
