@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Editor článku – Admin</title>
-  <link rel="stylesheet" href="/admin/style.css?v=8">
+  <link rel="stylesheet" href="/admin/style.css?v=9">
 
   <style>
     .form-block { margin-bottom: 20px; }
@@ -54,6 +54,11 @@
       margin: 10px 0;
       border-radius: 6px;
     }
+
+    #newSubWrap {
+      display: none;
+      margin-top: 10px;
+    }
   </style>
 </head>
 
@@ -97,6 +102,13 @@
   <div class="form-block">
     <label>Podsekce</label>
     <select id="subsection"></select>
+
+    <button onclick="showNewSub()" style="margin-top:10px;">+ Nová podsekce</button>
+
+    <div id="newSubWrap">
+      <input type="text" id="newSubName" placeholder="Název nové podsekce">
+      <button onclick="addNewSub()">Přidat</button>
+    </div>
   </div>
 
   <div class="form-block">
@@ -118,8 +130,8 @@
 
 </div>
 
-<script src="/admin/auth.js?v=8"></script>
-<script src="/admin/clanky/edit.js?v=8"></script>
+<script src="/admin/auth.js?v=9"></script>
+<script src="/admin/clanky/edit.js?v=9"></script>
 
 </body>
 </html>
