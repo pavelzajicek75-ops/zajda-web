@@ -1,74 +1,63 @@
-// /functions/api/quotes/list.js
-
 export async function onRequest(context) {
   const { request, env } = context;
   const bucket = env.zajda_quotes;
 
-  // Check if bucket is bound
-  if (!bucket) {
-    return new Response(JSON.stringify({ error: "R2 bucket zajda_quotes is not bound" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
+  const defaultQuotes = [
+    "We shine like stars falling from the sky.",
+    "Every silence hides a spark.",
+    "Dreams are the gravity of the soul.",
+    "Light travels even through darkness.",
+    "Moments fade, but meaning stays.",
+    "We are echoes of our own constellations.",
+    "Stars fall, but we rise.",
+    "A light you can't always see.",
+    "Every night carries a hidden sunrise.",
+    "We get lost to find ourselves."
+  ];
 
-  const fileName = "quotes.json";
-  const method = request.method.toUpperCase();
-
-  // --- GET: načtení citátů ---
-  if (method === "GET") {
+  // -------------------------
+  // GET – načtení citátů
+  // -------------------------
+  if (request.method === "GET") {
     try {
-      const file = await bucket.get(fileName);
-
-      if (!file) {
-        return new Response(JSON.stringify({ quotes: [] }), {
-          headers: { "Content-Type": "application/json" }
-        });
+      const object = await bucket.get("quotes.json");
+      if (!object) {
+        return Response.json({ quotes: defaultQuotes });
       }
 
-      const text = await file.text();
-      const quotes = JSON.parse(text);
+      const text = await object.text();
+      const data = JSON.parse(text);
 
-      return new Response(JSON.stringify({ quotes }), {
-        headers: { "Content-Type": "application/json" }
-      });
+      if (!data.quotes || !Array.isArray(data.quotes) || data.quotes.length === 0) {
+        return Response.json({ quotes: defaultQuotes });
+      }
+
+      return Response.json(data);
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      });
+      return Response.json({ quotes: defaultQuotes });
     }
   }
 
-  // --- POST: uložení citátů z dashboardu ---
-  if (method === "POST") {
+  // -------------------------
+  // POST – uložení citátů z dashboardu
+  // -------------------------
+  if (request.method === "POST") {
     try {
       const body = await request.json();
 
       if (!body.quotes || !Array.isArray(body.quotes)) {
-        return new Response(JSON.stringify({ error: "Invalid format" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        });
+        return new Response("Invalid format", { status: 400 });
       }
 
-      await bucket.put(fileName, JSON.stringify(body.quotes, null, 2), {
+      await bucket.put("quotes.json", JSON.stringify({ quotes: body.quotes }, null, 2), {
         httpMetadata: { contentType: "application/json" }
       });
 
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" }
-      });
+      return Response.json({ success: true });
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      });
+      return new Response("Error saving quotes", { status: 500 });
     }
   }
 
-  return new Response(JSON.stringify({ error: "Method not allowed" }), {
-    status: 405,
-    headers: { "Content-Type": "application/json" }
-  });
+  return new Response("Method not allowed", { status: 405 });
 }
