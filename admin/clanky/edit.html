@@ -2,8 +2,60 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Upravit článek – Admin</title>
-  <link rel="stylesheet" href="/admin/style.css?v=3">
+  <title>Editor článku – Admin</title>
+  <link rel="stylesheet" href="/admin/style.css?v=4">
+
+  <style>
+    .editor-wrapper {
+      display: flex;
+      gap: 20px;
+      height: calc(100vh - 80px);
+    }
+
+    .editor-left, .editor-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #toolbar {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: #222;
+      border-bottom: 1px solid #444;
+    }
+
+    #toolbar button {
+      background: #333;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    #editor {
+      flex: 1;
+      width: 100%;
+      padding: 15px;
+      background: #111;
+      color: #eee;
+      border: none;
+      outline: none;
+      resize: none;
+      font-size: 16px;
+      font-family: monospace;
+    }
+
+    #preview {
+      flex: 1;
+      padding: 15px;
+      background: #181818;
+      color: #ddd;
+      overflow-y: auto;
+      border-left: 1px solid #333;
+    }
+  </style>
 </head>
 
 <body>
@@ -21,27 +73,34 @@
 </div>
 
 <div class="main">
-  <h1>Upravit článek</h1>
+  <h1>Editor článku</h1>
 
-  <form id="articleForm">
-    <label>Název</label>
-    <input type="text" id="title" required>
+  <div class="editor-wrapper">
 
-    <label>Kategorie</label>
-    <input type="text" id="category">
+    <div class="editor-left">
+      <div id="toolbar">
+        <button onclick="wrap('**','**')">B</button>
+        <button onclick="wrap('*','*')">I</button>
+        <button onclick="wrap('# ','')">H1</button>
+        <button onclick="wrap('## ','')">H2</button>
+        <button onclick="wrap('- ','')">•</button>
+        <button onclick="insertImage()">🖼 Obrázek</button>
+        <button onclick="saveArticle()">💾 Uložit</button>
+      </div>
 
-    <label>Jazyk</label>
-    <input type="text" id="lang" value="cs">
+      <textarea id="editor" placeholder="Začni psát článek..."></textarea>
+    </div>
 
-    <label>Obsah</label>
-    <textarea id="content" rows="10"></textarea>
+    <div class="editor-right">
+      <h3>Náhled</h3>
+      <div id="preview"></div>
+    </div>
 
-    <button type="submit">Uložit</button>
-  </form>
+  </div>
 </div>
 
-<script src="/admin/auth.js?v=3"></script>
-<script src="/admin/clanky/edit.js?v=3"></script>
+<script src="/admin/auth.js?v=4"></script>
+<script src="/admin/clanky/edit.js?v=4"></script>
 
 </body>
 </html>
