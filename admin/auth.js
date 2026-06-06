@@ -1,6 +1,6 @@
-// /admin/auth.js
-
-// Kontrola přihlášení + verify
+// ============================================
+// CENTRÁLNÍ ADMIN AUTENTIZACE – FINÁLNÍ VERZE
+// ============================================
 
 function getToken() {
   return localStorage.getItem("adminToken");
@@ -20,6 +20,7 @@ async function verifyToken() {
     });
 
     if (!res.ok) return false;
+
     const data = await res.json();
     return data.valid === true;
   } catch {
@@ -39,6 +40,7 @@ function logout() {
 function displayUsername() {
   const token = getToken();
   if (!token) return;
+
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
     const usernameEl = document.getElementById("username");
@@ -48,6 +50,7 @@ function displayUsername() {
 
 async function checkAuth() {
   const path = window.location.pathname;
+
   if (path === "/admin/login.html") return;
 
   const ok = await verifyToken();
@@ -55,6 +58,7 @@ async function checkAuth() {
     redirectToLogin();
     return false;
   }
+
   displayUsername();
   return true;
 }
@@ -65,8 +69,10 @@ async function authenticatedFetch(url, options = {}) {
     redirectToLogin();
     return null;
   }
+
   const headers = options.headers || {};
   headers["Authorization"] = `Bearer ${token}`;
+
   return fetch(url, { ...options, headers });
 }
 
