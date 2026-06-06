@@ -42,27 +42,29 @@ header {
 
 .quote {
   position: absolute;
-  font-size: 16px;              /* 🔥 menší písmo když nelítá pod myší */
+  font-size: 14px;                 /* 🔥 malé písmo při letu */
   opacity: 0;
-  color: #ffffff;
+  color: #bbbbbb;                  /* 🔥 slabší barva při letu */
   transition:
-    opacity 1.8s ease,          /* 🔥 pomalejší rozsvícení */
-    transform 0.6s ease,        /* 🔥 pomalejší zvětšení */
-    text-shadow 0.8s ease;      /* 🔥 pomalejší glow */
+    opacity 2.2s ease,             /* 🔥 pomalé rozsvícení */
+    transform 0.6s ease,
+    text-shadow 1.4s ease,         /* 🔥 pomalé rozsvícení glow */
+    color 1.4s ease;               /* 🔥 pomalá změna barvy */
   pointer-events: auto;
   white-space: nowrap;
 }
 
-/* ===== HOVER – VÝRAZNÉ ROZSVÍCENÍ ===== */
+/* ===== HOVER – JASNÉ ROZSVÍCENÍ, JEN +2 PX ===== */
 .quote:hover {
   opacity: 1 !important;
-  transform: scale(1.8);        /* 🔥 větší zvětšení */
-  font-size: 26px;              /* 🔥 větší písmo při hoveru */
+  font-size: 16px;                 /* 🔥 jen o 2 px větší */
+  transform: scale(1.05);          /* 🔥 minimální zvětšení */
+  color: #ffffff;                  /* 🔥 jasná bílá */
   text-shadow:
-    0 0 30px #ffffff,
-    0 0 60px #ff6600,
-    0 0 90px #ff3300,
-    0 0 120px #ff0000;          /* 🔥 extrémní glow */
+    0 0 50px #ffffff,              /* 🔥 extrémní bílý glow */
+    0 0 90px #ff9900,              /* 🔥 silný oranžový glow */
+    0 0 140px #ff5500,             /* 🔥 hlubší oranžový glow */
+    0 0 200px #ff2200;             /* 🔥 červený žár – supernova efekt */
 }
 
 /* ===== DOLNÍ 4 SEKCE ===== */
