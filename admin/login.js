@@ -1,18 +1,54 @@
-function togglePassword() {
-  const pass = document.getElementById("password");
-  pass.type = pass.type === "password" ? "text" : "password";
-}
+// /admin/login.js
 
-function login() {
-  const user = document.getElementById("username").value.trim();
-  const pass = document.getElementById("password").value.trim();
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("login-form");
+  const usernameInput = document.getElementById("username");
+  const passwordInput = document.getElementById("password");
+  const errorBox = document.getElementById("login-error");
 
-  const savedPass = localStorage.getItem("adminPassword") || "vesmir2026";
+  if (!form) return;
 
-  if (user === "admin" && pass === savedPass) {
-    sessionStorage.setItem("adminToken", "active");
-    window.location.href = "/admin/dashboard.html";
-  } else {
-    alert("❌ Nesprávné jméno nebo heslo.");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!username || !password) {
+      showError("Vyplň uživatelské jméno i heslo.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.token) {
+        showError(data.error || "Přihlášení selhalo.");
+        return;
+      }
+
+      // Uložit JWT
+      localStorage.setItem("adminToken", data.token);
+
+      // Přesměrování na dashboard
+      window.location.href = "/admin/dashboard.html";
+    } catch (err) {
+      showError("Chyba připojení k serveru.");
+    }
+  });
+
+  function showError(msg) {
+    if (errorBox) {
+      errorBox.textContent = msg;
+      errorBox.style.display = "block";
+    } else {
+      alert(msg);
+    }
   }
-}
+});
