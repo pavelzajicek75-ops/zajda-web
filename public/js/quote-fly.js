@@ -13,20 +13,47 @@ async function loadQuotes() {
     el.className = "quote";
     el.textContent = q.text;
 
-    const x = Math.random() * window.innerWidth;
-    const y = Math.random() * window.innerHeight;
+    // náhodná startovní pozice
+    const startX = Math.random() * window.innerWidth;
+    const startY = Math.random() * window.innerHeight;
 
-    el.style.left = `${x}px`;
-    el.style.top = `${y}px`;
+    // náhodný směr a rychlost
+    const dx = (Math.random() - 0.5) * 0.4; // horizontální rychlost
+    const dy = (Math.random() - 0.5) * 0.4; // vertikální rychlost
+
+    el.style.left = `${startX}px`;
+    el.style.top = `${startY}px`;
+    el.style.opacity = 0;
 
     container.appendChild(el);
 
+    // fade-in
     setTimeout(() => {
-      el.remove();
-    }, 15000);
+      el.style.opacity = 0.6;
+    }, 100);
+
+    // animace pohybu
+    let x = startX;
+    let y = startY;
+
+    const interval = setInterval(() => {
+      x += dx;
+      y += dy;
+
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+
+      // fade-out + odstranění
+      if (x < -200 || x > window.innerWidth + 200 || y < -200 || y > window.innerHeight + 200) {
+        el.style.opacity = 0;
+        clearInterval(interval);
+        setTimeout(() => el.remove(), 1000);
+      }
+    }, 30);
   }
 
-  setInterval(spawnQuote, 1200);
+  // generuj nový citát každých 1.5 sekundy
+  setInterval(spawnQuote, 1500);
   spawnQuote();
 }
 
