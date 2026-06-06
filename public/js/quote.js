@@ -1,26 +1,31 @@
-export async function loadQuote() {
+export async function loadQuotes() {
   try {
     const res = await fetch("/api/quotes/public-list");
     const data = await res.json();
 
     if (!data.quotes || data.quotes.length === 0) return;
 
-    // Vyber náhodný citát
-    const q = data.quotes[Math.floor(Math.random() * data.quotes.length)];
-
-    // Ověř, že má text a autora
-    const text = q.text || "";
-    const author = q.author || "";
-
-    // Vlož čistý text (žádné object object)
     const quoteBox = document.getElementById("quoteBox");
     const quoteAuthor = document.getElementById("quoteAuthor");
 
-    if (quoteBox) quoteBox.textContent = text;
-    if (quoteAuthor) quoteAuthor.textContent = author;
+    let index = 0;
+
+    function showQuote() {
+      const q = data.quotes[index];
+      quoteBox.textContent = q.text || "";
+      quoteAuthor.textContent = q.author || "";
+      index = (index + 1) % data.quotes.length;
+    }
+
+    // zobraz první citát
+    showQuote();
+
+    // měň citát každých 10 sekund
+    setInterval(showQuote, 10000);
+
   } catch (e) {
-    console.error("Chyba při načítání citátu:", e);
+    console.error("Chyba při načítání citátů:", e);
   }
 }
 
-loadQuote();
+loadQuotes();
