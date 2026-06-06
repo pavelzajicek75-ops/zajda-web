@@ -9,6 +9,21 @@ async function loadQuotes() {
   let activeQuotes = 0;
   const MAX_QUOTES = 10;
 
+  function splitQuote(text) {
+    if (text.length <= 40) return text; // krátké necháme
+
+    const mid = Math.floor(text.length / 2);
+
+    // najdeme nejbližší mezeru kolem středu
+    let splitPos = text.indexOf(" ", mid);
+    if (splitPos === -1) splitPos = mid;
+
+    const part1 = text.slice(0, splitPos).trim();
+    const part2 = text.slice(splitPos).trim();
+
+    return part1 + "\n" + part2;
+  }
+
   function spawnQuote() {
     if (activeQuotes >= MAX_QUOTES) return;
 
@@ -16,15 +31,15 @@ async function loadQuotes() {
 
     const el = document.createElement("div");
     el.className = "quote";
-    el.textContent = q.text;
 
-    // náhodná startovní pozice
+    // 🔥 automatické rozdělení dlouhých citátů
+    el.textContent = splitQuote(q.text);
+
     const startX = Math.random() * window.innerWidth;
     const startY = Math.random() * window.innerHeight;
 
-    // náhodný směr a rychlost (rychlejší než předtím)
-    const dx = (Math.random() - 0.5) * 1.2; 
-    const dy = (Math.random() - 0.5) * 1.2;
+    const dx = (Math.random() - 0.5) * 2.2; 
+    const dy = (Math.random() - 0.5) * 2.2;
 
     el.style.left = `${startX}px`;
     el.style.top = `${startY}px`;
@@ -33,9 +48,8 @@ async function loadQuotes() {
     container.appendChild(el);
     activeQuotes++;
 
-    // fade-in
     setTimeout(() => {
-      el.style.opacity = 0.7;
+      el.style.opacity = 0.5;
     }, 100);
 
     let x = startX;
@@ -48,7 +62,6 @@ async function loadQuotes() {
       el.style.left = `${x}px`;
       el.style.top = `${y}px`;
 
-      // fade-out + odstranění
       if (
         x < -300 || 
         x > window.innerWidth + 300 || 
@@ -60,12 +73,11 @@ async function loadQuotes() {
         setTimeout(() => {
           el.remove();
           activeQuotes--;
-        }, 800);
+        }, 1500);
       }
-    }, 25); // rychlejší pohyb
+    }, 25);
   }
 
-  // generuj nový citát každých 1.2 sekundy
   setInterval(spawnQuote, 1200);
   spawnQuote();
 }
