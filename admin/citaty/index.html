@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Citáty – Admin</title>
+  <link rel="stylesheet" href="/admin/style.css?v=11">
+  <style>
+    body { background:#0b0b1a; color:#eee; font-family:Arial; }
+    table { width:100%; border-collapse:collapse; margin-top:20px; }
+    th, td { padding:10px; border-bottom:1px solid #333; }
+    button { background:#ff6600; border:none; padding:6px 10px; color:#fff; cursor:pointer; }
+    #editModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; padding:20px; border-radius:8px; width:400px; }
+  </style>
+</head>
+<body>
+  <h1>Citáty</h1>
+  <button onclick="openNew()">+ Nový citát</button>
+  <table id="quotesTable">
+    <thead><tr><th>Text</th><th>Autor</th><th>Akce</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="editModal">
+    <h3 id="modalTitle">Upravit citát</h3>
+    <input type="hidden" id="quoteId">
+    <textarea id="quoteText" rows="4" style="width:100%;"></textarea>
+    <input type="text" id="quoteAuthor" placeholder="Autor" style="width:100%; margin-top:10px;">
+    <div style="margin-top:10px;">
+      <button onclick="saveQuote()">💾 Uložit</button>
+      <button onclick="closeModal()">Zavřít</button>
+    </div>
+  </div>
+
+  <script src="/admin/auth.js?v=11"></script>
+  <script src="/admin/citaty/index.js?v=11"></script>
+</body>
+</html>
