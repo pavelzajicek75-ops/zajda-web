@@ -1,17 +1,63 @@
 // /admin/clanky/edit.js
 
 let articleId = null;
+let sections = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   articleId = params.get("id") || null;
 
+  loadSections();
   loadArticle();
-  setupLivePreview();
 });
 
 // --------------------------------------------------
-// Načtení článku
+// SECTIONS + SUBSECTIONS
+// --------------------------------------------------
+async function loadSections() {
+  try {
+    const res = await authenticatedFetch("/api/sections/list");
+    if (!res) return;
+
+    sections = await res.json();
+
+    const sectionSelect = document.getElementById("section");
+    sectionSelect.innerHTML = "";
+
+    sections.forEach(sec => {
+      const opt = document.createElement("option");
+      opt.value = sec.id;
+      opt.textContent = sec.name;
+      sectionSelect.appendChild(opt);
+    });
+
+    sectionSelect.addEventListener("change", updateSubsections);
+    updateSubsections();
+
+  } catch (err) {
+    console.error("Chyba při načítání sekcí:", err);
+  }
+}
+
+function updateSubsections() {
+  const sectionId = document.getElementById("section").value;
+  const section = sections.find(s => s.id == sectionId);
+
+  const subSelect = document.getElementById("subsection");
+  subSelect.innerHTML = "";
+
+  if (!section || !section.subsections) return;
+
+  section.subsections.forEach(sub => {
+    const opt = document.createElement("option");
+    opt.value = sub.id;
+    opt.textContent = sub.name;
+    subSelect.appendChild(opt);
+  });
+}
+
+// --------------------------------------------------
+// LOAD ARTICLE
 // --------------------------------------------------
 async function loadArticle() {
   if (!articleId) return;
@@ -22,8 +68,11 @@ async function loadArticle() {
 
     const data = await res.json();
 
-    document.getElementById("editor").value = data.content || "";
-    updatePreview();
+    document.getElementById("title").value = data.title || "";
+    document.getElementById("section").value = data.section || "";
+    updateSubsections();
+    document.getElementById("subsection").value = data.subsection || "";
+    document.getElementById("editor").innerHTML = data.content || "";
 
   } catch (err) {
     console.error("Chyba při načítání článku:", err);
@@ -31,14 +80,15 @@ async function loadArticle() {
 }
 
 // --------------------------------------------------
-// Uložení článku
+// SAVE ARTICLE
 // --------------------------------------------------
 async function saveArticle() {
-  const content = document.getElementById("editor").value.trim();
-
   const body = {
     id: articleId,
-    content
+    title: document.getElementById("title").value.trim(),
+    section: document.getElementById("section").value,
+    subsection: document.getElementById("subsection").value,
+    content: document.getElementById("editor").innerHTML.trim()
   };
 
   try {
@@ -62,55 +112,19 @@ async function saveArticle() {
 }
 
 // --------------------------------------------------
-// Toolbar funkce
+// WYSIWYG FUNKCE
 // --------------------------------------------------
-function wrap(before, after) {
-  const editor = document.getElementById("editor");
-  const start = editor.selectionStart;
-  const end = editor.selectionEnd;
+function format(cmd) {
+  document.execCommand(cmd, false, null);
+}
 
-  const selected = editor.value.substring(start, end);
-  const newText = before + selected + after;
-
-  editor.setRangeText(newText, start, end, "end");
-  updatePreview();
+function formatBlock(tag) {
+  document.execCommand("formatBlock", false, tag);
 }
 
 function insertImage() {
   const url = prompt("URL obrázku:");
   if (!url) return;
 
-  const editor = document.getElementById("editor");
-  const insert = `\n![popis obrázku](${url})\n`;
-
-  editor.setRangeText(insert, editor.selectionStart, editor.selectionEnd, "end");
-  updatePreview();
-}
-
-// --------------------------------------------------
-// Živý náhled
-// --------------------------------------------------
-function setupLivePreview() {
-  document.getElementById("editor").addEventListener("input", updatePreview);
-  updatePreview();
-}
-
-function updatePreview() {
-  const text = document.getElementById("editor").value;
-
-  // jednoduchý markdown → HTML
-  let html = text
-    .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-    .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-    .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-    .replace(/\*\*(.*?)\*\*/gim, "<b>$1</b>")
-    .replace(/\*(.*?)\*/gim, "<i>$1</i>")
-    .replace(/!
-
-\[(.*?)\]
-
-\((.*?)\)/gim, "<img src='$2' alt='$1' style='max-width:100%;'>")
-    .replace(/\n/g, "<br>");
-
-  document.getElementById("preview").innerHTML = html;
+  document.execCommand("insertHTML", false, `<img src="${url}">`);
 }
