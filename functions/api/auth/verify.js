@@ -1,7 +1,8 @@
 // /functions/api/auth/verify.js
 
-const JWT_SECRET = "super-tajne-heslo-zajda"; // MUSÍ být stejný jako v login.js
+const JWT_SECRET = "super-tajne-heslo-zajda"; // MUSÍ být stejné jako v login.js
 
+// Cloudflare-safe Base64URL decode
 function base64UrlDecode(str) {
   str = str.replace(/-/g, "+").replace(/_/g, "/");
   const pad = str.length % 4;
@@ -30,8 +31,9 @@ async function verifyJwt(token, secret) {
   const valid = await crypto.subtle.verify("HMAC", key, signature, data);
   if (!valid) return null;
 
-  const payloadJson = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
-  const payload = JSON.parse(payloadJson);
+  // Cloudflare-safe payload decode
+  const json = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
+  const payload = JSON.parse(json);
 
   const now = Math.floor(Date.now() / 1000);
   if (payload.exp && payload.exp < now) return null;
