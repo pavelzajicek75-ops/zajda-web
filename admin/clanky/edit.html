@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Upravit článek – Admin</title>
+  <link rel="stylesheet" href="/admin/style.css?v=3">
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>Admin</h2>
+  <ul>
+    <li><a href="/admin/dashboard.html">Dashboard</a></li>
+    <li><a href="/admin/clanky/index.html" class="active">Články</a></li>
+    <li><a href="/admin/gallery/">Fotky</a></li>
+    <li><a href="/admin/citaty/index.html">Citáty</a></li>
+    <li><a href="/admin/nastaveni.html">Nastavení</a></li>
+    <li><a href="#" onclick="logout()">Odhlásit se</a></li>
+  </ul>
+</div>
+
+<div class="main">
+  <h1>Upravit článek</h1>
+
+  <form id="articleForm">
+    <label>Název</label>
+    <input type="text" id="title" required>
+
+    <label>Kategorie</label>
+    <input type="text" id="category">
+
+    <label>Jazyk</label>
+    <input type="text" id="lang" value="cs">
+
+    <label>Obsah</label>
+    <textarea id="content" rows="10"></textarea>
+
+    <button type="submit">Uložit</button>
+  </form>
+</div>
+
+<script src="/admin/auth.js?v=3"></script>
+<script src="/admin/clanky/edit.js?v=3"></script>
+
+</body>
+</html>
