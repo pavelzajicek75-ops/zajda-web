@@ -1,10 +1,14 @@
 {
   "name": "zajda-web",
   "version": "1.0.0",
-  "description": "Static site for zajda-web",
+  "description": "Moje diagnóza, můj vesmír - Static site with Cloudflare Pages",
   "scripts": {
-    "build": "echo 'Static site build complete'"
+    "build": "echo 'Static site build complete'",
+    "dev": "wrangler pages dev ."
   },
   "author": "Pavel Zajíček",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.50.0"
+  }
 }

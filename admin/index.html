@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Moje diagnóza, můj vesmír</title>
+  <link rel="stylesheet" href="/admin/style.css?v=1.0">
+</head>
+<body>
+
+<aside class="sidebar">
+  <h2>ADMIN</h2>
+  <ul>
+    <li><a href="/admin/index.html" class="active">Dashboard</a></li>
+    <li><a href="/admin/editor.html">Editor článků</a></li>
+    <li><a href="/">Domů</a></li>
+  </ul>
+</aside>
+
+<main class="main">
+  <h1>Admin Dashboard</h1>
+
+  <section class="stats">
+    <div class="stat-box">
+      <h3>Články</h3>
+      <div id="articleCount">-</div>
+    </div>
+    <div class="stat-box">
+      <h3>Fotky</h3>
+      <div id="photoCount">-</div>
+    </div>
+    <div class="stat-box">
+      <h3>Citáty</h3>
+      <div id="quoteCount">-</div>
+    </div>
+  </section>
+
+  <h2>Poslední články</h2>
+  <table class="articles-table">
+    <thead>
+      <tr>
+        <th>Název</th>
+        <th>Autor</th>
+        <th>Vytvořeno</th>
+        <th>Akce</th>
+      </tr>
+    </thead>
+    <tbody id="articlesTableBody">
+      <tr>
+        <td colspan="4" style="text-align: center; color: #ccc;">Načítám...</td>
+      </tr>
+    </tbody>
+  </table>
+</main>
+
+<script>
+async function loadStats() {
+  try {
+    // Load articles
+    const articlesRes = await fetch("/api/articles/list");
+    if (articlesRes.ok) {
+      const articlesData = await articlesRes.json();
+      const articles = articlesData.articles || [];
+      document.getElementById("articleCount").textContent = articles.length;
+
+      // Display recent articles
+      const tbody = document.getElementById("articlesTableBody");
+      if (articles.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #ccc;">Žádné články</td></tr>';
+      } else {
+        tbody.innerHTML = articles.slice(0, 5).map(a => `
+          <tr>
+            <td>${a.title}</td>
+            <td>${a.author}</td>
+            <td>${new Date(a.created).toLocaleDateString('cs-CZ')}</td>
+            <td>
+              <button onclick="editArticle('${a.id}')">✎</button>
+              <button onclick="deleteArticle('${a.id}')">✕</button>
+            </td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    // Load photos
+    const photosRes = await fetch("/api/photo/list");
+    if (photosRes.ok) {
+      const photosData = await photosRes.json();
+      document.getElementById("photoCount").textContent = photosData.total || 0;
+    }
+
+    // Load quotes
+    const quotesRes = await fetch("/api/quotes/list");
+    if (quotesRes.ok) {
+      const quotesData = await quotesRes.json();
+      document.getElementById("quoteCount").textContent = (quotesData.quotes || []).length;
+    }
+  } catch (err) {
+    console.error("Error loading stats:", err);
+  }
+}
+
+function editArticle(id) {
+  alert("TODO: Implementovat editaci článku " + id);
+}
+
+function deleteArticle(id) {
+  if (confirm("Opravdu smazat tento článek?")) {
+    fetch(`/api/articles/${id}`, { method: "DELETE" })
+      .then(() => {
+        alert("Článek smazán");
+        loadStats();
+      })
+      .catch(err => alert("Chyba: " + err.message));
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadStats);
+</script>
+
+</body>
+</html>

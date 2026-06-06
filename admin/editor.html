@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor článků - Moje diagnóza, můj vesmír</title>
+  <link rel="stylesheet" href="/style.css?v=1.0">
+</head>
+<body>
+
+<!-- CITÁTY – hvězdy po celé stránce -->
+<div id="floatingQuotesContainer"></div>
+
+<header class="hero">
+  <h1 class="main-title">EDITOR ČLÁNKŮ</h1>
+  <h2 class="subtitle">Správa obsahu</h2>
+  <nav class="nav-links">
+    <a href="/">Domů</a>
+    <a href="/clanky/">Články</a>
+    <a href="/admin/editor.html">Admin</a>
+  </nav>
+</header>
+
+<section class="editor-container">
+  <form class="editor-form" id="articleForm">
+    <div class="form-group">
+      <label for="articleId">ID článku:</label>
+      <input type="text" id="articleId" name="id" placeholder="automatické-id" readonly>
+    </div>
+
+    <div class="form-group">
+      <label for="articleTitle">Název:</label>
+      <input type="text" id="articleTitle" name="title" placeholder="Název článku" required>
+    </div>
+
+    <div class="form-group">
+      <label for="articleSlug">Slug (URL):</label>
+      <input type="text" id="articleSlug" name="slug" placeholder="nazev-clanku" required>
+    </div>
+
+    <div class="form-group">
+      <label for="articleExcerpt">Shrnutí:</label>
+      <input type="text" id="articleExcerpt" name="excerpt" placeholder="Krátké shrnutí článku">
+    </div>
+
+    <div class="form-group">
+      <label for="articleContent">Obsah:</label>
+      <textarea id="articleContent" name="content" placeholder="Obsah článku..." required></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="articleTags">Tagy (oddělené čárkou):</label>
+      <input type="text" id="articleTags" name="tags" placeholder="tag1, tag2, tag3">
+    </div>
+
+    <div class="button-group">
+      <button type="submit">Uložit článek</button>
+      <button type="button" class="secondary" onclick="resetForm()">Nový článek</button>
+      <button type="button" class="secondary" onclick="goToArticles()">Zpět na články</button>
+    </div>
+
+    <div id="message" style="margin-top: 15px; padding: 10px; border-radius: 4px; display: none;"></div>
+  </form>
+</section>
+
+<footer>
+  <p>© 2026 Moje diagnóza, můj vesmír</p>
+</footer>
+
+<script src="/app.js?v=1.0"></script>
+<script>
+function generateId() {
+  return "article-" + Date.now() + "-" + Math.random().toString(36).substr(2, 9);
+}
+
+function resetForm() {
+  document.getElementById("articleForm").reset();
+  document.getElementById("articleId").value = generateId();
+  document.getElementById("message").style.display = "none";
+}
+
+function goToArticles() {
+  window.location.href = "/clanky/";
+}
+
+function showMessage(text, isError = false) {
+  const messageDiv = document.getElementById("message");
+  messageDiv.textContent = text;
+  messageDiv.style.backgroundColor = isError ? "rgba(255, 102, 0, 0.2)" : "rgba(0, 255, 0, 0.2)";
+  messageDiv.style.color = isError ? "#ff6600" : "#0f0";
+  messageDiv.style.display = "block";
+  setTimeout(() => {
+    messageDiv.style.display = "none";
+  }, 5000);
+}
+
+document.getElementById("articleForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(document.getElementById("articleForm"));
+
+  const article = {
+    id: formData.get("id"),
+    title: formData.get("title"),
+    slug: formData.get("slug"),
+    excerpt: formData.get("excerpt"),
+    content: formData.get("content"),
+    tags: formData.get("tags").split(",").map(t => t.trim()).filter(t => t),
+    author: "Pavel"
+  };
+
+  try {
+    const res = await fetch("/api/articles/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(article)
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      showMessage("Chyba: " + (error.error || "Neznámá chyba"), true);
+      return;
+    }
+
+    const result = await res.json();
+    showMessage("Článek úspěšně uložen: " + result.saved);
+    
+    // Reset form after successful save
+    setTimeout(() => {
+      resetForm();
+    }, 2000);
+  } catch (err) {
+    showMessage("Chyba: " + err.message, true);
+  }
+});
+
+// Initialize form on load
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("articleId").value = generateId();
+});
+</script>
+
+</body>
+</html>

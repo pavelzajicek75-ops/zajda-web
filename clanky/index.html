@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Články - Moje diagnóza, můj vesmír</title>
+  <link rel="stylesheet" href="/style.css?v=1.0">
+</head>
+<body>
+
+<!-- CITÁTY – hvězdy po celé stránce -->
+<div id="floatingQuotesContainer"></div>
+
+<header class="hero">
+  <h1 class="main-title">ČLÁNKY</h1>
+  <h2 class="subtitle">Seznám s mými příběhy</h2>
+  <nav class="nav-links">
+    <a href="/">Domů</a>
+    <a href="/clanky/">Články</a>
+    <a href="/admin/editor.html">Admin</a>
+  </nav>
+</header>
+
+<section class="article-list" id="articleList">
+  <div style="grid-column: 1 / -1; text-align: center; color: #ccc;">
+    Načítám články...
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 Moje diagnóza, můj vesmír</p>
+</footer>
+
+<script src="/app.js?v=1.0"></script>
+<script>
+async function loadArticles() {
+  try {
+    const res = await fetch("/api/articles/list");
+    if (!res.ok) {
+      document.getElementById("articleList").innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ff6600;">Chyba při načítání článků</div>';
+      return;
+    }
+
+    const data = await res.json();
+    const articles = data.articles || [];
+
+    const container = document.getElementById("articleList");
+    container.innerHTML = "";
+
+    if (articles.length === 0) {
+      container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ccc;">Zatím žádné články</div>';
+      return;
+    }
+
+    articles.forEach(article => {
+      const card = document.createElement("div");
+      card.className = "article-card";
+      card.innerHTML = `
+        <h3>${article.title}</h3>
+        <div class="meta">Autor: ${article.author} | ${new Date(article.created).toLocaleDateString('cs-CZ')}</div>
+        <p>${article.excerpt || "Bez shrnutí"}</p>
+      `;
+      card.onclick = () => window.location.href = `/clanky/${article.id}/`;
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error("Error loading articles:", err);
+    document.getElementById("articleList").innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #ff6600;">Chyba: ' + err.message + '</div>';
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadArticles);
+</script>
+
+</body>
+</html>
