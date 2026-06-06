@@ -1,16 +1,20 @@
-name = "zajda-web"
-compatibility_date = "2026-06-02"
-
-pages_build_output_dir = "."
-
 [[r2_buckets]]
-binding = "zajda_photos"
-bucket_name = "zajda-photos"
-
-[[r2_buckets]]
-binding = "zajda_quotes"
+binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
 
 [[r2_buckets]]
-binding = "zajda_articles"
-bucket_name = "zajda-articles"
+binding = "PHOTOS_R2"
+bucket_name = "zajda-photos"
+
+[[kv_namespaces]]
+binding = "ARTICLES"
+id = "56e1ba6fdafc4d46a5de4e4690d01fa3"
+
+[[kv_namespaces]]
+binding = "SUBSECTIONS"
+id = "dd6ee2a83add46339418a5294c74c7ef"
+
+[[kv_namespaces]]
+binding = "PHOTOS"
+id = "2d74f6e45eda4cbea51275017ba66c23"
+
