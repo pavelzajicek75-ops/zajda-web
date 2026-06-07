@@ -1,17 +1,14 @@
 export async function onRequest(context) {
-  const { env } = context;
+  const bucket = context.env.QUOTES_R2;
+  const list = await bucket.list({ prefix: "" });
 
-  const object = await env.QUOTES_R2.get("quotes.json");
-  if (!object) {
-    return new Response(JSON.stringify({ quotes: [] }), {
-      headers: { "Content-Type": "application/json" }
-    });
-  }
+  const quotes = await Promise.all(
+    list.objects.map(async (obj) => {
+      const file = await bucket.get(obj.key);
+      const text = await file.text();
+      return JSON.parse(text);
+    })
+  );
 
-  const text = await object.text();
-  const quotes = JSON.parse(text);
-
-  return new Response(JSON.stringify({ quotes }), {
-    headers: { "Content-Type": "application/json" }
-  });
+  return Response.json(quotes);
 }
