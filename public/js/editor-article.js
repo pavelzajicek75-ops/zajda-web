@@ -53,6 +53,7 @@ async function loadSections() {
     newSubInput.value = "";
     await fetch("/api/subsections/save", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(subsections)
     });
     renderSubsections();
@@ -76,12 +77,17 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
     created: Date.now()
   };
 
-  await fetch("/api/articles/create", {
+  const res = await fetch("/api/articles/create", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
 
-  alert("Článek uložen");
+  if (res.ok) {
+    alert("✅ Článek uložen do R2!");
+  } else {
+    alert("❌ Chyba při ukládání článku!");
+  }
 });
 
 initPhotoPicker();
