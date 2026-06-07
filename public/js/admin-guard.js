@@ -1,3 +1,3 @@
-if (localStorage.getItem("adminAuth") !== "OK") {
+if (localStorage.getItem("adminAuth") !== "1") {
   window.location.href = "/admin/login.html";
 }
