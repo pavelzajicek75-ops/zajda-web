@@ -2,22 +2,47 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="/css/admin.css">
+  <title>Admin Dashboard</title>
+
+  <link rel="stylesheet" href="/css/dashboard.css">
   <script type="module" src="/js/admin-guard.js"></script>
+  <script type="module" src="/js/dashboard-animations.js"></script>
 </head>
+
 <body>
 
-  <div class="admin-container">
-    <h1>Admin Dashboard</h1>
+  <div class="sidebar">
+    <h2 class="logo">Zajda Web</h2>
 
-    <div class="admin-menu">
-      <a href="/admin/clanky/index.html">Články</a>
-      <a href="/admin/fotky/index.html">Fotky</a>
-      <a href="/admin/citaty/index.html">Citáty</a>
-      <a href="/admin/logout.html">Odhlásit</a>
+    <a href="/admin/clanky/index.html">📄 Články</a>
+    <a href="/admin/fotky/index.html">🖼️ Galerie</a>
+    <a href="/admin/citaty/index.html">💬 Citáty</a>
+    <a href="/admin/logout.html">🚪 Odhlásit</a>
+  </div>
+
+  <div class="content">
+    <h1 class="animated-title">
+      <span data-text="Admin Dashboard">Admin Dashboard</span>
+    </h1>
+
+    <p class="subtitle">Správa obsahu hlavního webu</p>
+
+    <div class="cards">
+      <a class="card" href="/admin/clanky/index.html">
+        <h3>Články</h3>
+        <p>Správa článků, sekcí a podsekcí</p>
+      </a>
+
+      <a class="card" href="/admin/fotky/index.html">
+        <h3>Galerie</h3>
+        <p>Nahrávání a správa fotografií</p>
+      </a>
+
+      <a class="card" href="/admin/citaty/index.html">
+        <h3>Citáty</h3>
+        <p>Úprava textů pro hlavní stránku</p>
+      </a>
     </div>
-
   </div>
 
 </body>
