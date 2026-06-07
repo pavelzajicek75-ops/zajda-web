@@ -3,13 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <title>Dashboard</title>
+  <link rel="stylesheet" href="/css/admin.css">
   <script type="module" src="/js/admin-guard.js"></script>
 </head>
 <body>
-  <h1>Dashboard</h1>
 
-  <a href="/admin/clanky/edit.html">Editor článků</a><br>
-  <a href="/admin/fotky/index.html">Galerie fotek</a><br>
-  <a href="/admin/logout.html">Odhlásit</a>
+  <div class="admin-container">
+    <h1>Admin Dashboard</h1>
+
+    <div class="admin-menu">
+      <a href="/admin/clanky/index.html">Články</a>
+      <a href="/admin/fotky/index.html">Fotky</a>
+      <a href="/admin/citaty/index.html">Citáty</a>
+      <a href="/admin/logout.html">Odhlásit</a>
+    </div>
+
+  </div>
+
 </body>
 </html>
