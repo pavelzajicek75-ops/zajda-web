@@ -2,66 +2,54 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Admin – Moje diagnóza, můj vesmír</title>
-  <link rel="stylesheet" href="/admin/style.css?v=2">
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      width: 260px;
+    }
+    .menu a {
+      display: block;
+      padding: 15px;
+      background: #222;
+      border-radius: 8px;
+      color: #fff;
+      text-decoration: none;
+      font-size: 18px;
+      text-align: center;
+      border: 1px solid #333;
+    }
+    .menu a:hover {
+      background: #333;
+    }
+  </style>
 </head>
-
 <body>
 
-<div class="sidebar">
-  <h2>Admin</h2>
-  <ul>
-    <li><a href="/admin/dashboard.html" class="active">Dashboard</a></li>
-    <li><a href="/admin/clanky/index.html">Články</a></li>
-    <li><a href="/admin/gallery/">Fotky</a></li>
-    <li><a href="/admin/citaty/index.html">Citáty</a></li>
-    <li><a href="/admin/nastaveni.html">Nastavení</a></li>
-    <li><a href="#" onclick="logout()">Odhlásit se</a></li>
-  </ul>
+<script src="/admin/admin-guard.js"></script>
+
+<h1>Admin Dashboard</h1>
+
+<div class="menu">
+  <a href="/admin/gallery/">📸 Galerie</a>
+  <a href="/admin/citaty/">💬 Citáty</a>
+  <a href="/admin/clanky/">📝 Články</a>
+  <a href="/admin/sections/">📂 Sekce</a>
+  <a href="/admin/subsections/">📁 Podsekce</a>
 </div>
 
-<div class="main">
-  <h1>Admin – Moje diagnóza, můj vesmír</h1>
-
-  <div class="stats">
-    <div class="stat-box">
-      <h3>Celkem článků</h3>
-      <div id="articlesCount">–</div>
-    </div>
-    <div class="stat-box">
-      <h3>Počet fotek</h3>
-      <div id="photosCount">–</div>
-    </div>
-    <div class="stat-box">
-      <h3>Aktivní citáty</h3>
-      <div id="quotesCount">–</div>
-    </div>
-    <div class="stat-box">
-      <h3>Uživatelé online</h3>
-      <div id="usersCount">–</div>
-    </div>
-  </div>
-
-  <h2>Poslední články</h2>
-  <table class="articles-table">
-    <thead>
-      <tr>
-        <th>Název</th>
-        <th>Kategorie</th>
-        <th>Jazyk</th>
-        <th>Datum</th>
-        <th>Akce</th>
-      </tr>
-    </thead>
-    <tbody id="articlesList"></tbody>
-  </table>
-</div>
-
-<!-- MUSÍ BÝT PRVNÍ -->
-<script src="/admin/auth.js?v=2"></script>
-
-<!-- POTOM dashboard logika -->
-<script src="/admin/dashboard.js?v=2"></script>
-
+<script src="./dashboard.js"></script>
 </body>
 </html>
