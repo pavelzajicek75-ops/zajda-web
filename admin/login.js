@@ -1,16 +1,30 @@
-document.getElementById("togglePass").onclick = () => {
+document.addEventListener("DOMContentLoaded", () => {
+
   const pwd = document.getElementById("password");
-  pwd.type = pwd.type === "password" ? "text" : "password";
-};
+  const toggle = document.getElementById("togglePass");
 
-document.getElementById("loginBtn").onclick = () => {
-  const login = document.getElementById("login").value.trim();
-  const pwd = document.getElementById("password").value.trim();
+  // 🔥 FUNKČNÍ ZOBRAZENÍ / SKRYTÍ HESLA
+  toggle.onclick = () => {
+    if (pwd.type === "password") {
+      pwd.type = "text";
+      toggle.textContent = "🙈 skrýt heslo";
+    } else {
+      pwd.type = "password";
+      toggle.textContent = "👁️ zobrazit heslo";
+    }
+  };
 
-  if (login === "zajda" && pwd === "Cestmir753") {
-    localStorage.setItem("adminAuth", "1");
-    window.location.href = "/admin/dashboard.html";
-  } else {
-    alert("Špatné přihlašovací údaje!");
-  }
-};
+  // 🔥 FUNKČNÍ LOGIN
+  document.getElementById("loginBtn").onclick = () => {
+    const login = document.getElementById("login").value.trim();
+    const pass = pwd.value.trim();
+
+    if (login === "zajda" && pass === "Cestmir753") {
+      localStorage.setItem("adminAuth", "1");
+      window.location.href = "/admin/dashboard.html";
+    } else {
+      alert("Špatné přihlašovací údaje!");
+    }
+  };
+
+});
