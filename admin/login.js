@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const pwd = document.getElementById("password");
   const toggle = document.getElementById("togglePass");
 
-  // 🔥 FUNKČNÍ ZOBRAZENÍ / SKRYTÍ HESLA
+  // 🔥 ZOBRAZENÍ / SKRYTÍ HESLA
   toggle.onclick = () => {
     if (pwd.type === "password") {
       pwd.type = "text";
@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // 🔥 FUNKČNÍ LOGIN
+  // 🔥 LOGIN
   document.getElementById("loginBtn").onclick = () => {
     const login = document.getElementById("login").value.trim();
     const pass = pwd.value.trim();
