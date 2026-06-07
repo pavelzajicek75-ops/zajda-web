@@ -63,8 +63,37 @@
   <button id="loginBtn">Přihlásit</button>
 </div>
 
-<!-- 🔥 ABSOLUTNÍ CESTA – TADY BYLA CHYBA -->
-<script src="/admin/login.js"></script>
+<!-- 🔥 CELÝ LOGIN SCRIPT INLINE – NEJDE ZABLOKOVAT -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("INLINE LOGIN SCRIPT LOADED");
+
+  const pwd = document.getElementById("password");
+  const toggle = document.getElementById("togglePass");
+
+  toggle.onclick = () => {
+    if (pwd.type === "password") {
+      pwd.type = "text";
+      toggle.textContent = "🙈 skrýt heslo";
+    } else {
+      pwd.type = "password";
+      toggle.textContent = "👁️ zobrazit heslo";
+    }
+  };
+
+  document.getElementById("loginBtn").onclick = () => {
+    const login = document.getElementById("login").value.trim();
+    const pass = pwd.value.trim();
+
+    if (login === "zajda" && pass === "Cestmir753") {
+      localStorage.setItem("adminAuth", "1");
+      window.location.href = "/admin/dashboard.html";
+    } else {
+      alert("Špatné přihlašovací údaje!");
+    }
+  };
+});
+</script>
 
 </body>
 </html>
