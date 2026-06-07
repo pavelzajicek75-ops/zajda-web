@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Nahrát fotku</title>
+  <script type="module" src="/js/admin-guard.js"></script>
+</head>
+<body>
+
+  <h1>Nahrát fotku</h1>
+
+  <input type="file" id="file">
+  <button id="uploadBtn">Nahrát</button>
+
+  <script type="module">
+    document.getElementById("uploadBtn").onclick = async () => {
+      const file = document.getElementById("file").files[0];
+      const form = new FormData();
+      form.append("file", file);
+
+      await fetch("/api/photo/upload", {
+        method: "POST",
+        body: form
+      });
+
+      alert("Nahráno");
+    };
+  </script>
+
+</body>
+</html>
