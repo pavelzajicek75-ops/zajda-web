@@ -1,34 +1,21 @@
-// /admin/gallery/picker.js
-
-document.addEventListener("DOMContentLoaded", loadGallery);
-
 async function loadGallery() {
-  try {
-    const res = await authenticatedFetch("/api/photos/list");
-    if (!res || !res.ok) {
-      console.error("Chyba při načítání fotek", res && res.status);
-      return;
-    }
+  const res = await fetch("/api/photo/list");
+  const files = await res.json();
+  const gallery = document.getElementById("gallery");
 
-    const data = await res.json();
-    const container = document.getElementById("gallery");
-    container.innerHTML = "";
-
-    (data.photos || []).forEach(photo => {
-      const img = document.createElement("img");
-      img.src = photo.url;
-      img.onclick = () => selectImage(photo.url);
-      container.appendChild(img);
-    });
-
-  } catch (err) {
-    console.error("Chyba při načítání galerie:", err);
-  }
+  gallery.innerHTML = "";
+  files.forEach(file => {
+    const img = document.createElement("img");
+    img.src = file.url;
+    img.className = "thumb";
+    img.onclick = () => insertImage(file.url);
+    gallery.appendChild(img);
+  });
 }
 
-function selectImage(url) {
-  if (window.opener) {
-    window.opener.postMessage({ type: "imageSelected", url }, "*");
-  }
-  window.close();
+function insertImage(url) {
+  const editor = document.getElementById("editor");
+  editor.value += `<img src="${url}" alt="">`;
 }
+
+loadGallery();
