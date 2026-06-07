@@ -1,17 +1,16 @@
-document.getElementById("loginBtn").onclick = async () => {
-  const pwd = document.getElementById("password").value;
+export async function onRequest(context) {
+  const { password } = await context.request.json();
+  const stored = context.env.ADMIN_PASSWORD;
 
-  const res = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: pwd })
-  });
+  if (password === stored) {
+    const token = crypto.randomUUID();
 
-  const data = await res.json();
-  if (data.token) {
-    localStorage.setItem("adminToken", data.token);
-    window.location.href = "/admin/dashboard.html";
-  } else {
-    alert("Špatné heslo!");
+    await context.env.SESSIONS.put(token, "ok", {
+      expirationTtl: 3600   // 🔥 1 hodina, ne 1 sekunda
+    });
+
+    return Response.json({ token });
   }
-};
+
+  return Response.json({ error: "Invalid password" }, { status: 401 });
+}
