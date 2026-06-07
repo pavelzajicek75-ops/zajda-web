@@ -12,6 +12,7 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
     .login-box {
       background: #222;
@@ -45,6 +46,7 @@
       margin-top: -5px;
       display: block;
       text-align: right;
+      user-select: none;
     }
   </style>
 </head>
@@ -54,7 +56,7 @@
   <h2>Přihlášení</h2>
 
   <input id="login" type="text" placeholder="Login">
-  
+
   <input id="password" type="password" placeholder="Heslo">
   <span id="togglePass" class="show-pass">👁️ zobrazit heslo</span>
 
