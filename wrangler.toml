@@ -18,3 +18,7 @@ id = "dd6ee2a83add46339418a5294c74c7ef"
 binding = "PHOTOS"
 id = "2d74f6e45eda4cbea51275017ba66c23"
 
+# 🔥 CHYBĚJÍCÍ – MUSÍ TAM BÝT
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "sessions"
