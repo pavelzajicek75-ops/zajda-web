@@ -19,6 +19,8 @@
       flex-direction: column;
       gap: 15px;
       width: 260px;
+      float: left;
+      margin-right: 40px;
     }
     .menu a {
       display: block;
@@ -34,6 +36,39 @@
     .menu a:hover {
       background: #333;
     }
+
+    .content {
+      margin-left: 320px;
+      max-width: 900px;
+    }
+
+    .box {
+      background: #1a1a1a;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      border: 1px solid #333;
+    }
+
+    .box h2 {
+      margin-top: 0;
+      color: #66ffcc;
+    }
+
+    .stat {
+      font-size: 18px;
+      margin: 6px 0;
+    }
+
+    .preview img {
+      border-radius: 6px;
+      margin: 5px;
+      box-shadow: 0 0 5px #000;
+    }
+
+    .quote-item, .article-item {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -48,6 +83,35 @@
   <a href="/admin/clanky/">📝 Články</a>
   <a href="/admin/sections/">📂 Sekce</a>
   <a href="/admin/subsections/">📁 Podsekce</a>
+</div>
+
+<div class="content">
+
+  <div class="box">
+    <h2>📊 Statistiky</h2>
+    <div class="stat">Články: <strong id="articlesCount">0</strong></div>
+    <div class="stat">Fotky: <strong id="photosCount">0</strong></div>
+    <div class="stat">Citáty: <strong id="quotesCount">0</strong></div>
+    <div class="stat">Uživatelé: <strong id="usersCount">0</strong></div>
+    <div class="stat">Sekce: <strong id="sectionsCount">0</strong></div>
+    <div class="stat">Podsekce: <strong id="subsectionsCount">0</strong></div>
+  </div>
+
+  <div class="box">
+    <h2>📸 Galerie – poslední fotky</h2>
+    <div id="galleryPreview" class="preview"></div>
+  </div>
+
+  <div class="box">
+    <h2>💬 Poslední citáty</h2>
+    <div id="quotesPreview"></div>
+  </div>
+
+  <div class="box">
+    <h2>📝 Poslední články</h2>
+    <div id="articlesPreview"></div>
+  </div>
+
 </div>
 
 <script src="./dashboard.js"></script>
