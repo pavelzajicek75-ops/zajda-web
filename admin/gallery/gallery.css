@@ -1,0 +1,141 @@
+:root {
+  --bg-dark: #0a0a1a;
+  --bg-card: #12122a;
+  --bg-hover: #1a1a3a;
+  --accent: #ff6b35;
+  --accent-light: value="0" id="contrast" oninput="updateFilter('contrast', this.value)">
+          </div>
+          <div class="slider-group">
+            <label>Saturace <span id="val-satur #ff8c5a;
+  --text: #e8e8f0;
+  --">0</span></label>
+            <input type="range" min="-100"text-muted" value="0": #8888aa;
+saturate  --border: #2a2a4a;
+  --radius: 10px;
+}
+
+* { margin: 0; padding: 0; box-sizing="val: border-box; }
+
+body {
+span></  font-family: 'Segoe UI', system-ui" max=", sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  min-height:ance', this 100vh;
+}
+
+.top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: rgba(10,10,26,0.95);
+  backdrop-filter: blurrange" min="-100" max="100" value="0" id="(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.input="updateFilter('temperature', this.value)">
+          </div>
+          <5rem;
+  display">
+: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+span></.top-bar h1 {
+  font-size: 1.2rem;
+  color: var(--accent);
+  id=" margin-right: auto;
+}
+
+.btn {
+  padding: 0.5rem 1rem oninput="updateFilter('shadows', this.value)">
+          </div>
+          <div class="slider-group;
+  border: none;
+  border-radius: var(--laradius);
+  font-size: 0.85rem;
+ ></label>
+ font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+="-100" max="100" value="0"  background: var(--bg-card);
+  color: var(--('highlightstext);
+  border: 1px          </div solid var(--border);
+}
+
+.btn:hover { border-colorlabel>: var(--accent); color: var(--accent); }
+.btn-primary { backgroundspan></label>
+            <input type="range" min="-100" max="100" value="0" id="clarity" oninput="updateFilter('clarity', this.value)">
+          </div>
+          <div class="slider-group: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-light); }
+.btn-danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+
+.view-toggle { display: flex; gap: 0.25rem; }
+.view-toggle .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.infolabel>
+            <input type="range" min="-100" max="100" value="0" id="-p" oninput="updateFilter('dehaze', this.value)">
+          </ill {
+  font-size: 0.8rem;
+  color: var(--text-mutedst);
+  background: var(--bg-card);
+arpen  padding: 0.35rem 0.75remrange" min;
+  border-radius: 20px100";
+  border: 1px solid var(--border);
+}
+
+" oninput="updateFilter('.gallery-wrap { padding:          </ 1.5rem; }
+
+/* LIST        <!-- VIEW */
+.list-view .photo-item {
+  displayrop: grid;
+  grid-templatecrop-columns: 40px 60ios">
+pxbutton class 1fr 100px 100px 100CropRatio('px 100px 100px 120px 100px;
+  align-items: center;
+  gap: 1rem;
+1)  padding: 0.:1</button>
+           75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--">border);
+  border-radius: var(--radius);
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+}
+
+.list-view .photo-item:hover { background: var(--bg-hover); border-color: var(--accent); }
+.list-view .photo-item.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,107,53,0.2); }
+.list-view .thumb { width: setCropRatio(3/4)">3:4</button>
+            <button class="ratio-btn" onclick="setCropRatio(16/9)">16:9</button>
+          </div>
+          <button class="btn btn-primary" onclick="applyCrop()" style="width:100%;margin-top:1rem;">✓ Použ50px; ořez</button>
+          <button class height: 50px;="cancel object-fit: cover; border-radius:width:100 6px; cursor: pointer;">✕ Zrušit ořez</button>
+        </div>
+
+        <!-- Transform Tab -->
+        <div class="tab-content" id="tab-transform">
+          <div class="transform-buttons">
+            <button class="; }
+.list-view .filename-secondary" onclick="rotateImage(90)">↻ 90°</button>
+            <button class="btn btn-secondary" onclick="rotateImage(180)">↻ 180°</button>
+            <button class="btn btn-secondary" onclick="rotateImage(270)">↻ 270°</button>
+          </div>
+          <div class="transform-buttons" style="margin-top:0.75rem;">
+            <button class="btn btn-secondary { font-size: 0.9rem; color: var(--text); cursor: pointer; }
+.list-view .meta { font-size: 0.75rem; color: var(--text-muted); }
+.list-view .checkbox { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* SMALL GRID */
+.small-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; }
+.small-grid .photo-item { position: relative; aspect-ratio: 1; background: var(--bg-cardodor); border: 1px solid var(--border); border            <button class="btn-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.')">⇅ Svis2s; }
+.small-grid .photo-item:hover { border-color: var(--accent); transform: scale" style="(1.03);1rem }
+.small-grid .label>photo-item.selected { boxizont-shadow: 0 0 0 2px var(--0°accent); }
+.small-grid            < .photo-item img="range" { width: 100%; height: 100%; object-fit: cover; }
+="straighten".small-grid .photo-item .cb          </ { position: absolute; top: 6px; left: 6px; width: 18px; height: 18px; accent-color: var(--accent); z-index: 2; }
+.small-grid .photo-item .info>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></ { position: absolute; bottom:photo-editor/editor.js"></script>
+</body>
+</html>
