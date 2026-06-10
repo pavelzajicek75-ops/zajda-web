@@ -1,12 +1,56 @@
 export async function onRequest(context) {
-  const bucket = context.env.PHOTOS_R2;
-  const list = await bucket.list({ prefix: "" });
+  const { request, env } = context;
+  
+  if (request.method !== 'GET') {
+    return new Response('Method not allowed', { status: 405 });
+  }
 
-  const photos = list.objects.map(obj => ({
-    key: obj.key,
-    url: `https://pub-zajda-photos.r2.dev/${obj.key}`
-  }));
-
-  return Response.json(photos);
+  try {
+    const bucket = env.zajda_photos;
+    const prefix = 'photos/meta/';
+    const listed = await bucket.list({ prefix });
+    
+    const photos = [];
+    for (const obj of listed.objects) {
+      const key = obj.key;
+      const filename = key.replace(prefix, '');
+      if (!filename) continue;
+      
+      // Get metadata
+      const metaObj = await bucket.get(key);
+      let meta = {};
+      if (metaObj) {
+        try {
+          meta = JSON.parse(await metaObj.text());
+        } catch (e) {}
+      }
+      
+      // Get sizes for each version
+      const sizes = {};
+      const versions = ['original', '2000px', 'fullhd', '1024px', 'thumb'];
+      for (const ver of versions) {
+        const path = `photos/${ver === 'original' ? 'original' : ver}/${filename.replace(/\.[^.]+$/, ver === 'thumb' ? '.webp' : (ver === 'original' ? '' : '.webp'))}`;
+        try {
+          const vObj = await bucket.head(path);
+          if (vObj) sizes[ver] = vObj.size;
+        } catch (e) {}
+      }
+      
+      photos.push({
+        filename,
+        meta,
+        sizes,
+        updated: obj.uploaded
+      });
+    }
+    
+    return new Response(JSON.stringify({ photos, count: photos.length }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }
-
