@@ -2,45 +2,51 @@ export async function onRequest(context) {
   const { request, env } = context;
   const bucket = env.zajda_photos;
 
-  if (request.method !== 'POST') h = Math {
+  if (request.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
 
   try {
     const formData = await request.formData();
-;
-  var    const file = formData.get('file');
     const filename = formData.get('filename');
-    const metaStr = formData.get('metadata');
-
-    ifSmoothingQuality (!file 'high';
- || !filename) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing file or filename' }), {
+    if (!filename) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing filename' }), {
         status: 400,
-        headers: {('image/web 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    await bucket.putURL) {
-('photos/original/' + filename, file.stream(), {
-      httpMetadata: { contentType:0]. file.type || 'application/octet-stream' }
-    });
+    const files = [
+      { field: 'original', path: 'photos/original/' },
+      { field: '2000px', path: 'photos/2000px/' },
+      { field: 'fullhd', path: 'photos/fullhd/' },
+      { field: '1024px', path: 'photos/1024px/' },
+      { field: 'thumb', path: 'photos/thumbs/' }
+    ];
 
-1];
-    if (metaStr) {
-      const meta = JSON.parse(metaStr);
-      meta.updated = new Date().toISOString();
-      await bucket.put('photos/meta/' + filename + '.json', JSON.stringify(meta));
+    for (const f of files) {
+      const file = formData.get(f.field);
+      if (file && file.size > 0) {
+        await bucket.put(f.path + filename, file.stream(), {
+          httpMetadata: { contentType: file.type || 'image/webp' }
+        });
+      }
     }
 
-    return new Response(JSON =.stringify({ success: true, filename }), {
+    const metadataStr = formData.get('metadata');
+    if (metadataStr) {
+      await bucket.put('photos/meta/' + filename + '.json', metadataStr, {
+        httpMetadata: { contentType: 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, filename }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } mime });
- catch (e) {
+  } catch (e) {
     return new Response(JSON.stringify({ success: false, error: e.message }), {
       status: 500,
-      headers: { 'Content-Type('Sm': 'application/json' }
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
