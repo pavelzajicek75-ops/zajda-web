@@ -33,6 +33,9 @@ export async function onRequest(context) {
   });
 
   return new Response(JSON.stringify(updated), {
-    headers: { "Content-Type": "application/json" }
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
+    }
   });
 }
