@@ -55,14 +55,17 @@ async function loadGalleryPreview() {
 // ===================== CITÁTY =====================
 async function loadQuotesPreview() {
   try {
-    const res = await authenticatedFetch("/api/admin/quotes/list");
+    // 🔥 TADY JE OPRAVA – správný endpoint
+    const res = await authenticatedFetch("/api/quotes/list");
     if (!res) return;
+
     const data = await res.json();
+    const quotes = Array.isArray(data[0]) ? data[0] : data;
 
     const box = document.getElementById("quotesPreview");
     box.innerHTML = "";
 
-    (data.quotes || []).slice(0, 3).forEach(q => {
+    quotes.slice(0, 3).forEach(q => {
       const div = document.createElement("div");
       div.className = "quote-item";
       div.innerHTML = `<p>"${q.text}"</p><small>– ${q.author}</small>`;
