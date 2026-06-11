@@ -2,13 +2,63 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>Citáty</title>
+  <title>Citáty – Administrace</title>
+
+  <!-- Ověření přihlášení -->
   <script type="module" src="/js/admin-guard.js"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; }
+    th { background: #eee; }
+    button { padding: 6px 12px; margin-right: 5px; cursor: pointer; }
+    .hidden { display: none; }
+    #form-section { background: white; padding: 20px; margin-top: 20px; border-radius: 6px; }
+  </style>
 </head>
 <body>
 
   <h1>Citáty</h1>
-  <a href="/admin/citaty/edit.html">Upravit citáty</a>
+
+  <button id="btn-add">➕ Nový citát</button>
+  <button id="btn-delete-selected">🗑️ Smazat vybrané</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="select-all"></th>
+        <th>Text</th>
+        <th>Autor</th>
+        <th>Vytvořeno</th>
+        <th>Upraveno</th>
+        <th>Akce</th>
+      </tr>
+    </thead>
+    <tbody id="quotes-tbody"></tbody>
+  </table>
+
+  <!-- FORMULÁŘ -->
+  <div id="form-section" class="hidden">
+    <h2 id="form-title">Nový citát</h2>
+
+    <form id="quote-form">
+      <input type="hidden" id="quote-id">
+
+      <label>Text:</label><br>
+      <textarea id="quote-text" rows="4" style="width:100%;"></textarea><br><br>
+
+      <label>Autor:</label><br>
+      <input type="text" id="quote-author" style="width:100%;"><br><br>
+
+      <button type="submit">💾 Uložit</button>
+      <button type="button" id="btn-cancel">Zpět</button>
+    </form>
+  </div>
+
+  <!-- 🔥 TADY SE NAČÍTÁ FUNKČNÍ JS -->
+  <script src="/admin/js/quotes.js"></script>
 
 </body>
 </html>
