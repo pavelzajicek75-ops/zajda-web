@@ -46,51 +46,70 @@ function showList() {
 }
 
 async function loadQuotes() {
-  const res = await authenticatedFetch(`${API_BASE}/list`);
-  const quotes = await res.json();
-  tbody.innerHTML = "";
-  quotes.forEach((q) => {
-    const tr = document.createElement("tr");
+  try {
+    const res = await authenticatedFetch(`${API_BASE}/list`);
+    if (!res.ok) {
+      console.error("API error:", res.status);
+      tbody.innerHTML = `<tr><td colspan="6">Error ${res.status}</td></tr>`;
+      return;
+    }
 
-    const tdCheck = document.createElement("td");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.className = "row-check";
-    cb.dataset.id = q.id;
-    tdCheck.appendChild(cb);
+    const data = await res.json();
+    const quotes = Array.isArray(data[0]) ? data[0] : data;
 
-    const tdText = document.createElement("td");
-    tdText.textContent = q.text;
+    tbody.innerHTML = "";
+    quotes.forEach((q) => {
+      const tr = document.createElement("tr");
 
-    const tdAuthor = document.createElement("td");
-    tdAuthor.textContent = q.author || "";
+      const tdCheck = document.createElement("td");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "row-check";
+      cb.dataset.id = q.id;
+      tdCheck.appendChild(cb);
 
-    const tdCreated = document.createElement("td");
-    tdCreated.textContent = q.created || "";
+      const tdText = document.createElement("td");
+      tdText.textContent = q.text;
 
-    const tdUpdated = document.createElement("td");
-    tdUpdated.textContent = q.updated || "";
+      const tdAuthor = document.createElement("td");
+      tdAuthor.textContent = q.author || "";
 
-    const tdActions = document.createElement("td");
-    const btnEdit = document.createElement("button");
-    btnEdit.textContent = "✏️";
-    btnEdit.addEventListener("click", () => showForm(true, q));
-    const btnDelete = document.createElement("button");
-    btnDelete.textContent = "🗑️";
-    btnDelete.addEventListener("click", async () => {
-      if (confirm("Delete this quote?")) {
-        await authenticatedFetch(`${API_BASE}/delete`, {
-          method: "POST",
-          body: JSON.stringify({ id: q.id }),
-        });
-        await loadQuotes();
-      }
+      const tdCreated = document.createElement("td");
+      tdCreated.textContent = q.created
+        ? new Date(q.created).toLocaleString()
+        : "";
+
+      const tdUpdated = document.createElement("td");
+      tdUpdated.textContent = q.updated
+        ? new Date(q.updated).toLocaleString()
+        : "";
+
+      const tdActions = document.createElement("td");
+      const btnEdit = document.createElement("button");
+      btnEdit.textContent = "✏️";
+      btnEdit.addEventListener("click", () => showForm(true, q));
+
+      const btnDelete = document.createElement("button");
+      btnDelete.textContent = "🗑️";
+      btnDelete.addEventListener("click", async () => {
+        if (confirm("Delete this quote?")) {
+          await authenticatedFetch(`${API_BASE}/delete`, {
+            method: "POST",
+            body: JSON.stringify({ id: q.id }),
+          });
+          await loadQuotes();
+        }
+      });
+
+      tdActions.append(btnEdit, btnDelete);
+
+      tr.append(tdCheck, tdText, tdAuthor, tdCreated, tdUpdated, tdActions);
+      tbody.appendChild(tr);
     });
-    tdActions.append(btnEdit, btnDelete);
-
-    tr.append(tdCheck, tdText, tdAuthor, tdCreated, tdUpdated, tdActions);
-    tbody.appendChild(tr);
-  });
+  } catch (err) {
+    console.error("Failed to load quotes:", err);
+    tbody.innerHTML = `<tr><td colspan="6">Error loading quotes</td></tr>`;
+  }
 }
 
 btnAdd.addEventListener("click", () => showForm(false, null));
