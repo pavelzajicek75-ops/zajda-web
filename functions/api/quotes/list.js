@@ -13,7 +13,9 @@ export async function onRequest(context) {
   return new Response(JSON.stringify(quotes), {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      "Pragma": "no-cache",
+      "Expires": "0"
     }
   });
 }
