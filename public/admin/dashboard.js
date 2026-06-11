@@ -1,12 +1,12 @@
 async function loadQuotesPreview() {
   try {
-    const res = await authenticatedFetch("/api/quotes/list");
+    const res = await fetch("/api/quotes/list");
     if (!res.ok) {
       console.error("Chyba API:", res.status);
       return;
     }
 
-    const quotes = await res.json(); // 🔥 JSON je přímo pole
+    const quotes = await res.json(); // 🔥 JSON je přímo pole objektů
 
     const box = document.getElementById("quotesPreview");
     box.innerHTML = "";
@@ -14,14 +14,12 @@ async function loadQuotesPreview() {
     quotes.slice(0, 5).forEach(q => {
       const div = document.createElement("div");
       div.className = "quote-item";
-      div.innerHTML = `
-        <p>"${q.text}"</p>
-        <small>– ${q.author || ""}</small>
-      `;
+      div.innerHTML = `<p>"${q.text}"</p><small>– ${q.author || ""}</small>`;
       box.appendChild(div);
     });
-
   } catch (err) {
     console.error("Chyba při načítání citátů:", err);
   }
 }
+
+document.addEventListener("DOMContentLoaded", loadQuotesPreview);
