@@ -1,141 +1,361 @@
-:root {
-  --bg-dark: #0a0a1a;
-  --bg-card: #12122a;
-  --bg-hover: #1a1a3a;
-  --accent: #ff6b35;
-  --accent-light: value="0" id="contrast" oninput="updateFilter('contrast', this.value)">
-          </div>
-          <div class="slider-group">
-            <label>Saturace <span id="val-satur #ff8c5a;
-  --text: #e8e8f0;
-  --">0</span></label>
-            <input type="range" min="-100"text-muted" value="0": #8888aa;
-saturate  --border: #2a2a4a;
-  --radius: 10px;
-}
+/* ===== ADMIN GALERIE ===== */
 
-* { margin: 0; padding: 0; box-sizing="val: border-box; }
-
-body {
-span></  font-family: 'Segoe UI', system-ui" max=", sans-serif;
-  background: var(--bg-dark);
-  color: var(--text);
-  min-height:ance', this 100vh;
-}
-
-.top-bar {
+.gallery-sticky-panel {
   position: sticky;
-  top: 0;
-  z-index: 200;
-  background: rgba(10,10,26,0.95);
-  backdrop-filter: blurrange" min="-100" max="100" value="0" id="(20px);
-  border-bottom: 1px solid var(--border);
-  padding: 0.75rem 1.input="updateFilter('temperature', this.value)">
-          </div>
-          <5rem;
-  display">
-: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-span></.top-bar h1 {
-  font-size: 1.2rem;
-  color: var(--accent);
-  id=" margin-right: auto;
-}
-
-.btn {
-  padding: 0.5rem 1rem oninput="updateFilter('shadows', this.value)">
-          </div>
-          <div class="slider-group;
-  border: none;
-  border-radius: var(--laradius);
-  font-size: 0.85rem;
- ></label>
- font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-="-100" max="100" value="0"  background: var(--bg-card);
-  color: var(--('highlightstext);
-  border: 1px          </div solid var(--border);
-}
-
-.btn:hover { border-colorlabel>: var(--accent); color: var(--accent); }
-.btn-primary { backgroundspan></label>
-            <input type="range" min="-100" max="100" value="0" id="clarity" oninput="updateFilter('clarity', this.value)">
-          </div>
-          <div class="slider-group: var(--accent); color: #fff; border-color: var(--accent); }
-.btn-primary:hover { background: var(--accent-light); }
-.btn-danger { background: #c0392b; color: #fff; border-color: #c0392b; }
-
-.view-toggle { display: flex; gap: 0.25rem; }
-.view-toggle .btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-.infolabel>
-            <input type="range" min="-100" max="100" value="0" id="-p" oninput="updateFilter('dehaze', this.value)">
-          </ill {
-  font-size: 0.8rem;
-  color: var(--text-mutedst);
-  background: var(--bg-card);
-arpen  padding: 0.35rem 0.75remrange" min;
-  border-radius: 20px100";
+  top: 64px;
+  z-index: 90;
+  background: rgba(10, 10, 26, 0.95);
+  backdrop-filter: blur(20px);
   border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-" oninput="updateFilter('.gallery-wrap { padding:          </ 1.5rem; }
-
-/* LIST        <!-- VIEW */
-.list-view .photo-item {
-  displayrop: grid;
-  grid-templatecrop-columns: 40px 60ios">
-pxbutton class 1fr 100px 100px 100CropRatio('px 100px 100px 120px 100px;
+.panel-left, .panel-center, .panel-right, .panel-info {
+  display: flex;
   align-items: center;
-  gap: 1rem;
-1)  padding: 0.:1</button>
-           75rem 1rem;
+  gap: 0.5rem;
+}
+
+.panel-left { flex: 1; min-width: 280px; }
+.panel-center { justify-content: center; }
+.panel-right { justify-content: flex-end; }
+.panel-info {
+  width: 100%;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.view-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
   background: var(--bg-card);
-  border: 1px solid var(--">border);
-  border-radius: var(--radius);
-  margin-bottom: 0.5rem;
+  color: var(--text-muted);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
   transition: all 0.2s;
 }
 
-.list-view .photo-item:hover { background: var(--bg-hover); border-color: var(--accent); }
-.list-view .photo-item.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,107,53,0.2); }
-.list-view .thumb { width: setCropRatio(3/4)">3:4</button>
-            <button class="ratio-btn" onclick="setCropRatio(16/9)">16:9</button>
-          </div>
-          <button class="btn btn-primary" onclick="applyCrop()" style="width:100%;margin-top:1rem;">✓ Použ50px; ořez</button>
-          <button class height: 50px;="cancel object-fit: cover; border-radius:width:100 6px; cursor: pointer;">✕ Zrušit ořez</button>
-        </div>
+.view-btn:hover, .view-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-card-hover);
+}
 
-        <!-- Transform Tab -->
-        <div class="tab-content" id="tab-transform">
-          <div class="transform-buttons">
-            <button class="; }
-.list-view .filename-secondary" onclick="rotateImage(90)">↻ 90°</button>
-            <button class="btn btn-secondary" onclick="rotateImage(180)">↻ 180°</button>
-            <button class="btn btn-secondary" onclick="rotateImage(270)">↻ 270°</button>
-          </div>
-          <div class="transform-buttons" style="margin-top:0.75rem;">
-            <button class="btn btn-secondary { font-size: 0.9rem; color: var(--text); cursor: pointer; }
-.list-view .meta { font-size: 0.75rem; color: var(--text-muted); }
-.list-view .checkbox { width: 18px; height: 18px; accent-color: var(--accent); }
+.btn-danger {
+  background: #c62828;
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-danger:hover { background: #e53935; }
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* LIST VIEW */
+.list-view .photo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.photo-list-item {
+  display: grid;
+  grid-template-columns: 40px 60px 2fr 1fr 1fr 1fr 1fr 1fr 1fr 120px;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.2s;
+}
+
+.photo-list-item:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+}
+
+.photo-list-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.photo-list-item .thumb {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.photo-list-item .filename {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.photo-list-item .meta {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
 
 /* SMALL GRID */
-.small-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; }
-.small-grid .photo-item { position: relative; aspect-ratio: 1; background: var(--bg-cardodor); border: 1px solid var(--border); border            <button class="btn-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.')">⇅ Svis2s; }
-.small-grid .photo-item:hover { border-color: var(--accent); transform: scale" style="(1.03);1rem }
-.small-grid .label>photo-item.selected { boxizont-shadow: 0 0 0 2px var(--0°accent); }
-.small-grid            < .photo-item img="range" { width: 100%; height: 100%; object-fit: cover; }
-="straighten".small-grid .photo-item .cb          </ { position: absolute; top: 6px; left: 6px; width: 18px; height: 18px; accent-color: var(--accent); z-index: 2; }
-.small-grid .photo-item .info>
-      </div>
-    </div>
-  </div>
+.small-grid .photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
 
-  <script src="/app.js"></ { position: absolute; bottom:photo-editor/editor.js"></script>
-</body>
-</html>
+.small-grid .photo-item {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.small-grid .photo-item:hover {
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+.small-grid .photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.small-grid .photo-item input[type="checkbox"] {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  z-index: 5;
+}
+
+.small-grid .photo-item .hover-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.small-grid .photo-item:hover .hover-info {
+  opacity: 1;
+}
+
+/* LARGE GRID */
+.large-grid .photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.large-grid .photo-item {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.large-grid .photo-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.large-grid .photo-item img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+.large-grid .photo-item input[type="checkbox"] {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 24px;
+  height: 24px;
+  accent-color: var(--accent);
+  z-index: 5;
+}
+
+.large-grid .photo-item .info {
+  padding: 0.75rem;
+}
+
+.large-grid .photo-item .info .name {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.large-grid .photo-item .info .dims {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* LIGHTBOX */
+.lightbox {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.95);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.lightbox.active {
+  display: flex;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lightbox-content img {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: var(--radius);
+}
+
+.lightbox-info {
+  color: var(--text-muted);
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+.lightbox-edit {
+  position: absolute;
+  top: -40px;
+  right: 50px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* MODAL */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 1001;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  min-width: 400px;
+  max-width: 600px;
+}
+
+#upload-progress {
+  margin: 1rem 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.upload-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.upload-item .status {
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+.upload-item .status.done { color: #4caf50; }
+.upload-item .status.error { color: #f44336; }
+.upload-item .status.uploading { color: var(--accent); }
+
+@media (max-width: 768px) {
+  .gallery-sticky-panel {
+    top: 56px;
+    padding: 0.75rem;
+  }
+  .panel-left { min-width: 100%; justify-content: center; }
+  .photo-list-item {
+    grid-template-columns: 40px 60px 1fr;
+    gap: 0.5rem;
+  }
+  .photo-list-item .meta-hide-mobile { display: none; }
+  .large-grid .photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
