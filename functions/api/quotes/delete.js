@@ -1,19 +1,22 @@
 export async function onRequest(context) {
   const { request, env } = context;
-  const url = new URL(request.url);
-  const id = url.searchParams.get("id");
 
-  const object = await env.QUOTES_R2.get("quotes.json");
-  if (!object) {
-    return new Response(JSON.stringify({ ok: false }), { status: 404 });
+  if (request.method !== "POST" && request.method !== "DELETE") {
+    return new Response("Method Not Allowed", { status: 405 });
   }
 
-  const quotes = JSON.parse(await object.text());
-  const filtered = quotes.filter(q => q.id !== id);
+  const body = await request.json();
+  const ids = Array.isArray(body.ids) ? body.ids : (body.id ? [body.id] : []);
 
-  await env.QUOTES_R2.put("quotes.json", JSON.stringify(filtered));
+  if (!ids.length) {
+    return new Response(JSON.stringify({ error: "Missing id(s)" }), { status: 400 });
+  }
 
-  return new Response(JSON.stringify({ ok: true }), {
+  for (const id of ids) {
+    await env.QUOTES_BUCKET.delete(`quotes/${id}.json`);
+  }
+
+  return new Response(JSON.stringify({ success: true, deleted: ids }), {
     headers: { "Content-Type": "application/json" }
   });
 }
