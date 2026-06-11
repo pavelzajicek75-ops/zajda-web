@@ -55,7 +55,7 @@ async function loadGalleryPreview() {
 // ===================== CITÁTY =====================
 async function loadQuotesPreview() {
   try {
-    // 🔥 TADY JE OPRAVA – správný endpoint
+    // 🔥 OPRAVENO – správný endpoint
     const res = await authenticatedFetch("/api/quotes/list");
     if (!res) return;
 
