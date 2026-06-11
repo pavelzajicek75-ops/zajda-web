@@ -1,71 +1,32 @@
 export async function onRequest(context) {
-  constahr { env } = context;
+  const { request, env } = context;
   const bucket = env.zajda_photos;
 
+  if (request.method !== 'GET') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
   try {
-    const listed = await bucket.list({ prefix: 'photos/meta/' });
+    const prefix = 'photos/meta/';
+    const listed = await bucket.list({ prefix: prefix });
     const photos = [];
 
     for (const obj of listed.objects || []) {
-      const key = obj.key; // photos/meta/filename.json
-      const filename = key.replace('photos/meta/', '').replace('.json', '');
-      
-      let meta = null;
       try {
-        const metaObj = await bucket.get(key);
-        if (metaObj) meta = JSON.parse(await metaObj.text());
-      } catch (e) { meta = null; }
-
-      const originalKey = 'photos/original/' + filename;
-      const originalObj = await bucket.get {
-      showToast('Chyba: ' + files[i].name + ' - ' + e.message);
-    }
-  }
-  
-  btn.disabled = false;
-  btn.textContent = 'Nahrát(originalKeyUploadModal();
-  loadPhotos();
-}
-
-async function uploadSingleFile(file) {
-  // Generate versions on client
-  var versions = await generateVersions(file);
-  
-  var formData =);
-      const();
-  form originalSize = originalObj ? (originalObj.size || 0) : 0;
-
-      const sizes = meta?.],sizes || {};
-      
-      photos.push({
-        filename  form,
-        originalSize,
-        sizes: {
-          original: sizes.original || originalSize,
-          '2000px': sizes['2000px'] || 0,
-          fullhd: sizes.fullhd || 0,
-          '1024px': sizes['Data.append('thumb', versions1024px'] || 0,
-          thumb: sizes.thumb || 0
-  var        },
-        width: meta?.width || 0,
-        height: meta?.height || 0,
-        exif: meta?.exif || {},
-        created: meta?.created || obj.uploaded,
-        updated: meta?.updated || obj.uploaded
-      });
+        const metaObj = await bucket.get(obj.key);
+        if (!metaObj) continue;
+        const metaText = await metaObj.text();
+        const meta = JSON.parse(metaText);
+        photos.push(meta);
+      } catch (e) {
+        continue;
+      }
     }
 
-    return new Response(JSON,
-      '.stringify({ photos, count: photos.length }), {
-      headers: { 'Content-Type': 'application    },
-    created: new Date().toISOString(),
-    updated: new Date().toISOString()
-  };
-  formData.append('metadata', JSON.stringify(metadata));
-  
-  var resp = await fetch('/api/admin/photos/save', { method: 'POST', body: formData });
-  var data = await resp.json();
-  if (!data.success) throw new Error/json' }
+    photos.sort((a, b) => new Date(b.created || 0) - new Date(a.created || 0));
+
+    return new Response(JSON.stringify({ photos, count: photos.length }), {
+      headers: { 'Content-Type': 'application/json' }
     });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message, photos: [] }), {
