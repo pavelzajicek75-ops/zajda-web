@@ -1,5 +1,5 @@
 async function loadQuotes() {
-  const res = await fetch("/api/quotes/list", {
+  const res = await fetch("/api/quotes/list?v=3", {
     headers: {
       "Cache-Control": "no-store"
     }
