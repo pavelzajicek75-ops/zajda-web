@@ -11,6 +11,9 @@ export async function onRequest(context) {
   }
 
   return new Response(JSON.stringify(quotes), {
-    headers: { "Content-Type": "application/json" }
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
+    }
   });
 }
