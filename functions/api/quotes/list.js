@@ -10,7 +10,7 @@ export async function onRequest(context) {
     quotes.push(await file.json());
   }
 
-  return new Response(JSON.stringify(quotes), {
+ return new Response(JSON.stringify(quotes), {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
