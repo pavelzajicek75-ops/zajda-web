@@ -1,208 +1,49 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <script src="admin-guard.js"></script>
-    <link rel="stylesheet" href="dashboard.css">
+  <meta charset="UTF-8">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="/admin/dashboard.css">
+  <script src="/admin/admin-guard.js"></script>
 </head>
 <body>
-    <div class="app">
-        <aside class="sidebar">
-            <div class="logo">📋 Zajda Admin</div>
-            <nav>
-                <a href="#dashboard" class="nav-item active" data-section="dashboard">🏠 Dashboard</a>
-                <a href="#quotes" class="nav-item" data-section="quotes">💬 Citáty</a>
-                <a href="#articles" class="nav-item" data-section="articles">📝 Články</a>
-                <a href="#gallery" class="nav-item" data-section="gallery">🖼️ Galerie</a>
-            </nav>
-            <button class="logout-btn" id="logoutBtn">🚪 Odhlásit se</button>
-        </aside>
-        
-        <main class="main-content">
-            <!-- DASHBOARD -->
-            <section id="dashboard-section" class="section active">
-                <h1>Dashboard</h1>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-number" id="quoteCount">-</div>
-                        <div class="stat-label">Citátů</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="articleCount">-</div>
-                        <div class="stat-label">Článků</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="photoCount">-</div>
-                        <div class="stat-label">Fotek</div>
-                    </div>
-                </div>
-            </section>
+  <h1>Admin Dashboard</h1>
 
-            <!-- CITÁTY -->
-            <section id="quotes-section" class="section">
-                <div class="section-header">
-                    <h1>Správa citátů</h1>
-                    <button class="btn-primary" id="addQuoteBtn">➕ Přidat citát</button>
-                </div>
-                <div class="table-container">
-                    <table id="quotesTable">
-                        <thead>
-                            <tr><th>Autor</th><th>Citát</th><th>Akce</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
+  <div class="menu">
+    <a href="/admin/gallery/">📸 Galerie</a>
+    <a href="/admin/citaty/">💬 Citáty</a>
+    <a href="/admin/clanky/">📝 Články</a>
+    <a href="/admin/sections/">📂 Sekce</a>
+    <a href="/admin/subsections/">📁 Podsekce</a>
+  </div>
 
-            <!-- ČLÁNKY -->
-            <section id="articles-section" class="section">
-                <div class="section-header">
-                    <h1>Správa článků</h1>
-                    <button class="btn-primary" id="addArticleBtn">➕ Nový článek</button>
-                </div>
-                <div class="table-container">
-                    <table id="articlesTable">
-                        <thead>
-                            <tr><th>Název</th><th>Datum</th><th>Sekce</th><th>Akce</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- GALERIE -->
-            <section id="gallery-section" class="section">
-                <div class="section-header">
-                    <h1>Galerie fotografií</h1>
-                    <div class="upload-zone" id="uploadZone">
-                        <input type="file" id="fileInput" accept="image/*" multiple hidden>
-                        <p>📁 Klikněte nebo přetáhněte fotky sem</p>
-                        <p class="hint">Podporováno: JPG, PNG, WebP | Max 20MB</p>
-                    </div>
-                </div>
-                <div class="gallery-grid" id="galleryGrid"></div>
-            </section>
-        </main>
+  <div class="content">
+    <div class="box">
+      <h2>📊 Statistiky</h2>
+      <div class="stat">Články: <strong id="articlesCount">0</strong></div>
+      <div class="stat">Fotky: <strong id="photosCount">0</strong></div>
+      <div class="stat">Citáty: <strong id="quotesCount">0</strong></div>
+      <div class="stat">Uživatelé: <strong id="usersCount">0</strong></div>
+      <div class="stat">Sekce: <strong id="sectionsCount">0</strong></div>
+      <div class="stat">Podsekce: <strong id="subsectionsCount">0</strong></div>
     </div>
 
-    <!-- MODAL: Citát -->
-    <div class="modal" id="quoteModal">
-        <div class="modal-content">
-            <h2 id="quoteModalTitle">Nový citát</h2>
-            <form id="quoteForm">
-                <input type="hidden" id="quoteId">
-                <div class="form-group">
-                    <label>Autor</label>
-                    <input type="text" id="quoteAuthor" required>
-                </div>
-                <div class="form-group">
-                    <label>Text citátu</label>
-                    <textarea id="quoteText" rows="4" required></textarea>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal('quoteModal')">Zrušit</button>
-                    <button type="submit" class="btn-primary">Uložit</button>
-                </div>
-            </form>
-        </div>
+    <div class="box">
+      <h2>💬 Poslední citáty</h2>
+      <div id="quotesPreview"></div>
     </div>
 
-    <!-- MODAL: Článek -->
-    <div class="modal" id="articleModal">
-        <div class="modal-content modal-large">
-            <h2 id="articleModalTitle">Nový článek</h2>
-            <form id="articleForm">
-                <input type="hidden" id="articleId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Název</label>
-                        <input type="text" id="articleTitle" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Datum</label>
-                        <input type="date" id="articleDate" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Sekce</label>
-                        <select id="articleSection">
-                            <option value="aktuality">Aktuality</option>
-                            <option value="clanky">Články</option>
-                            <option value="recenze">Recenze</option>
-                            <option value="reportaze">Reportáže</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Podsekce</label>
-                        <input type="text" id="articleSubsection" placeholder="nepovinné">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Obsah</label>
-                    <div class="editor-toolbar">
-                        <button type="button" data-cmd="bold"><b>B</b></button>
-                        <button type="button" data-cmd="italic"><i>I</i></button>
-                        <button type="button" data-cmd="underline"><u>U</u></button>
-                        <button type="button" data-cmd="insertUnorderedList">• Seznam</button>
-                        <button type="button" data-cmd="insertOrderedList">1. Seznam</button>
-                        <button type="button" id="insertImageBtn">🖼️ Vložit fotku</button>
-                    </div>
-                    <div id="articleEditor" contenteditable="true" class="rich-editor"></div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeModal('articleModal')">Zrušit</button>
-                    <button type="submit" class="btn-primary">Uložit článek</button>
-                </div>
-            </form>
-        </div>
+    <div class="box">
+      <h2>📸 Galerie – poslední fotky</h2>
+      <div id="galleryPreview" class="preview"></div>
     </div>
 
-    <!-- MODAL: Výběr fotky z galerie -->
-    <div class="modal" id="galleryPickerModal">
-        <div class="modal-content modal-large">
-            <h2>Vyberte fotku</h2>
-            <div class="gallery-grid" id="pickerGalleryGrid"></div>
-            <div class="modal-actions">
-                <button type="button" class="btn-secondary" onclick="closeModal('galleryPickerModal')">Zrušit</button>
-            </div>
-        </div>
+    <div class="box">
+      <h2>📝 Poslední články</h2>
+      <div id="articlesPreview"></div>
     </div>
+  </div>
 
-    <!-- MODAL: Editace fotky -->
-    <div class="modal" id="photoEditModal">
-        <div class="modal-content">
-            <h2>Úprava fotky</h2>
-            <div class="photo-edit-container">
-                <canvas id="editCanvas"></canvas>
-                <div class="edit-controls">
-                    <div class="resize-presets">
-                        <button type="button" class="resize-btn" data-size="original">Původní</button>
-                        <button type="button" class="resize-btn" data-size="2000">2000px</button>
-                        <button type="button" class="resize-btn" data-size="1920">Full HD (1920)</button>
-                        <button type="button" class="resize-btn" data-size="1024">1024px</button>
-                    </div>
-                    <div class="crop-controls">
-                        <label>Ořez: <input type="checkbox" id="cropEnabled"></label>
-                        <select id="cropRatio">
-                            <option value="free">Volný</option>
-                            <option value="1:1">1:1 Čtverec</option>
-                            <option value="16:9">16:9 Široký</option>
-                            <option value="4:3">4:3 Klasický</option>
-                            <option value="3:2">3:2 Foto</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn-secondary" onclick="closeModal('photoEditModal')">Zrušit</button>
-                <button type="button" class="btn-primary" id="savePhotoBtn">💾 Uložit změny</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="dashboard.js"></script>
+  <script src="/admin/dashboard.js"></script>
 </body>
 </html>
