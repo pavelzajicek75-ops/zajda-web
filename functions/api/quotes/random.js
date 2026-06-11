@@ -1,5 +1,5 @@
 export async function onRequest(context) {
-  const { QUOTES_BUCKET } = context.env;
+  const { QUOTES_R2 } = context.env;
 
   try {
     const list = await QUOTES_BUCKET.list({ prefix: "quotes/" });
