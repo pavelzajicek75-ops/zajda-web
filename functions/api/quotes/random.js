@@ -1,17 +1,12 @@
 export async function onRequest(context) {
-  const { QUOTES_R2 } = context.env;
+  const { QUOTES } = context.env;
 
   try {
-    const list = await QUOTES_BUCKET.list({ prefix: "quotes/" });
-    const quotes = [];
+    // načti seznam objektů
+    const list = await QUOTES.list();
+    const keys = list.objects.map(o => o.key);
 
-    for (const obj of list.objects) {
-      const file = await QUOTES_BUCKET.get(obj.key);
-      if (!file) continue;
-      quotes.push(await file.json());
-    }
-
-    if (quotes.length === 0) {
+    if (keys.length === 0) {
       return new Response(JSON.stringify({
         text: "Žádné citáty nenalezeny.",
         author: "System"
@@ -23,9 +18,14 @@ export async function onRequest(context) {
       });
     }
 
-    const random = quotes[Math.floor(Math.random() * quotes.length)];
+    // náhodný klíč
+    const randomKey = keys[Math.floor(Math.random() * keys.length)];
 
-    return new Response(JSON.stringify(random), {
+    // načti JSON soubor
+    const file = await QUOTES.get(randomKey);
+    const data = await file.json();
+
+    return new Response(JSON.stringify(data), {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "no-store"
