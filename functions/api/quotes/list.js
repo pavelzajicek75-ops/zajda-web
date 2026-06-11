@@ -1,21 +1,38 @@
 export async function onRequest(context) {
-  const { QUOTES_BUCKET } = context.env;
+  const { QUOTES } = context.env;
 
-  const objects = await QUOTES_BUCKET.list({ prefix: "quotes/" });
-  const quotes = [];
+  try {
+    // načti seznam objektů v bucketu
+    const list = await QUOTES.list();
+    const quotes = [];
 
-  for (const obj of objects.objects) {
-    const file = await QUOTES_BUCKET.get(obj.key);
-    if (!file) continue;
-    quotes.push(await file.json());
-  }
+    // projdi všechny soubory a načti JSON
+    for (const obj of list.objects) {
+      const file = await QUOTES.get(obj.key);
+      if (!file) continue;
 
- return new Response(JSON.stringify(quotes), {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-      "Pragma": "no-cache",
-      "Expires": "0"
+      const data = await file.json();
+      quotes.push(data);
     }
-  });
+
+    // vrať čisté pole objektů (NE dvojité pole!)
+    return new Response(JSON.stringify(quotes), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      }
+    });
+
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: err.message }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store"
+        }
+      }
+    );
+  }
 }
