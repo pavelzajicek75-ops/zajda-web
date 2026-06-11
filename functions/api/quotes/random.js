@@ -5,7 +5,10 @@ export async function onRequest(context) {
   if (!objects.objects.length) {
     return new Response(JSON.stringify({ error: "No quotes available" }), {
       status: 404,
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store"
+      }
     });
   }
 
@@ -14,6 +17,9 @@ export async function onRequest(context) {
   const json = await file.json();
 
   return new Response(JSON.stringify(json), {
-    headers: { "Content-Type": "application/json" }
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
+    }
   });
 }
