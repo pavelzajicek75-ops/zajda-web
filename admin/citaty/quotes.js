@@ -1,7 +1,6 @@
 const API_BASE = "/api/quotes";
 
 async function authenticatedFetch(url, options = {}) {
-  // Tady si dosaď svůj skutečný authenticatedFetch (token/cookie atd.)
   return fetch(url, {
     ...options,
     headers: {
