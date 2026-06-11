@@ -1,5 +1,5 @@
 async function loadRandomQuote() {
-  const res = await fetch("/api/quotes/random?v=3", {
+  const res = await fetch("/api/quotes/random?v=10", {
     headers: {
       "Cache-Control": "no-store"
     }
