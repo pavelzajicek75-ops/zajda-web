@@ -26,10 +26,10 @@ function formatDate(dateStr) {
   } catch (e) { return dateStr; }
 }
 
-async function authenticatedFetch(url, options) {
+function authenticatedFetch(url, options) {
   options = options || {};
   options.headers = options.headers || {};
-  const token = localStorage.getItem('admin_token');
+  var token = localStorage.getItem('admin_token');
   if (token) {
     options.headers['Authorization'] = 'Bearer ' + token;
   }
@@ -49,7 +49,7 @@ async function loadGallery() {
     const data = await photosResp.json();
     allPhotos = data.photos || [];
 
-    let storageData = { count: 0, totalSizeFormatted: '0 MB' };
+    var storageData = { count: 0, totalSizeFormatted: '0 MB' };
     try { storageData = await storageResp.json(); } catch (e) {}
 
     document.getElementById('file-count').textContent = (storageData.count || allPhotos.length) + ' fotek';
@@ -58,37 +58,38 @@ async function loadGallery() {
     sortPhotos();
     renderGallery();
   } catch (e) {
-    container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:3rem;">Chyba při načítání galerie.</p>';
+    container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:3rem;">Chyba při načítání galerie: ' + escapeHtml(e.message) + '</p>';
   }
 }
 
 function sortPhotos() {
-  const sortBy = document.getElementById('sort-by').value;
+  var sortBy = document.getElementById('sort-by').value;
   allPhotos.sort(function(a, b) {
     switch (sortBy) {
       case 'date-desc': return new Date(b.created || 0) - new Date(a.created || 0);
       case 'date-asc': return new Date(a.created || 0) - new Date(b.created || 0);
       case 'name-asc': return (a.filename || '').localeCompare(b.filename || '');
       case 'name-desc': return (b.filename || '').localeCompare(a.filename || '');
-      case 'size-desc': return (b.sizes?.original || 0) - (a.sizes?.original || 0);
-      case 'size-asc': return (a.sizes?.original || 0) - (b.sizes?.original || 0);
+      case 'size-desc': return ((b.sizes && b.sizes.original) || 0) - ((a.sizes && a.sizes.original) || 0);
+      case 'size-asc': return ((a.sizes && a.sizes.original) || 0) - ((b.sizes && b.sizes.original) || 0);
       default: return 0;
     }
   });
 }
 
-function setView(view) {
+function setView(view, btn) {
   currentView = view;
-  document.querySelectorAll('.view-btn').forEach(function(btn) { btn.classList.remove('active'); });
-  event.target.classList.add('active');
+  document.querySelectorAll('.view-btn').forEach(function(b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
 
-  const container = document.getElementById('gallery-container');
-  container.className = 'gallery-view ' + view + '-grid';
+  var container = document.getElementById('gallery-container');
+  var viewClass = view === 'list' ? 'list-view' : view + '-grid';
+  container.className = 'gallery-view ' + viewClass;
   renderGallery();
 }
 
 function renderGallery() {
-  const container = document.getElementById('gallery-container');
+  var container = document.getElementById('gallery-container');
   if (allPhotos.length === 0) {
     container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:3rem;">Galerie je prázdná. Nahrajte první fotku.</p>';
     return;
@@ -108,16 +109,17 @@ function renderListView(container) {
   allPhotos.forEach(function(p) {
     var isSelected = selectedFiles.has(p.filename);
     var exif = p.exif || {};
+    var sizes = p.sizes || {};
     html += '<div class="photo-list-item">' +
       '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onchange="toggleSelect(\'' + p.filename + '\')">' +
       '<img class="thumb" src="/api/admin/photos/get?file=' + encodeURIComponent(p.filename) + '&size=thumb" ' +
       'onclick="openLightbox(\'' + p.filename + '\')" loading="lazy">' +
       '<div class="filename" onclick="openLightbox(\'' + p.filename + '\')">' + escapeHtml(p.filename) + '</div>' +
       '<div class="meta meta-hide-mobile">' + (p.width || '?') + '×' + (p.height || '?') + '</div>' +
-      '<div class="meta meta-hide-mobile">' + formatSize(p.sizes?.original) + '</div>' +
-      '<div class="meta meta-hide-mobile">' + formatSize(p.sizes?.['2000px']) + '</div>' +
-      '<div class="meta meta-hide-mobile">' + formatSize(p.sizes?.fullhd) + '</div>' +
-      '<div class="meta meta-hide-mobile">' + formatSize(p.sizes?.['1024px']) + '</div>' +
+      '<div class="meta meta-hide-mobile">' + formatSize(sizes.original) + '</div>' +
+      '<div class="meta meta-hide-mobile">' + formatSize(sizes['2000px']) + '</div>' +
+      '<div class="meta meta-hide-mobile">' + formatSize(sizes.fullhd) + '</div>' +
+      '<div class="meta meta-hide-mobile">' + formatSize(sizes['1024px']) + '</div>' +
       '<div class="meta meta-hide-mobile">' + (exif.camera || '-') + '</div>' +
       '<div class="meta">' + formatDate(p.created) + '</div>' +
       '</div>';
@@ -144,12 +146,13 @@ function renderLargeGrid(container) {
   var html = '<div class="photo-grid">';
   allPhotos.forEach(function(p) {
     var isSelected = selectedFiles.has(p.filename);
+    var sizes = p.sizes || {};
     html += '<div class="photo-item" onclick="openLightbox(\'' + p.filename + '\')">' +
       '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' onclick="event.stopPropagation();toggleSelect(\'' + p.filename + '\')">' +
       '<img src="/api/admin/photos/get?file=' + encodeURIComponent(p.filename) + '&size=1024px" loading="lazy">' +
       '<div class="info">' +
       '<div class="name">' + escapeHtml(p.filename) + '</div>' +
-      '<div class="dims">' + (p.width || '?') + '×' + (p.height || '?') + ' · ' + formatSize(p.sizes?.original) + ' · ' + formatDate(p.created) + '</div>' +
+      '<div class="dims">' + (p.width || '?') + '×' + (p.height || '?') + ' · ' + formatSize(sizes.original) + ' · ' + formatDate(p.created) + '</div>' +
       '</div></div>';
   });
   html += '</div>';
@@ -216,8 +219,8 @@ function openLightbox(filename) {
   document.getElementById('lightbox-info').innerHTML =
     '<strong>' + escapeHtml(filename) + '</strong><br>' +
     (photo.width || '?') + '×' + (photo.height || '?') + ' · ' +
-    formatSize(photo.sizes?.original) + '<br>' +
-    'EXIF: ' + (photo.exif?.camera || '-') + ' · ISO ' + (photo.exif?.iso || '-') + '<br>' +
+    formatSize((photo.sizes && photo.sizes.original) || 0) + '<br>' +
+    'EXIF: ' + ((photo.exif && photo.exif.camera) || '-') + ' · ISO ' + ((photo.exif && photo.exif.iso) || '-') + '<br>' +
     formatDate(photo.created);
 
   document.getElementById('lightbox').classList.add('active');
@@ -227,11 +230,6 @@ function closeLightbox(e) {
   if (e && e.target !== e.currentTarget) return;
   document.getElementById('lightbox').classList.remove('active');
   currentLightboxFile = null;
-}
-
-function openEditor() {
-  if (!currentLightboxFile) return;
-  window.open('/admin/photo-editor/?file=' + encodeURIComponent(currentLightboxFile), '_blank');
 }
 
 async function uploadFiles(files) {
@@ -263,7 +261,7 @@ async function uploadFiles(files) {
       var meta = await extractMetadata(file, img, versions);
       formData.append('metadata', JSON.stringify(meta));
 
-      var resp = await authenticatedFetch('/api/admin/photos/save', {
+      var resp = await authenticatedFetch('/api/admin/photos/upload', {
         method: 'POST',
         body: formData
       });
@@ -279,7 +277,7 @@ async function uploadFiles(files) {
       }
     } catch (e) {
       var statusEl = document.querySelector('#' + itemId + ' .status');
-      statusEl.textContent = '✗ Chyba';
+      statusEl.textContent = '✗ Chyba: ' + e.message;
       statusEl.className = 'status error';
     }
   }
@@ -328,48 +326,4 @@ function resizeCanvas(img, maxWidth, maxHeight, quality) {
   return new Promise(function(resolve) {
     canvas.toBlob(function(blob) {
       resolve(blob);
-    }, 'image/webp', quality);
-  });
-}
-
-async function generateVersions(img, filename) {
-  var ext = filename.split('.').pop().toLowerCase();
-  var mime = ext === 'png' ? 'image/png' : (ext === 'jpeg' || ext === 'jpg') ? 'image/jpeg' : 'image/webp';
-
-  var origBlob = await new Promise(function(resolve) {
-    var canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    canvas.toBlob(resolve, mime, 0.95);
-  });
-
-  var versions = {
-    original: new File([origBlob], filename, { type: mime }),
-    '2000px': new File([await resizeCanvas(img, 2000, 2000)], filename + '.2000.webp', { type: 'image/webp' }),
-    'fullhd': new File([await resizeCanvas(img, 1920, 1080)], filename + '.fullhd.webp', { type: 'image/webp' }),
-    '1024px': new File([await resizeCanvas(img, 1024, 1024)], filename + '.1024.webp', { type: 'image/webp' }),
-    'thumb': new File([await resizeCanvas(img, 400, 400)], filename + '.thumb.webp', { type: 'image/webp' })
-  };
-
-  return versions;
-}
-
-async function extractMetadata(file, img, versions) {
-  var sizes = {};
-  for (var key in versions) {
-    sizes[key] = versions[key].size;
-  }
-
-  return {
-    filename: file.name,
-    width: img.width,
-    height: img.height,
-    sizes: sizes,
-    exif: {},
-    created: new Date().toISOString(),
-    updated: new Date().toISOString()
-  };
-}
-
-loadGallery();
+    },
