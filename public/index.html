@@ -14,9 +14,10 @@
       font-family: system-ui, sans-serif;
       background: radial-gradient(circle at 50% 20%, #0a0a1a, #000000 70%);
       position: relative;
+      height: 100vh;
     }
 
-    /* DROBNÉ STATICKÉ HVĚZDY */
+    /* DROBNÉ HVĚZDY */
     body::before {
       content: "";
       position: absolute;
@@ -68,8 +69,8 @@
     /* TVŮJ TEXT NAPRAVO POD NADPISEM */
     .intro-text {
       position: absolute;
-      top: 140px;
-      right: 60px;
+      top: 210px;
+      right: 80px;
       width: 380px;
       text-align: left;
       color: #ffb366;
@@ -94,7 +95,6 @@
       z-index: 5;
     }
 
-    /* ZVÝRAZNĚNÍ PŘI HOVERU */
     .quote-star:hover {
       color: #fff;
       text-shadow:
@@ -105,7 +105,6 @@
       transition: all 0.3s ease;
     }
 
-    /* POMALÉ ZHASÍNÁNÍ PO ODJEZDU MYŠI */
     .fade-out {
       transition: all 3s ease;
       color: rgba(255,255,255,0.6) !important;
@@ -119,6 +118,31 @@
       90% { opacity: 1; }
       to { transform: translate(var(--ex), var(--ey)); opacity: 0; }
     }
+
+    /* DOLNÍ SEKCE */
+    .sections {
+      position: absolute;
+      bottom: 40px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      z-index: 10;
+    }
+
+    .section-link {
+      color: #ffcc66;
+      font-size: 20px;
+      text-decoration: none;
+      text-shadow: 0 0 15px rgba(255, 200, 100, 0.6);
+      transition: all 0.3s ease;
+    }
+
+    .section-link:hover {
+      color: #fff;
+      text-shadow: 0 0 25px #ff6600, 0 0 45px #ff6600;
+      transform: scale(1.15);
+    }
   </style>
 </head>
 
@@ -129,7 +153,14 @@
   </div>
 
   <div class="intro-text">
-    Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot, a všechno možné, co mi zrovna prolétne hlavou. Píšu o tom, kde jsem byl, co jsem zažil, co mě pobavilo, překvapilo nebo naštvalo. Prostě život tak, jak přichází. Bez přikrášlování, bez velkých mouder a většinou i bez nějakého hlubšího plánu.
+    Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...
+  </div>
+
+  <div class="sections">
+    <a href="/travel" class="section-link">Cestování / Travel</a>
+    <a href="/photo" class="section-link">Fotografování / Photo</a>
+    <a href="/projects" class="section-link">Projekty / Projects</a>
+    <a href="/about" class="section-link">Zajda / About</a>
   </div>
 
   <script>
@@ -197,3 +228,5 @@
   </script>
 </body>
 </html>
+
+      
