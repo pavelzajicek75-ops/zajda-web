@@ -2,16 +2,18 @@
 // CENTRÁLNÍ ADMIN AUTENTIZACE – STABILNÍ VERZE
 // ============================================
 
+// 🔥 sjednocení s dashboardem – token je v sessionStorage
 function getToken() {
   return sessionStorage.getItem("authToken");
 }
 
+// 🔥 verify endpoint musí být admin endpoint
 async function verifyToken() {
   const token = getToken();
   if (!token) return false;
 
   try {
-    const res = await fetch("/api/auth/verify", {
+    const res = await fetch("/api/admin/verify", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -22,16 +24,9 @@ async function verifyToken() {
     if (!res.ok) return false;
 
     const data = await res.json();
-
-    // 🔥 prodloužení platnosti tokenu (pokud backend podporuje)
-    if (data.exp && Date.now() / 1000 > data.exp) {
-      console.warn("Token expiroval – přihlášení vyžaduje obnovu.");
-      return false;
-    }
-
     return data.valid === true;
-  } catch (err) {
-    console.error("Chyba při ověřování tokenu:", err);
+
+  } catch {
     return false;
   }
 }
@@ -53,9 +48,7 @@ function displayUsername() {
     const payload = JSON.parse(atob(token.split(".")[1]));
     const usernameEl = document.getElementById("username");
     if (usernameEl) usernameEl.textContent = payload.username;
-  } catch (err) {
-    console.error("Chyba při dekódování tokenu:", err);
-  }
+  } catch {}
 }
 
 async function checkAuth() {
