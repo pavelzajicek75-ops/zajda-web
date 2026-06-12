@@ -1,44 +1,33 @@
-export async function onRequest(context) {
-  const { request, env } = context;
-  const bucket = env.zajda_photos;
-
-  if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
-
+export async function onRequestPost(context) {
   try {
-    const body = await request.json();
-    const filenames = body.filenames || [];
-    if (filenames.length === 0) {
-      return new Response(JSON.stringify({ success: false, error: 'No filenames' }), {
+    const auth = context.request.headers.get("Authorization");
+    if (!auth || !auth.startsWith("Bearer ")) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const token = auth.replace("Bearer ", "").trim();
+    const secret = context.env.ADMIN_JWT_SECRET;
+    await context.env.JWT.verify(token, secret);
+
+    const body = await context.request.json();
+    const key = body.key;
+    if (!key) {
+      return new Response(JSON.stringify({ success: false, error: "Missing key" }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { "Content-Type": "application/json" }
       });
     }
 
-    const prefixes = [
-      'photos/original/',
-      'photos/2000px/',
-      'photos/fullhd/',
-      'photos/1024px/',
-      'photos/thumbs/',
-      'photos/meta/'
-    ];
+    await context.env.PHOTOS_BUCKET.delete(key);
 
-    for (const filename of filenames) {
-      for (const prefix of prefixes) {
-        const key = prefix + (prefix === 'photos/meta/' ? filename + '.json' : filename);
-        try { await bucket.delete(key); } catch (e) {}
-      }
-    }
-
-    return new Response(JSON.stringify({ success: true, deleted: filenames.length }), {
-      headers: { 'Content-Type': 'application/json' }
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
     });
-  } catch (e) {
-    return new Response(JSON.stringify({ success: false, error: e.message }), {
+  } catch (err) {
+    return new Response(JSON.stringify({ success: false, error: "Delete failed" }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" }
     });
   }
 }
