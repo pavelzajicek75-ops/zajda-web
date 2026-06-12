@@ -1,52 +1,162 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moje diagnóza, můj vesmír</title>
-  <link rel="stylesheet" href="/style.css?v=1.0">
+  <meta charset="UTF-8" />
+  <title>Zajda – hlavní web</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    /* ============================================
+       ZÁKLADNÍ STYL HLAVNÍHO WEBU
+    ============================================ */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #222 0%, #000 60%);
+      color: #fff;
+    }
+
+    header {
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 40px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* ============================================
+       CITÁTY – SVÍTÍCÍ, FADE-IN, LUXUSNÍ EFEKT
+    ============================================ */
+    #quotesSection {
+      width: 100%;
+      text-align: center;
+      margin: 40px 0;
+      padding: 20px;
+    }
+
+    .quote-box {
+      display: inline-block;
+      padding: 20px 40px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+      transition: all 0.5s ease;
+    }
+
+    .quote-text {
+      font-size: 32px;
+      font-weight: 300;
+      color: #fff;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+      margin-bottom: 10px;
+    }
+
+    .quote-author {
+      font-size: 20px;
+      color: #ffcc66;
+      text-shadow: 0 0 10px rgba(255, 200, 100, 0.8);
+    }
+
+    .fade-in {
+      animation: fadeIn 1.2s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+        filter: blur(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+      }
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>Zajda – hlavní web</h1>
+  </header>
 
-<!-- CITÁTY – hvězdy po celé stránce -->
-<div id="floatingQuotesContainer"></div>
+  <main>
+    <!-- SEKCE CITÁTY -->
+    <section id="quotesSection"></section>
+  </main>
 
-<header class="hero">
-  <h1 class="main-title">MOJE DIAGNÓZA, MŮJ VESMÍR</h1>
-  <h2 class="subtitle">My Diagnosis: My Universe</h2>
-  <nav class="nav-links">
-    <a href="/">Domů</a>
-    <a href="/clanky/">Články</a>
-    <a href="/admin/editor.html">Admin</a>
-  </nav>
-</header>
+  <script>
+    // ============================================
+    // HLAVNÍ WEB – CITÁTY S EFEKTY (GLOW + FADE-IN + ROTACE)
+    // ============================================
 
-<section class="cards">
-  <div class="card">
-    <img src="/api/photo/fotografovani.jpg" alt="Fotografování" loading="lazy">
-    <h3>Fotografování</h3>
-  </div>
+    document.addEventListener("DOMContentLoaded", () => {
+      loadQuotesToMain();
+    });
 
-  <div class="card">
-    <img src="/api/photo/cestovani.jpg" alt="Cestování" loading="lazy">
-    <h3>Cestování</h3>
-  </div>
+    async function loadQuotesToMain() {
+      try {
+        const res = await fetch("/api/quotes");
+        if (!res.ok) {
+          console.error("API /api/quotes vrátilo chybu:", res.status);
+          return;
+        }
 
-  <div class="card">
-    <img src="/api/photo/projekty.jpg" alt="Moje projekty" loading="lazy">
-    <h3>Moje projekty</h3>
-  </div>
+        const data = await res.json();
+        const quotes = Array.isArray(data) ? data : [];
 
-  <div class="card">
-    <img src="/api/photo/zajda.jpg" alt="Zajda" loading="lazy">
-    <h3>Zajda</h3>
-  </div>
-</section>
+        if (!quotes.length) {
+          console.warn("Žádné citáty v /api/quotes");
+          return;
+        }
 
-<footer>
-  <p>© 2026 Moje diagnóza, můj vesmír</p>
-</footer>
+        const container = document.getElementById("quotesSection");
+        if (!container) {
+          console.error("Chybí element #quotesSection v HTML");
+          return;
+        }
 
-<script src="/app.js?v=1.0"></script>
+        container.innerHTML = "";
+
+        const quoteBox = document.createElement("div");
+        quoteBox.id = "quoteBox";
+        quoteBox.className = "quote-box";
+        container.appendChild(quoteBox);
+
+        let index = 0;
+
+        function showQuote() {
+          const q = quotes[index];
+
+          quoteBox.innerHTML = `
+            <div class="quote-text">"${q.text}"</div>
+            <div class="quote-author">– ${q.author}</div>
+          `;
+
+          quoteBox.classList.remove("fade-in");
+          void quoteBox.offsetWidth;
+          quoteBox.classList.add("fade-in");
+
+          index = (index + 1) % quotes.length;
+        }
+
+        showQuote();
+        setInterval(showQuote, 5000);
+      } catch (err) {
+        console.error("Chyba při načítání citátů:", err);
+      }
+    }
+  </script>
 </body>
 </html>
