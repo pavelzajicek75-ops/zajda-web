@@ -82,7 +82,7 @@
       z-index: 9;
     }
 
-    /* LÉTAJÍCÍ CITÁTY */
+    /* LÉTAJÍCÍ CITÁTY – UPRAVENO */
     .quote-star {
       position: absolute;
       max-width: 320px;
@@ -90,20 +90,19 @@
       color: rgba(255,255,255,0.75);
       font-weight: 300;
       text-shadow: 0 0 8px rgba(255,255,255,0.6);
-      transition: all 3s ease; /* <<< PLYNULÉ 3 SEKUNDY */
+      opacity: 0.75;
+      transition: opacity 1s ease-in-out; /* <<< JEN OPACITY, ŽÁDNÉ CUKNUTÍ */
       pointer-events: auto;
       cursor: default;
-      opacity: 0.85;
       z-index: 5;
     }
 
     .quote-star:hover {
-      color: #fff;
+      opacity: 1; /* <<< ROZSVÍCENÍ ZA 1 SEKUNDU */
       text-shadow:
         0 0 25px #ffffff,
         0 0 45px #ff6600,
         0 0 70px #ff6600;
-      transform: scale(1.35);
     }
 
     @keyframes drift {
@@ -113,7 +112,7 @@
       to { transform: translate(var(--ex), var(--ey)); opacity: 0; }
     }
 
-    /* DOLNÍ SEKCE – KARTY V JEDNÉ ŘADĚ */
+    /* DOLNÍ SEKCE – KARTY */
     .sections {
       position: absolute;
       bottom: 40px;
@@ -230,9 +229,12 @@
       const el = document.createElement("div");
       el.className = "quote-star";
 
+      /* UPRAVENÝ HTML BLOK – autor menší, bez pomlčky, doprava */
       el.innerHTML = `
-        "<strong>${q.text}</strong>"<br>
-        <span style="color:#ffcc66; font-size:14px;">– ${q.author}</span>
+        <div style="text-align:right;">
+          "<strong>${q.text}</strong>"<br>
+          <span style="color:#ffcc66; font-size:13px; opacity:0.85;">${q.author}</span>
+        </div>
       `;
 
       const startX = random(0, window.innerWidth);
@@ -250,7 +252,6 @@
 
       el.style.animation = `drift ${random(14, 22)}s linear infinite`;
 
-      /* <<< ZASTAVENÍ A ZNOVUSPUŠTĚNÍ POHYBU */
       el.addEventListener("mouseenter", () => {
         el.style.animationPlayState = "paused";
       });
