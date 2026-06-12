@@ -1,5 +1,5 @@
 // ============================================
-// CITÁTY – ADMINISTRACE
+// CITÁTY – ADMINISTRACE (napojeno na [[path]].js)
 // ============================================
 
 const API_BASE = "/api/quotes";
@@ -8,11 +8,11 @@ const API_BASE = "/api/quotes";
 // Pomocná fetch funkce
 // ----------------------
 async function api(url, method = "GET", body = null) {
-  const options = {
-    method,
-    headers: { "Content-Type": "application/json" }
-  };
-  if (body) options.body = JSON.stringify(body);
+  const options = { method, headers: {} };
+  if (body) {
+    options.headers["Content-Type"] = "application/json";
+    options.body = JSON.stringify(body);
+  }
   return fetch(url, options);
 }
 
@@ -59,17 +59,23 @@ function showList() {
 }
 
 // ----------------------
-// Načtení citátů
+// Načtení citátů – LIST = GET /api/quotes
 // ----------------------
 async function loadQuotes() {
   try {
-    const res = await api(`${API_BASE}/list`);
+    const res = await api(API_BASE, "GET");
     if (!res.ok) {
       tbody.innerHTML = `<tr><td colspan="6">Chyba API: ${res.status}</td></tr>`;
       return;
     }
 
-    const quotes = await res.json();
+    const data = await res.json();
+    const quotes = Array.isArray(data)
+      ? data
+      : Array.isArray(data.quotes)
+      ? data.quotes
+      : [];
+
     tbody.innerHTML = "";
 
     quotes.forEach(q => {
@@ -93,13 +99,17 @@ async function loadQuotes() {
 
       // created
       const tdCreated = document.createElement("td");
-      tdCreated.textContent = q.created
+      tdCreated.textContent = q.createdAt
+        ? new Date(q.createdAt).toLocaleString()
+        : q.created
         ? new Date(q.created).toLocaleString()
         : "";
 
       // updated
       const tdUpdated = document.createElement("td");
-      tdUpdated.textContent = q.updated
+      tdUpdated.textContent = q.updatedAt
+        ? new Date(q.updatedAt).toLocaleString()
+        : q.updated
         ? new Date(q.updated).toLocaleString()
         : "";
 
@@ -113,10 +123,9 @@ async function loadQuotes() {
       const btnDelete = document.createElement("button");
       btnDelete.textContent = "🗑️";
       btnDelete.addEventListener("click", async () => {
-        if (confirm("Smazat tento citát?")) {
-          await api(`${API_BASE}/delete`, "POST", { id: q.id });
-          await loadQuotes();
-        }
+        if (!confirm("Smazat tento citát?")) return;
+        await api(`${API_BASE}/${q.id}`, "DELETE");
+        await loadQuotes();
       });
 
       tdActions.append(btnEdit, btnDelete);
@@ -124,7 +133,6 @@ async function loadQuotes() {
       tr.append(tdCheck, tdText, tdAuthor, tdCreated, tdUpdated, tdActions);
       tbody.appendChild(tr);
     });
-
   } catch (err) {
     console.error(err);
     tbody.innerHTML = `<tr><td colspan="6">Chyba při načítání citátů</td></tr>`;
@@ -132,7 +140,7 @@ async function loadQuotes() {
 }
 
 // ----------------------
-// Formulář – uložení
+// Uložení – CREATE/UPDATE
 // ----------------------
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -144,10 +152,9 @@ form.addEventListener("submit", async (e) => {
   };
 
   if (id) {
-    payload.id = id;
-    await api(`${API_BASE}/update`, "POST", payload);
+    await api(`${API_BASE}/${id}`, "PUT", payload);
   } else {
-    await api(`${API_BASE}/create`, "POST", payload);
+    await api(API_BASE, "POST", payload);
   }
 
   await loadQuotes();
@@ -171,7 +178,10 @@ btnDeleteSelected.addEventListener("click", async () => {
   if (!ids.length) return;
   if (!confirm(`Smazat ${ids.length} citát(ů)?`)) return;
 
-  await api(`${API_BASE}/delete`, "POST", { ids });
+  for (const id of ids) {
+    await api(`${API_BASE}/${id}`, "DELETE");
+  }
+
   await loadQuotes();
 });
 
