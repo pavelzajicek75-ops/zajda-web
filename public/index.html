@@ -6,37 +6,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    /* HVĚZDNÁ OBLOHA */
+    /* VESMÍRNÉ POZADÍ – HLUBOKÝ GRADIENT + MLHOVINY */
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
       font-family: system-ui, sans-serif;
-      background: radial-gradient(circle at 50% 20%, #0a0a1a, #000000 70%);
+      background: radial-gradient(circle at 50% 20%, #0d0d1a, #000000 70%),
+                  radial-gradient(circle at 80% 80%, rgba(80,0,120,0.35), transparent 60%),
+                  radial-gradient(circle at 20% 70%, rgba(0,80,160,0.25), transparent 60%),
+                  radial-gradient(circle at 60% 30%, rgba(255,120,0,0.18), transparent 70%);
+      background-blend-mode: screen;
       position: relative;
       height: 100vh;
     }
 
-    /* DROBNÉ HVĚZDY */
-    body::before {
-      content: "";
+    /* PULZUJÍCÍ HVĚZDY – JEMNÉ, NERUŠIVÉ */
+    .star {
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: transparent url("data:image/svg+xml;utf8,\
-      <svg xmlns='http://www.w3.org/2000/svg' width='3' height='3'>\
-        <circle cx='1' cy='1' r='1' fill='white' opacity='0.8'/>\
-      </svg>") repeat;
-      opacity: 0.25;
-      animation: starPulse 6s ease-in-out infinite;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      opacity: 0.7;
+      animation: twinkle 4s infinite ease-in-out;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1;
     }
 
-    @keyframes starPulse {
-      0% { opacity: 0.20; }
-      50% { opacity: 0.32; }
-      100% { opacity: 0.20; }
+    @keyframes twinkle {
+      0% { opacity: 0.2; }
+      50% { opacity: 0.9; }
+      100% { opacity: 0.2; }
     }
 
     /* NADPISY */
@@ -69,7 +70,7 @@
     /* TVŮJ TEXT NAPRAVO POD NADPISEM */
     .intro-text {
       position: absolute;
-      top: 210px;
+      top: 220px;
       right: 80px;
       width: 380px;
       text-align: left;
@@ -147,6 +148,19 @@
 </head>
 
 <body>
+
+  <!-- GENERÁTOR HVĚZD -->
+  <script>
+    for (let i = 0; i < 180; i++) {
+      const star = document.createElement("div");
+      star.className = "star";
+      star.style.left = Math.random() * window.innerWidth + "px";
+      star.style.top = Math.random() * window.innerHeight + "px";
+      star.style.animationDelay = (Math.random() * 4) + "s";
+      document.body.appendChild(star);
+    }
+  </script>
+
   <div class="title-block">
     <span class="cz-title">Moje diagnóza, můj vesmír</span>
     <span class="en-title">My diagnosis, my universe</span>
@@ -228,5 +242,3 @@
   </script>
 </body>
 </html>
-
-      
