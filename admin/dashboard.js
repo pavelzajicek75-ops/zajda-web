@@ -55,12 +55,12 @@ async function loadGalleryPreview() {
 // ===================== CITÁTY =====================
 async function loadQuotesPreview() {
   try {
-    // 🔥 OPRAVENO – správný endpoint
-    const res = await authenticatedFetch("/api/quotes/list");
+    // 🔥 OPRAVENO – správný endpoint podle [[path]].js
+    const res = await authenticatedFetch("/api/quotes");
     if (!res) return;
 
     const data = await res.json();
-    const quotes = Array.isArray(data[0]) ? data[0] : data;
+    const quotes = Array.isArray(data) ? data : [];
 
     const box = document.getElementById("quotesPreview");
     box.innerHTML = "";
@@ -68,7 +68,7 @@ async function loadQuotesPreview() {
     quotes.slice(0, 3).forEach(q => {
       const div = document.createElement("div");
       div.className = "quote-item";
-      div.innerHTML = `<p>"${q.text}"</p><small>– ${q.author}</small>`;
+      div.innerHTML = `<p>"${q.text}"</p><small>– ${q.author || ""}</small>`;
       box.appendChild(div);
     });
   } catch (err) {
