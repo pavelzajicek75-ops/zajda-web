@@ -1,5 +1,100 @@
 {
   "version": 1,
   "include": ["/api/*"],
-  "exclude": []
+  "exclude": ["/admin/*", "/assets/*", "/*.html", "/*.js", "/*.css", "/*.png", "/*.jpg", "/*.svg"]
+}
+ headers: cors });
+  }
+
+  if (type === 'login') {
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405, headers: cors });
+    }
+    const { password } = await request.json();
+    if (password !== env.ADMIN_JWT_SECRET) {
+      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+        status: 401,
+        headers: { ...cors, 'Content-Type': 'application/json' }
+      });
+    }
+    return new Response(JSON.stringify({ token: 'admin-token-' + Date.now() }), {
+      headers: { ...cors, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const auth = request.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...cors, 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    if (type === 'quotes') {
+      if (!id) {
+        const list = await env.QUOTES_R2.list();
+        return new Response(JSON.stringify(list.objects.map(o => ({
+          key: o.key,
+          size: o.size,
+          uploaded: o.uploaded
+        }))), { headers: { ...cors, 'Content-Type': 'application/json' } });
+      }
+      const obj = await env.QUOTES_R2.get(id);
+      if (!obj) return new Response('Not found', { status: 404, headers: cors });
+      return new Response(await obj.arrayBuffer(), {
+        headers: { ...cors, 'Content-Type': obj.httpMetadata?.contentType || 'application/json' }
+      });
+    }
+
+    if (type === 'photos') {
+      if (!id) {
+        const list = await env.PHOTOS_R2.list();
+        return new Response(JSON.stringify(list.objects.map(o => ({
+          key: o.key,
+          size: o.size,
+          uploaded: o.uploaded
+        }))), { headers: { ...cors, 'Content-Type': 'application/json' } });
+      }
+      const obj = await env.PHOTOS_R2.get(id);
+      if (!obj) return new Response('Not found', { status: 404, headers: cors });
+      return new Response(await obj.arrayBuffer(), {
+        headers: { ...cors, 'Content-Type': obj.httpMetadata?.contentType || 'image/jpeg' }
+      });
+    }
+
+    if (type === 'articles') {
+      if (!id) {
+        const list = await env.ARTICLES.list();
+        return new Response(JSON.stringify(list.keys.map(k => k.name)), {
+          headers: { ...cors, 'Content-Type': 'application/json' }
+        });
+      }
+      const val = await env.ARTICLES.get(id);
+      if (!val) return new Response('Not found', { status: 404, headers: cors });
+      return new Response(val, { headers: { ...cors, 'Content-Type': 'application/json' } });
+    }
+
+    if (type === 'subsections') {
+      if (!id) {
+        const list = await env.SUBSECTIONS.list();
+        return new Response(JSON.stringify(list.keys.map(k => k.name)), {
+          headers: { ...cors, 'Content-Type': 'application/json' }
+        });
+      }
+      const val = await env.SUBSECTIONS.get(id);
+      if (!val) return new Response('Not found', { status: 404, headers: cors });
+      return new Response(val, { headers: { ...cors, 'Content-Type': 'application/json' } });
+    }
+
+    return new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { ...cors, 'Content-Type': 'application/json' }
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...cors, 'Content-Type': 'application/json' }
+    });
+  }
 }
