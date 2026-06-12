@@ -222,6 +222,32 @@
       </a>
     </div>
   </div>
+
+  <script>
+    async function loadQuotes() {
+      const res = await fetch("/api/quotes");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function spawnQuote(q) {
+      const el = document.createElement("div");
+      el.className = "quote-star";
+
+      el.innerHTML = `
+        "<strong>${q.text}</strong>"<br>
+        <span style="color:#ffcc66; font-size:14px;">– ${q.author}</span>
+      `;
+
+      const startX = random(0, window.innerWidth);
+      const startY = random(0, window.innerHeight);
+      const endX = startX + random(-300, 300);
+      const endY = startY + random(-300, 300);
+
       el.style.left = startX + "px";
       el.style.top = startY + "px";
 
@@ -244,13 +270,11 @@
       const quotes = await loadQuotes();
       if (!quotes.length) return;
 
-      // inicialní hvězdy
       for (let i = 0; i < 10; i++) {
         const q = quotes[Math.floor(Math.random() * quotes.length)];
         spawnQuote(q);
       }
 
-      // postupné přidávání
       setInterval(() => {
         const q = quotes[Math.floor(Math.random() * quotes.length)];
         spawnQuote(q);
@@ -260,7 +284,7 @@
       }, 4000);
     }
 
-    startSky();
+    window.addEventListener("load", startSky);
   </script>
 
 </body>
