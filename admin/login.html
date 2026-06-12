@@ -1,99 +1,40 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin Login</title>
-  <style>
-    body {
-      background: #111;
-      color: #fff;
-      font-family: Arial;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .login-box {
-      background: #222;
-      padding: 30px;
-      border-radius: 10px;
-      width: 320px;
-      box-shadow: 0 0 20px #000;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 6px;
-      border: none;
-      font-size: 16px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #4caf50;
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .show-pass {
-      cursor: pointer;
-      color: #aaa;
-      font-size: 14px;
-      margin-top: -5px;
-      display: block;
-      text-align: right;
-      user-select: none;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,sans-serif}
+body{background:#0f172a;color:#e2e8f0;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:#1e293b;padding:2.5rem;border-radius:12px;width:100%;max-width:400px;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)}
+h1{text-align:center;margin-bottom:1.5rem;color:#60a5fa}
+input{width:100%;padding:.75rem;margin-bottom:1rem;background:#334155;border:1px solid #475569;border-radius:6px;color:#fff;font-size:1rem}
+button{width:100%;padding:.75rem;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:1rem}
+button:hover{background:#2563eb}
+#error{color:#ef4444;text-align:center;margin-top:1rem}
+</style>
 </head>
 <body>
-
-<div class="login-box">
-  <h2>Přihlášení</h2>
-
-  <input id="login" type="text" placeholder="Login">
-
-  <input id="password" type="password" placeholder="Heslo">
-  <span id="togglePass" class="show-pass">👁️ zobrazit heslo</span>
-
-  <button id="loginBtn">Přihlásit</button>
+<div class="card">
+  <h1>🔐 Zajda Admin</h1>
+  <input type="password" id="pwd" placeholder="Heslo" onkeydown="if(event.key==='Enter')login()">
+  <button onclick="login()">Přihlásit se</button>
+  <p id="error"></p>
 </div>
-
-<!-- 🔥 CELÝ LOGIN SCRIPT INLINE – NEJDE ZABLOKOVAT -->
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("INLINE LOGIN SCRIPT LOADED");
-
-  const pwd = document.getElementById("password");
-  const toggle = document.getElementById("togglePass");
-
-  toggle.onclick = () => {
-    if (pwd.type === "password") {
-      pwd.type = "text";
-      toggle.textContent = "🙈 skrýt heslo";
-    } else {
-      pwd.type = "password";
-      toggle.textContent = "👁️ zobrazit heslo";
-    }
-  };
-
-  document.getElementById("loginBtn").onclick = () => {
-    const login = document.getElementById("login").value.trim();
-    const pass = pwd.value.trim();
-
-    if (login === "zajda" && pass === "Cestmir753") {
-      localStorage.setItem("adminAuth", "1");
-      window.location.href = "/admin/dashboard.html";
-    } else {
-      alert("Špatné přihlašovací údaje!");
-    }
-  };
-});
+async function login(){
+  const pwd = document.getElementById('pwd').value;
+  try{
+    const res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
+    if(!res.ok) throw new Error('Špatné heslo');
+    const data = await res.json();
+    localStorage.setItem('zajda_token',data.token);
+    window.location.href = '/admin/dashboard.html';
+  }catch(e){
+    document.getElementById('error').textContent = e.message;
+  }
+}
 </script>
-
 </body>
 </html>
