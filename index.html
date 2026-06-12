@@ -2,45 +2,27 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <title>Zajda – hlavní web</title>
+  <title>Moje diagnóza, můj vesmír</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <style>
-    /* ============================================
-       ZÁKLADNÍ STYL HLAVNÍHO WEBU
-    ============================================ */
     body {
       margin: 0;
       padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #222 0%, #000 60%);
+      font-family: system-ui, sans-serif;
+      background: #000;
       color: #fff;
-    }
-
-    header {
-      padding: 40px 20px;
       text-align: center;
     }
 
-    header h1 {
+    h1 {
+      margin-top: 60px;
       font-size: 40px;
-      letter-spacing: 4px;
-      text-transform: uppercase;
+      color: #ff6600;
+      text-shadow: 0 0 20px #ff6600;
     }
 
-    main {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    /* ============================================
-       CITÁTY – SVÍTÍCÍ, FADE-IN, LUXUSNÍ EFEKT
-    ============================================ */
     #quotesSection {
-      width: 100%;
-      text-align: center;
-      margin: 40px 0;
+      margin-top: 60px;
       padding: 20px;
     }
 
@@ -55,7 +37,7 @@
     }
 
     .quote-text {
-      font-size: 32px;
+      font-size: 28px;
       font-weight: 300;
       color: #fff;
       text-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
@@ -87,20 +69,10 @@
   </style>
 </head>
 <body>
-  <header>
-    <h1>Zajda – hlavní web</h1>
-  </header>
-
-  <main>
-    <!-- SEKCE CITÁTY -->
-    <section id="quotesSection"></section>
-  </main>
+  <h1>Moje diagnóza, můj vesmír</h1>
+  <section id="quotesSection"></section>
 
   <script>
-    // ============================================
-    // HLAVNÍ WEB – CITÁTY S EFEKTY (GLOW + FADE-IN + ROTACE)
-    // ============================================
-
     document.addEventListener("DOMContentLoaded", () => {
       loadQuotesToMain();
     });
@@ -109,28 +81,21 @@
       try {
         const res = await fetch("/api/quotes");
         if (!res.ok) {
-          console.error("API /api/quotes vrátilo chybu:", res.status);
+          console.error("Chyba API:", res.status);
           return;
         }
 
         const data = await res.json();
         const quotes = Array.isArray(data) ? data : [];
-
         if (!quotes.length) {
-          console.warn("Žádné citáty v /api/quotes");
+          console.warn("Žádné citáty");
           return;
         }
 
         const container = document.getElementById("quotesSection");
-        if (!container) {
-          console.error("Chybí element #quotesSection v HTML");
-          return;
-        }
-
         container.innerHTML = "";
 
         const quoteBox = document.createElement("div");
-        quoteBox.id = "quoteBox";
         quoteBox.className = "quote-box";
         container.appendChild(quoteBox);
 
@@ -138,16 +103,13 @@
 
         function showQuote() {
           const q = quotes[index];
-
           quoteBox.innerHTML = `
             <div class="quote-text">"${q.text}"</div>
             <div class="quote-author">– ${q.author}</div>
           `;
-
           quoteBox.classList.remove("fade-in");
           void quoteBox.offsetWidth;
           quoteBox.classList.add("fade-in");
-
           index = (index + 1) % quotes.length;
         }
 
