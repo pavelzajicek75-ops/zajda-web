@@ -3,149 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard</title>
+<title>Admin Login</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,sans-serif}
-body{background:#0f172a;color:#e2e8f0}
-header{background:#1e293b;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;flex-wrap:wrap;gap:1rem}
-nav{display:flex;gap:.5rem;flex-wrap:wrap}
-button{padding:.5rem 1rem;background:#334155;color:#fff;border:none;border-radius:6px;cursor:pointer}
-button.active{background:#3b82f6}
-.container{max-width:1200px;margin:0 auto;padding:2rem}
-.editor{background:#1e293b;padding:1.5rem;border-radius:8px;border:1px solid #334155;margin-bottom:2rem}
-.editor > *{margin-bottom:1rem}
-input,textarea,select{width:100%;padding:.75rem;background:#334155;border:1px solid #475569;border-radius:6px;color:#fff;font-size:1rem}
-textarea{min-height:100px;resize:vertical}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}
-.card{background:#1e293b;padding:1rem;border-radius:8px;border:1px solid #334155}
-.card h3{color:#60a5fa;word-break:break-all;font-size:.9rem}
-.card p{color:#94a3b8;font-size:.8rem;margin-top:.5rem}
-.meta{color:#64748b;font-size:.75rem;margin-top:.5rem}
-.actions{display:flex;gap:.5rem;margin-top:1rem}
-.actions button{padding:.4rem .6rem;font-size:.8rem;width:auto}
-.danger{background:#ef4444}
-.hidden{display:none}
+body{background:#0f172a;color:#e2e8f0;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:#1e293b;padding:2.5rem;border-radius:12px;width:100%;max-width:400px;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)}
+h1{text-align:center;margin-bottom:1.5rem;color:#60a5fa}
+input{width:100%;padding:.75rem;margin-bottom:1rem;background:#334155;border:1px solid #475569;border-radius:6px;color:#fff;font-size:1rem}
+button{width:100%;padding:.75rem;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:1rem}
+button:hover{background:#2563eb}
+#error{color:#ef4444;text-align:center;margin-top:1rem}
 </style>
 </head>
 <body>
-<header>
-  <h1>📊 Dashboard</h1>
-  <nav>
-    <button onclick="show('quotes')" id="btn-quotes" class="active">Citáty</button>
-    <button onclick="show('photos')" id="btn-photos">Fotografie</button>
-    <button onclick="show('articles')" id="btn-articles">Články</button>
-    <button onclick="show('subsections')" id="btn-subsections">Sekce</button>
-    <button onclick="logout()" class="danger">Odhlásit</button>
-  </nav>
-</header>
-<div class="container">
-
-<div id="tab-quotes" class="tab">
-  <div class="editor">
-    <h2>Přidat citát</h2>
-    <input id="qid" placeholder="ID (např. quote-1)">
-    <textarea id="qtext" placeholder="Text citátu"></textarea>
-    <input id="qauthor" placeholder="Autor">
-    <button onclick="save('quotes')">Uložit</button>
-  </div>
-  <div id="list-quotes" class="grid"></div>
-</div>
-
-<div id="tab-photos" class="tab hidden">
-  <div class="editor">
-    <h2>Nahrát fotografii</h2>
-    <input id="pid" placeholder="ID (např. photo-1)">
-    <input type="file" id="pfile" accept="image/*">
-    <button onclick="uploadPhoto()">Nahrát</button>
-  </div>
-  <div id="list-photos" class="grid"></div>
-</div>
-
-<div id="tab-articles" class="tab hidden">
-  <div class="editor">
-    <h2>Přidat článek</h2>
-    <input id="aid" placeholder="ID (např. article-1)">
-    <input id="atitle" placeholder="Nadpis">
-    <textarea id="acontent" placeholder="Obsah"></textarea>
-    <button onclick="save('articles')">Uložit</button>
-  </div>
-  <div id="list-articles" class="grid"></div>
-</div>
-
-<div id="tab-subsections" class="tab hidden">
-  <div class="editor">
-    <h2>Přidat sekci</h2>
-    <input id="sid" placeholder="ID (např. section-1)">
-    <input id="stitle" placeholder="Název">
-    <textarea id="scontent" placeholder="Obsah"></textarea>
-    <button onclick="save('subsections')">Uložit</button>
-  </div>
-  <div id="list-subsections" class="grid"></div>
-</div>
-
+<div class="card">
+  <h1>🔐 Zajda Admin</h1>
+  <input type="password" id="pwd" placeholder="Heslo" onkeydown="if(event.key==='Enter')login()">
+  <button onclick="login()">Přihlásit se</button>
+  <p id="error"></p>
 </div>
 <script>
-const token = localStorage.getItem('zajda_token');
-if(!token) location.href='/admin/login.html';
-
-function auth(h){h.append('Authorization','Bearer '+token);return h;}
-
-function show(tab){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.add('hidden'));
-  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.remove('hidden');
-  document.getElementById('btn-'+tab).classList.add('active');
-  load(tab);
-}
-
-async function load(type){
-  const el = document.getElementById('list-'+type);
-  el.innerHTML='<p style="color:#64748b">Načítání...</p>';
+async function login(){
+  const pwd = document.getElementById('pwd').value;
   try{
-    const res = await fetch('/api/'+type,{headers:auth(new Headers())});
-    if(!res.ok) throw new Error();
+    const res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
+    if(!res.ok) throw new Error('Špatné heslo');
     const data = await res.json();
-    el.innerHTML='';
-    if(!data.length){el.innerHTML='<p style="color:#64748b">Žádné položky</p>';return;}
-    data.forEach(item=>{
-      const key = typeof item==='string'?item:item.key;
-      const div=document.createElement('div');div.className='card';
-      div.innerHTML=`<h3>${key}</h3><div class="meta">${type}</div><div class="actions">
-        <button onclick="del('${type}','${key}')" class="danger">Smazat</button>
-      </div>`;
-      el.appendChild(div);
-    });
-  }catch(e){el.innerHTML='<p style="color:#ef4444">Chyba načítání</p>';}
+    localStorage.setItem('zajda_token',data.token);
+    window.location.href = '/admin/dashboard.html';
+  }catch(e){
+    document.getElementById('error').textContent = e.message;
+  }
 }
-
-async function save(type){
-  const id=document.getElementById(type==='quotes'?'qid':type==='articles'?'aid':'sid').value.trim();
-  if(!id){alert('Vyplňte ID');return;}
-  let body={};
-  if(type==='quotes') body={text:document.getElementById('qtext').value,author:document.getElementById('qauthor').value};
-  if(type==='articles') body={title:document.getElementById('atitle').value,content:document.getElementById('acontent').value};
-  if(type==='subsections') body={title:document.getElementById('stitle').value,content:document.getElementById('scontent').value};
-  await fetch('/api/'+type+'/'+id,{method:'PUT',headers:auth(new Headers({'Content-Type':'application/json'})),body:JSON.stringify(body)});
-  alert('Uloženo');load(type);
-}
-
-async function uploadPhoto(){
-  const id=document.getElementById('pid').value.trim();
-  const file=document.getElementById('pfile').files[0];
-  if(!id||!file){alert('Vyplňte ID a vyberte soubor');return;}
-  await fetch('/api/photos/'+id,{method:'PUT',headers:auth(new Headers({'Content-Type':file.type})),body:file});
-  alert('Nahráno');load('photos');
-}
-
-async function del(type,key){
-  if(!confirm('Smazat '+key+'?'))return;
-  await fetch('/api/'+type+'/'+key,{method:'DELETE',headers:auth(new Headers())});
-  load(type);
-}
-
-function logout(){localStorage.removeItem('zajda_token');location.href='/admin/login.html';}
-
-show('quotes');
 </script>
 </body>
 </html>
