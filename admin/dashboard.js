@@ -1,105 +1,168 @@
-// ============================================
-// DASHBOARD – napojený na centrální autentizaci
-// ============================================
+// Předpoklad: login ukládá JWT do sessionStorage pod klíčem "authToken"
+// verify endpoint: /api/admin/verify (už máš)
+// R2 API: /api/admin/photos/* (viz Functions níže)
 
-document.addEventListener("DOMContentLoaded", () => {
-  loadStats();
-  loadGalleryPreview();
-  loadQuotesPreview();
-  loadArticlesPreview();
-});
-
-// ============================================
-// AUTH FETCH – JEDINÁ SPRÁVNÁ VERZE
-// ============================================
+function getToken() {
+  return sessionStorage.getItem("authToken");
+}
 
 async function authenticatedFetch(url, options = {}) {
-  const token = sessionStorage.getItem("authToken");
-
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    }
-  });
-
-  if (res.status === 401 || res.status === 403) {
-    sessionStorage.removeItem("authToken");
-    window.location.href = "/admin/login/";
-    return null;
+  const token = getToken();
+  if (!token) {
+    redirectToLogin();
+    return;
   }
 
+  const headers = options.headers || {};
+  headers["Authorization"] = `Bearer ${token}`;
+  options.headers = headers;
+
+  const res = await fetch(url, options);
+  if (res.status === 401) {
+    redirectToLogin();
+    return;
+  }
   return res;
 }
 
-// ===================== STATISTIKY =====================
-async function loadStats() {
-  const res = await authenticatedFetch("/api/admin/stats");
-  if (!res) return;
-  const data = await res.json();
-
-  document.getElementById("articlesCount").textContent = data.articles || 0;
-  document.getElementById("photosCount").textContent = data.photos || 0;
-  document.getElementById("quotesCount").textContent = data.quotes || 0;
-  document.getElementById("usersCount").textContent = data.users || 0;
-  document.getElementById("sectionsCount").textContent = data.sections || 0;
-  document.getElementById("subsectionsCount").textContent = data.subsections || 0;
+function redirectToLogin() {
+  window.location.href = "/admin/login.html";
 }
 
-// ===================== GALERIE =====================
-async function loadGalleryPreview() {
+async function verifyAuth() {
+  const res = await authenticatedFetch("/api/admin/verify", {
+    method: "POST"
+  });
+  if (!res) return;
+  const data = await res.json();
+  if (!data.valid) {
+    redirectToLogin();
+  }
+}
+
+async function loadPhotos() {
+  const grid = document.getElementById("photo-grid");
+  grid.innerHTML = "Načítám fotky…";
+
   const res = await authenticatedFetch("/api/admin/photos/list");
   if (!res) return;
   const data = await res.json();
 
-  const box = document.getElementById("galleryPreview");
-  box.innerHTML = "";
+  grid.innerHTML = "";
 
-  (data.photos || []).slice(0, 6).forEach(photo => {
+  data.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "photo-card";
+
     const img = document.createElement("img");
-    img.src = photo.url;
-    img.width = 80;
-    img.style.margin = "5px";
-    img.style.borderRadius = "6px";
-    img.style.boxShadow = "0 0 5px #000";
-    box.appendChild(img);
+    img.src = item.url;
+    img.alt = item.key;
+
+    const meta = document.createElement("div");
+    meta.className = "photo-meta";
+    meta.textContent = item.key;
+
+    const actions = document.createElement("div");
+    actions.className = "photo-actions";
+
+    const infoBtn = document.createElement("button");
+    infoBtn.className = "btn-info";
+    infoBtn.textContent = "Info";
+    infoBtn.addEventListener("click", () => showInfo(item.key));
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn-delete";
+    delBtn.textContent = "Smazat";
+    delBtn.addEventListener("click", () => deletePhoto(item.key));
+
+    actions.appendChild(infoBtn);
+    actions.appendChild(delBtn);
+
+    card.appendChild(img);
+    card.appendChild(meta);
+    card.appendChild(actions);
+
+    grid.appendChild(card);
   });
 }
 
-// ===================== CITÁTY =====================
-async function loadQuotesPreview() {
-  const res = await authenticatedFetch("/api/admin/quotes/list");
+async function showInfo(key) {
+  const res = await authenticatedFetch(`/api/admin/photos/info?key=${encodeURIComponent(key)}`);
   if (!res) return;
-
   const data = await res.json();
-  const quotes = Array.isArray(data.quotes) ? data.quotes : data;
 
-  const box = document.getElementById("quotesPreview");
-  box.innerHTML = "";
-
-  quotes.slice(0, 3).forEach(q => {
-    const div = document.createElement("div");
-    div.className = "quote-item";
-    div.innerHTML = `<p>"${q.text}"</p><small>– ${q.author || ""}</small>`;
-    box.appendChild(div);
-  });
+  const modal = document.getElementById("modal");
+  const body = document.getElementById("modal-body");
+  body.textContent = JSON.stringify(data, null, 2);
+  modal.style.display = "flex";
 }
 
-// ===================== ČLÁNKY =====================
-async function loadArticlesPreview() {
-  const res = await authenticatedFetch("/api/admin/articles/list");
+async function deletePhoto(key) {
+  if (!confirm(`Opravdu smazat fotku: ${key}?`)) return;
+
+  const res = await authenticatedFetch("/api/admin/photos/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key })
+  });
   if (!res) return;
   const data = await res.json();
 
-  const box = document.getElementById("articlesPreview");
-  box.innerHTML = "";
+  const status = document.getElementById("status");
+  status.textContent = data.success ? "Fotka smazána." : "Chyba při mazání.";
+  await loadPhotos();
+}
 
-  (data.articles || []).slice(0, 3).forEach(a => {
-    const div = document.createElement("div");
-    div.className = "article-item";
-    div.innerHTML = `<p><strong>${a.title}</strong> <small>${a.date}</small></p>`;
-    box.appendChild(div);
+async function uploadPhoto(file) {
+  const status = document.getElementById("status");
+  status.textContent = "Nahrávám…";
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await authenticatedFetch("/api/admin/photos/upload", {
+    method: "POST",
+    body: formData
+  });
+  if (!res) return;
+  const data = await res.json();
+
+  status.textContent = data.success ? "Fotka nahrána." : "Chyba při nahrávání.";
+  await loadPhotos();
+}
+
+function initUploadForm() {
+  const form = document.getElementById("upload-form");
+  const fileInput = document.getElementById("file-input");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const file = fileInput.files[0];
+    if (!file) return;
+    uploadPhoto(file);
   });
 }
+
+function initModal() {
+  const modal = document.getElementById("modal");
+  const closeBtn = document.getElementById("modal-close");
+  closeBtn.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+}
+
+function initLogout() {
+  const btn = document.getElementById("logout-btn");
+  btn.addEventListener("click", () => {
+    sessionStorage.removeItem("authToken");
+    redirectToLogin();
+  });
+}
+
+window.addEventListener("load", async () => {
+  await verifyAuth();
+  initUploadForm();
+  initModal();
+  initLogout();
+  await loadPhotos();
+});
