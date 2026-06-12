@@ -1,54 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <title>Quotes Management</title>
-  <link rel="stylesheet" href="quotes.css?v=2" />
+  <meta charset="UTF-8">
+  <title>Citáty – Administrace</title>
+  <script type="module" src="/admin/admin-guard.js"></script>
+  <link rel="stylesheet" href="/admin/citaty/quotes.css">
 </head>
 <body>
-  <header class="top-bar">
-    <h1>Quotes Management</h1>
-    <button id="btn-add">Add Quote</button>
-    <button id="btn-delete-selected">Delete Selected</button>
-  </header>
 
-  <main>
-    <section id="form-section" class="hidden">
-      <h2 id="form-title">New Quote</h2>
-      <form id="quote-form">
-        <input type="hidden" id="quote-id" />
-        <div class="field">
-          <label for="quote-text">Quote text (EN)</label>
-          <textarea id="quote-text" required></textarea>
-        </div>
-        <div class="field">
-          <label for="quote-author">Author</label>
-          <input id="quote-author" type="text" />
-        </div>
-        <div class="actions">
-          <button type="submit">Save</button>
-          <button type="button" id="btn-cancel">Cancel</button>
-        </div>
-      </form>
-    </section>
+  <h1>Citáty</h1>
 
-    <section id="list-section">
-      <table>
-        <thead>
-          <tr>
-            <th><input type="checkbox" id="select-all" /></th>
-            <th>Quote</th>
-            <th>Author</th>
-            <th>Created</th>
-            <th>Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="quotes-tbody"></tbody>
-      </table>
-    </section>
-  </main>
+  <button id="btn-add">➕ Nový citát</button>
+  <button id="btn-delete-selected">🗑️ Smazat vybrané</button>
 
-  <script src="quotes.js?v=2"></script>
+  <table>
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="select-all"></th>
+        <th>Text</th>
+        <th>Autor</th>
+        <th>Vytvořeno</th>
+        <th>Upraveno</th>
+        <th>Akce</th>
+      </tr>
+    </thead>
+    <tbody id="quotes-tbody"></tbody>
+  </table>
+
+  <div id="form-section" class="hidden">
+    <h2 id="form-title">Nový citát</h2>
+    <form id="quote-form">
+      <input type="hidden" id="quote-id">
+      <label>Text:</label><br>
+      <textarea id="quote-text" rows="4" style="width:100%;"></textarea><br><br>
+      <label>Autor:</label><br>
+      <input type="text" id="quote-author" style="width:100%;"><br><br>
+      <button type="submit">💾 Uložit</button>
+      <button type="button" id="btn-cancel">Zpět</button>
+    </form>
+  </div>
+
+  <!-- 🔥 SPRÁVNÁ CESTA -->
+  <script src="/admin/citaty/quotes.js"></script>
+
 </body>
 </html>
