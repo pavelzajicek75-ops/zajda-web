@@ -90,7 +90,7 @@
       color: rgba(255,255,255,0.75);
       font-weight: 300;
       text-shadow: 0 0 8px rgba(255,255,255,0.6);
-      transition: all 0.6s ease;
+      transition: all 3s ease; /* <<< PLYNULÉ 3 SEKUNDY */
       pointer-events: auto;
       cursor: default;
       opacity: 0.85;
@@ -103,15 +103,7 @@
         0 0 25px #ffffff,
         0 0 45px #ff6600,
         0 0 70px #ff6600;
-      transform: scale(1.25);
-      transition: all 0.3s ease;
-    }
-
-    .fade-out {
-      transition: all 3s ease;
-      color: rgba(255,255,255,0.6) !important;
-      text-shadow: 0 0 5px rgba(255,255,255,0.3) !important;
-      transform: scale(1) !important;
+      transform: scale(1.35);
     }
 
     @keyframes drift {
@@ -258,9 +250,13 @@
 
       el.style.animation = `drift ${random(14, 22)}s linear infinite`;
 
+      /* <<< ZASTAVENÍ A ZNOVUSPUŠTĚNÍ POHYBU */
+      el.addEventListener("mouseenter", () => {
+        el.style.animationPlayState = "paused";
+      });
+
       el.addEventListener("mouseleave", () => {
-        el.classList.add("fade-out");
-        setTimeout(() => el.classList.remove("fade-out"), 3000);
+        el.style.animationPlayState = "running";
       });
 
       document.body.appendChild(el);
