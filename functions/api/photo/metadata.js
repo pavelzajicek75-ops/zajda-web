@@ -11,7 +11,7 @@ export async function onRequest(context) {
     if (!filename) {
       return new Response(
         JSON.stringify({ error: "Missing ?file= parameter" }),
-        { status: 400 }
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -20,7 +20,7 @@ export async function onRequest(context) {
     if (!object) {
       return new Response(
         JSON.stringify({ error: "File not found" }),
-        { status: 404 }
+        { status: 404, headers: { "Content-Type": "application/json" } }
       );
     }
 
@@ -40,7 +40,7 @@ export async function onRequest(context) {
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err.message }),
-      { status: 500 }
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
