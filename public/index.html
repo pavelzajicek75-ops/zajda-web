@@ -4,21 +4,23 @@
   <meta charset="UTF-8" />
   <title>Moje diagnóza, můj vesmír</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
     body {
       margin: 0;
       padding: 0;
-      font-family: system-ui, sans-serif;
+      overflow: hidden;
       background: #000;
-      color: #fff;
-      text-align: center;
+      font-family: system-ui, sans-serif;
     }
 
-    /* BLOK NADPISŮ */
+    /* NADPISY */
     .title-block {
-      margin-top: 80px;
-      display: inline-block;
+      position: absolute;
+      top: 40px;
+      width: 100%;
       text-align: center;
+      z-index: 10;
     }
 
     .cz-title {
@@ -28,7 +30,6 @@
       text-shadow: 0 0 25px #ff6600;
       letter-spacing: 2px;
       display: block;
-      width: 100%;
     }
 
     .en-title {
@@ -38,112 +39,93 @@
       text-shadow: 0 0 20px #ffcc66;
       margin-top: 8px;
       display: block;
-      width: 100%;
     }
 
-    /* CITÁTY */
-    #quotesSection {
-      margin-top: 60px;
-      padding: 20px;
-    }
-
-    .quote-box {
-      display: inline-block;
-      padding: 20px 40px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
-      transition: all 0.5s ease;
-    }
-
-    .quote-text {
-      font-size: 28px;
+    /* LÉTAJÍCÍ CITÁTY */
+    .quote-star {
+      position: absolute;
+      white-space: nowrap;
+      color: rgba(255,255,255,0.7);
       font-weight: 300;
+      text-shadow: 0 0 8px rgba(255,255,255,0.6);
+      transition: all 0.6s ease;
+      pointer-events: auto;
+      cursor: default;
+    }
+
+    .quote-star:hover {
       color: #fff;
-      text-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
-      margin-bottom: 10px;
+      text-shadow: 0 0 20px #ffffff, 0 0 40px #ffcc66;
+      transform: scale(1.15);
     }
 
-    .quote-author {
-      font-size: 20px;
-      color: #ffcc66;
-      text-shadow: 0 0 10px rgba(255, 200, 100, 0.8);
-    }
-
-    .fade-in {
-      animation: fadeIn 1.2s ease forwards;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-        filter: blur(4px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-        filter: blur(0);
-      }
+    @keyframes drift {
+      from { transform: translate(var(--sx), var(--sy)); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      to { transform: translate(var(--ex), var(--ey)); opacity: 0; }
     }
   </style>
 </head>
+
 <body>
   <div class="title-block">
     <span class="cz-title">Moje diagnóza, můj vesmír</span>
     <span class="en-title">My diagnosis, my universe</span>
   </div>
 
-  <section id="quotesSection"></section>
-
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      loadQuotesToMain();
-    });
-
-    async function loadQuotesToMain() {
-      try {
-        const res = await fetch("/api/quotes");
-        if (!res.ok) {
-          console.error("Chyba API:", res.status);
-          return;
-        }
-
-        const data = await res.json();
-        const quotes = Array.isArray(data) ? data : [];
-        if (!quotes.length) {
-          console.warn("Žádné citáty");
-          return;
-        }
-
-        const container = document.getElementById("quotesSection");
-        container.innerHTML = "";
-
-        const quoteBox = document.createElement("div");
-        quoteBox.className = "quote-box";
-        container.appendChild(quoteBox);
-
-        let index = 0;
-
-        function showQuote() {
-          const q = quotes[index];
-          quoteBox.innerHTML = `
-            <div class="quote-text">"${q.text}"</div>
-            <div class="quote-author">– ${q.author}</div>
-          `;
-          quoteBox.classList.remove("fade-in");
-          void quoteBox.offsetWidth;
-          quoteBox.classList.add("fade-in");
-          index = (index + 1) % quotes.length;
-        }
-
-        showQuote();
-        setInterval(showQuote, 5000);
-      } catch (err) {
-        console.error("Chyba při načítání citátů:", err);
-      }
+    async function loadQuotes() {
+      const res = await fetch("/api/quotes");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
     }
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function spawnQuote(q) {
+      const el = document.createElement("div");
+      el.className = "quote-star";
+      el.textContent = q.text; // bez uvozovek
+
+      const startX = random(0, window.innerWidth);
+      const startY = random(0, window.innerHeight);
+      const endX = startX + random(-300, 300);
+      const endY = startY + random(-300, 300);
+
+      el.style.left = startX + "px";
+      el.style.top = startY + "px";
+
+      el.style.setProperty("--sx", "0px");
+      el.style.setProperty("--sy", "0px");
+      el.style.setProperty("--ex", (endX - startX) + "px");
+      el.style.setProperty("--ey", (endY - startY) + "px");
+
+      el.style.animation = `drift ${random(12, 22)}s linear infinite`;
+
+      document.body.appendChild(el);
+    }
+
+    async function startSky() {
+      const quotes = await loadQuotes();
+      if (!quotes.length) return;
+
+      // 20 hvězd najednou
+      for (let i = 0; i < 20; i++) {
+        const q = quotes[Math.floor(Math.random() * quotes.length)];
+        spawnQuote(q);
+      }
+
+      // každé 3 sekundy přidáme novou hvězdu
+      setInterval(() => {
+        const q = quotes[Math.floor(Math.random() * quotes.length)];
+        spawnQuote(q);
+      }, 3000);
+    }
+
+    startSky();
   </script>
 </body>
 </html>
