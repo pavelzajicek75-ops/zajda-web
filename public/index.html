@@ -2,26 +2,148 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moje diagnóza, můj vesmír</title>
-  <link rel="stylesheet" href="/css/main.css" />
-  <script type="module" src="/js/quote-fly.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, sans-serif;
+      background: #000;
+      color: #fff;
+      text-align: center;
+    }
+
+    /* BLOK NADPISŮ */
+    .title-block {
+      margin-top: 80px;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .cz-title {
+      font-size: 48px;
+      font-weight: 600;
+      color: #ff6600;
+      text-shadow: 0 0 25px #ff6600;
+      letter-spacing: 2px;
+      display: block;
+      width: 100%;
+    }
+
+    .en-title {
+      font-size: 28px;
+      font-weight: 400;
+      color: #ffcc66;
+      text-shadow: 0 0 20px #ffcc66;
+      margin-top: 8px;
+      display: block;
+      width: 100%;
+    }
+
+    /* CITÁTY */
+    #quotesSection {
+      margin-top: 60px;
+      padding: 20px;
+    }
+
+    .quote-box {
+      display: inline-block;
+      padding: 20px 40px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+      transition: all 0.5s ease;
+    }
+
+    .quote-text {
+      font-size: 28px;
+      font-weight: 300;
+      color: #fff;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.7);
+      margin-bottom: 10px;
+    }
+
+    .quote-author {
+      font-size: 20px;
+      color: #ffcc66;
+      text-shadow: 0 0 10px rgba(255, 200, 100, 0.8);
+    }
+
+    .fade-in {
+      animation: fadeIn 1.2s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+        filter: blur(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="title-block">
+    <span class="cz-title">Moje diagnóza, můj vesmír</span>
+    <span class="en-title">My diagnosis, my universe</span>
+  </div>
 
-  <header>
-    <div class="title">Moje diagnóza, můj vesmír</div>
-    <div class="subtitle">My diagnosis, my universe</div>
-  </header>
+  <section id="quotesSection"></section>
 
-  <div id="quotesContainer"></div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      loadQuotesToMain();
+    });
 
-  <footer>
-    <div class="section">Cestování / Travel</div>
-    <div class="section">Fotografie / Photography</div>
-    <div class="section">Projekty / Projects</div>
-    <div class="section">Zajda / About</div>
-  </footer>
+    async function loadQuotesToMain() {
+      try {
+        const res = await fetch("/api/quotes");
+        if (!res.ok) {
+          console.error("Chyba API:", res.status);
+          return;
+        }
 
+        const data = await res.json();
+        const quotes = Array.isArray(data) ? data : [];
+        if (!quotes.length) {
+          console.warn("Žádné citáty");
+          return;
+        }
+
+        const container = document.getElementById("quotesSection");
+        container.innerHTML = "";
+
+        const quoteBox = document.createElement("div");
+        quoteBox.className = "quote-box";
+        container.appendChild(quoteBox);
+
+        let index = 0;
+
+        function showQuote() {
+          const q = quotes[index];
+          quoteBox.innerHTML = `
+            <div class="quote-text">"${q.text}"</div>
+            <div class="quote-author">– ${q.author}</div>
+          `;
+          quoteBox.classList.remove("fade-in");
+          void quoteBox.offsetWidth;
+          quoteBox.classList.add("fade-in");
+          index = (index + 1) % quotes.length;
+        }
+
+        showQuote();
+        setInterval(showQuote, 5000);
+      } catch (err) {
+        console.error("Chyba při načítání citátů:", err);
+      }
+    }
+  </script>
 </body>
 </html>
