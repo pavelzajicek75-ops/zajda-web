@@ -6,22 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    /* VESMÍRNÉ POZADÍ – HLUBOKÝ GRADIENT + MLHOVINY */
+    /* TEMNÝ, HLUBOKÝ VESMÍR */
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
       font-family: system-ui, sans-serif;
-      background: radial-gradient(circle at 50% 20%, #0d0d1a, #000000 70%),
-                  radial-gradient(circle at 80% 80%, rgba(80,0,120,0.35), transparent 60%),
-                  radial-gradient(circle at 20% 70%, rgba(0,80,160,0.25), transparent 60%),
-                  radial-gradient(circle at 60% 30%, rgba(255,120,0,0.18), transparent 70%);
+      background:
+        radial-gradient(circle at 50% 20%, #050509, #000000 80%),
+        radial-gradient(circle at 70% 80%, rgba(40,0,80,0.25), transparent 70%),
+        radial-gradient(circle at 20% 70%, rgba(0,40,120,0.20), transparent 70%),
+        radial-gradient(circle at 60% 30%, rgba(120,40,0,0.15), transparent 80%);
       background-blend-mode: screen;
       position: relative;
       height: 100vh;
     }
 
-    /* PULZUJÍCÍ HVĚZDY – JEMNÉ, NERUŠIVÉ */
+    /* HVĚZDY */
     .star {
       position: absolute;
       width: 2px;
@@ -120,29 +121,54 @@
       to { transform: translate(var(--ex), var(--ey)); opacity: 0; }
     }
 
-    /* DOLNÍ SEKCE */
+    /* DOLNÍ SEKCE – KARTY V JEDNÉ ŘADĚ */
     .sections {
       position: absolute;
       bottom: 40px;
       width: 100%;
       display: flex;
       justify-content: center;
-      gap: 60px;
+      gap: 40px;
       z-index: 10;
     }
 
-    .section-link {
-      color: #ffcc66;
-      font-size: 20px;
-      text-decoration: none;
-      text-shadow: 0 0 15px rgba(255, 200, 100, 0.6);
-      transition: all 0.3s ease;
+    .card {
+      position: relative;
+      width: 220px;
+      height: 140px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(255, 150, 50, 0.3);
+      transition: all 0.4s ease;
+      cursor: pointer;
     }
 
-    .section-link:hover {
-      color: #fff;
-      text-shadow: 0 0 25px #ff6600, 0 0 45px #ff6600;
-      transform: scale(1.15);
+    .card:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 40px rgba(255, 150, 50, 0.6);
+    }
+
+    .card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.8);
+      transition: filter 0.3s ease;
+    }
+
+    .card:hover img {
+      filter: brightness(1);
+    }
+
+    .card span {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: #ffcc66;
+      font-size: 18px;
+      text-shadow: 0 0 10px rgba(255, 200, 100, 0.6);
     }
   </style>
 </head>
@@ -171,37 +197,31 @@
   </div>
 
   <div class="sections">
-    <a href="/travel" class="section-link">Cestování / Travel</a>
-    <a href="/photo" class="section-link">Fotografování / Photo</a>
-    <a href="/projects" class="section-link">Projekty / Projects</a>
-    <a href="/about" class="section-link">Zajda / About</a>
+    <div class="card">
+      <a href="/travel">
+        <img src="/images/placeholder.jpg" alt="Travel">
+        <span>Cestování / Travel</span>
+      </a>
+    </div>
+    <div class="card">
+      <a href="/photo">
+        <img src="/images/placeholder.jpg" alt="Photo">
+        <span>Fotografování / Photo</span>
+      </a>
+    </div>
+    <div class="card">
+      <a href="/projects">
+        <img src="/images/placeholder.jpg" alt="Projects">
+        <span>Projekty / Projects</span>
+      </a>
+    </div>
+    <div class="card">
+      <a href="/about">
+        <img src="/images/placeholder.jpg" alt="About Zajda">
+        <span>Zajda / About</span>
+      </a>
+    </div>
   </div>
-
-  <script>
-    async function loadQuotes() {
-      const res = await fetch("/api/quotes");
-      const data = await res.json();
-      return Array.isArray(data) ? data : [];
-    }
-
-    function random(min, max) {
-      return Math.random() * (max - min) + min;
-    }
-
-    function spawnQuote(q) {
-      const el = document.createElement("div");
-      el.className = "quote-star";
-
-      el.innerHTML = `
-        "<strong>${q.text}</strong>"<br>
-        <span style="color:#ffcc66; font-size:14px;">– ${q.author}</span>
-      `;
-
-      const startX = random(0, window.innerWidth);
-      const startY = random(0, window.innerHeight);
-      const endX = startX + random(-300, 300);
-      const endY = startY + random(-300, 300);
-
       el.style.left = startX + "px";
       el.style.top = startY + "px";
 
@@ -224,11 +244,13 @@
       const quotes = await loadQuotes();
       if (!quotes.length) return;
 
+      // inicialní hvězdy
       for (let i = 0; i < 10; i++) {
         const q = quotes[Math.floor(Math.random() * quotes.length)];
         spawnQuote(q);
       }
 
+      // postupné přidávání
       setInterval(() => {
         const q = quotes[Math.floor(Math.random() * quotes.length)];
         spawnQuote(q);
@@ -240,5 +262,6 @@
 
     startSky();
   </script>
+
 </body>
 </html>
