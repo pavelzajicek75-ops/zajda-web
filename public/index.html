@@ -6,12 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    /* HVĚZDNÁ OBLOHA */
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: #000;
       font-family: system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 20%, #0a0a1a, #000000 70%);
+      position: relative;
+    }
+
+    /* DROBNÉ STATICKÉ HVĚZDY */
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: transparent url("data:image/svg+xml;utf8,\
+      <svg xmlns='http://www.w3.org/2000/svg' width='3' height='3'>\
+        <circle cx='1' cy='1' r='1' fill='white' opacity='0.8'/>\
+      </svg>") repeat;
+      opacity: 0.25;
+      animation: starPulse 6s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes starPulse {
+      0% { opacity: 0.20; }
+      50% { opacity: 0.32; }
+      100% { opacity: 0.20; }
     }
 
     /* NADPISY */
@@ -41,18 +65,34 @@
       display: block;
     }
 
+    /* INTRO TEXT */
+    .intro-text {
+      margin-top: 160px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+      color: #ffb366;
+      font-size: 18px;
+      line-height: 1.6;
+      text-shadow: 0 0 12px rgba(255, 150, 50, 0.4);
+      z-index: 9;
+      position: relative;
+    }
+
     /* LÉTAJÍCÍ CITÁTY */
     .quote-star {
       position: absolute;
       max-width: 320px;
-      white-space: normal; /* ZALAMOVÁNÍ */
-      color: rgba(255,255,255,0.7);
+      white-space: normal;
+      color: rgba(255,255,255,0.75);
       font-weight: 300;
       text-shadow: 0 0 8px rgba(255,255,255,0.6);
       transition: all 0.6s ease;
       pointer-events: auto;
       cursor: default;
       opacity: 0.85;
+      z-index: 5;
     }
 
     /* ZVÝRAZNĚNÍ PŘI HOVERU */
@@ -87,6 +127,14 @@
   <div class="title-block">
     <span class="cz-title">Moje diagnóza, můj vesmír</span>
     <span class="en-title">My diagnosis, my universe</span>
+  </div>
+
+  <div class="intro-text">
+    Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života.<br><br>
+    Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot,
+    a všechno možné, co mi zrovna prolétne hlavou.<br><br>
+    Píšu o tom, kde jsem byl, co jsem zažil, co mě pobavilo, překvapilo nebo naštvalo.<br><br>
+    Prostě život tak, jak přichází. Bez přikrášlování, bez velkých mouder a většinou i bez nějakého hlubšího plánu.
   </div>
 
   <script>
