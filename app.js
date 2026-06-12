@@ -1,41 +1,52 @@
-// /app.js
+// ============================================
+// HLAVNÍ WEB – CITÁTY S EFEKTY (GLOW + FADE-IN + ROTACE)
+// ============================================
 
-async function loadFloatingQuotes() {
+document.addEventListener("DOMContentLoaded", () => {
+  loadQuotesToMain();
+});
+
+async function loadQuotesToMain() {
   try {
-    const res = await fetch("/api/quotes/list");
-    if (!res.ok) {
-      console.error("Failed to load quotes:", res.status);
-      return;
-    }
+    const res = await fetch("/api/quotes");
+    if (!res.ok) return;
 
     const data = await res.json();
-    const quotes = data.quotes || [];
+    const quotes = Array.isArray(data) ? data : [];
 
-    const container = document.getElementById("floatingQuotesContainer");
-    if (!container) return;
+    if (!quotes.length) return;
 
+    const container = document.getElementById("quotesSection");
     container.innerHTML = "";
 
-    quotes.forEach(q => {
-      const div = document.createElement("div");
-      div.className = "floating-quote";
+    // vytvoříme element pro citát
+    const quoteBox = document.createElement("div");
+    quoteBox.id = "quoteBox";
+    quoteBox.className = "quote-box";
+    container.appendChild(quoteBox);
 
-      div.style.top = Math.random() * 90 + "vh";
-      div.style.left = Math.random() * 90 + "vw";
-      div.style.animationDelay = (Math.random() * 10) + "s";
+    let index = 0;
 
-      div.innerHTML = `<div>${q}</div>`;
+    function showQuote() {
+      const q = quotes[index];
 
-      div.addEventListener("mouseenter", () => {
-        div.classList.add("star-glow");
-        setTimeout(() => div.classList.remove("star-glow"), 3000);
-      });
+      quoteBox.innerHTML = `
+        <div class="quote-text">"${q.text}"</div>
+        <div class="quote-author">– ${q.author}</div>
+      `;
 
-      container.appendChild(div);
-    });
+      // animace
+      quoteBox.classList.remove("fade-in");
+      void quoteBox.offsetWidth; // reset animace
+      quoteBox.classList.add("fade-in");
+
+      index = (index + 1) % quotes.length;
+    }
+
+    showQuote();
+    setInterval(showQuote, 5000); // rotace každých 5 sekund
+
   } catch (err) {
-    console.error("Error loading floating quotes:", err);
+    console.error("Chyba při načítání citátů:", err);
   }
 }
-
-document.addEventListener("DOMContentLoaded", loadFloatingQuotes);
