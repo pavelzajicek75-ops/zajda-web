@@ -1,30 +1,29 @@
-document.addEventListener("DOMContentLoaded", () => {
+// ============================================
+// LOGIN – uloží token a přesměruje do dashboardu
+// ============================================
 
-  const pwd = document.getElementById("password");
-  const toggle = document.getElementById("togglePass");
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-  // 🔥 ZOBRAZENÍ / SKRYTÍ HESLA
-  toggle.onclick = () => {
-    if (pwd.type === "password") {
-      pwd.type = "text";
-      toggle.textContent = "🙈 skrýt heslo";
-    } else {
-      pwd.type = "password";
-      toggle.textContent = "👁️ zobrazit heslo";
-    }
-  };
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-  // 🔥 LOGIN
-  document.getElementById("loginBtn").onclick = () => {
-    const login = document.getElementById("login").value.trim();
-    const pass = pwd.value.trim();
+  const res = await fetch("/api/admin/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
 
-    if (login === "zajda" && pass === "Cestmir753") {
-      localStorage.setItem("adminAuth", "1");
-      window.location.href = "/admin/dashboard.html";
-    } else {
-      alert("Špatné přihlašovací údaje!");
-    }
-  };
+  if (!res.ok) {
+    alert("Špatné přihlášení!");
+    return;
+  }
 
+  const data = await res.json();
+
+  // 🔥 ULOŽENÍ TOKENU – TOTO JE KLÍČOVÉ
+  sessionStorage.setItem("authToken", data.token);
+
+  // přesměrování
+  window.location.href = "/admin/dashboard/";
 });
