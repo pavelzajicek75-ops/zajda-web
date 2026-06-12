@@ -55,12 +55,11 @@ async function loadGalleryPreview() {
 // ===================== CITÁTY =====================
 async function loadQuotesPreview() {
   try {
-    // 🔥 OPRAVENO – správný endpoint podle [[path]].js
-    const res = await authenticatedFetch("/api/quotes");
+    const res = await authenticatedFetch("/api/admin/quotes/list");
     if (!res) return;
 
     const data = await res.json();
-    const quotes = Array.isArray(data) ? data : [];
+    const quotes = Array.isArray(data.quotes) ? data.quotes : data;
 
     const box = document.getElementById("quotesPreview");
     box.innerHTML = "";
