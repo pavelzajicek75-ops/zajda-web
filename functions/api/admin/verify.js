@@ -1,7 +1,3 @@
-// ============================================
-// ADMIN TOKEN VERIFY ENDPOINT – FINÁLNÍ VERZE
-// ============================================
-
 export async function onRequestPost(context) {
   try {
     const auth = context.request.headers.get("Authorization");
@@ -15,12 +11,17 @@ export async function onRequestPost(context) {
 
     const token = auth.replace("Bearer ", "").trim();
 
-    // 🔥 TADY OPRAVDU MUSÍ BÝT STEJNÝ SECRET JAKO V LOGINU
-    const secret = context.env.ADMIN_JWT_SECRET;
+    // ✔ Ověření tokenu v KV (STEJNÉ jako login.js)
+    const session = await context.env.SESSIONS.get(token);
 
-    const { payload } = await context.env.JWT.verify(token, secret);
+    if (!session) {
+      return new Response(JSON.stringify({ valid: false }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
 
-    return new Response(JSON.stringify({ valid: true, exp: payload.exp }), {
+    return new Response(JSON.stringify({ valid: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });
