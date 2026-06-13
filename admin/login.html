@@ -28,7 +28,8 @@ async function login(){
   const pwd = document.getElementById('pwd').value;
 
   try{
-    const res = await fetch('/api/login', {
+    // ⚠️ PŮVODNÍ BACKEND KONTRAKT
+    const res = await fetch('/api/admin/login', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({password:pwd})
@@ -38,10 +39,10 @@ async function login(){
 
     const data = await res.json();
 
-    // 🔥 sjednoceno – guard hledá adminToken
-    localStorage.setItem('adminToken', data.token);
+    // ⚠️ PŘESNĚ PODLE DASHBOARDU:
+    // Předpoklad: login ukládá JWT do sessionStorage pod klíčem "authToken"
+    sessionStorage.setItem('authToken', data.token);
 
-    // přesměrování
     window.location.href = '/admin/dashboard.html';
 
   }catch(e){
