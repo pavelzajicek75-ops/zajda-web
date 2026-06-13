@@ -1,5 +1,5 @@
 // ============================================
-// LOGIN – uloží token a přesměruje do dashboardu
+// LOGIN – přihlášení administrátora
 // ============================================
 
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
@@ -8,22 +8,22 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  const res = await fetch("/api/admin/login", {
+  const res = await fetch("/functions/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password })
   });
 
+  const data = await res.json();
+
   if (!res.ok) {
-    alert("Špatné přihlášení!");
+    alert(data.error || "Chyba přihlášení");
     return;
   }
 
-  const data = await res.json();
+  // Uložit token
+  localStorage.setItem("adminToken", data.token);
 
-  // 🔥 ULOŽENÍ TOKENU – TOTO JE KLÍČOVÉ
-  sessionStorage.setItem("authToken", data.token);
-
-  // přesměrování
-  window.location.href = "/admin/dashboard/";
+  // Přesměrování
+  window.location.href = "/admin/dashboard.html";
 });
