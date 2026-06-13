@@ -3,11 +3,12 @@ compatibility_date = "2026-06-13"
 pages_build_output_dir = "."
 
 [vars]
+ADMIN_JWT_SECRET = "TVŮJ_SECRET"
 CDN_BASE_URL = "https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "PASTE_SESSIONS_KV_ID_HERE"
+id = "PASTE_SESSIONS_ID_HERE"
 
 [[kv_namespaces]]
 binding = "ARTICLES"
@@ -28,11 +29,3 @@ bucket_name = "zajda-photos"
 [[r2_buckets]]
 binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
-
-[[r2_buckets]]
-binding = "ARTICLES_R2"
-bucket_name = "zajda-articles"
-
-[[r2_buckets]]
-binding = "SECTIONS_R2"
-bucket_name = "zajda-sections"
