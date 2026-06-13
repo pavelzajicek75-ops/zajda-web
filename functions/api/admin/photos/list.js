@@ -1,8 +1,8 @@
 export async function onRequestGet(context) {
   const { env } = context;
-  
+
   const objects = await env.PHOTOS_R2.list();
-  
+
   const photos = (objects.objects || []).map(obj => ({
     key: obj.key,
     size: obj.size,
@@ -11,6 +11,7 @@ export async function onRequestGet(context) {
   }));
 
   return new Response(JSON.stringify({ photos }), {
+    status: 200,
     headers: { "Content-Type": "application/json" }
   });
 }
