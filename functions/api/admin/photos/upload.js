@@ -1,11 +1,11 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
-  
+
   const formData = await request.formData();
   const file = formData.get("file");
-  
+
   if (!file || typeof file === "string") {
-    return new Response(JSON.stringify({ error: "Missing file" }), { 
+    return new Response(JSON.stringify({ error: "Missing file" }), {
       status: 400,
       headers: { "Content-Type": "application/json" }
     });
@@ -15,7 +15,9 @@ export async function onRequestPost(context) {
   const arrayBuffer = await file.arrayBuffer();
 
   await env.PHOTOS_R2.put(key, arrayBuffer, {
-    httpMetadata: { contentType: file.type || "application/octet-stream" }
+    httpMetadata: {
+      contentType: file.type || "application/octet-stream"
+    }
   });
 
   return new Response(JSON.stringify({
@@ -23,6 +25,7 @@ export async function onRequestPost(context) {
     key,
     url: `${env.CDN_BASE_URL}/${key}`
   }), {
+    status: 200,
     headers: { "Content-Type": "application/json" }
   });
 }
