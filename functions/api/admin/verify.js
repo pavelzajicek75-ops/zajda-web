@@ -1,28 +1,18 @@
-export async function onRequestGet(context) {
-  const { request, env } = context;
+import jwt from "@tsndr/cloudflare-worker-jwt";
 
-  const authHeader = request.headers.get("Authorization") || "";
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+export async function onRequest(context) {
+  const cookie = context.request.headers.get("Cookie");
+  const token = cookie?.match(/token=([^;]+)/)?.[1];
 
-  if (!match) {
-    return new Response(JSON.stringify({ error: "Missing token" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" }
-    });
+  if (!token) {
+    return Response.json({ ok: false });
   }
 
-  const token = match[1];
-  const exists = await env.SESSIONS.get(token);
+  const valid = await jwt.verify(token, context.env.ADMIN_JWT_SECRET);
 
-  if (!exists) {
-    return new Response(JSON.stringify({ error: "Invalid token" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" }
-    });
+  if (!valid) {
+    return Response.json({ ok: false });
   }
 
-  return new Response(JSON.stringify({ valid: true }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" }
-  });
+  return Response.json({ ok: true });
 }
