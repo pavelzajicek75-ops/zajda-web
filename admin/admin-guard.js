@@ -3,11 +3,10 @@
 // ============================================
 
 (function () {
-  const token = sessionStorage.getItem("authToken");
+  const token = localStorage.getItem("adminToken");
 
-  // není token → login
   if (!token) {
-    window.location.href = "/admin/login/";
+    window.location.href = "/admin/login.html";
     return;
   }
 })();
