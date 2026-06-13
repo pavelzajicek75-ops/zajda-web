@@ -1,116 +1,103 @@
-const API_BASE = '/functions/api/admin';
+const API_BASE = "/functions/api/admin";
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem('authToken');
+  const token = sessionStorage.getItem("authToken");
   return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
   };
 }
 
 async function login(password) {
   const res = await fetch(`${API_BASE}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password })
   });
-
-  if (!res.ok) {
-    throw new Error('Login failed');
-  }
-
+  
   const data = await res.json();
-  sessionStorage.setItem('authToken', data.token);
+  
+  if (!res.ok) throw new Error(data.error || "Login failed");
+  
+  sessionStorage.setItem("authToken", data.token);
   return data.token;
 }
 
-async function verify() {
+async function verifyToken() {
   const res = await fetch(`${API_BASE}/verify`, {
-    headers: getAuthHeaders(),
+    headers: getAuthHeaders()
   });
-
-  if (!res.ok) {
-    throw new Error('Not authenticated');
-  }
-
-  return res.json();
+  
+  if (!res.ok) return false;
+  
+  const data = await res.json();
+  return data.valid === true;
 }
 
 async function listPhotos() {
   const res = await fetch(`${API_BASE}/photos/list`, {
-    headers: getAuthHeaders(),
+    headers: getAuthHeaders()
   });
-
-  if (!res.ok) {
-    throw new Error('Failed to list photos');
-  }
-
+  
+  if (!res.ok) throw new Error("Failed to list photos");
+  
   return res.json();
 }
 
 async function getPhotoInfo(key) {
   const res = await fetch(`${API_BASE}/photos/info?key=${encodeURIComponent(key)}`, {
-    headers: getAuthHeaders(),
+    headers: getAuthHeaders()
   });
-
-  if (!res.ok) {
-    throw new Error('Failed to get photo info');
-  }
-
+  
+  if (!res.ok) throw new Error("Failed to get photo info");
+  
   return res.json();
 }
 
 async function deletePhoto(key) {
   const res = await fetch(`${API_BASE}/photos/delete`, {
-    method: 'POST',
+    method: "POST",
     headers: getAuthHeaders(),
-    body: JSON.stringify({ key }),
+    body: JSON.stringify({ key })
   });
-
-  if (!res.ok) {
-    throw new Error('Failed to delete photo');
-  }
-
+  
+  if (!res.ok) throw new Error("Failed to delete photo");
+  
   return res.json();
 }
 
 async function uploadPhoto(file, key) {
   const formData = new FormData();
-  formData.append('file', file);
-  if (key) formData.append('key', key);
+  formData.append("file", file);
+  if (key) formData.append("key", key);
 
-  const token = sessionStorage.getItem('authToken');
+  const token = sessionStorage.getItem("authToken");
+  
   const res = await fetch(`${API_BASE}/photos/upload`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` },
+    body: formData
   });
-
-  if (!res.ok) {
-    throw new Error('Failed to upload photo');
-  }
-
+  
+  if (!res.ok) throw new Error("Failed to upload photo");
+  
   return res.json();
 }
 
-// Dashboard init
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    await verify();
-    console.log('Admin authenticated');
-    loadDashboard();
-  } catch (err) {
-    console.error('Auth failed:', err);
-    showLoginForm();
+// Guard: redirect to login if not authenticated
+async function adminGuard() {
+  const token = sessionStorage.getItem("authToken");
+  if (!token) {
+    window.location.href = "/admin/login.html";
+    return false;
   }
-});
-
-function showLoginForm() {
-  // Implement your login form display
-}
-
-function loadDashboard() {
-  // Implement your dashboard load
+  
+  const valid = await verifyToken();
+  if (!valid) {
+    sessionStorage.removeItem("authToken");
+    window.location.href = "/admin/login.html";
+    return false;
+  }
+  
+  return true;
 }
