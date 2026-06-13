@@ -1,55 +1,40 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,sans-serif}
-body{background:#0f172a;color:#e2e8f0;display:flex;justify-content:center;align-items:center;min-height:100vh}
-.card{background:#1e293b;padding:2.5rem;border-radius:12px;width:100%;max-width:400px;box-shadow:0 25px 50px -12px rgba(0,0,0,.5)}
-h1{text-align:center;margin-bottom:1.5rem;color:#60a5fa}
-input{width:100%;padding:.75rem;margin-bottom:1rem;background:#334155;border:1px solid #475569;border-radius:6px;color:#fff;font-size:1rem}
-button{width:100%;padding:.75rem;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:1rem}
-button:hover{background:#2563eb}
-#error{color:#ef4444;text-align:center;margin-top:1rem}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
 </head>
 <body>
-<div class="card">
-  <h1>🔐 Zajda Admin</h1>
-  <input type="password" id="pwd" placeholder="Heslo" onkeydown="if(event.key==='Enter')login()">
-  <button onclick="login()">Přihlásit se</button>
-  <p id="error"></p>
-</div>
-
-<script>
-async function login(){
-  const pwd = document.getElementById('pwd').value;
-
-  try{
-    // ⚠️ PŮVODNÍ BACKEND KONTRAKT
-    const res = await fetch('/api/admin/login', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({password:pwd})
+  <h1>Admin Login</h1>
+  <form id="loginForm">
+    <input type="password" id="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+  </form>
+  <p id="error" style="color:red;"></p>
+  
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const password = document.getElementById("password").value;
+      
+      try {
+        const res = await fetch("/functions/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password })
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.error);
+        
+        sessionStorage.setItem("authToken", data.token);
+        window.location.href = "/admin/dashboard.html";
+      } catch (err) {
+        document.getElementById("error").textContent = err.message;
+      }
     });
-
-    if(!res.ok) throw new Error('Špatné heslo');
-
-    const data = await res.json();
-
-    // ⚠️ PŘESNĚ PODLE DASHBOARDU:
-    // Předpoklad: login ukládá JWT do sessionStorage pod klíčem "authToken"
-    sessionStorage.setItem('authToken', data.token);
-
-    window.location.href = '/admin/dashboard.html';
-
-  }catch(e){
-    document.getElementById('error').textContent = e.message;
-  }
-}
-</script>
-
+  </script>
 </body>
 </html>
