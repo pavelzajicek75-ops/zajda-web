@@ -1,35 +1,28 @@
-export async function onRequestPost(context) {
-  try {
-    const auth = context.request.headers.get("Authorization");
+export async function onRequestGet(context) {
+  const { request, env } = context;
 
-    if (!auth || !auth.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ valid: false }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
+  const authHeader = request.headers.get('Authorization') || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
 
-    const token = auth.replace("Bearer ", "").trim();
-
-    // ✔ Ověření tokenu v KV (STEJNÉ jako login.js)
-    const session = await context.env.SESSIONS.get(token);
-
-    if (!session) {
-      return new Response(JSON.stringify({ valid: false }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-
-    return new Response(JSON.stringify({ valid: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-
-  } catch (err) {
-    return new Response(JSON.stringify({ valid: false }), {
+  if (!match) {
+    return new Response(JSON.stringify({ error: 'Missing token' }), {
       status: 401,
-      headers: { "Content-Type": "application/json" }
+      headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  const token = match[1];
+  const session = await env.SESSIONS.get(token);
+
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Invalid token' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  return new Response(JSON.stringify({ valid: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
