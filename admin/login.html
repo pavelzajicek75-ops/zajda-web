@@ -22,19 +22,33 @@ button:hover{background:#2563eb}
   <button onclick="login()">Přihlásit se</button>
   <p id="error"></p>
 </div>
+
 <script>
 async function login(){
   const pwd = document.getElementById('pwd').value;
+
   try{
-    const res = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pwd})});
+    const res = await fetch('/api/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:pwd})
+    });
+
     if(!res.ok) throw new Error('Špatné heslo');
+
     const data = await res.json();
-    localStorage.setItem('zajda_token',data.token);
+
+    // 🔥 sjednoceno – guard hledá adminToken
+    localStorage.setItem('adminToken', data.token);
+
+    // přesměrování
     window.location.href = '/admin/dashboard.html';
+
   }catch(e){
     document.getElementById('error').textContent = e.message;
   }
 }
 </script>
+
 </body>
 </html>
