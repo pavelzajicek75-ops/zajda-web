@@ -1,9 +1,6 @@
-// ============================================
-// ADMIN GUARD – kontrola přihlášení
-// ============================================
-
 (function () {
-  const token = localStorage.getItem("adminToken");
+  // dashboard používá sessionStorage + authToken
+  const token = sessionStorage.getItem("authToken");
 
   if (!token) {
     window.location.href = "/admin/login.html";
