@@ -1,84 +1,27 @@
 // ============================================
-// CENTRÁLNÍ ADMIN AUTENTIZACE – STABILNÍ VERZE
+// AUTH – přidání tokenu do všech fetch požadavků
 // ============================================
 
-// 🔥 sjednocení s dashboardem – token je v sessionStorage
-function getToken() {
-  return sessionStorage.getItem("authToken");
-}
+export async function apiFetch(url, options = {}) {
+  const token = localStorage.getItem("adminToken");
 
-// 🔥 verify endpoint musí být admin endpoint
-async function verifyToken() {
-  const token = getToken();
-  if (!token) return false;
+  const headers = {
+    ...(options.headers || {}),
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  };
 
-  try {
-    const res = await fetch("/api/admin/verify", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      }
-    });
+  const res = await fetch(url, {
+    ...options,
+    headers
+  });
 
-    if (!res.ok) return false;
-
-    const data = await res.json();
-    return data.valid === true;
-
-  } catch {
-    return false;
-  }
-}
-
-function redirectToLogin() {
-  window.location.href = "/admin/login.html";
-}
-
-function logout() {
-  sessionStorage.removeItem("authToken");
-  redirectToLogin();
-}
-
-function displayUsername() {
-  const token = getToken();
-  if (!token) return;
-
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    const usernameEl = document.getElementById("username");
-    if (usernameEl) usernameEl.textContent = payload.username;
-  } catch {}
-}
-
-async function checkAuth() {
-  const path = window.location.pathname;
-
-  if (path === "/admin/login.html") return;
-
-  const ok = await verifyToken();
-  if (!ok) {
-    redirectToLogin();
-    return false;
+  if (res.status === 401) {
+    // token neplatný → logout
+    localStorage.removeItem("adminToken");
+    window.location.href = "/admin/login.html";
+    return;
   }
 
-  displayUsername();
-  return true;
+  return res;
 }
-
-async function authenticatedFetch(url, options = {}) {
-  const token = getToken();
-  if (!token) {
-    redirectToLogin();
-    return null;
-  }
-
-  const headers = options.headers || {};
-  headers["Authorization"] = `Bearer ${token}`;
-
-  return fetch(url, { ...options, headers });
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  checkAuth();
-});
