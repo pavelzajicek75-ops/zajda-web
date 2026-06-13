@@ -7,7 +7,7 @@ CDN_BASE_URL = "https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "YOUR_SESSIONS_KV_ID"
+id = "PASTE_SESSIONS_KV_ID_HERE"
 
 [[kv_namespaces]]
 binding = "ARTICLES"
@@ -28,3 +28,11 @@ bucket_name = "zajda-photos"
 [[r2_buckets]]
 binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
+
+[[r2_buckets]]
+binding = "ARTICLES_R2"
+bucket_name = "zajda-articles"
+
+[[r2_buckets]]
+binding = "SECTIONS_R2"
+bucket_name = "zajda-sections"
