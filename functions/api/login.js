@@ -1,30 +1,21 @@
-export async function onRequestPost(context) {
-  const { request, env } = context;
-  
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON" }), { 
-      status: 400,
-      headers: { "Content-Type": "application/json" }
-    });
+import jwt from "@tsndr/cloudflare-worker-jwt";
+
+export async function onRequest(context) {
+  const { password } = await context.request.json();
+
+  if (password !== context.env.ADMIN_PASSWORD) {
+    return new Response(JSON.stringify({ ok: false }), { status: 401 });
   }
 
-  const { password } = body;
-  
-  if (!password || password !== env.ADMIN_PASSWORD) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-      status: 401,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
+  const token = await jwt.sign(
+    { admin: true, ts: Date.now() },
+    context.env.ADMIN_JWT_SECRET
+  );
 
-  const token = crypto.randomUUID();
-  
-  await env.SESSIONS.put(token, "1", { expirationTtl: 86400 });
-
-  return new Response(JSON.stringify({ token }), {
-    headers: { "Content-Type": "application/json" }
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: {
+      "Content-Type": "application/json",
+      "Set-Cookie": `token=${token}; Path=/; Secure; HttpOnly; SameSite=None`
+    }
   });
 }
