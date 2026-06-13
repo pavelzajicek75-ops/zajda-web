@@ -1,29 +1,47 @@
-// ============================================
-// LOGIN – přihlášení administrátora
-// ============================================
+function base64url(input) {
+  return btoa(String.fromCharCode(...new Uint8Array(input)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
 
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+async function signJWT(payload, secret) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
 
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const header = { alg: "HS256", typ: "JWT" };
+  const encodedHeader = base64url(encoder.encode(JSON.stringify(header)));
+  const encodedPayload = base64url(encoder.encode(JSON.stringify(payload)));
 
-  const res = await fetch("/functions/api/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password })
-  });
+  const data = encoder.encode(`${encodedHeader}.${encodedPayload}`);
+  const signature = await crypto.subtle.sign("HMAC", key, data);
+  const encodedSignature = base64url(signature);
 
-  const data = await res.json();
+  return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
+}
 
-  if (!res.ok) {
-    alert(data.error || "Chyba přihlášení");
-    return;
+export async function onRequest(context) {
+  const { password } = await context.request.json();
+
+  if (password !== context.env.ADMIN_PASSWORD) {
+    return new Response(JSON.stringify({ ok: false }), { status: 401 });
   }
 
-  // Uložit token
-  localStorage.setItem("adminToken", data.token);
+  const token = await signJWT(
+    { admin: true, ts: Date.now() },
+    context.env.ADMIN_JWT_SECRET
+  );
 
-  // Přesměrování
-  window.location.href = "/admin/dashboard.html";
-});
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: {
+      "Content-Type": "application/json",
+      "Set-Cookie": `token=${token}; Path=/; Secure; HttpOnly; SameSite=None`
+    }
+  });
+}
