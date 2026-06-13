@@ -1,188 +1,116 @@
-// ============================================
-// DASHBOARD AUTH + API
-// ============================================
+const API_BASE = '/functions/api/admin';
 
-// token se bere z localStorage (sjednoceno s loginem)
-function getToken() {
-  return localStorage.getItem("adminToken");
+function getAuthHeaders() {
+  const token = sessionStorage.getItem('authToken');
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
 }
 
-// fetch s automatickým přidáním Authorization
-async function authenticatedFetch(url, options = {}) {
-  const token = getToken();
-  if (!token) {
-    redirectToLogin();
-    return;
-  }
-
-  const headers = options.headers || {};
-  headers["Authorization"] = `Bearer ${token}`;
-  options.headers = headers;
-
-  const res = await fetch(url, options);
-
-  // pokud API vrátí 401 → token neplatný → logout
-  if (res.status === 401) {
-    localStorage.removeItem("adminToken");
-    redirectToLogin();
-    return;
-  }
-
-  return res;
-}
-
-function redirectToLogin() {
-  window.location.href = "/admin/login.html";
-}
-
-// ověření tokenu při načtení dashboardu
-async function verifyAuth() {
-  const res = await authenticatedFetch("/functions/api/verify", {
-    method: "POST"
+async function login(password) {
+  const res = await fetch(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
   });
-  if (!res) return;
 
-  const data = await res.json();
-  if (!data.valid) {
-    redirectToLogin();
+  if (!res.ok) {
+    throw new Error('Login failed');
   }
-}
-
-// ============================================
-// FOTKY
-// ============================================
-
-async function loadPhotos() {
-  const grid = document.getElementById("photo-grid");
-  grid.innerHTML = "Načítám fotky…";
-
-  const res = await authenticatedFetch("/functions/api/photos/list");
-  if (!res) return;
 
   const data = await res.json();
-  grid.innerHTML = "";
+  sessionStorage.setItem('authToken', data.token);
+  return data.token;
+}
 
-  data.forEach((item) => {
-    const card = document.createElement("div");
-    card.className = "photo-card";
-
-    const img = document.createElement("img");
-    img.src = item.url;
-    img.alt = item.key;
-
-    const meta = document.createElement("div");
-    meta.className = "photo-meta";
-    meta.textContent = item.key;
-
-    const actions = document.createElement("div");
-    actions.className = "photo-actions";
-
-    const infoBtn = document.createElement("button");
-    infoBtn.className = "btn-info";
-    infoBtn.textContent = "Info";
-    infoBtn.addEventListener("click", () => showInfo(item.key));
-
-    const delBtn = document.createElement("button");
-    delBtn.className = "btn-delete";
-    delBtn.textContent = "Smazat";
-    delBtn.addEventListener("click", () => deletePhoto(item.key));
-
-    actions.appendChild(infoBtn);
-    actions.appendChild(delBtn);
-
-    card.appendChild(img);
-    card.appendChild(meta);
-    card.appendChild(actions);
-
-    grid.appendChild(card);
+async function verify() {
+  const res = await fetch(`${API_BASE}/verify`, {
+    headers: getAuthHeaders(),
   });
+
+  if (!res.ok) {
+    throw new Error('Not authenticated');
+  }
+
+  return res.json();
 }
 
-async function showInfo(key) {
-  const res = await authenticatedFetch(`/functions/api/photos/info?key=${encodeURIComponent(key)}`);
-  if (!res) return;
+async function listPhotos() {
+  const res = await fetch(`${API_BASE}/photos/list`, {
+    headers: getAuthHeaders(),
+  });
 
-  const data = await res.json();
-  const modal = document.getElementById("modal");
-  const body = document.getElementById("modal-body");
+  if (!res.ok) {
+    throw new Error('Failed to list photos');
+  }
 
-  body.textContent = JSON.stringify(data, null, 2);
-  modal.style.display = "flex";
+  return res.json();
+}
+
+async function getPhotoInfo(key) {
+  const res = await fetch(`${API_BASE}/photos/info?key=${encodeURIComponent(key)}`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to get photo info');
+  }
+
+  return res.json();
 }
 
 async function deletePhoto(key) {
-  if (!confirm(`Opravdu smazat fotku: ${key}?`)) return;
-
-  const res = await authenticatedFetch("/functions/api/photos/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key })
+  const res = await fetch(`${API_BASE}/photos/delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ key }),
   });
-  if (!res) return;
 
-  const data = await res.json();
-  const status = document.getElementById("status");
+  if (!res.ok) {
+    throw new Error('Failed to delete photo');
+  }
 
-  status.textContent = data.success ? "Fotka smazána." : "Chyba při mazání.";
-  await loadPhotos();
+  return res.json();
 }
 
-async function uploadPhoto(file) {
-  const status = document.getElementById("status");
-  status.textContent = "Nahrávám…";
-
+async function uploadPhoto(file, key) {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append('file', file);
+  if (key) formData.append('key', key);
 
-  const res = await authenticatedFetch("/functions/api/photos/upload", {
-    method: "POST",
-    body: formData
+  const token = sessionStorage.getItem('authToken');
+  const res = await fetch(`${API_BASE}/photos/upload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
   });
-  if (!res) return;
 
-  const data = await res.json();
-  status.textContent = data.success ? "Fotka nahrána." : "Chyba při nahrávání.";
+  if (!res.ok) {
+    throw new Error('Failed to upload photo');
+  }
 
-  await loadPhotos();
+  return res.json();
 }
 
-// ============================================
-// INIT
-// ============================================
-
-function initUploadForm() {
-  const form = document.getElementById("upload-form");
-  const fileInput = document.getElementById("file-input");
-
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const file = fileInput.files[0];
-    if (!file) return;
-    uploadPhoto(file);
-  });
-}
-
-function initModal() {
-  const modal = document.getElementById("modal");
-  const closeBtn = document.getElementById("modal-close");
-
-  closeBtn.addEventListener("click", () => {
-    modal.style.display = "none";
-  });
-}
-
-function initLogout() {
-  const btn = document.getElementById("logout-btn");
-  btn.addEventListener("click", () => {
-    localStorage.removeItem("adminToken");
-    redirectToLogin();
-  });
-}
-
-window.addEventListener("load", async () => {
-  await verifyAuth();
-  initUploadForm();
-  initModal();
-  initLogout();
-  await loadPhotos();
+// Dashboard init
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await verify();
+    console.log('Admin authenticated');
+    loadDashboard();
+  } catch (err) {
+    console.error('Auth failed:', err);
+    showLoginForm();
+  }
 });
+
+function showLoginForm() {
+  // Implement your login form display
+}
+
+function loadDashboard() {
+  // Implement your dashboard load
+}
