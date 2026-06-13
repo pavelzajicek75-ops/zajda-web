@@ -5,7 +5,7 @@ pages_build_output_dir = "."
 
 [vars]
 ADMIN_JWT_SECRET = "TVŮJ_SECRET"
-CDN_BASE_URL = "https://pub-xxxx.r2.dev"
+CDN_BASE_URL = "https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev"
 
 [[r2_buckets]]
 binding = "QUOTES_R2"
@@ -29,4 +29,4 @@ id = "2d74f6e45eda4cbea51275017ba66c23"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "sessions"
+id = "SEM_VLOŽ_SPRÁVNÉ_KV_ID"
