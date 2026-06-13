@@ -1,11 +1,13 @@
-// Předpoklad: login ukládá JWT do sessionStorage pod klíčem "authToken"
-// verify endpoint: /api/admin/verify (už máš)
-// R2 API: /api/admin/photos/* (viz Functions níže)
+// ============================================
+// DASHBOARD AUTH + API
+// ============================================
 
+// token se bere z localStorage (sjednoceno s loginem)
 function getToken() {
-  return sessionStorage.getItem("authToken");
+  return localStorage.getItem("adminToken");
 }
 
+// fetch s automatickým přidáním Authorization
 async function authenticatedFetch(url, options = {}) {
   const token = getToken();
   if (!token) {
@@ -18,10 +20,14 @@ async function authenticatedFetch(url, options = {}) {
   options.headers = headers;
 
   const res = await fetch(url, options);
+
+  // pokud API vrátí 401 → token neplatný → logout
   if (res.status === 401) {
+    localStorage.removeItem("adminToken");
     redirectToLogin();
     return;
   }
+
   return res;
 }
 
@@ -29,25 +35,31 @@ function redirectToLogin() {
   window.location.href = "/admin/login.html";
 }
 
+// ověření tokenu při načtení dashboardu
 async function verifyAuth() {
-  const res = await authenticatedFetch("/api/admin/verify", {
+  const res = await authenticatedFetch("/functions/api/verify", {
     method: "POST"
   });
   if (!res) return;
+
   const data = await res.json();
   if (!data.valid) {
     redirectToLogin();
   }
 }
 
+// ============================================
+// FOTKY
+// ============================================
+
 async function loadPhotos() {
   const grid = document.getElementById("photo-grid");
   grid.innerHTML = "Načítám fotky…";
 
-  const res = await authenticatedFetch("/api/admin/photos/list");
+  const res = await authenticatedFetch("/functions/api/photos/list");
   if (!res) return;
-  const data = await res.json();
 
+  const data = await res.json();
   grid.innerHTML = "";
 
   data.forEach((item) => {
@@ -87,12 +99,13 @@ async function loadPhotos() {
 }
 
 async function showInfo(key) {
-  const res = await authenticatedFetch(`/api/admin/photos/info?key=${encodeURIComponent(key)}`);
+  const res = await authenticatedFetch(`/functions/api/photos/info?key=${encodeURIComponent(key)}`);
   if (!res) return;
-  const data = await res.json();
 
+  const data = await res.json();
   const modal = document.getElementById("modal");
   const body = document.getElementById("modal-body");
+
   body.textContent = JSON.stringify(data, null, 2);
   modal.style.display = "flex";
 }
@@ -100,15 +113,16 @@ async function showInfo(key) {
 async function deletePhoto(key) {
   if (!confirm(`Opravdu smazat fotku: ${key}?`)) return;
 
-  const res = await authenticatedFetch("/api/admin/photos/delete", {
+  const res = await authenticatedFetch("/functions/api/photos/delete", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ key })
   });
   if (!res) return;
-  const data = await res.json();
 
+  const data = await res.json();
   const status = document.getElementById("status");
+
   status.textContent = data.success ? "Fotka smazána." : "Chyba při mazání.";
   await loadPhotos();
 }
@@ -120,16 +134,21 @@ async function uploadPhoto(file) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await authenticatedFetch("/api/admin/photos/upload", {
+  const res = await authenticatedFetch("/functions/api/photos/upload", {
     method: "POST",
     body: formData
   });
   if (!res) return;
-  const data = await res.json();
 
+  const data = await res.json();
   status.textContent = data.success ? "Fotka nahrána." : "Chyba při nahrávání.";
+
   await loadPhotos();
 }
+
+// ============================================
+// INIT
+// ============================================
 
 function initUploadForm() {
   const form = document.getElementById("upload-form");
@@ -146,6 +165,7 @@ function initUploadForm() {
 function initModal() {
   const modal = document.getElementById("modal");
   const closeBtn = document.getElementById("modal-close");
+
   closeBtn.addEventListener("click", () => {
     modal.style.display = "none";
   });
@@ -154,7 +174,7 @@ function initModal() {
 function initLogout() {
   const btn = document.getElementById("logout-btn");
   btn.addEventListener("click", () => {
-    sessionStorage.removeItem("authToken");
+    localStorage.removeItem("adminToken");
     redirectToLogin();
   });
 }
