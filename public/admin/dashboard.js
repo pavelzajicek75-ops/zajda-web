@@ -21,14 +21,20 @@ function loadSection(name) {
   if (name === 'quotes') loadQuotes();
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // ─── FOTOGRAFIE ───
 async function loadGalleries() {
   const res = await fetch('/api/photos/list');
   const data = await res.json();
   document.getElementById('galleryList').innerHTML = data.map(g => `
     <div class="card">
-      <h4>${g.title || 'Bez názvu'}</h4>
-      <p>${g.desc || ''}</p>
+      <h4>${escapeHtml(g.title || 'Bez názvu')}</h4>
+      <p>${escapeHtml(g.desc || '')}</p>
       <form onsubmit="uploadPhoto(event, '${g.id}')" class="upload-form">
         <input type="file" name="file" accept="image/*" required>
         <button type="submit" class="btn btn-blue">Nahrát foto</button>
@@ -87,17 +93,17 @@ async function loadArticles() {
   const data = await res.json();
   document.getElementById('articleList').innerHTML = data.map(a => `
     <div class="card">
-      <h4>${a.title}</h4>
-      <p>${a.content.substring(0,150)}...</p>
+      <h4>${escapeHtml(a.title)}</h4>
+      <p>${escapeHtml(a.content.substring(0,150))}...</p>
       <small>${new Date(a.created).toLocaleString('cs')}</small>
       <div class="actions">
         <button onclick="toggleEdit('${a.id}')" class="btn btn-blue">Upravit</button>
         <button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button>
       </div>
       <div id="edit-${a.id}" class="edit-box hidden">
-        <input type="text" id="t-${a.id}" value="${a.title}">
-        <input type="text" id="i-${a.id}" value="${a.image || ''}">
-        <textarea id="c-${a.id}" rows="4">${a.content}</textarea>
+        <input type="text" id="t-${a.id}" value="${escapeHtml(a.title)}">
+        <input type="text" id="i-${a.id}" value="${escapeHtml(a.image || '')}">
+        <textarea id="c-${a.id}" rows="4">${escapeHtml(a.content)}</textarea>
         <button onclick="saveArticle('${a.id}')" class="btn btn-green">Uložit změny</button>
       </div>
     </div>
@@ -149,23 +155,30 @@ async function deleteArticle(id) {
 
 // ─── CITÁTY ───
 async function loadQuotes() {
-  const res = await fetch('/api/quotes/list');
-  const data = await res.json();
-  
-  if (data.length === 0) {
-    document.getElementById('quoteList').innerHTML = '<p style="color:#64748b">Žádné citáty v databázi.</p>';
-    return;
+  const tbody = document.getElementById('quoteTableBody');
+  tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>';
+
+  try {
+    const res = await fetch('/api/quotes/list');
+    const data = await res.json();
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty v databázi.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(q => `
+      <tr>
+        <td>"${escapeHtml(q.text)}"</td>
+        <td>${escapeHtml(q.author) || '—'}</td>
+        <td>
+          <button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba při načítání citátů.</td></tr>';
   }
-  
-  document.getElementById('quoteList').innerHTML = data.map(q => `
-    <div class="card">
-      <p>"${q.text}"</p>
-      <small>— ${q.author || 'Neznámý'}</small>
-      <div class="actions">
-        <button onclick="deleteQuote('${q.key}')" class="btn btn-red">Smazat</button>
-      </div>
-    </div>
-  `).join('');
 }
 
 async function createQuote() {
@@ -185,8 +198,8 @@ async function createQuote() {
 }
 
 async function deleteQuote(key) {
-  if (!confirm('Smazat citát?')) return;
-  await fetch(`/api/quotes/delete?key=${encodeURIComponent(key)}`, { method: 'DELETE' });
+  if (!confirm('Opravdu smazat tento citát?')) return;
+  await fetch(`/api/quotes/delete?key=${key}`, { method: 'DELETE' });
   loadQuotes();
 }
 
