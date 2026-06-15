@@ -36,8 +36,8 @@ bucket_name = "zajda-photos"
 binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
 
-# --- ASSETS (doporučeno, ale ne povinné) ---
+# --- ASSETS (musí být přejmenováno, protože ASSETS je zakázané) ---
 
 [assets]
 directory = "public"
-binding = "ASSETS"
+binding = "STATIC"
