@@ -1,4 +1,3 @@
-// functions/api/photos/list.js
 export async function onRequestGet(context) {
   const { env } = context;
   const list = await env.PHOTOS.list({ prefix: 'gallery:' });
