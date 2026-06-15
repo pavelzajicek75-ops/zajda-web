@@ -1,15 +1,11 @@
-export async function onRequest(context) {
+// functions/api/articles/list.js
+export async function onRequestGet(context) {
   const { env } = context;
-
-  const list = await env.PHOTOS.list();
-  const photos = [];
-
+  const list = await env.ARTICLES.list({ prefix: 'article:' });
+  const articles = [];
   for (const key of list.keys) {
-    const url = await env.PHOTOS.get(key.name, { type: "url" });
-    photos.push({ url });
+    const data = await env.ARTICLES.get(key.name, { type: 'json' });
+    if (data) articles.push(data);
   }
-
-  return new Response(JSON.stringify({ photos }), {
-    headers: { "Content-Type": "application/json" }
-  });
+  return Response.json(articles.sort((a,b) => b.created - a.created));
 }
