@@ -1,11 +1,9 @@
-export async function onRequest(context) {
-  const bucket = context.env.ARTICLES_BUCKET;
-  const body = await context.request.json();
-  const id = body.id;
-
-  await bucket.put(`articles/${id}.json`, JSON.stringify(body), {
-    httpMetadata: { contentType: "application/json" }
-  });
-
-  return Response.json({ ok: true });
+// functions/api/articles/create.js
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  const body = await request.json();
+  const id = crypto.randomUUID();
+  const article = { id, title: body.title, content: body.content, image: body.image || '', created: Date.now() };
+  await env.ARTICLES.put(`article:${id}`, JSON.stringify(article));
+  return Response.json(article);
 }
