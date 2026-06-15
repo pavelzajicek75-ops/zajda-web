@@ -1,17 +1,23 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Login</title>
-    <link rel="stylesheet" href="/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <link rel="stylesheet" href="/admin/style.css">
 </head>
-<body>
+<body style="background-color: black; color: white; font-family: sans-serif;">
 
-<h1>Admin Login</h1>
+  <h1>Admin Login</h1>
 
-<input id="password" type="password" placeholder="Heslo">
-<button onclick="login()">Přihlásit</button>
+  <form id="login-form" style="display: flex; flex-direction: column; width: 200px;">
+    <input type="password" id="password" placeholder="Heslo" style="margin-bottom: 10px;">
+    <button type="submit">Přihlásit</button>
+  </form>
 
-<script src="login.js"></script>
+  <div id="status" style="margin-top: 10px;"></div>
+
+  <!-- 🔥 správné připojení scriptu -->
+  <script src="/admin/login.js"></script>
 </body>
 </html>
