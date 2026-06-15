@@ -21,17 +21,29 @@ async function verifyJWT(token, secret) {
   const data = encoder.encode(`${headerB64}.${payloadB64}`);
   const signature = base64urlDecode(signatureB64);
 
-  const valid = await crypto.subtle.verify("HMAC", key, signature, data);
-  return valid;
+  return crypto.subtle.verify("HMAC", key, signature, data);
 }
 
-export async function onRequest(context) {
-  const cookie = context.request.headers.get("Cookie");
-  const token = cookie?.match(/token=([^;]+)/)?.[1];
+export async function onRequestPost(context) {
+  const auth = context.request.headers.get("Authorization");
 
-  if (!token) return Response.json({ ok: false });
+  if (!auth || !auth.startsWith("Bearer ")) {
+    return Response.json({ ok: false }, { status: 401 });
+  }
 
+  const token = auth.replace("Bearer ", "").trim();
+
+  // 1) Ověřit JWT
   const valid = await verifyJWT(token, context.env.ADMIN_JWT_SECRET);
+  if (!valid) {
+    return Response.json({ ok: false }, { status: 401 });
+  }
 
-  return Response.json({ ok: valid });
+  // 2) Ověřit, že token existuje v KV
+  const exists = await context.env.SESSIONS.get(token);
+  if (!exists) {
+    return Response.json({ ok: false }, { status: 401 });
+  }
+
+  return Response.json({ ok: true });
 }
