@@ -26,7 +26,7 @@ async function signJWT(payload, secret) {
   return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
 }
 
-export async function onRequest(context) {
+export async function onRequestPost(context) {
   const { password } = await context.request.json();
 
   if (password !== context.env.ADMIN_PASSWORD) {
@@ -38,10 +38,11 @@ export async function onRequest(context) {
     context.env.ADMIN_JWT_SECRET
   );
 
-  return new Response(JSON.stringify({ ok: true }), {
-    headers: {
-      "Content-Type": "application/json",
-      "Set-Cookie": `token=${token}; Path=/; Secure; HttpOnly; SameSite=None`
-    }
+  await context.env.SESSIONS.put(token, "valid", {
+    expirationTtl: 60 * 60 * 24
+  });
+
+  return new Response(JSON.stringify({ ok: true, token }), {
+    headers: { "Content-Type": "application/json" }
   });
 }
