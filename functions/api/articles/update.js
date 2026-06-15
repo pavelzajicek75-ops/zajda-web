@@ -1,0 +1,10 @@
+// functions/api/articles/update.js
+export async function onRequestPut(context) {
+  const { request, env } = context;
+  const body = await request.json();
+  const existing = await env.ARTICLES.get(`article:${body.id}`, { type: 'json' });
+  if (!existing) return Response.json({ error: 'Not found' }, { status: 404 });
+  const updated = { ...existing, ...body, updated: Date.now() };
+  await env.ARTICLES.put(`article:${body.id}`, JSON.stringify(updated));
+  return Response.json(updated);
+}
