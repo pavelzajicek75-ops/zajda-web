@@ -11,12 +11,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         password: document.getElementById('password').value
       })
     });
+    const data = await res.json();
     if (res.ok) {
       window.location.href = '/admin/dashboard.html';
     } else {
-      err.textContent = 'Špatné přihlašovací údaje';
+      err.textContent = data.error || 'Špatné přihlašovací údaje';
     }
   } catch {
-    err.textContent = 'Chyba připojení';
+    err.textContent = 'Chyba připojení k serveru';
   }
 });
