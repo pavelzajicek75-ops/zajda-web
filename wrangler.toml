@@ -12,7 +12,7 @@ CDN_BASE_URL = "https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev"
 
 [[kv_namespaces]]
 binding = "SESSIONS"
-id = "TVŮJ_SESSIONS_ID"
+id = "f03cc831474f4af3b2e0a6c5f3aa069c"
 
 [[kv_namespaces]]
 binding = "ARTICLES"
