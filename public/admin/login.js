@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("login-form");
+  const usernameInput = document.getElementById("username");
   const passwordInput = document.getElementById("password");
   const statusBox = document.getElementById("status");
 
@@ -11,13 +12,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: passwordInput.value })
+        body: JSON.stringify({
+          username: usernameInput.value,
+          password: passwordInput.value
+        })
       });
 
       const data = await res.json();
 
       if (!data.ok) {
-        statusBox.textContent = "Špatné heslo!";
+        statusBox.textContent = "Špatné jméno nebo heslo!";
         return;
       }
 
