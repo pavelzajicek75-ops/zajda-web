@@ -1,4 +1,3 @@
-// functions/api/articles/delete.js
 export async function onRequestDelete(context) {
   const { request, env } = context;
   const { searchParams } = new URL(request.url);
