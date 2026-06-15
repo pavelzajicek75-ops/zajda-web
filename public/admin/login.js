@@ -14,11 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ password: passwordInput.value })
       });
 
-      if (!res.ok) {
-        statusBox.textContent = "Chyba serveru nebo špatné heslo!";
-        return;
-      }
-
       const data = await res.json();
 
       if (!data.ok) {
@@ -27,7 +22,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       localStorage.setItem("token", data.token);
-      statusBox.textContent = "OK, přesměrovávám…";
       window.location.href = "/admin/";
     } catch (err) {
       console.error(err);
