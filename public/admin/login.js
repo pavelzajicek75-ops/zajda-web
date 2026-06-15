@@ -11,10 +11,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/functions/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: passwordInput.value
-        })
+        body: JSON.stringify({ password: passwordInput.value })
       });
+
+      if (!res.ok) {
+        statusBox.textContent = "Chyba serveru nebo špatné heslo!";
+        return;
+      }
 
       const data = await res.json();
 
@@ -23,12 +26,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // 🔥 ULOŽIT TOKEN DO LOCALSTORAGE
       localStorage.setItem("token", data.token);
-
       statusBox.textContent = "OK, přesměrovávám…";
-
-      // 🔥 PŘESMĚROVAT DO ADMIN DASHBOARDU
       window.location.href = "/admin/";
     } catch (err) {
       console.error(err);
