@@ -1,14 +1,11 @@
 name = "zajda-web"
 compatibility_date = "2026-06-13"
 
-# Cloudflare Pages má brát frontend z /public
 pages_build_output_dir = "public"
 
 [vars]
 ADMIN_JWT_SECRET = "TVŮJ_SECRET"
 CDN_BASE_URL = "https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev"
-
-# --- KV ---
 
 [[kv_namespaces]]
 binding = "SESSIONS"
@@ -26,8 +23,6 @@ id = "dd6ee2a83add46339418a5294c74c7ef"
 binding = "PHOTOS"
 id = "2d74f6e45eda4cbea51275017ba66c23"
 
-# --- R2 ---
-
 [[r2_buckets]]
 binding = "PHOTOS_R2"
 bucket_name = "zajda-photos"
@@ -35,9 +30,3 @@ bucket_name = "zajda-photos"
 [[r2_buckets]]
 binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
-
-# --- ASSETS (musí být přejmenováno, protože ASSETS je zakázané) ---
-
-[assets]
-directory = "public"
-binding = "STATIC"
