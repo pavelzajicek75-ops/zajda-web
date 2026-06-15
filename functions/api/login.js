@@ -27,17 +27,25 @@ async function signJWT(payload, secret) {
 }
 
 export async function onRequestPost(context) {
-  const { password } = await context.request.json();
+  const { username, password } = await context.request.json();
 
+  // 1) kontrola jména
+  if (username !== "zajda") {
+    return new Response(JSON.stringify({ ok: false }), { status: 401 });
+  }
+
+  // 2) kontrola hesla
   if (password !== context.env.ADMIN_PASSWORD) {
     return new Response(JSON.stringify({ ok: false }), { status: 401 });
   }
 
+  // 3) vytvoření tokenu
   const token = await signJWT(
-    { admin: true, ts: Date.now() },
+    { admin: true, ts: Date.now(), username: "zajda" },
     context.env.ADMIN_JWT_SECRET
   );
 
+  // 4) uložení session
   await context.env.SESSIONS.put(token, "valid", {
     expirationTtl: 60 * 60 * 24
   });
