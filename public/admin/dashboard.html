@@ -42,12 +42,25 @@
   <section id="quotes" class="section">
     <h2>Citáty</h2>
     <div class="form-card">
-      <h3>Nový citát</h3>
+      <h3>Přidat nový citát</h3>
       <textarea id="qText" placeholder="Text citátu..." rows="3"></textarea>
       <input type="text" id="qAuthor" placeholder="Autor">
       <button onclick="createQuote()" class="btn btn-green">Přidat citát</button>
     </div>
-    <div id="quoteList" class="list"></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:60%">Citát</th>
+            <th style="width:25%">Autor</th>
+            <th style="width:15%">Akce</th>
+          </tr>
+        </thead>
+        <tbody id="quoteTableBody">
+          <tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </main>
 
