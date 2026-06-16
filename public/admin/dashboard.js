@@ -19,6 +19,9 @@ function loadSection(name) {
   if (name === 'galleries') loadGalleries();
   if (name === 'articles') loadArticles();
   if (name === 'quotes') loadQuotes();
+  if (name === 'sections') loadSections();
+  if (name === 'subsections') loadSubsections();
+  if (name === 'about') loadAbout();
 }
 
 function escapeHtml(text) {
@@ -203,5 +206,115 @@ async function deleteQuote(key) {
   loadQuotes();
 }
 
-// Načti galerie při startu
+// ─── SEKCE ───
+async function loadSections() {
+  const res = await fetch('/api/sections/list');
+  const data = await res.json();
+  document.getElementById('sectionTableBody').innerHTML = data.map(s => `
+    <tr>
+      <td>${escapeHtml(s.name)}</td>
+      <td>${escapeHtml(s.slug)}</td>
+      <td>${s.order || 0}</td>
+      <td><button onclick="deleteSection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td>
+    </tr>
+  `).join('');
+
+  const select = document.getElementById('ssSection');
+  select.innerHTML = '<option value="">— Vyber sekci —</option>' +
+    data.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+}
+
+async function createSection() {
+  const name = document.getElementById('sName').value.trim();
+  if (!name) return alert('Zadej název sekce');
+  await fetch('/api/sections/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name,
+      slug: document.getElementById('sSlug').value.trim(),
+      order: parseInt(document.getElementById('sOrder').value) || 0
+    })
+  });
+  document.getElementById('sName').value = '';
+  document.getElementById('sSlug').value = '';
+  loadSections();
+}
+
+async function deleteSection(id) {
+  if (!confirm('Smazat sekci?')) return;
+  await fetch(`/api/sections/delete?id=${id}`, { method: 'DELETE' });
+  loadSections();
+}
+
+// ─── PODSEKCE ───
+async function loadSubsections() {
+  const res = await fetch('/api/subsections/list');
+  const data = await res.json();
+  document.getElementById('subsectionTableBody').innerHTML = data.map(s => `
+    <tr>
+      <td>${escapeHtml(s.sectionName || s.sectionId)}</td>
+      <td>${escapeHtml(s.name)}</td>
+      <td>${escapeHtml(s.slug)}</td>
+      <td>${s.order || 0}</td>
+      <td><button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td>
+    </tr>
+  `).join('');
+}
+
+async function createSubsection() {
+  const name = document.getElementById('ssName').value.trim();
+  const sectionId = document.getElementById('ssSection').value;
+  if (!name) return alert('Zadej název podsekce');
+  if (!sectionId) return alert('Vyber sekci');
+  await fetch('/api/subsections/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sectionId,
+      name,
+      slug: document.getElementById('ssSlug').value.trim(),
+      order: parseInt(document.getElementById('ssOrder').value) || 0
+    })
+  });
+  document.getElementById('ssName').value = '';
+  document.getElementById('ssSlug').value = '';
+  loadSubsections();
+}
+
+async function deleteSubsection(id) {
+  if (!confirm('Smazat podsekci?')) return;
+  await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' });
+  loadSubsections();
+}
+
+// ─── O ZAJDOVI ───
+async function loadAbout() {
+  try {
+    const res = await fetch('/api/about/get');
+    const data = await res.json();
+    document.getElementById('aboutTitle').value = data.title || '';
+    document.getElementById('aboutText').value = data.text || '';
+    document.getElementById('aboutPreview').innerHTML = `
+      <h4>${escapeHtml(data.title || 'O Zajdovi')}</h4>
+      <p>${escapeHtml(data.text || '').replace(/\n/g, '<br>')}</p>
+    `;
+  } catch {
+    document.getElementById('aboutPreview').innerHTML = '<p style="color:#64748b">Zatím žádný obsah.</p>';
+  }
+}
+
+async function saveAbout() {
+  await fetch('/api/about/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title: document.getElementById('aboutTitle').value,
+      text: document.getElementById('aboutText').value
+    })
+  });
+  loadAbout();
+}
+
+// ─── INIT ───
 loadGalleries();
