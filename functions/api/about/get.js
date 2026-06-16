@@ -1,10 +1,13 @@
 export async function onRequestGet(context) {
   const { env } = context;
-  const data = await env.ARTICLES.get('about:zajda', { type: 'json' });
-  return Response.json(data || {
+  try {
+    const data = await env.ARTICLES.get('about:zajda', { type: 'json' });
+    if (data) return Response.json(data);
+  } catch {}
+  
+  return Response.json({
     title: 'O Zajdovi',
-    text: '',
-    photos: [],
-    updated: null
+    text: 'Zatím žádný popis.',
+    photos: []
   });
 }
