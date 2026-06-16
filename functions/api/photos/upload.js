@@ -4,6 +4,10 @@ export async function onRequestPost(context) {
   const file = formData.get('file');
   const galleryId = formData.get('galleryId');
 
+  if (!env.PHOTOS_R2) {
+    return Response.json({ error: 'R2 binding PHOTOS_R2 není připojený. Přidej ho v Pages Settings > Functions.' }, { status: 500 });
+  }
+
   if (!file || !galleryId) {
     return Response.json({ error: 'Chybí soubor nebo ID galerie' }, { status: 400 });
   }
@@ -12,7 +16,7 @@ export async function onRequestPost(context) {
   const ext = file.name.split('.').pop();
   const key = `gallery-${galleryId}/${id}.${ext}`;
 
-  await env['zajda-photos'].put(key, file.stream(), {
+  await env.PHOTOS_R2.put(key, file.stream(), {
     httpMetadata: { contentType: file.type }
   });
 
