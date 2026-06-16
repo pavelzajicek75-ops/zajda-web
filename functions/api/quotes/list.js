@@ -9,20 +9,45 @@ export async function onRequestGet(context) {
       if (!data) continue;
 
       let item;
+      let rawText = null;
+      
       try {
         item = await data.json();
       } catch {
-        continue;
+        // Pokud to není JSON, zkusíme text
+        rawText = await data.text();
+        item = { text: rawText };
       }
 
-      const text = item.text || item.quote || item.content || item.citat || '';
-      const author = item.author || item.autor || item.by || item.source || '';
+      // Podpora různých formátů
+      let text = item.text || item.quote || item.content || item.citat || item.message || '';
+      let author = item.author || item.autor || item.by || item.source || item.name || '';
+      
+      // Pokud je text prázdný ale máme rawText
+      if (!text && rawText) text = rawText;
+
+      // Pokud je to pole citátů v jednom souboru
+      if (Array.isArray(item)) {
+        for (const sub of item) {
+          const subText = sub.text || sub.quote || sub.content || sub.citat || '';
+          const subAuthor = sub.author || sub.autor || sub.by || sub.source || '';
+          if (subText) {
+            quotes.push({
+              key: obj.key,
+              text: subText,
+              author: subAuthor,
+              created: sub.created || obj.uploaded
+            });
+          }
+        }
+        continue;
+      }
 
       if (text) {
         quotes.push({
           key: obj.key,
-          text: text,
-          author: author,
+          text: String(text),
+          author: String(author),
           created: item.created || obj.uploaded
         });
       }
