@@ -9,6 +9,6 @@ export async function onRequestPost(context) {
     order: body.order || 0,
     created: Date.now()
   };
-  await env.SECTIONS.put(`section:${id}`, JSON.stringify(section));
+  await env.SUBSECTIONS.put(`section:${id}`, JSON.stringify(section));
   return Response.json(section);
 }
