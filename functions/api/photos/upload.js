@@ -4,10 +4,6 @@ export async function onRequestPost(context) {
   const file = formData.get('file');
   const galleryId = formData.get('galleryId');
 
-  if (!env.PHOTOS_R2) {
-    return Response.json({ error: 'R2 binding PHOTOS_R2 není připojený. Přidej ho v Pages Settings > Functions.' }, { status: 500 });
-  }
-
   if (!file || !galleryId) {
     return Response.json({ error: 'Chybí soubor nebo ID galerie' }, { status: 400 });
   }
@@ -27,9 +23,16 @@ export async function onRequestPost(context) {
   const gallery = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
   if (gallery) {
     gallery.photos = gallery.photos || [];
-    gallery.photos.push({ id, key, url: publicUrl, name: file.name });
+    gallery.photos.push({
+      id,
+      key,
+      url: publicUrl,
+      name: file.name,
+      size: file.size,
+      uploaded: Date.now()
+    });
     await env.PHOTOS.put(`gallery:${galleryId}`, JSON.stringify(gallery));
   }
 
-  return Response.json({ id, url: publicUrl });
+  return Response.json({ id, url: publicUrl, size: file.size });
 }
