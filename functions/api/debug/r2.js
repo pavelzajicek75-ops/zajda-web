@@ -1,67 +1,27 @@
 export async function onRequestGet(context) {
   const { env } = context;
-  const result = {
-    photos: [],
-    quotes: []
+  
+  const bindings = {
+    available: Object.keys(env).filter(k => !k.startsWith('__')),
+    photos_r2: env.PHOTOS_R2 ? 'OK' : 'CHYBÍ - přidej v Pages Settings > Functions',
+    quotes_r2: env.QUOTES_R2 ? 'OK' : 'CHYBÍ - přidej v Pages Settings > Functions',
+    photos_kv: env.PHOTOS ? 'OK' : 'CHYBÍ',
+    articles_kv: env.ARTICLES ? 'OK' : 'CHYBÍ',
+    sessions_kv: env.SESSIONS ? 'OK' : 'CHYBÍ',
+    subsections_kv: env.SUBSECTIONS ? 'OK' : 'CHYBÍ',
   };
 
-  try {
-    const photosList = await env['zajda-photos'].list();
-    result.photos = (photosList.objects || []).slice(0, 20).map(o => ({
-      key: o.key,
-      size: o.size,
-      uploaded: o.uploaded
-    }));
-  } catch (e) {
-    result.photosError = e.message;
-  }
-
-  try {
-    const quotesList = await env['zajda-quotes'].list();
-    result.quotes = [];
-    for (const obj of (quotesList.objects || []).slice(0, 20)) {
-      try {
-        const data = await env['zajda-quotes'].get(obj.key);
-        let content = null;
-        try {
-          content = await data.json();
-        } catch {
-          content = await data.text();
-        }
-        result.quotes.push({
-          key: obj.key,
-          size: obj.size,
-          content: content
-        });
-      } catch (e) {
-        result.quotes.push({ key: obj.key, error: e.message });
+  const quotes = [];
+  if (env.QUOTES_R2) {
+    try {
+      const list = await env.QUOTES_R2.list({ limit: 5 });
+      for (const obj of list.objects || []) {
+        quotes.push({ key: obj.key, size: obj.size });
       }
+    } catch (e) {
+      bindings.quotes_error = e.message;
     }
-  } catch (e) {
-    result.quotesError = e.message;
   }
 
-  try {
-    const sectionsList = await env.SECTIONS.list();
-    result.sections = [];
-    for (const key of (sectionsList.keys || []).slice(0, 20)) {
-      const data = await env.SECTIONS.get(key.name, { type: 'json' });
-      result.sections.push({ key: key.name, data });
-    }
-  } catch (e) {
-    result.sectionsError = e.message;
-  }
-
-  try {
-    const subsectionsList = await env.SUBSECTIONS.list();
-    result.subsections = [];
-    for (const key of (subsectionsList.keys || []).slice(0, 20)) {
-      const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });
-      result.subsections.push({ key: key.name, data });
-    }
-  } catch (e) {
-    result.subsectionsError = e.message;
-  }
-
-  return Response.json(result, { headers: { 'Content-Type': 'application/json' } });
+  return Response.json({ bindings, sample_quotes: quotes });
 }
