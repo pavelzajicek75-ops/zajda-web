@@ -21,7 +21,7 @@ function loadSection(name) {
   if (name === 'quotes') loadQuotes();
   if (name === 'sections') loadSections();
   if (name === 'subsections') loadSubsections();
-  if (name === 'about') { loadAbout(); loadAboutPhotoPicker(); }
+  if (name === 'about') loadAbout();
 }
 
 function escapeHtml(text) {
@@ -30,57 +30,183 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// ─── FOTOGRAFIE ───
+function formatSize(bytes) {
+  if (!bytes) return '-';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// ═══════════════════════════════════════
+// GALERIE
+// ═══════════════════════════════════════
+let galleriesData = [];
+let currentGalleryId = null;
+let currentView = 'grid';
+let currentSort = 'date-desc';
+let selectedPhotos = new Set();
+let editorState = { img: null, rotation: 0, flipH: 1, flipV: 1, originalKey: null };
+
 async function loadGalleries() {
   const res = await fetch('/api/photos/list');
-  const data = await res.json();
-  document.getElementById('galleryList').innerHTML = data.map(g => `
-    <div class="card">
-      <h4>${escapeHtml(g.title || 'Bez názvu')}</h4>
-      <p>${escapeHtml(g.desc || '')}</p>
-      <form onsubmit="uploadPhoto(event, '${g.id}')" class="upload-form">
-        <input type="file" name="file" accept="image/*" required>
-        <button type="submit" class="btn btn-blue">Nahrát foto</button>
-      </form>
-      <div class="thumbs">${(g.photos || []).map(p => `
-        <div class="thumb">
-          <img src="${p.url}" alt="" loading="lazy">
-          <button onclick="deletePhoto('${g.id}','${p.id}')" class="btn btn-red btn-sm">×</button>
-        </div>
-      `).join('')}</div>
-      <button onclick="deleteGallery('${g.id}')" class="btn btn-red">Smazat galerii</button>
-    </div>
+  galleriesData = await res.json();
+  
+  const tabs = document.getElementById('galleryTabs');
+  if (!galleriesData.length) {
+    tabs.innerHTML = '<p style="color:#64748b">Zatím žádné galerie.</p>';
+    document.getElementById('galleryToolbar').style.display = 'none';
+    document.getElementById('galleryContent').innerHTML = '';
+    return;
+  }
+
+  tabs.innerHTML = galleriesData.map(g => `
+    <button class="gallery-tab ${g.id === currentGalleryId ? 'active' : ''}" 
+            onclick="switchGallery('${g.id}')">${escapeHtml(g.title)}</button>
   `).join('');
+
+  if (!currentGalleryId || !galleriesData.find(g => g.id === currentGalleryId)) {
+    currentGalleryId = galleriesData[0].id;
+  }
+  
+  document.getElementById('galleryToolbar').style.display = 'flex';
+  renderGallery();
+  loadGalleryStats();
+}
+
+function switchGallery(id) {
+  currentGalleryId = id;
+  selectedPhotos.clear();
+  updateSelectionUI();
+  loadGalleries();
+}
+
+async function loadGalleryStats() {
+  try {
+    const res = await fetch('/api/photos/stats');
+    const stats = await res.json();
+    const g = galleriesData.find(x => x.id === currentGalleryId);
+    const count = g?.photos?.length || 0;
+    document.getElementById('galleryStats').textContent = 
+      `Galerie: ${count} fotek | Celkem v R2: ${stats.count} fotek / ${stats.sizeText}`;
+  } catch {
+    document.getElementById('galleryStats').textContent = 'Statistiky nedostupné';
+  }
+}
+
+function setView(view) {
+  currentView = view;
+  document.getElementById('btnGrid').classList.toggle('active', view === 'grid');
+  document.getElementById('btnSmall').classList.toggle('active', view === 'small');
+  document.getElementById('btnList').classList.toggle('active', view === 'list');
+  renderGallery();
+}
+
+function sortPhotos(sortValue) {
+  currentSort = sortValue;
+  renderGallery();
+}
+
+function getSortedPhotos() {
+  const g = galleriesData.find(x => x.id === currentGalleryId);
+  if (!g?.photos) return [];
+  const photos = [...g.photos];
+  
+  const [field, dir] = currentSort.split('-');
+  photos.sort((a, b) => {
+    let va = a[field] || 0, vb = b[field] || 0;
+    if (field === 'name') { va = a.name || ''; vb = b.name || ''; }
+    if (va < vb) return dir === 'asc' ? -1 : 1;
+    if (va > vb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+  return photos;
+}
+
+function renderGallery() {
+  const photos = getSortedPhotos();
+  const container = document.getElementById('galleryContent');
+  container.className = currentView === 'list' ? 'gallery-list' : currentView === 'small' ? 'gallery-small' : 'gallery-grid';
+  
+  if (!photos.length) {
+    container.innerHTML = '<p style="color:#64748b;grid-column:1/-1">Galerie je prázdná.</p>';
+    return;
+  }
+
+  container.innerHTML = photos.map(p => {
+    const checked = selectedPhotos.has(p.key) ? 'checked' : '';
+    if (currentView === 'list') {
+      return `
+        <div class="list-row" data-key="${p.key}">
+          <input type="checkbox" ${checked} onchange="toggleSelect('${p.key}')">
+          <img src="${p.url}" onclick="openEditor('${p.key}','${p.url}')">
+          <div class="list-info">
+            <strong>${escapeHtml(p.name)}</strong>
+            <small>${formatSize(p.size)} | ${new Date(p.uploaded).toLocaleDateString('cs')}</small>
+          </div>
+          <button onclick="deletePhoto('${currentGalleryId}','${p.id}')" class="btn btn-red btn-sm">🗑️</button>
+        </div>`;
+    }
+    const cls = currentView === 'small' ? 'photo-small' : 'photo-card';
+    return `
+      <div class="${cls}" data-key="${p.key}">
+        <input type="checkbox" class="photo-check" ${checked} onchange="toggleSelect('${p.key}')">
+        <img src="${p.url}" onclick="openEditor('${p.key}','${p.url}')" loading="lazy">
+        <div class="photo-overlay">
+          <small>${escapeHtml(p.name)}</small>
+          <small>${formatSize(p.size)}</small>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleSelect(key) {
+  if (selectedPhotos.has(key)) selectedPhotos.delete(key);
+  else selectedPhotos.add(key);
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  const count = selectedPhotos.size;
+  document.getElementById('selCount').textContent = count;
+  document.getElementById('bulkDeleteBtn').style.display = count > 0 ? 'inline-block' : 'none';
+}
+
+async function deleteSelected() {
+  if (!confirm(`Smazat ${selectedPhotos.size} fotek?`)) return;
+  await fetch('/api/photos/bulk-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keys: Array.from(selectedPhotos), galleryId: currentGalleryId })
+  });
+  selectedPhotos.clear();
+  updateSelectionUI();
+  loadGalleries();
 }
 
 async function createGallery() {
   const title = document.getElementById('gTitle').value.trim();
-  const desc = document.getElementById('gDesc').value.trim();
   if (!title) return alert('Zadej název galerie');
   await fetch('/api/photos/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, desc })
+    body: JSON.stringify({ title, desc: document.getElementById('gDesc').value.trim() })
   });
   document.getElementById('gTitle').value = '';
   document.getElementById('gDesc').value = '';
   loadGalleries();
 }
 
-async function uploadPhoto(e, galleryId) {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  formData.append('galleryId', galleryId);
-  const btn = e.target.querySelector('button');
-  btn.textContent = 'Nahrávám...';
-  await fetch('/api/photos/upload', { method: 'POST', body: formData });
-  btn.textContent = 'Nahrát foto';
-  loadGalleries();
-}
-
-async function deleteGallery(id) {
-  if (!confirm('Smazat celou galerii včetně fotek?')) return;
-  await fetch(`/api/photos/delete?id=${id}`, { method: 'DELETE' });
+async function uploadToGallery(e) {
+  const files = e.target.files;
+  if (!files.length || !currentGalleryId) return;
+  
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('galleryId', currentGalleryId);
+    await fetch('/api/photos/upload', { method: 'POST', body: formData });
+  }
+  e.target.value = '';
   loadGalleries();
 }
 
@@ -90,7 +216,92 @@ async function deletePhoto(galleryId, photoId) {
   loadGalleries();
 }
 
-// ─── ČLÁNKY ───
+// ═══════════════════════════════════════
+// EDITOR FOTEK (Canvas)
+// ═══════════════════════════════════════
+function openEditor(key, url) {
+  editorState = { img: new Image(), rotation: 0, flipH: 1, flipV: 1, originalKey: key, originalUrl: url };
+  editorState.img.crossOrigin = 'anonymous';
+  editorState.img.onload = () => {
+    document.getElementById('editorWidth').value = editorState.img.width;
+    document.getElementById('editorHeight').value = editorState.img.height;
+    document.getElementById('editorQuality').addEventListener('input', e => {
+      document.getElementById('qualityVal').textContent = Math.round(e.target.value * 100) + '%';
+    });
+    drawEditor();
+    document.getElementById('photoEditor').classList.remove('hidden');
+  };
+  editorState.img.src = url;
+}
+
+function drawEditor() {
+  const canvas = document.getElementById('editorCanvas');
+  const ctx = canvas.getContext('2d');
+  const img = editorState.img;
+  
+  const rad = editorState.rotation * Math.PI / 180;
+  const isSideways = Math.abs(editorState.rotation) % 180 === 90;
+  canvas.width = isSideways ? img.height : img.width;
+  canvas.height = isSideways ? img.width : img.height;
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(rad);
+  ctx.scale(editorState.flipH, editorState.flipV);
+  ctx.drawImage(img, -img.width / 2, -img.height / 2);
+  ctx.restore();
+}
+
+function editorRotate(deg) {
+  editorState.rotation = (editorState.rotation + deg) % 360;
+  drawEditor();
+}
+
+function editorFlip(dir) {
+  if (dir === 'h') editorState.flipH *= -1;
+  else editorState.flipV *= -1;
+  drawEditor();
+}
+
+function editorResize() {
+  // Resize se aplikuje až při uložení - zde jen náhled
+  drawEditor();
+}
+
+function closeEditor() {
+  document.getElementById('photoEditor').classList.add('hidden');
+}
+
+async function saveEditor(mode) {
+  const canvas = document.getElementById('editorCanvas');
+  const quality = parseFloat(document.getElementById('editorQuality').value);
+  
+  canvas.toBlob(async (blob) => {
+    const formData = new FormData();
+    const fileName = editorState.originalKey.split('/').pop();
+    const newFile = new File([blob], fileName, { type: 'image/jpeg' });
+    
+    formData.append('file', newFile);
+    
+    if (mode === 'overwrite') {
+      formData.append('key', editorState.originalKey);
+      formData.append('galleryId', currentGalleryId);
+      await fetch('/api/photos/update', { method: 'POST', body: formData });
+    } else {
+      // Uložit jako novou - normální upload
+      formData.append('galleryId', currentGalleryId);
+      await fetch('/api/photos/upload', { method: 'POST', body: formData });
+    }
+    
+    closeEditor();
+    loadGalleries();
+  }, 'image/jpeg', quality);
+}
+
+// ═══════════════════════════════════════
+// ČLÁNKY
+// ═══════════════════════════════════════
 async function loadArticles() {
   const res = await fetch('/api/articles/list');
   const data = await res.json();
@@ -156,7 +367,9 @@ async function deleteArticle(id) {
   loadArticles();
 }
 
-// ─── CITÁTY ───
+// ═══════════════════════════════════════
+// CITÁTY
+// ═══════════════════════════════════════
 async function loadQuotes() {
   const tbody = document.getElementById('quoteTableBody');
   tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>';
@@ -164,7 +377,7 @@ async function loadQuotes() {
     const res = await fetch('/api/quotes/list');
     const data = await res.json();
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty v databázi.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty.</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(q => `
@@ -175,7 +388,7 @@ async function loadQuotes() {
       </tr>
     `).join('');
   } catch {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba při načítání citátů.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba při načítání.</td></tr>';
   }
 }
 
@@ -185,10 +398,7 @@ async function createQuote() {
   await fetch('/api/quotes/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      text,
-      author: document.getElementById('qAuthor').value.trim()
-    })
+    body: JSON.stringify({ text, author: document.getElementById('qAuthor').value.trim() })
   });
   document.getElementById('qText').value = '';
   document.getElementById('qAuthor').value = '';
@@ -196,12 +406,14 @@ async function createQuote() {
 }
 
 async function deleteQuote(key) {
-  if (!confirm('Opravdu smazat tento citát?')) return;
+  if (!confirm('Smazat citát?')) return;
   await fetch(`/api/quotes/delete?key=${key}`, { method: 'DELETE' });
   loadQuotes();
 }
 
-// ─── SEKCE ───
+// ═══════════════════════════════════════
+// SEKCE & PODSEKCE
+// ═══════════════════════════════════════
 async function loadSections() {
   const res = await fetch('/api/sections/list');
   const data = await res.json();
@@ -216,28 +428,22 @@ async function loadSections() {
 
 async function createSection() {
   const name = document.getElementById('sName').value.trim();
-  if (!name) return alert('Zadej název sekce');
+  if (!name) return alert('Zadej název');
   await fetch('/api/sections/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name,
-      slug: document.getElementById('sSlug').value.trim(),
-      order: parseInt(document.getElementById('sOrder').value) || 0
-    })
+    body: JSON.stringify({ name, slug: document.getElementById('sSlug').value.trim(), order: parseInt(document.getElementById('sOrder').value) || 0 })
   });
   document.getElementById('sName').value = '';
-  document.getElementById('sSlug').value = '';
   loadSections();
 }
 
 async function deleteSection(id) {
-  if (!confirm('Smazat sekci?')) return;
+  if (!confirm('Smazat?')) return;
   await fetch(`/api/sections/delete?id=${id}`, { method: 'DELETE' });
   loadSections();
 }
 
-// ─── PODSEKCE ───
 async function loadSubsections() {
   const res = await fetch('/api/subsections/list');
   const data = await res.json();
@@ -251,37 +457,34 @@ async function loadSubsections() {
 async function createSubsection() {
   const name = document.getElementById('ssName').value.trim();
   const sectionId = document.getElementById('ssSection').value;
-  if (!name) return alert('Zadej název podsekce');
-  if (!sectionId) return alert('Vyber sekci');
+  if (!name || !sectionId) return alert('Vyplň vše');
   await fetch('/api/subsections/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sectionId,
-      name,
-      slug: document.getElementById('ssSlug').value.trim(),
-      order: parseInt(document.getElementById('ssOrder').value) || 0
-    })
+    body: JSON.stringify({ sectionId, name, slug: document.getElementById('ssSlug').value.trim(), order: parseInt(document.getElementById('ssOrder').value) || 0 })
   });
   document.getElementById('ssName').value = '';
-  document.getElementById('ssSlug').value = '';
   loadSubsections();
 }
 
 async function deleteSubsection(id) {
-  if (!confirm('Smazat podsekci?')) return;
+  if (!confirm('Smazat?')) return;
   await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' });
   loadSubsections();
 }
 
-// ─── O ZAJDOVI ───
+// ═══════════════════════════════════════
+// O ZAJDOVI
+// ═══════════════════════════════════════
 async function loadAbout() {
   try {
     const res = await fetch('/api/about/get');
     const data = await res.json();
     document.getElementById('aboutTitle').value = data.title || '';
     document.getElementById('aboutText').value = data.text || '';
-    renderAboutPreview(data.title, data.text);
+    document.getElementById('aboutPreview').innerHTML = `
+      <h4>${escapeHtml(data.title || 'O Zajdovi')}</h4>
+      <p>${escapeHtml(data.text || '').replace(/\n/g, '<br>')}</p>`;
   } catch {
     document.getElementById('aboutPreview').innerHTML = '<p style="color:#64748b">Zatím žádný obsah.</p>';
   }
@@ -291,70 +494,12 @@ async function saveAbout() {
   await fetch('/api/about/update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title: document.getElementById('aboutTitle').value,
-      text: document.getElementById('aboutText').value
-    })
+    body: JSON.stringify({ title: document.getElementById('aboutTitle').value, text: document.getElementById('aboutText').value })
   });
-  const text = document.getElementById('aboutText').value;
-  const title = document.getElementById('aboutTitle').value;
-  renderAboutPreview(title, text);
-  alert('Uloženo!');
+  loadAbout();
 }
 
-function renderAboutPreview(title, text) {
-  if (!text && !title) {
-    document.getElementById('aboutPreview').innerHTML = '<p style="color:#64748b">Zatím žádný obsah.</p>';
-    return;
-  }
-  let html = `<h4>${escapeHtml(title || 'O Zajdovi')}</h4>`;
-  // Nahraď [img:URL] za obrázky
-  const parts = text.split(/(\[img:[^\]]+\])/);
-  parts.forEach(part => {
-    if (part.startsWith('[img:')) {
-      const url = part.slice(5, -1);
-      html += `<img src="${escapeHtml(url)}" style="max-width:100%;border-radius:8px;margin:1rem 0;display:block;">`;
-    } else {
-      html += `<p style="line-height:1.7;color:#cbd5e1;">${escapeHtml(part).replace(/\n/g, '<br>')}</p>`;
-    }
-  });
-  document.getElementById('aboutPreview').innerHTML = html;
-}
-
-// Výběr fotek z galerie pro vložení do About
-async function loadAboutPhotoPicker() {
-  const container = document.getElementById('aboutPhotoPicker');
-  try {
-    const res = await fetch('/api/photos/list');
-    const galleries = await res.json();
-    if (!galleries.length) {
-      container.innerHTML = '<p style="color:#64748b">Žádné galerie k dispozici.</p>';
-      return;
-    }
-    let html = '';
-    galleries.forEach(g => {
-      if (!g.photos || !g.photos.length) return;
-      html += `<div style="margin-bottom:1rem;"><h5 style="color:#94a3b8;margin-bottom:0.5rem;">${escapeHtml(g.title)}</h5><div class="picker-thumbs">`;
-      g.photos.forEach(p => {
-        html += `
-          <div class="picker-thumb" onclick="insertPhotoIntoAbout('${escapeHtml(p.url)}')" title="Klikni pro vložení">
-            <img src="${p.url}" loading="lazy">
-          </div>`;
-      });
-      html += '</div></div>';
-    });
-    container.innerHTML = html || '<p style="color:#64748b">Žádné fotky v galeriích.</p>';
-  } catch {
-    container.innerHTML = '<p style="color:#ef4444">Chyba při načítání galerií.</p>';
-  }
-}
-
-function insertPhotoIntoAbout(url) {
-  const ta = document.getElementById('aboutText');
-  const tag = `\n\n[img:${url}]\n\n`;
-  ta.value += tag;
-  ta.focus();
-}
-
-// ─── INIT ───
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
 loadGalleries();
