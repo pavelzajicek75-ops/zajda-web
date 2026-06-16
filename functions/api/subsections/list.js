@@ -3,7 +3,7 @@ export async function onRequestGet(context) {
   const { searchParams } = new URL(request.url);
   const sectionId = searchParams.get('sectionId');
   
-  const list = await env.SUBSECTIONS.list();
+  const list = await env.SUBSECTIONS.list({ prefix: 'subsection:' });
   const subsections = [];
   for (const key of list.keys) {
     const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });
