@@ -1,38 +1,10 @@
-export async function onRequest(context) {
+export async function onRequestGet(context) {
   const { env } = context;
-
-  // načti uložené podsekce
-  const raw = await env.SUBSECTIONS.get("all");
-  const stored = raw ? JSON.parse(raw) : {};
-
-  const sections = [
-    {
-      id: "cestovani",
-      name_cz: "Cestování",
-      name_en: "Travel",
-      subsections: stored.cestovani || []
-    },
-    {
-      id: "fotografovani",
-      name_cz: "Fotografování",
-      name_en: "Photography",
-      subsections: stored.fotografovani || []
-    },
-    {
-      id: "projekty",
-      name_cz: "Projekty",
-      name_en: "Projects",
-      subsections: stored.projekty || []
-    },
-    {
-      id: "zajda",
-      name_cz: "Zajda – O mně",
-      name_en: "About",
-      subsections: stored.zajda || []
-    }
-  ];
-
-  return new Response(JSON.stringify(sections), {
-    headers: { "Content-Type": "application/json" }
-  });
+  const list = await env.SECTIONS.list();
+  const sections = [];
+  for (const key of list.keys) {
+    const data = await env.SECTIONS.get(key.name, { type: 'json' });
+    if (data) sections.push(data);
+  }
+  return Response.json(sections.sort((a, b) => (a.order || 0) - (b.order || 0)));
 }
