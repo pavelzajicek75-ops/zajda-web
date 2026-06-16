@@ -21,7 +21,7 @@ function loadSection(name) {
   if (name === 'quotes') loadQuotes();
   if (name === 'sections') loadSections();
   if (name === 'subsections') loadSubsections();
-  if (name === 'about') loadAbout();
+  if (name === 'about') { loadAbout(); loadAboutPhotoPicker(); }
 }
 
 function escapeHtml(text) {
@@ -160,23 +160,18 @@ async function deleteArticle(id) {
 async function loadQuotes() {
   const tbody = document.getElementById('quoteTableBody');
   tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>';
-
   try {
     const res = await fetch('/api/quotes/list');
     const data = await res.json();
-
     if (!data.length) {
       tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty v databázi.</td></tr>';
       return;
     }
-
     tbody.innerHTML = data.map(q => `
       <tr>
         <td>"${escapeHtml(q.text)}"</td>
         <td>${escapeHtml(q.author) || '—'}</td>
-        <td>
-          <button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button>
-        </td>
+        <td><button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button></td>
       </tr>
     `).join('');
   } catch {
@@ -211,14 +206,9 @@ async function loadSections() {
   const res = await fetch('/api/sections/list');
   const data = await res.json();
   document.getElementById('sectionTableBody').innerHTML = data.map(s => `
-    <tr>
-      <td>${escapeHtml(s.name)}</td>
-      <td>${escapeHtml(s.slug)}</td>
-      <td>${s.order || 0}</td>
-      <td><button onclick="deleteSection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td>
-    </tr>
+    <tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td>
+    <td><button onclick="deleteSection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>
   `).join('');
-
   const select = document.getElementById('ssSection');
   select.innerHTML = '<option value="">— Vyber sekci —</option>' +
     data.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
@@ -252,13 +242,9 @@ async function loadSubsections() {
   const res = await fetch('/api/subsections/list');
   const data = await res.json();
   document.getElementById('subsectionTableBody').innerHTML = data.map(s => `
-    <tr>
-      <td>${escapeHtml(s.sectionName || s.sectionId)}</td>
-      <td>${escapeHtml(s.name)}</td>
-      <td>${escapeHtml(s.slug)}</td>
-      <td>${s.order || 0}</td>
-      <td><button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td>
-    </tr>
+    <tr><td>${escapeHtml(s.sectionName || s.sectionId)}</td><td>${escapeHtml(s.name)}</td>
+    <td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td>
+    <td><button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>
   `).join('');
 }
 
@@ -295,10 +281,7 @@ async function loadAbout() {
     const data = await res.json();
     document.getElementById('aboutTitle').value = data.title || '';
     document.getElementById('aboutText').value = data.text || '';
-    document.getElementById('aboutPreview').innerHTML = `
-      <h4>${escapeHtml(data.title || 'O Zajdovi')}</h4>
-      <p>${escapeHtml(data.text || '').replace(/\n/g, '<br>')}</p>
-    `;
+    renderAboutPreview(data.title, data.text);
   } catch {
     document.getElementById('aboutPreview').innerHTML = '<p style="color:#64748b">Zatím žádný obsah.</p>';
   }
@@ -313,7 +296,64 @@ async function saveAbout() {
       text: document.getElementById('aboutText').value
     })
   });
-  loadAbout();
+  const text = document.getElementById('aboutText').value;
+  const title = document.getElementById('aboutTitle').value;
+  renderAboutPreview(title, text);
+  alert('Uloženo!');
+}
+
+function renderAboutPreview(title, text) {
+  if (!text && !title) {
+    document.getElementById('aboutPreview').innerHTML = '<p style="color:#64748b">Zatím žádný obsah.</p>';
+    return;
+  }
+  let html = `<h4>${escapeHtml(title || 'O Zajdovi')}</h4>`;
+  // Nahraď [img:URL] za obrázky
+  const parts = text.split(/(\[img:[^\]]+\])/);
+  parts.forEach(part => {
+    if (part.startsWith('[img:')) {
+      const url = part.slice(5, -1);
+      html += `<img src="${escapeHtml(url)}" style="max-width:100%;border-radius:8px;margin:1rem 0;display:block;">`;
+    } else {
+      html += `<p style="line-height:1.7;color:#cbd5e1;">${escapeHtml(part).replace(/\n/g, '<br>')}</p>`;
+    }
+  });
+  document.getElementById('aboutPreview').innerHTML = html;
+}
+
+// Výběr fotek z galerie pro vložení do About
+async function loadAboutPhotoPicker() {
+  const container = document.getElementById('aboutPhotoPicker');
+  try {
+    const res = await fetch('/api/photos/list');
+    const galleries = await res.json();
+    if (!galleries.length) {
+      container.innerHTML = '<p style="color:#64748b">Žádné galerie k dispozici.</p>';
+      return;
+    }
+    let html = '';
+    galleries.forEach(g => {
+      if (!g.photos || !g.photos.length) return;
+      html += `<div style="margin-bottom:1rem;"><h5 style="color:#94a3b8;margin-bottom:0.5rem;">${escapeHtml(g.title)}</h5><div class="picker-thumbs">`;
+      g.photos.forEach(p => {
+        html += `
+          <div class="picker-thumb" onclick="insertPhotoIntoAbout('${escapeHtml(p.url)}')" title="Klikni pro vložení">
+            <img src="${p.url}" loading="lazy">
+          </div>`;
+      });
+      html += '</div></div>';
+    });
+    container.innerHTML = html || '<p style="color:#64748b">Žádné fotky v galeriích.</p>';
+  } catch {
+    container.innerHTML = '<p style="color:#ef4444">Chyba při načítání galerií.</p>';
+  }
+}
+
+function insertPhotoIntoAbout(url) {
+  const ta = document.getElementById('aboutText');
+  const tag = `\n\n[img:${url}]\n\n`;
+  ta.value += tag;
+  ta.focus();
 }
 
 // ─── INIT ───
