@@ -53,15 +53,9 @@
     <div class="table-wrap">
       <table class="data-table">
         <thead>
-          <tr>
-            <th style="width:60%">Citát</th>
-            <th style="width:25%">Autor</th>
-            <th style="width:15%">Akce</th>
-          </tr>
+          <tr><th style="width:60%">Citát</th><th style="width:25%">Autor</th><th style="width:15%">Akce</th></tr>
         </thead>
-        <tbody id="quoteTableBody">
-          <tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>
-        </tbody>
+        <tbody id="quoteTableBody"><tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -77,9 +71,7 @@
     </div>
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr>
-        </thead>
+        <thead><tr><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr></thead>
         <tbody id="sectionTableBody"></tbody>
       </table>
     </div>
@@ -97,9 +89,7 @@
     </div>
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr><th>Sekce</th><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr>
-        </thead>
+        <thead><tr><th>Sekce</th><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr></thead>
         <tbody id="subsectionTableBody"></tbody>
       </table>
     </div>
@@ -113,6 +103,14 @@
       <textarea id="aboutText" placeholder="Text o Zajdovi..." rows="8"></textarea>
       <button onclick="saveAbout()" class="btn btn-green">Uložit změny</button>
     </div>
+    
+    <div class="form-card">
+      <h3>Vložit fotku z galerie</h3>
+      <div id="aboutPhotoPicker" class="picker-grid">
+        <p style="color:#64748b">Načítání galerií...</p>
+      </div>
+    </div>
+    
     <div id="aboutPreview" class="card" style="margin-top:1.5rem"></div>
   </section>
 </main>
