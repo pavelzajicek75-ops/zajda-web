@@ -20,47 +20,71 @@
 
 <main class="content">
   <!-- GALERIE -->
-  <section id="galleries" class="section active">
-    <h2>Fotografie / Galerie</h2>
-    
-    <div class="form-card">
-      <h3>Nová galerie</h3>
-      <input type="text" id="gTitle" placeholder="Název galerie">
-      <input type="text" id="gDesc" placeholder="Popis">
-      <button onclick="createGallery()" class="btn btn-green">Vytvořit galerii</button>
+ <section id="galleries" class="section active">
+  <h2>Fotografie / Galerie</h2>
+
+  <!-- Karty galerií (Excel listy) -->
+  <div class="gallery-tabs" id="galleryTabs">
+    <button onclick="createGallery()" class="tab-btn tab-add" title="Nová galerie">+</button>
+  </div>
+
+  <!-- Ovládací panel -->
+  <div class="gallery-toolbar">
+    <div class="toolbar-info">
+      <span id="galleryStats">0 fotek | 0 MB</span>
     </div>
+    <div class="toolbar-view">
+      <button onclick="setView('thumbnails')" id="view-thumb" class="btn btn-blue active">🔲 Miniatury</button>
+      <button onclick="setView('small')" id="view-small" class="btn btn-blue">▫️ Malé</button>
+      <button onclick="setView('list')" id="view-list" class="btn btn-blue">☰ Seznam</button>
+    </div>
+    <div class="toolbar-sort">
+      <select id="sortBy" onchange="renderGallery()">
+        <option value="name">Název</option>
+        <option value="date">Datum</option>
+        <option value="size">Velikost</option>
+      </select>
+      <button onclick="toggleSortDir()" id="sortDirBtn" class="btn btn-blue">↑ Vzestupně</button>
+    </div>
+    <div class="toolbar-actions">
+      <button onclick="document.getElementById('galleryUpload').click()" class="btn btn-green">📤 Přidat fotky</button>
+      <button onclick="deleteSelected()" class="btn btn-red">🗑️ Smazat vybrané (<span id="selectedCount">0</span>)</button>
+      <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="uploadToGallery(event)">
+    </div>
+  </div>
 
-    <!-- Taby galerií -->
-    <div class="gallery-tabs" id="galleryTabs"></div>
+  <!-- Obsah galerie -->
+  <div id="galleryContent" class="gallery-view view-thumbnails"></div>
+</section>
 
-    <!-- Toolbar -->
-    <div class="gallery-toolbar" id="galleryToolbar" style="display:none">
-      <div class="toolbar-left">
-        <span id="galleryStats">Načítání...</span>
+<!-- Editor fotografií -->
+<div id="editorModal" class="modal hidden">
+  <div class="modal-content editor-modal">
+    <h3>🎨 Editor fotografií</h3>
+    <div class="editor-canvas-wrap">
+      <canvas id="editorCanvas"></canvas>
+    </div>
+    <div class="editor-tools">
+      <div class="tool-group">
+        <button onclick="editorRotate(-90)" class="btn btn-blue" title="Otočit doleva">↺ 90°</button>
+        <button onclick="editorRotate(90)" class="btn btn-blue" title="Otočit doprava">↻ 90°</button>
+        <button onclick="editorFlip('h')" class="btn btn-blue" title="Zrcadlit vodorovně">↔</button>
+        <button onclick="editorFlip('v')" class="btn btn-blue" title="Zrcadlit svisle">↕</button>
       </div>
-      <div class="toolbar-center">
-        <button onclick="setView('grid')" class="btn btn-sm" id="btnGrid">🗂️ Mřížka</button>
-        <button onclick="setView('small')" class="btn btn-sm" id="btnSmall">📑 Malé</button>
-        <button onclick="setView('list')" class="btn btn-sm" id="btnList">📃 Seznam</button>
-      </div>
-      <div class="toolbar-right">
-        <select onchange="sortPhotos(this.value)" id="sortSelect">
-          <option value="name-asc">Název ↑</option>
-          <option value="name-desc">Název ↓</option>
-          <option value="date-asc">Nejstarší</option>
-          <option value="date-desc">Nejnovější</option>
-          <option value="size-asc">Velikost ↑</option>
-          <option value="size-desc">Velikost ↓</option>
-        </select>
-        <button onclick="document.getElementById('galleryUpload').click()" class="btn btn-green">+ Přidat fotky</button>
-        <button onclick="deleteSelected()" class="btn btn-red" id="bulkDeleteBtn" style="display:none">🗑️ Smazat (<span id="selCount">0</span>)</button>
+      <div class="tool-group sliders">
+        <label>Jas: <input type="range" id="edBrightness" min="0" max="200" value="100" oninput="editorApply()"></label>
+        <label>Kontrast: <input type="range" id="edContrast" min="0" max="200" value="100" oninput="editorApply()"></label>
+        <label>Saturace: <input type="range" id="edSaturation" min="0" max="200" value="100" oninput="editorApply()"></label>
       </div>
     </div>
+    <div class="editor-actions">
+      <button onclick="saveEdit('overwrite')" class="btn btn-green">💾 Uložit (přepsat)</button>
+      <button onclick="saveEdit('saveas')" class="btn btn-blue">💾 Uložit jako kopii</button>
+      <button onclick="closeEditor()" class="btn btn-red">❌ Zrušit</button>
+    </div>
+  </div>
+</div>
 
-    <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="uploadToGallery(event)">
-
-    <div id="galleryContent" class="gallery-grid"></div>
-  </section>
 
   <!-- ČLÁNKY -->
   <section id="articles" class="section">
