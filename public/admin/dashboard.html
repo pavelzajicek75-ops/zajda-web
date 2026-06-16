@@ -19,17 +19,50 @@
 </nav>
 
 <main class="content">
+  <!-- GALERIE -->
   <section id="galleries" class="section active">
     <h2>Fotografie / Galerie</h2>
+    
     <div class="form-card">
       <h3>Nová galerie</h3>
       <input type="text" id="gTitle" placeholder="Název galerie">
       <input type="text" id="gDesc" placeholder="Popis">
       <button onclick="createGallery()" class="btn btn-green">Vytvořit galerii</button>
     </div>
-    <div id="galleryList" class="grid"></div>
+
+    <!-- Taby galerií -->
+    <div class="gallery-tabs" id="galleryTabs"></div>
+
+    <!-- Toolbar -->
+    <div class="gallery-toolbar" id="galleryToolbar" style="display:none">
+      <div class="toolbar-left">
+        <span id="galleryStats">Načítání...</span>
+      </div>
+      <div class="toolbar-center">
+        <button onclick="setView('grid')" class="btn btn-sm" id="btnGrid">🗂️ Mřížka</button>
+        <button onclick="setView('small')" class="btn btn-sm" id="btnSmall">📑 Malé</button>
+        <button onclick="setView('list')" class="btn btn-sm" id="btnList">📃 Seznam</button>
+      </div>
+      <div class="toolbar-right">
+        <select onchange="sortPhotos(this.value)" id="sortSelect">
+          <option value="name-asc">Název ↑</option>
+          <option value="name-desc">Název ↓</option>
+          <option value="date-asc">Nejstarší</option>
+          <option value="date-desc">Nejnovější</option>
+          <option value="size-asc">Velikost ↑</option>
+          <option value="size-desc">Velikost ↓</option>
+        </select>
+        <button onclick="document.getElementById('galleryUpload').click()" class="btn btn-green">+ Přidat fotky</button>
+        <button onclick="deleteSelected()" class="btn btn-red" id="bulkDeleteBtn" style="display:none">🗑️ Smazat (<span id="selCount">0</span>)</button>
+      </div>
+    </div>
+
+    <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="uploadToGallery(event)">
+
+    <div id="galleryContent" class="gallery-grid"></div>
   </section>
 
+  <!-- ČLÁNKY -->
   <section id="articles" class="section">
     <h2>Články</h2>
     <div class="form-card">
@@ -42,6 +75,7 @@
     <div id="articleList" class="list"></div>
   </section>
 
+  <!-- CITÁTY -->
   <section id="quotes" class="section">
     <h2>Citáty</h2>
     <div class="form-card">
@@ -55,11 +89,14 @@
         <thead>
           <tr><th style="width:60%">Citát</th><th style="width:25%">Autor</th><th style="width:15%">Akce</th></tr>
         </thead>
-        <tbody id="quoteTableBody"><tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr></tbody>
+        <tbody id="quoteTableBody">
+          <tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>
+        </tbody>
       </table>
     </div>
   </section>
 
+  <!-- SEKCE -->
   <section id="sections" class="section">
     <h2>Sekce</h2>
     <div class="form-card">
@@ -77,6 +114,7 @@
     </div>
   </section>
 
+  <!-- PODSEKCE -->
   <section id="subsections" class="section">
     <h2>Podsekce</h2>
     <div class="form-card">
@@ -95,6 +133,7 @@
     </div>
   </section>
 
+  <!-- O ZAJDOVI -->
   <section id="about" class="section">
     <h2>O Zajdovi</h2>
     <div class="form-card">
@@ -103,17 +142,46 @@
       <textarea id="aboutText" placeholder="Text o Zajdovi..." rows="8"></textarea>
       <button onclick="saveAbout()" class="btn btn-green">Uložit změny</button>
     </div>
-    
-    <div class="form-card">
-      <h3>Vložit fotku z galerie</h3>
-      <div id="aboutPhotoPicker" class="picker-grid">
-        <p style="color:#64748b">Načítání galerií...</p>
-      </div>
-    </div>
-    
     <div id="aboutPreview" class="card" style="margin-top:1.5rem"></div>
   </section>
 </main>
+
+<!-- EDITOR FOTEK -->
+<div id="photoEditor" class="modal hidden">
+  <div class="modal-content editor-modal">
+    <h3>✏️ Editor fotky</h3>
+    <div class="editor-canvas-wrap">
+      <canvas id="editorCanvas"></canvas>
+    </div>
+    <div class="editor-tools">
+      <div class="tool-group">
+        <label>Rotace:</label>
+        <button onclick="editorRotate(-90)" class="btn btn-sm">↺ -90°</button>
+        <button onclick="editorRotate(90)" class="btn btn-sm">↻ +90°</button>
+      </div>
+      <div class="tool-group">
+        <label>Zrcadlit:</label>
+        <button onclick="editorFlip('h')" class="btn btn-sm">↔ Vodorovně</button>
+        <button onclick="editorFlip('v')" class="btn btn-sm">↕ Svisle</button>
+      </div>
+      <div class="tool-group">
+        <label>Rozměry:</label>
+        <input type="number" id="editorWidth" placeholder="Šířka" onchange="editorResize()">
+        <input type="number" id="editorHeight" placeholder="Výška" onchange="editorResize()">
+      </div>
+      <div class="tool-group">
+        <label>Kvalita (JPEG):</label>
+        <input type="range" id="editorQuality" min="0.1" max="1" step="0.1" value="0.9">
+        <span id="qualityVal">90%</span>
+      </div>
+    </div>
+    <div class="editor-actions">
+      <button onclick="closeEditor()" class="btn">Zavřít</button>
+      <button onclick="saveEditor('overwrite')" class="btn btn-green">💾 Uložit (přepsat)</button>
+      <button onclick="saveEditor('copy')" class="btn btn-blue">📄 Uložit jako novou</button>
+    </div>
+  </div>
+</div>
 
 <script src="/admin/dashboard.js"></script>
 </body>
