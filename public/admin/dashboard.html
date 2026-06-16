@@ -1,51 +1,70 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-<meta charset="UTF-8">
+ 'POST<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
+<title>Admin Dashboard({ title, desc })
+  });
+  document.getElement</title>
 <link rel="stylesheet" href="/admin/style.css">
 </head>
 <body>
-<nav class="sidebar">
+('gTitle<nav class="sidebar">
   <h2>📊 Admin</h2>
-  <a href="#" class="nav-link active" data-section="galleries">🖼️ Fotografie</a>
-  <a href="#" class="nav-link" data-section="articles">📝 Články</a>
-  <a href="#" class="nav-link" data-section="quotes">💬 Citáty</a>
-  <button onclick="logout()" class="btn btn-red" style="margin-top:auto">Odhlásit</button>
-</nav>
+  <a href="#" class="nav-link active" data-section="galleries">eries();
+🖼️ Fotografie</a>
+  <a href="#"(e, gallery class="nav-link" data-section="articles">📝 Články</a>
+  <a formData href="#" new FormData(e.target class="nav-link" data-section="('quotes">💬 Citáty</a galleryId);
+  const btn = e.target.querySelector('button>
+  <a href="#" class="nav-link" data-section="sections">📁 Sekce</a>
+ = 'N  <a href="#" class="nav-link" data-sectionáv="subsections">📂 Podsekce</  await fetch('/apia>
+  <a href="#" class="nav-link" data-section="about">👤 O Zajdovi</a>
+  <button onclick="', body: formData });
+  btnlogout()" class="btn btn-red" style="margin-top:auto">Odhlásit</button>
+  loadGalleries();
+}
+
+async function delete</nav>
 
 <main class="content">
-  <section id="galleries" class="section active">
-    <h2>Fotografie / Galerie</h2>
-    <div class="form-card">
-      <h3>Nová galerie</h3>
-      <input type="text" id="gTitle" placeholder="Název galerie">
+ (!confirm  <section id="galleries" class="section active">
+   č <h2>Fotografie / Galerie?'))</h2>
+    <div class  await="form-card">
+      <apih3>Nová galerie</h3>
+      <input type=" 'DELETEtext" id });
+  loadGalleries();
+="gTitle" placeholder="Název galerie">
       <input type="text" id="gDesc" placeholder="Popis">
       <button onclick="createGallery()" class="btn btn-green">Vytvořit galerii</button>
     </div>
-    <div id="galleryList" class="grid"></div>
+    <div id="kugallery return;
+  await fetch(`/api/photos/delete?id=${photoId}&galleryId=${galleryId}&List" classphoto`, { method="grid"></div>
   </section>
 
-  <section id="articles" class="section">
-    <h2>Články</h2>
+  <section id="articlesDELETE" class  load="section">
+    <h2>Články</h──2>
     <div class="form-card">
-      <h3>Nový článek</h3>
-      <input type="text" id="aTitle" placeholder="Nadpis článku">
-      <input type="text" id="aImage" placeholder="URL obrázku (nepovinné)">
+      <h3>Nový článek</h3 loadArticles>
+      <input type="text" id=" fetch('/aTitle" placeholder="Nadpis článku await res">
+      <input type  document="textElementBy" id="aImage" placeholder="URL obrázku (nepov `
+    <div class="card">
+      <inn>${escapeHtml(a.title)}</h4>
+      <p>${escapeHtml(a.content.substring(0,150))}...</é)">
       <textarea id="aContent" placeholder="Obsah článku..." rows="5"></textarea>
       <button onclick="createArticle()" class="btn btn-green">Publikovat</button>
-    </div>
+    </ Date(a.created).toLocaleStringdiv>
     <div id="articleList" class="list"></div>
   </section>
 
   <section id="quotes" class="section">
-    <h2>Citáty</h2>
+    <h2>Cit">
+áty</h2button onclick>
     <div class="form-card">
-      <h3>Přidat nový citát</h3>
+      <h3>Přidat nový-blue"> citát</h3>
       <textarea id="qText" placeholder="Text citátu..." rows="3"></textarea>
-      <input type="text" id="qAuthor" placeholder="Autor">
-      <button onclick="createQuote()" class="btn btn-green">Přidat citát</button>
+      <input type="text" id="qAuthor" placeholder="Autdiv>
+     or">
+      <button onclick="createQuote()" class="btn btn-green}"">Přidat citát</button>
     </div>
     <div class="table-wrap">
       <table class="data-table">
@@ -53,17 +72,99 @@
           <tr>
             <th style="width:60%">Citát</th>
             <th style="width:25%">Autor</th>
-            <th style="width:15%">Akce</th>
+            <th style="width:15%">textarea id="c-${a.id}" rowsAkce</th>
           </tr>
         </thead>
         <tbody id="quoteTableBody">
-          <tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>
+          <tr><td colspan="3" style="text-align:center;color:#64748btnb">Načítání...</td></tr>
         </tbody>
       </table>
     </div>
   </section>
+
+  <section id="sections" class="section">
+    <h2>Sek('ace</h2>
+    <();
+  constdiv class="form-card">
+      <h3>NaContentová sekce</value.trimh3>
+      <input type="text" id="sName" placeholder="Název sek nadpce">
+      <input type="text" id="sSlug" placeholder="URLapi slug (např. galer method:ie)">
+      <input',
+    headers type=" 'Content-Type':number/json' },
+    body: JSON.stringify({
+      title,
+      content,
+      image: document.getElementById('aImage').value" id="sOrder" placeholder="Pořadí" value="0">
+      <button onclick="createSection()" class="btn btn-green">Vytvořit sekci  document</button>
+    </div>
+    <div classaTitle="table-wrap">
+      <table class="data-table  document.get">
+        <Id('thead>
+         ').value = '';
+  document.getElementById('aImage').value = '';
+ <tr><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr>
+        </thead>
+        <tbody id="Id(`sectionTable-${idBody"></).classList.toggle('hidden');
+}
+
+async function saveArticle(id) {
+  await fetch('/api/articles/updatetbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="subsections" class="section">
+    <h2>Podsekce</h2>
+    <div class="PUTform-card">
+      <h3>Nová podsekce</h3>
+      </json'select id="ssSection      id"><option      title value="">— Vyber sekci —</option></select>
+      <input type="(`ctext" id="ssName" placeholder="Název podsekce">
+      <input type="text" id="ssSlug" placeholder="URL slug">
+      <input type="number" id="ssOrder).value
+    })
+  });
+" placeholder="Articles();
+}
+
+async function deleteArticle(id) {
+  if (!confirm('SmazPořadáí" value="0">
+      < return;
+button onclick="createapiSubsection()" class="btn btn-green">Vyt { method: 'DELETE' });
+  loadArticles();
+}
+
+//vořit podsekci</button>
+    </div>
+    <div class="table-wrap CITÁTY">
+      <table class="data-table">
+ function loadQuotes        <thead>
+          <tr>< = documentth>Sekce</th><TableBody');
+  tbodyth>Název</th>< =th>Slug</th><th>="3Pořadí</th><th>Akce</th></tr>
+Na        </...</thead>
+        <tbody id="subsectionTableBody"></tbody>
+      </table>
+    </div>
+  <//qusection>
+
+/list');
+  <section id="about.ok)" class="section">
+    <h2>O Zajdovi</h2>
+    <div class="form-card">
+      < await resh3>Upravit profil    if (data.error</h3>
+      <input type="(datatext" id="aboutTitle" placeholder="Nadp.length) {
+      tbodyis">
+      <textarea id="aboutText" placeholder="Text = '<tr><td colspan="3" style="text o Zajdovi..." rows="6"></textarea>
+      <button onclick="saveAbout()" class="btn btn-green">Uložit změny</button>
+    </div>
+   48b">Žádné citáty v databázi.</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = data.map(q => `
+ <div id="aboutPreview" class${escapeHtml(q.text="card" style="margin-top:1rem"></div>
+  </section>
 </main>
 
-<script src="/admin/dashboard.js"></script>
+) || '<script src="/admin}<//dashboard.js"></script>
 </body>
 </html>
