@@ -1,11 +1,16 @@
 export async function onRequestGet(context) {
   const { env } = context;
-  const list = await env['zajda-quotes'].list();
+  
+  if (!env.QUOTES_R2) {
+    return Response.json({ error: 'R2 binding QUOTES_R2 není připojený. Přidej ho v Pages Settings > Functions.' }, { status: 500 });
+  }
+
+  const list = await env.QUOTES_R2.list();
   const quotes = [];
 
   for (const obj of list.objects || []) {
     try {
-      const data = await env['zajda-quotes'].get(obj.key);
+      const data = await env.QUOTES_R2.get(obj.key);
       if (!data) continue;
 
       let item;
@@ -14,19 +19,15 @@ export async function onRequestGet(context) {
       try {
         item = await data.json();
       } catch {
-        // Pokud to není JSON, zkusíme text
         rawText = await data.text();
         item = { text: rawText };
       }
 
-      // Podpora různých formátů
       let text = item.text || item.quote || item.content || item.citat || item.message || '';
       let author = item.author || item.autor || item.by || item.source || item.name || '';
       
-      // Pokud je text prázdný ale máme rawText
       if (!text && rawText) text = rawText;
 
-      // Pokud je to pole citátů v jednom souboru
       if (Array.isArray(item)) {
         for (const sub of item) {
           const subText = sub.text || sub.quote || sub.content || sub.citat || '';
@@ -34,8 +35,8 @@ export async function onRequestGet(context) {
           if (subText) {
             quotes.push({
               key: obj.key,
-              text: subText,
-              author: subAuthor,
+              text: String(subText),
+              author: String(subAuthor),
               created: sub.created || obj.uploaded
             });
           }
