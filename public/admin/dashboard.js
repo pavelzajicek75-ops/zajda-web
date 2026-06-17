@@ -24,54 +24,41 @@ function loadSection(name) {
   if (name === 'about') loadAbout();
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function fmtBytes(b) { return b ? (b / 1024 / 1024).toFixed(2) + ' MB' : '0 MB'; }
 
 // ─── GALERIE STATE ───
-let galleryState = {
-  galleries: [],
-  currentGalleryId: null,
-  photos: [],
-  selected: new Set(),
-  editor: { img: null, rotation: 0, photoId: null }
+let G = { galleries: [], current: null, photos: [], selected: new Set() };
+let editor = {
+  photo: null, img: null, zoom: 1, rotate: 0, panX: 0, panY: 0,
+  crop: 'free', exportSize: 'max',
+  filters: { exposure: 0, shadows: 0, highlights: 0, temp: 0, colors: 0, vibrance: 0, sharpness: 0, denoise: 0, vignette: 0, ai: false },
+  dragging: false, lastX: 0, lastY: 0
 };
 
 // ─── GALERIE ───
 async function loadGalleries() {
   const res = await fetch('/api/photos/galleries');
-  galleryState.galleries = await res.json();
+  G.galleries = await res.json();
   const tabs = document.getElementById('galleryTabs');
-  tabs.innerHTML = galleryState.galleries.map(g => `
-    <div class="gallery-tab ${g.id === galleryState.currentGalleryId ? 'active' : ''}" onclick="selectGallery('${g.id}')">
-      ${escapeHtml(g.title)}
-    </div>
+  tabs.innerHTML = G.galleries.map(g => `
+    <div class="gallery-tab ${g.id === G.current ? 'active' : ''}" onclick="selectGallery('${g.id}')">${escapeHtml(g.title)}</div>
   `).join('');
-  if (!galleryState.currentGalleryId && galleryState.galleries.length > 0) {
-    selectGallery(galleryState.galleries[0].id);
-  }
+  if (!G.current && G.galleries.length) selectGallery(G.galleries[0].id);
 }
 
 function createGalleryPrompt() {
-  const name = prompt('Název nové galerie:');
+  const name = prompt('Název galerie:');
   if (!name) return;
-  fetch('/api/photos/galleries', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: name })
-  }).then(() => loadGalleries());
+  fetch('/api/photos/galleries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name }) })
+    .then(() => loadGalleries());
 }
 
 async function selectGallery(id) {
-  galleryState.currentGalleryId = id;
-  galleryState.selected.clear();
-  document.getElementById('bulkDeleteBtn').style.display = 'none';
-  loadGalleries(); // refresh tabs
-
+  G.current = id; G.selected.clear(); document.getElementById('bulkDeleteBtn').style.display = 'none';
+  loadGalleries();
   const res = await fetch(`/api/photos/list?galleryId=${id}`);
-  galleryState.photos = await res.json();
+  G.photos = await res.json();
   renderGallery();
   loadStats();
   document.getElementById('galleryToolbar').style.display = 'flex';
@@ -79,182 +66,301 @@ async function selectGallery(id) {
 
 async function loadStats() {
   try {
-    const res = await fetch('/api/photos/stats');
-    const stats = await res.json();
-    document.getElementById('photoCount').textContent = (stats.count || 0) + ' fotek';
-    document.getElementById('photoSize').textContent = ((stats.totalSize || 0) / 1024 / 1024).toFixed(2) + ' MB';
-  } catch {
-    document.getElementById('photoCount').textContent = galleryState.photos.length + ' fotek';
-    const size = galleryState.photos.reduce((a, p) => a + (p.size || 0), 0);
-    document.getElementById('photoSize').textContent = (size / 1024 / 1024).toFixed(2) + ' MB';
-  }
+    const res = await fetch(`/api/photos/stats?galleryId=${G.current}`);
+    const s = await res.json();
+    document.getElementById('galCount').textContent = (s.galCount || 0) + ' fotek';
+    document.getElementById('galSize').textContent = fmtBytes(s.galSize);
+    document.getElementById('totalSize').textContent = 'Celkem R2: ' + fmtBytes(s.totalSize);
+  } catch {}
 }
 
 function renderGallery() {
   const mode = document.getElementById('viewMode').value;
-  const sort = document.getElementById('sortBy').value;
-  const container = document.getElementById('galleryContent');
-  container.className = 'gallery-view ' + mode + '-view';
+  const sort = document.getElementById('sortMode').value;
+  const box = document.getElementById('galleryView');
+  box.className = 'gallery-view ' + mode + '-view';
 
-  let photos = [...galleryState.photos];
-  const [field, dir] = sort.split('-');
-  photos.sort((a, b) => {
-    let va = a[field === 'date' ? 'uploaded' : field] || '';
-    let vb = b[field === 'date' ? 'uploaded' : field] || '';
-    if (field === 'size') { va = a.size || 0; vb = b.size || 0; }
-    if (dir === 'asc') return va > vb ? 1 : -1;
-    return va < vb ? 1 : -1;
+  let list = [...G.photos];
+  const map = { dateDesc: ['uploaded', -1], dateAsc: ['uploaded', 1], nameAsc: ['name', 1], nameDesc: ['name', -1], sizeDesc: ['size', -1], sizeAsc: ['size', 1] };
+  const [k, dir] = map[sort] || ['uploaded', -1];
+  list.sort((a, b) => {
+    let av = a[k] || 0, bv = b[k] || 0;
+    if (typeof av === 'string') return dir === 1 ? av.localeCompare(bv) : bv.localeCompare(av);
+    return av > bv ? dir : av < bv ? -dir : 0;
   });
 
-  container.innerHTML = photos.map(p => {
-    const checked = galleryState.selected.has(p.id) ? 'checked' : '';
+  box.innerHTML = list.map(p => {
+    const checked = G.selected.has(p.id) ? 'checked' : '';
     if (mode === 'list') {
       return `
-        <div class="gallery-item" onclick="openLightbox('${p.id}')">
-          <input type="checkbox" class="select-box" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
+        <div class="gallery-item" onclick="openEditor('${p.id}')">
+          <input type="checkbox" class="sel" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
           <img src="${p.url}" alt="" loading="lazy">
-          <div class="gallery-meta">
-            <div>${escapeHtml(p.name)}</div>
-            <small>${(p.size / 1024).toFixed(1)} kB • ${new Date(p.uploaded).toLocaleDateString('cs')}</small>
+          <div class="meta">
+            <strong>${escapeHtml(p.name)}</strong>
+            <span>${fmtBytes(p.size)} • ${new Date(p.uploaded).toLocaleDateString('cs')}</span>
           </div>
         </div>`;
     }
     return `
-      <div class="gallery-item" onclick="openLightbox('${p.id}')">
-        <input type="checkbox" class="select-box" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
+      <div class="gallery-item" onclick="openEditor('${p.id}')">
+        <input type="checkbox" class="sel" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
         <img src="${p.url}" alt="" loading="lazy">
       </div>`;
   }).join('');
 }
 
 function toggleSelect(id) {
-  if (galleryState.selected.has(id)) galleryState.selected.delete(id);
-  else galleryState.selected.add(id);
-  document.getElementById('bulkDeleteBtn').style.display = galleryState.selected.size > 0 ? 'inline-block' : 'none';
+  if (G.selected.has(id)) G.selected.delete(id); else G.selected.add(id);
+  document.getElementById('bulkDeleteBtn').style.display = G.selected.size > 0 ? 'inline-block' : 'none';
   renderGallery();
 }
 
-async function deleteSelectedPhotos() {
-  if (!confirm(`Smazat ${galleryState.selected.size} fotek?`)) return;
-  const ids = Array.from(galleryState.selected).join(',');
-  await fetch(`/api/photos/delete?galleryId=${galleryState.currentGalleryId}&keys=${ids}`, { method: 'DELETE' });
-  galleryState.selected.clear();
-  document.getElementById('bulkDeleteBtn').style.display = 'none';
-  selectGallery(galleryState.currentGalleryId);
+async function bulkDelete() {
+  if (!confirm(`Smazat ${G.selected.size} fotek?`)) return;
+  const keys = Array.from(G.selected).join(',');
+  await fetch(`/api/photos/delete?galleryId=${G.current}&keys=${keys}`, { method: 'DELETE' });
+  G.selected.clear(); document.getElementById('bulkDeleteBtn').style.display = 'none';
+  selectGallery(G.current);
 }
 
-async function uploadGalleryPhotos(input) {
+async function uploadFiles(input) {
   if (!input.files.length) return;
   for (const file of input.files) {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('galleryId', galleryState.currentGalleryId);
-    await fetch('/api/photos/upload', { method: 'POST', body: formData });
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('galleryId', G.current);
+    await fetch('/api/photos/upload', { method: 'POST', body: fd });
   }
   input.value = '';
-  selectGallery(galleryState.currentGalleryId);
-}
-
-// ─── LIGHTBOX ───
-function openLightbox(id) {
-  const p = galleryState.photos.find(x => x.id === id);
-  if (!p) return;
-  galleryState.editor.photoId = id;
-  document.getElementById('lightboxImg').src = p.url;
-  document.getElementById('lightbox').classList.remove('hidden');
-}
-
-function closeLightbox(e) {
-  if (e && e.target !== e.currentTarget) return;
-  document.getElementById('lightbox').classList.add('hidden');
-}
-
-function deleteLightboxPhoto() {
-  const id = galleryState.editor.photoId;
-  closeLightbox();
-  fetch(`/api/photos/delete?galleryId=${galleryState.currentGalleryId}&photoId=${id}`, { method: 'DELETE' })
-    .then(() => selectGallery(galleryState.currentGalleryId));
+  selectGallery(G.current);
 }
 
 // ─── EDITOR ───
-function openEditorFromLightbox() {
-  const id = galleryState.editor.photoId;
-  const p = galleryState.photos.find(x => x.id === id);
-  closeLightbox();
+function openEditor(id) {
+  const p = G.photos.find(x => x.id === id);
   if (!p) return;
-
-  const modal = document.getElementById('editorModal');
-  modal.classList.remove('hidden');
+  editor.photo = p;
+  editor.zoom = 1; editor.rotate = 0; editor.panX = 0; editor.panY = 0;
+  editor.crop = 'free'; editor.exportSize = 'max';
+  editor.filters = { exposure: 0, shadows: 0, highlights: 0, temp: 0, colors: 0, vibrance: 0, sharpness: 0, denoise: 0, vignette: 0, ai: false };
+  updateFilterLabels();
 
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
-    galleryState.editor.img = img;
-    galleryState.editor.rotation = 0;
-    document.getElementById('cropZoom').value = 1;
-    document.getElementById('brightness').value = 100;
-    document.getElementById('contrast').value = 100;
-    refreshEditor();
+    editor.img = img;
+    document.getElementById('editorModal').classList.remove('hidden');
+    resizeCanvas();
+    drawEditor();
   };
   img.src = p.url;
 }
 
-function refreshEditor() {
+function closeEditor() {
+  document.getElementById('editorModal').classList.add('hidden');
+  editor.img = null; editor.photo = null;
+}
+
+function resizeCanvas() {
+  const box = document.querySelector('.editor-canvas-box');
   const canvas = document.getElementById('editorCanvas');
-  const ctx = canvas.getContext('2d');
-  const img = galleryState.editor.img;
-  if (!img) return;
+  canvas.width = box.clientWidth;
+  canvas.height = box.clientHeight;
+}
 
-  const zoom = parseFloat(document.getElementById('cropZoom').value);
-  const bright = document.getElementById('brightness').value;
-  const contrast = document.getElementById('contrast').value;
-  const rot = galleryState.editor.rotation;
+function updateFilterLabels() {
+  const f = editor.filters;
+  document.getElementById('val-exposure').textContent = f.exposure;
+  document.getElementById('val-shadows').textContent = f.shadows;
+  document.getElementById('val-highlights').textContent = f.highlights;
+  document.getElementById('val-temp').textContent = f.temp;
+  document.getElementById('val-colors').textContent = f.colors;
+  document.getElementById('val-vibrance').textContent = f.vibrance;
+  document.getElementById('val-sharpness').textContent = f.sharpness;
+  document.getElementById('val-denoise').textContent = f.denoise;
+  document.getElementById('val-vignette').textContent = f.vignette;
+}
 
-  // Výpočet rozměrů canvasu po rotaci
-  let w = img.width / zoom;
-  let h = img.height / zoom;
+function setFilter(key, val) {
+  editor.filters[key] = parseInt(val);
+  document.getElementById('val-' + key).textContent = val;
+  drawEditor();
+}
 
-  if (rot % 180 !== 0) {
-    canvas.width = h;
-    canvas.height = w;
-  } else {
-    canvas.width = w;
-    canvas.height = h;
-  }
+function setCrop(mode) {
+  editor.crop = mode;
+  drawEditor();
+}
 
-  ctx.filter = `brightness(${bright}%) contrast(${contrast}%)`;
-  ctx.save();
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(rot * Math.PI / 180);
-
-  const sx = (img.width - w) / 2;
-  const sy = (img.height - h) / 2;
-  ctx.drawImage(img, sx, sy, w, h, -w / 2, -h / 2, w, h);
-  ctx.restore();
+function setExportSize(size) {
+  editor.exportSize = size;
+  ['max', '2000', 'fullhd'].forEach(s => {
+    document.getElementById('btn-' + s).classList.toggle('btn-blue', s === size);
+    document.getElementById('btn-' + s).classList.toggle('btn-sm', s !== size);
+  });
 }
 
 function rotateEditor(deg) {
-  galleryState.editor.rotation = (galleryState.editor.rotation + deg) % 360;
-  refreshEditor();
+  editor.rotate = (editor.rotate + deg) % 360;
+  drawEditor();
 }
 
-function closeEditor() {
-  document.getElementById('editorModal').classList.add('hidden');
-  galleryState.editor.img = null;
+function drawEditor() {
+  const canvas = document.getElementById('editorCanvas');
+  const ctx = canvas.getContext('2d');
+  if (!editor.img) return;
+
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(W / 2 + editor.panX, H / 2 + editor.panY);
+  ctx.rotate(editor.rotate * Math.PI / 180);
+  ctx.scale(editor.zoom, editor.zoom);
+
+  const img = editor.img;
+  const ratio = Math.min(W / img.width, H / img.height) * 0.9;
+  const dw = img.width * ratio, dh = img.height * ratio;
+
+  // Apply filters via CSS-like filter string on context
+  const f = editor.filters;
+  let filters = [];
+  filters.push(`brightness(${100 + parseInt(f.exposure)}%)`);
+  filters.push(`contrast(${100 + parseInt(f.colors)}%)`);
+  filters.push(`saturate(${100 + parseInt(f.vibrance)}%)`);
+  if (f.temp > 0) filters.push(`sepia(${f.temp * 0.5}%)`);
+  else filters.push(`hue-rotate(${f.temp * 0.3}deg)`);
+  if (f.sharpness > 0) filters.push(`contrast(${100 + f.sharpness * 0.5}%)`);
+  ctx.filter = filters.join(' ');
+
+  ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+  ctx.filter = 'none';
+  ctx.restore();
+
+  // Vignette overlay
+  document.getElementById('vignetteOverlay').style.opacity = f.vignette / 100;
+
+  // Crop overlay
+  const overlay = document.getElementById('cropOverlay');
+  if (editor.crop === 'free') {
+    overlay.classList.add('hidden');
+  } else {
+    overlay.classList.remove('hidden');
+    let cw = W * 0.7, ch = H * 0.7;
+    if (editor.crop === '1:1') ch = cw;
+    else if (editor.crop === '4:3') ch = cw * 0.75;
+    else if (editor.crop === '16:9') ch = cw / 1.777;
+    else if (editor.crop === 'original') ch = cw * (img.height / img.width);
+    overlay.style.width = cw + 'px';
+    overlay.style.height = ch + 'px';
+  }
+}
+
+// Canvas pan events
+const canvasEl = () => document.getElementById('editorCanvas');
+function initEditorEvents() {
+  const c = canvasEl();
+  c.addEventListener('mousedown', e => { editor.dragging = true; editor.lastX = e.clientX; editor.lastY = e.clientY; c.style.cursor = 'grabbing'; });
+  window.addEventListener('mousemove', e => {
+    if (!editor.dragging) return;
+    editor.panX += e.clientX - editor.lastX;
+    editor.panY += e.clientY - editor.lastY;
+    editor.lastX = e.clientX; editor.lastY = e.clientY;
+    drawEditor();
+  });
+  window.addEventListener('mouseup', () => { editor.dragging = false; if (canvasEl()) canvasEl().style.cursor = 'grab'; });
+}
+window.addEventListener('load', initEditorEvents);
+
+function getCropRect(srcW, srcH) {
+  if (editor.crop === 'free') return { x: 0, y: 0, w: srcW, h: srcH };
+  let w = srcW, h = srcH;
+  if (editor.crop === '1:1') h = w;
+  else if (editor.crop === '4:3') h = w * 0.75;
+  else if (editor.crop === '16:9') h = w / 1.777;
+  else if (editor.crop === 'original') h = w * (editor.img.height / editor.img.width);
+  // Center crop
+  const x = (srcW - w) / 2, y = (srcH - h) / 2;
+  return { x: Math.max(0, x), y: Math.max(0, y), w: Math.min(w, srcW), h: Math.min(h, srcH) };
+}
+
+function getExportDimensions(origW, origH) {
+  const size = editor.exportSize;
+  if (size === 'max') return { w: origW, h: origH };
+  if (size === '2000') {
+    const max = Math.max(origW, origH);
+    if (max <= 2000) return { w: origW, h: origH };
+    const scale = 2000 / max;
+    return { w: Math.round(origW * scale), h: Math.round(origH * scale) };
+  }
+  if (size === 'fullhd') {
+    const scale = Math.min(1920 / origW, 1080 / origH, 1);
+    return { w: Math.round(origW * scale), h: Math.round(origH * scale) };
+  }
+  return { w: origW, h: origH };
 }
 
 async function saveEditor(mode) {
-  const canvas = document.getElementById('editorCanvas');
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
-  const formData = new FormData();
-  formData.append('file', blob, 'edited.jpg');
-  formData.append('galleryId', galleryState.currentGalleryId);
-  formData.append('photoId', galleryState.editor.photoId);
-  formData.append('mode', mode);
+  if (!editor.img) return;
+  const img = editor.img;
 
-  await fetch('/api/photos/update', { method: 'POST', body: formData });
+  // Determine source crop
+  const crop = getCropRect(img.width, img.height);
+  const exp = getExportDimensions(crop.w, crop.h);
+
+  // Create export canvas
+  const out = document.createElement('canvas');
+  out.width = exp.w; out.height = exp.h;
+  const ctx = out.getContext('2d');
+
+  // Apply filters
+  const f = editor.filters;
+  let filters = [];
+  filters.push(`brightness(${100 + parseInt(f.exposure)}%)`);
+  filters.push(`contrast(${100 + parseInt(f.colors)}%)`);
+  filters.push(`saturate(${100 + parseInt(f.vibrance)}%)`);
+  if (f.temp > 0) filters.push(`sepia(${f.temp * 0.5}%)`);
+  else filters.push(`hue-rotate(${f.temp * 0.3}deg)`);
+  if (f.sharpness > 0) filters.push(`contrast(${100 + f.sharpness * 0.5}%)`);
+  ctx.filter = filters.join(' ');
+
+  // Draw with rotation
+  ctx.save();
+  ctx.translate(exp.w / 2, exp.h / 2);
+  ctx.rotate(editor.rotate * Math.PI / 180);
+  const scale = Math.min(exp.w / crop.w, exp.h / crop.h);
+  ctx.scale(scale, scale);
+  ctx.drawImage(img, -crop.w / 2, -crop.h / 2, crop.w, crop.h);
+  ctx.restore();
+
+  // AI enhancement simulation (slight unsharp mask or brightness boost)
+  if (f.ai) {
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(0, 0, exp.w, exp.h);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // Vignette on export
+  if (f.vignette > 0) {
+    const grad = ctx.createRadialGradient(exp.w / 2, exp.h / 2, exp.w * 0.3, exp.w / 2, exp.h / 2, exp.w * 0.8);
+    grad.addColorStop(0, 'transparent');
+    grad.addColorStop(1, `rgba(0,0,0,${f.vignette / 100})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, exp.w, exp.h);
+  }
+
+  const blob = await new Promise(res => out.toBlob(res, 'image/jpeg', 0.92));
+  const fd = new FormData();
+  fd.append('file', blob, editor.photo.name || 'edited.jpg');
+  fd.append('galleryId', G.current);
+  fd.append('photoId', editor.photo.id);
+  fd.append('mode', mode);
+
+  await fetch('/api/photos/update', { method: 'POST', body: fd });
   closeEditor();
-  selectGallery(galleryState.currentGalleryId);
+  selectGallery(G.current);
 }
 
 // ─── ČLÁNKY ───
@@ -264,8 +370,8 @@ async function loadArticles() {
   document.getElementById('articleList').innerHTML = data.map(a => `
     <div class="card">
       <h4>${escapeHtml(a.title)}</h4>
-      <p>${escapeHtml(a.content.substring(0,150))}...</p>
-      <small>${new Date(a.created).toLocaleString('cs')}</small>
+      <p>${escapeHtml(a.content.substring(0, 150))}...</p>
+      <small>${new Date(a.created).toLocaleDateString('cs')}</small>
       <div class="actions">
         <button onclick="toggleEdit('${a.id}')" class="btn btn-blue">Upravit</button>
         <button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button>
@@ -340,7 +446,7 @@ async function deleteQuote(key) {
   loadQuotes();
 }
 
-// ─── SEKCE / PODSEKCE / ABOUT ───
+// ─── SEKCE / PODSEKCE ───
 async function loadSections() {
   const res = await fetch('/api/sections/list');
   const data = await res.json();
@@ -362,19 +468,79 @@ async function loadSubsections() {
 }
 
 async function createSubsection() {
-  const name = document.getElementById('ssName').value.trim();
-  if (!name || !document.getElementById('ssSection').value) return alert('Vyplň název a sekci');
-  await fetch('/api/subsections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sectionId: document.getElementById('ssSection').value, name, slug: document.getElementById('ssSlug').value, order: parseInt(document.getElementById('ssOrder').value) || 0 }) });
+  if (!document.getElementById('ssSection').value || !document.getElementById('ssName').value.trim()) return alert('Vyplň sekci a název');
+  await fetch('/api/subsections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sectionId: document.getElementById('ssSection').value, name: document.getElementById('ssName').value, slug: document.getElementById('ssSlug').value, order: parseInt(document.getElementById('ssOrder').value) || 0 }) });
   document.getElementById('ssName').value = ''; document.getElementById('ssSlug').value = ''; loadSubsections();
 }
 
 async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
 
+// ─── O ZAJDOVI ───
+let aboutData = { title: '', text: '', photos: [], subsections: [] };
+
 async function loadAbout() {
-  try { const res = await fetch('/api/about/get'); const data = await res.json(); document.getElementById('aboutTitle').value = data.title || ''; document.getElementById('aboutText').value = data.text || ''; document.getElementById('aboutPreview').innerHTML = `<h4>${escapeHtml(data.title || 'O Zajdovi')}</h4><p>${escapeHtml(data.text || '').replace(/\n/g, '<br>')}</p>`; } catch {}
+  try {
+    const res = await fetch('/api/about/get');
+    aboutData = await res.json();
+  } catch { aboutData = { title: '', text: '', photos: [], subsections: [] }; }
+  document.getElementById('aboutTitle').value = aboutData.title || '';
+  document.getElementById('aboutText').value = aboutData.text || '';
+  renderAboutPhotos();
+  renderAboutSubsections();
+  document.getElementById('aboutPreview').innerHTML = `
+    <h4>${escapeHtml(aboutData.title || 'O Zajdovi')}</h4>
+    <p>${escapeHtml(aboutData.text || '').replace(/\n/g, '<br>')}</p>
+    ${aboutData.photos.length ? `<div class="about-photos">${aboutData.photos.map(u => `<img src="${u}">`).join('')}</div>` : ''}
+  `;
 }
 
-async function saveAbout() { await fetch('/api/about/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: document.getElementById('aboutTitle').value, text: document.getElementById('aboutText').value }) }); loadAbout(); }
+function renderAboutPhotos() {
+  const box = document.getElementById('aboutPhotos');
+  box.innerHTML = aboutData.photos.map((u, i) => `
+    <div style="position:relative;display:inline-block">
+      <img src="${u}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #334155">
+      <button onclick="removeAboutPhoto(${i})" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px">×</button>
+    </div>
+  `).join('');
+}
+
+function removeAboutPhoto(i) { aboutData.photos.splice(i, 1); renderAboutPhotos(); }
+
+async function uploadAboutPhoto(input) {
+  if (!input.files[0]) return;
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  const res = await fetch('/api/about/upload-photo', { method: 'POST', body: fd });
+  const data = await res.json();
+  aboutData.photos.push(data.url);
+  renderAboutPhotos();
+  input.value = '';
+}
+
+function renderAboutSubsections() {
+  const box = document.getElementById('aboutSubsections');
+  box.innerHTML = aboutData.subsections.map((s, i) => `
+    <div class="about-sub">
+      <input type="text" placeholder="Nadpis podsekce" value="${escapeHtml(s.title || '')}" onchange="aboutData.subsections[${i}].title=this.value">
+      <textarea placeholder="Text podsekce..." rows="3" onchange="aboutData.subsections[${i}].text=this.value">${escapeHtml(s.text || '')}</textarea>
+      <button onclick="removeAboutSub(${i})" class="btn btn-red btn-sm">Odstranit</button>
+    </div>
+  `).join('');
+}
+
+function addAboutSubsection() {
+  aboutData.subsections.push({ title: '', text: '' });
+  renderAboutSubsections();
+}
+
+function removeAboutSub(i) { aboutData.subsections.splice(i, 1); renderAboutSubsections(); }
+
+async function saveAbout() {
+  aboutData.title = document.getElementById('aboutTitle').value;
+  aboutData.text = document.getElementById('aboutText').value;
+  await fetch('/api/about/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aboutData) });
+  loadAbout();
+}
 
 // ─── INIT ───
 loadGalleries();
