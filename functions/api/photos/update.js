@@ -2,44 +2,37 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   const formData = await request.formData();
   const file = formData.get('file');
-  
+  const photoId = formData.get('photoId');
+  const mode = formData.get('mode') || 'replace';
+
   if (!file) return Response.json({ error: 'Chybí soubor' }, { status: 400 });
 
-  // Najdi nebo vytvoř hlavní galerii
   const list = await env.PHOTOS.list({ prefix: 'gallery:' });
-  let mainKey = list.keys[0]?.name;
-  let galleryId;
-  
-  if (mainKey) {
-    galleryId = mainKey.replace('gallery:', '');
-  } else {
-    galleryId = 'main';
-    mainKey = 'gallery:main';
-    await env.PHOTOS.put(mainKey, JSON.stringify({ id: galleryId, title: 'Hlavní galerie', photos: [] }));
-  }
+  const mainKey = list.keys[0]?.name;
+  if (!mainKey) return Response.json({ error: 'Žádná galerie' }, { status: 404 });
 
-  const id = crypto.randomUUID();
+  const gallery = await env.PHOTOS.get(mainKey, { type: 'json' });
+  const old = gallery.photos.find(p => p.id === photoId);
+  const id = mode === 'saveas' ? crypto.randomUUID() : photoId;
   const ext = file.name.split('.').pop();
-  const key = `gallery-${galleryId}/${id}.${ext}`;
+  const key = `gallery-main/${id}.${ext}`;
 
   await env['zajda-photos'].put(key, file.stream(), { httpMetadata: { contentType: file.type } });
-
+  
   const publicUrl = env.CDN_BASE_URL 
     ? `${env.CDN_BASE_URL}/${key}` 
     : `https://pub-ce1c3ab85a304b4b9fb2213045f09c2c.r2.dev/${key}`;
 
-  const photo = {
-    id, key, url: publicUrl,
-    name: file.name,
-    size: file.size,
-    type: file.type,
-    uploaded: Date.now()
-  };
+  const photo = { id, key, url: publicUrl, name: file.name, size: file.size, type: file.type, uploaded: Date.now() };
 
-  const gallery = await env.PHOTOS.get(mainKey, { type: 'json' });
-  gallery.photos = gallery.photos || [];
-  gallery.photos.push(photo);
+  if (mode === 'replace' && old) {
+    await env['zajda-photos'].delete(old.key);
+    const idx = gallery.photos.findIndex(p => p.id === photoId);
+    if (idx !== -1) gallery.photos[idx] = photo;
+  } else {
+    gallery.photos.push(photo);
+  }
+
   await env.PHOTOS.put(mainKey, JSON.stringify(gallery));
-
   return Response.json(photo);
 }
