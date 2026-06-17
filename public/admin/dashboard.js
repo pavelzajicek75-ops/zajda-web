@@ -27,60 +27,31 @@ function loadSection(name) {
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 function fmtBytes(b) { return b ? (b / 1024 / 1024).toFixed(2) + ' MB' : '0 MB'; }
 
-// ─── GALERIE STATE (JEN JEDNA) ───
-let G = { id: null, photos: [], selected: new Set() };
-let editor = {
-  photo: null, img: null, zoom: 1, rotate: 0, panX: 0, panY: 0,
-  crop: 'free', exportSize: 'max',
-  filters: { exposure: 0, shadows: 0, highlights: 0, temp: 0, colors: 0, vibrance: 0, sharpness: 0, denoise: 0, vignette: 0, ai: false },
-  dragging: false, lastX: 0, lastY: 0
-};
+// ─── GALERIE ───
+let G = { photos: [], selected: new Set() };
+let ED = { photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0, crop: 'free', export: 'max', filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0 }, drag: false, lx: 0, ly: 0 };
 
-// ─── JEDNA GALERIE – načte první nebo vytvoří ───
 async function loadGallery() {
   try {
-    const res = await fetch('/api/photos/galleries');
-    const galleries = await res.json();
-
-    if (galleries.length === 0) {
-      // Vytvoří výchozí galerii
-      await fetch('/api/photos/galleries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Hlavní galerie' })
-      });
-      return loadGallery(); // znovu načte
-    }
-
-    G.id = galleries[0].id;
-    await refreshGallery();
+    const res = await fetch('/api/photos/list?galleryId=main');
+    G.photos = await res.json();
+    renderGallery();
+    loadStats();
     document.getElementById('galleryToolbar').style.display = 'flex';
-  } catch (e) {
-    console.error('Chyba galerie:', e);
-  }
-}
-
-async function refreshGallery() {
-  if (!G.id) return;
-  G.selected.clear();
-  document.getElementById('bulkDeleteBtn').style.display = 'none';
-
-  const res = await fetch(`/api/photos/list?galleryId=${G.id}`);
-  G.photos = await res.json();
-  renderGallery();
-  loadStats();
+  } catch (e) { console.error('Galerie chyba:', e); }
 }
 
 async function loadStats() {
   try {
-    const res = await fetch(`/api/photos/stats?galleryId=${G.id}`);
+    const res = await fetch('/api/photos/stats?galleryId=main');
     const s = await res.json();
-    document.getElementById('galCount').textContent = (s.galCount || G.photos.length || 0) + ' fotek';
-    document.getElementById('galSize').textContent = fmtBytes(s.galSize || G.photos.reduce((a,p)=>a+(p.size||0),0));
-    document.getElementById('totalSize').textContent = 'Celkem R2: ' + fmtBytes(s.totalSize || 0);
+    document.getElementById('galCount').textContent = (s.galCount || G.photos.length) + ' fotek';
+    document.getElementById('galSize').textContent = fmtBytes(s.galSize);
+    document.getElementById('totalSize').textContent = 'R2: ' + fmtBytes(s.totalSize);
   } catch {
     document.getElementById('galCount').textContent = G.photos.length + ' fotek';
-    document.getElementById('galSize').textContent = fmtBytes(G.photos.reduce((a,p)=>a+(p.size||0),0));
+    const sz = G.photos.reduce((a, p) => a + (p.size || 0), 0);
+    document.getElementById('galSize').textContent = fmtBytes(sz);
   }
 }
 
@@ -91,322 +62,173 @@ function renderGallery() {
   box.className = 'gallery-view ' + mode + '-view';
 
   let list = [...G.photos];
-  const map = { dateDesc: ['uploaded', -1], dateAsc: ['uploaded', 1], nameAsc: ['name', 1], nameDesc: ['name', -1], sizeDesc: ['size', -1], sizeAsc: ['size', 1] };
+  const map = { new: ['uploaded', -1], old: ['uploaded', 1], name: ['name', 1], big: ['size', -1], small: ['size', 1] };
   const [k, dir] = map[sort] || ['uploaded', -1];
   list.sort((a, b) => {
-    let av = a[k] || 0, bv = b[k] || 0;
+    let av = a[k] || '', bv = b[k] || '';
     if (typeof av === 'string') return dir === 1 ? av.localeCompare(bv) : bv.localeCompare(av);
     return av > bv ? dir : av < bv ? -dir : 0;
   });
 
-  if (list.length === 0) {
-    box.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">Galerie je prázdná. Nahraj první fotky.</p>';
-    return;
-  }
+  if (!list.length) { box.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">Galerie je prázdná.</p>'; return; }
 
   box.innerHTML = list.map(p => {
     const checked = G.selected.has(p.id) ? 'checked' : '';
     if (mode === 'list') {
-      return `
-        <div class="gallery-item" onclick="openEditor('${p.id}')">
-          <input type="checkbox" class="sel" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
-          <img src="${p.url}" alt="" loading="lazy">
-          <div class="meta">
-            <strong>${escapeHtml(p.name)}</strong>
-            <span>${fmtBytes(p.size)} • ${new Date(p.uploaded).toLocaleDateString('cs')}</span>
-          </div>
-        </div>`;
-    }
-    return `
-      <div class="gallery-item" onclick="openEditor('${p.id}')">
-        <input type="checkbox" class="sel" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
+      return `<div class="gallery-item" onclick="openEditor('${p.id}')">
+        <input type="checkbox" class="sel" ${checked} onclick="event.stopPropagation(); toggleSel('${p.id}')">
         <img src="${p.url}" alt="" loading="lazy">
+        <div class="meta"><strong>${escapeHtml(p.name)}</strong><span>${fmtBytes(p.size)} • ${new Date(p.uploaded).toLocaleDateString('cs')}</span></div>
       </div>`;
+    }
+    return `<div class="gallery-item" onclick="openEditor('${p.id}')">
+      <input type="checkbox" class="sel" ${checked} onclick="event.stopPropagation(); toggleSel('${p.id}')">
+      <img src="${p.url}" alt="" loading="lazy">
+    </div>`;
   }).join('');
 }
 
-function toggleSelect(id) {
-  if (G.selected.has(id)) G.selected.delete(id); else G.selected.add(id);
-  document.getElementById('bulkDeleteBtn').style.display = G.selected.size > 0 ? 'inline-block' : 'none';
-  renderGallery();
-}
+function toggleSel(id) { G.selected.has(id) ? G.selected.delete(id) : G.selected.add(id); document.getElementById('delBtn').style.display = G.selected.size ? 'inline-flex' : 'none'; renderGallery(); }
 
 async function bulkDelete() {
   if (!confirm(`Smazat ${G.selected.size} fotek?`)) return;
-  const keys = Array.from(G.selected).join(',');
-  await fetch(`/api/photos/delete?galleryId=${G.id}&keys=${keys}`, { method: 'DELETE' });
-  G.selected.clear();
-  document.getElementById('bulkDeleteBtn').style.display = 'none';
-  refreshGallery();
+  const keys = Array.from(G.selected).map(id => G.photos.find(p => p.id === id)?.key).filter(Boolean).join(',');
+  if (keys) await fetch(`/api/photos/delete?keys=${encodeURIComponent(keys)}`, { method: 'DELETE' });
+  G.selected.clear(); document.getElementById('delBtn').style.display = 'none'; loadGallery();
 }
 
-// ─── UPLOAD – opravený ───
 async function uploadFiles(input) {
-  if (!input.files.length || !G.id) return;
-
+  if (!input.files.length) return;
   for (const file of input.files) {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('galleryId', G.id);
-    try {
-      await fetch('/api/photos/upload', { method: 'POST', body: fd });
-    } catch (e) {
-      console.error('Upload chyba:', e);
-    }
+    const fd = new FormData(); fd.append('file', file); fd.append('galleryId', 'main');
+    try { await fetch('/api/photos/upload', { method: 'POST', body: fd }); } catch (e) { console.error(e); }
   }
-  input.value = '';
-  await refreshGallery();
+  input.value = ''; loadGallery();
 }
 
 // ─── EDITOR ───
 function openEditor(id) {
   const p = G.photos.find(x => x.id === id);
   if (!p) return;
-  
-  editor.photo = p;
-  editor.zoom = 1; editor.rotate = 0; editor.panX = 0; editor.panY = 0;
-  editor.crop = 'free'; editor.exportSize = 'max';
-  editor.filters = { exposure: 0, shadows: 0, highlights: 0, temp: 0, colors: 0, vibrance: 0, sharpness: 0, denoise: 0, vignette: 0, ai: false };
-  updateFilterLabels();
+  ED.photo = p; ED.scale = 1; ED.rotate = 0; ED.panX = 0; ED.panY = 0; ED.crop = 'free'; ED.export = 'max';
+  ED.filters = { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0 };
+  updateFilterLabels(); setCrop('free'); setExport('max');
 
   const img = new Image();
   img.crossOrigin = 'anonymous';
-  
-  // Přidáme cache-busting, aby se načetla aktuální verze po editaci
-  const cacheUrl = p.url + (p.url.includes('?') ? '&' : '?') + 'edit=' + Date.now();
-  
-  img.onload = () => {
-    editor.img = img;
-    document.getElementById('editorModal').classList.remove('hidden');
-    resizeCanvas();
-    drawEditor();
-  };
-  img.onerror = () => {
-    // Zkusíme ještě jednou bez cache
-    const retry = new Image();
-    retry.crossOrigin = 'anonymous';
-    retry.onload = () => {
-      editor.img = retry;
-      document.getElementById('editorModal').classList.remove('hidden');
-      resizeCanvas();
-      drawEditor();
-    };
-    retry.onerror = () => alert('Obrázek se nepodařilo načíst. Zkus obnovit stránku.');
-    retry.src = p.url.split('?')[0] + '?v=' + Date.now();
-  };
-  
-  img.src = cacheUrl;
+  img.onload = () => { ED.img = img; document.getElementById('editorModal').classList.remove('hidden'); resizeCanvas(); drawEditor(); };
+  img.onerror = () => alert('Nepodařilo se načíst obrázek');
+  img.src = p.url.split('?')[0] + '?v=' + Date.now();
 }
 
-}
-
-function closeEditor() {
-  document.getElementById('editorModal').classList.add('hidden');
-  editor.img = null; editor.photo = null;
-}
+function closeEditor() { document.getElementById('editorModal').classList.add('hidden'); ED.img = null; ED.photo = null; }
 
 function resizeCanvas() {
   const box = document.querySelector('.editor-canvas-box');
-  const canvas = document.getElementById('editorCanvas');
-  if (box && canvas) {
-    canvas.width = box.clientWidth;
-    canvas.height = box.clientHeight;
-  }
+  const c = document.getElementById('editorCanvas');
+  if (box && c) { c.width = box.clientWidth; c.height = box.clientHeight; }
 }
 
 function updateFilterLabels() {
-  const f = editor.filters;
-  const ids = { exposure: 'val-exposure', shadows: 'val-shadows', highlights: 'val-highlights', temp: 'val-temp', colors: 'val-colors', vibrance: 'val-vibrance', sharpness: 'val-sharpness', denoise: 'val-denoise', vignette: 'val-vignette' };
-  for (const [k, id] of Object.entries(ids)) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = f[k];
-  }
+  const f = ED.filters, ids = { exposure: 'fval-exposure', contrast: 'fval-contrast', saturation: 'fval-saturation', temp: 'fval-temp', vignette: 'fval-vignette' };
+  for (const [k, id] of Object.entries(ids)) { const el = document.getElementById(id); if (el) el.textContent = f[k]; }
 }
 
-function setFilter(key, val) {
-  editor.filters[key] = parseInt(val);
-  const el = document.getElementById('val-' + key);
-  if (el) el.textContent = val;
-  drawEditor();
-}
+function setFilter(key, val) { ED.filters[key] = parseInt(val); const el = document.getElementById('fval-' + key); if (el) el.textContent = val; drawEditor(); }
 
 function setCrop(mode) {
-  editor.crop = mode;
-  drawEditor();
+  ED.crop = mode;
+  document.querySelectorAll('.editor-tools .btn').forEach(b => b.classList.remove('btn-blue'));
+  const btn = Array.from(document.querySelectorAll('.editor-tools .btn')).find(b => b.textContent.includes(mode === 'free' ? 'Voln' : mode));
+  if (btn) btn.classList.add('btn-blue');
+  const frame = document.getElementById('cropFrame');
+  if (mode === 'free') { frame.classList.add('hidden'); return; }
+  frame.classList.remove('hidden');
+  const box = document.querySelector('.editor-canvas-box');
+  const W = box.clientWidth, H = box.clientHeight;
+  let w = W * 0.7, h = H * 0.7;
+  if (mode === '1:1') h = w;
+  else if (mode === '4:3') h = w * 0.75;
+  else if (mode === '3:4') h = w * 4 / 3;
+  else if (mode === '16:9') h = w / 1.777;
+  frame.style.width = Math.min(w, W * 0.9) + 'px';
+  frame.style.height = Math.min(h, H * 0.9) + 'px';
 }
 
-function setExportSize(size) {
-  editor.exportSize = size;
-  ['max', '2000', 'fullhd'].forEach(s => {
-    const btn = document.getElementById('btn-' + s);
-    if (btn) {
-      btn.classList.toggle('btn-blue', s === size);
-      btn.classList.toggle('btn-sm', s !== size);
-    }
-  });
-}
+function setExport(size) { ED.export = size; ['max', '2000', 'fullhd'].forEach(s => { const b = document.getElementById('ex-' + s); if (b) b.classList.toggle('btn-blue', s === size); }); }
 
-function rotateEditor(deg) {
-  editor.rotate = (editor.rotate + deg) % 360;
-  drawEditor();
-}
+function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; drawEditor(); }
 
 function drawEditor() {
-  const canvas = document.getElementById('editorCanvas');
-  const ctx = canvas.getContext('2d');
-  if (!editor.img || !canvas) return;
-
-  const W = canvas.width, H = canvas.height;
+  const c = document.getElementById('editorCanvas'), ctx = c.getContext('2d');
+  if (!ED.img || !c) return;
+  const W = c.width, H = c.height;
   ctx.clearRect(0, 0, W, H);
-
   ctx.save();
-  ctx.translate(W / 2 + editor.panX, H / 2 + editor.panY);
-  ctx.rotate(editor.rotate * Math.PI / 180);
-  ctx.scale(editor.zoom, editor.zoom);
-
-  const img = editor.img;
-  const ratio = Math.min(W / img.width, H / img.height) * 0.9;
+  ctx.translate(W / 2 + ED.panX, H / 2 + ED.panY);
+  ctx.rotate(ED.rotate * Math.PI / 180);
+  ctx.scale(ED.scale, ED.scale);
+  const img = ED.img, ratio = Math.min(W / img.width, H / img.height) * 0.85;
   const dw = img.width * ratio, dh = img.height * ratio;
-
-  const f = editor.filters;
-  let filters = [];
-  filters.push(`brightness(${100 + parseInt(f.exposure)}%)`);
-  filters.push(`contrast(${100 + parseInt(f.colors)}%)`);
-  filters.push(`saturate(${100 + parseInt(f.vibrance)}%)`);
-  if (f.temp > 0) filters.push(`sepia(${f.temp * 0.5}%)`);
-  else filters.push(`hue-rotate(${f.temp * 0.3}deg)`);
-  if (f.sharpness > 0) filters.push(`contrast(${100 + f.sharpness * 0.5}%)`);
-  ctx.filter = filters.join(' ');
-
+  const f = ED.filters;
+  ctx.filter = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
+  if (f.temp > 0) ctx.filter += ` sepia(${f.temp * 0.5}%)`;
+  else ctx.filter += ` hue-rotate(${f.temp * 0.3}deg)`;
   ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
-  ctx.filter = 'none';
-  ctx.restore();
-
-  const vig = document.getElementById('vignetteOverlay');
-  if (vig) vig.style.opacity = f.vignette / 100;
-
-  const overlay = document.getElementById('cropOverlay');
-  if (overlay) {
-    if (editor.crop === 'free') {
-      overlay.classList.add('hidden');
-    } else {
-      overlay.classList.remove('hidden');
-      let cw = W * 0.7, ch = H * 0.7;
-      if (editor.crop === '1:1') ch = cw;
-      else if (editor.crop === '4:3') ch = cw * 0.75;
-      else if (editor.crop === '16:9') ch = cw / 1.777;
-      else if (editor.crop === 'original') ch = cw * (img.height / img.width);
-      overlay.style.width = cw + 'px';
-      overlay.style.height = ch + 'px';
-    }
-  }
+  ctx.filter = 'none'; ctx.restore();
 }
 
-// Drag – mouse + touch
-function initEditorDrag() {
+// Drag - mouse + touch
+function initDrag() {
   const c = document.getElementById('editorCanvas');
   if (!c) return;
-
-  const start = (x, y) => { editor.dragging = true; editor.lastX = x; editor.lastY = y; c.style.cursor = 'grabbing'; };
-  const move = (x, y) => {
-    if (!editor.dragging) return;
-    editor.panX += x - editor.lastX;
-    editor.panY += y - editor.lastY;
-    editor.lastX = x; editor.lastY = y;
-    drawEditor();
-  };
-  const end = () => { editor.dragging = false; c.style.cursor = 'grab'; };
-
+  const start = (x, y) => { ED.drag = true; ED.lx = x; ED.ly = y; c.style.cursor = 'grabbing'; };
+  const move = (x, y) => { if (!ED.drag) return; ED.panX += x - ED.lx; ED.panY += y - ED.ly; ED.lx = x; ED.ly = y; drawEditor(); };
+  const end = () => { ED.drag = false; c.style.cursor = 'grab'; };
   c.addEventListener('mousedown', e => start(e.clientX, e.clientY));
   window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
   window.addEventListener('mouseup', end);
-
-  c.addEventListener('touchstart', e => { if(e.touches.length===1) start(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
-  window.addEventListener('touchmove', e => { if(editor.dragging && e.touches.length===1) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); } }, {passive:false});
+  c.addEventListener('touchstart', e => { if (e.touches.length === 1) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+  window.addEventListener('touchmove', e => { if (ED.drag && e.touches.length === 1) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
   window.addEventListener('touchend', end);
 }
-window.addEventListener('load', initEditorDrag);
+window.addEventListener('load', initDrag);
 
-function getCropRect(srcW, srcH) {
-  if (editor.crop === 'free') return { x: 0, y: 0, w: srcW, h: srcH };
-  let w = srcW, h = srcH;
-  if (editor.crop === '1:1') h = w;
-  else if (editor.crop === '4:3') h = w * 0.75;
-  else if (editor.crop === '16:9') h = w / 1.777;
-  else if (editor.crop === 'original') h = w * (editor.img.height / editor.img.width);
-  const x = (srcW - w) / 2, y = (srcH - h) / 2;
-  return { x: Math.max(0, x), y: Math.max(0, y), w: Math.min(w, srcW), h: Math.min(h, srcH) };
-}
-
-function getExportDimensions(origW, origH) {
-  const size = editor.exportSize;
-  if (size === 'max') return { w: origW, h: origH };
-  if (size === '2000') {
-    const max = Math.max(origW, origH);
-    if (max <= 2000) return { w: origW, h: origH };
-    const scale = 2000 / max;
-    return { w: Math.round(origW * scale), h: Math.round(origH * scale) };
-  }
-  if (size === 'fullhd') {
-    const scale = Math.min(1920 / origW, 1080 / origH, 1);
-    return { w: Math.round(origW * scale), h: Math.round(origH * scale) };
-  }
-  return { w: origW, h: origH };
+function getExportDim(w, h) {
+  if (ED.export === 'max') return { w, h };
+  if (ED.export === '2000') { const s = Math.min(1, 2000 / Math.max(w, h)); return { w: Math.round(w * s), h: Math.round(h * s) }; }
+  if (ED.export === 'fullhd') { const s = Math.min(1, 1920 / w, 1080 / h); return { w: Math.round(w * s), h: Math.round(h * s) }; }
+  return { w, h };
 }
 
 async function saveEditor(mode) {
-  if (!editor.img) return;
-  const img = editor.img;
-  const crop = getCropRect(img.width, img.height);
-  const exp = getExportDimensions(crop.w, crop.h);
-
+  if (!ED.img) return;
+  const img = ED.img;
   const out = document.createElement('canvas');
-  out.width = exp.w; out.height = exp.h;
+  const dim = getExportDim(img.width, img.height);
+  out.width = dim.w; out.height = dim.h;
   const ctx = out.getContext('2d');
-
-  const f = editor.filters;
-  let filters = [];
-  filters.push(`brightness(${100 + parseInt(f.exposure)}%)`);
-  filters.push(`contrast(${100 + parseInt(f.colors)}%)`);
-  filters.push(`saturate(${100 + parseInt(f.vibrance)}%)`);
-  if (f.temp > 0) filters.push(`sepia(${f.temp * 0.5}%)`);
-  else filters.push(`hue-rotate(${f.temp * 0.3}deg)`);
-  if (f.sharpness > 0) filters.push(`contrast(${100 + f.sharpness * 0.5}%)`);
-  ctx.filter = filters.join(' ');
-
-  ctx.save();
-  ctx.translate(exp.w / 2, exp.h / 2);
-  ctx.rotate(editor.rotate * Math.PI / 180);
-  const scale = Math.min(exp.w / crop.w, exp.h / crop.h);
-  ctx.scale(scale, scale);
-  ctx.drawImage(img, -crop.w / 2, -crop.h / 2, crop.w, crop.h);
+  const f = ED.filters;
+  ctx.filter = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
+  if (f.temp > 0) ctx.filter += ` sepia(${f.temp * 0.5}%)`;
+  else ctx.filter += ` hue-rotate(${f.temp * 0.3}deg)`;
+  ctx.save(); ctx.translate(dim.w / 2, dim.h / 2); ctx.rotate(ED.rotate * Math.PI / 180); ctx.scale(ED.scale, ED.scale);
+  const ratio = Math.min(dim.w / img.width, dim.h / img.height);
+  ctx.drawImage(img, -img.width * ratio / 2, -img.height * ratio / 2, img.width * ratio, img.height * ratio);
   ctx.restore();
-
-  if (f.ai) {
-    ctx.globalCompositeOperation = 'overlay';
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(0, 0, exp.w, exp.h);
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
   if (f.vignette > 0) {
-    const grad = ctx.createRadialGradient(exp.w / 2, exp.h / 2, exp.w * 0.3, exp.w / 2, exp.h / 2, exp.w * 0.8);
-    grad.addColorStop(0, 'transparent');
-    grad.addColorStop(1, `rgba(0,0,0,${f.vignette / 100})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, exp.w, exp.h);
+    const grad = ctx.createRadialGradient(dim.w / 2, dim.h / 2, dim.w * 0.3, dim.w / 2, dim.h / 2, dim.w * 0.8);
+    grad.addColorStop(0, 'transparent'); grad.addColorStop(1, `rgba(0,0,0,${f.vignette / 100})`);
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, dim.w, dim.h);
   }
-
-  const blob = await new Promise(res => out.toBlob(res, 'image/jpeg', 0.92));
+  const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.92));
   const fd = new FormData();
-  fd.append('file', blob, editor.photo.name || 'edited.jpg');
-  fd.append('galleryId', G.id);
-  fd.append('photoId', editor.photo.id);
+  fd.append('file', blob, ED.photo.name || 'edited.jpg');
+  fd.append('galleryId', 'main');
+  fd.append('oldKey', ED.photo.key);
   fd.append('mode', mode);
-
   await fetch('/api/photos/update', { method: 'POST', body: fd });
-  closeEditor();
-  refreshGallery();
+  closeEditor(); loadGallery();
 }
 
 // ─── ČLÁNKY ───
@@ -414,55 +236,30 @@ async function loadArticles() {
   const res = await fetch('/api/articles/list');
   const data = await res.json();
   document.getElementById('articleList').innerHTML = data.map(a => `
-    <div class="card">
-      <h4>${escapeHtml(a.title)}</h4>
-      <p>${escapeHtml(a.content.substring(0, 150))}...</p>
-      <small>${new Date(a.created).toLocaleDateString('cs')}</small>
-      <div class="actions">
-        <button onclick="toggleEdit('${a.id}')" class="btn btn-blue">Upravit</button>
-        <button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button>
-      </div>
-      <div id="edit-${a.id}" class="edit-box hidden">
-        <input type="text" id="t-${a.id}" value="${escapeHtml(a.title)}">
-        <input type="text" id="i-${a.id}" value="${escapeHtml(a.image || '')}">
-        <textarea id="c-${a.id}" rows="4">${escapeHtml(a.content)}</textarea>
-        <button onclick="saveArticle('${a.id}')" class="btn btn-green">Uložit změny</button>
-      </div>
-    </div>
-  `).join('');
+    <div class="card"><h4>${escapeHtml(a.title)}</h4><p>${escapeHtml(a.content.substring(0, 150))}...</p>
+    <small>${new Date(a.created).toLocaleDateString('cs')}</small>
+    <div class="actions"><button onclick="toggleEdit('${a.id}')" class="btn btn-blue">Upravit</button><button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button></div>
+    <div id="edit-${a.id}" class="edit-box hidden">
+      <input type="text" id="t-${a.id}" value="${escapeHtml(a.title)}"><input type="text" id="i-${a.id}" value="${escapeHtml(a.image || '')}">
+      <textarea id="c-${a.id}" rows="4">${escapeHtml(a.content)}</textarea><button onclick="saveArticle('${a.id}')" class="btn btn-green">Uložit</button>
+    </div></div>`).join('');
 }
 
 async function createArticle() {
-  const title = document.getElementById('aTitle').value.trim();
-  const content = document.getElementById('aContent').value.trim();
+  const title = document.getElementById('aTitle').value.trim(), content = document.getElementById('aContent').value.trim();
   if (!title || !content) return alert('Vyplň nadpis a obsah');
-  await fetch('/api/articles/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, content, image: document.getElementById('aImage').value.trim() })
-  });
-  document.getElementById('aTitle').value = '';
-  document.getElementById('aContent').value = '';
-  document.getElementById('aImage').value = '';
-  loadArticles();
+  await fetch('/api/articles/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, content, image: document.getElementById('aImage').value.trim() }) });
+  document.getElementById('aTitle').value = ''; document.getElementById('aContent').value = ''; document.getElementById('aImage').value = ''; loadArticles();
 }
 
 function toggleEdit(id) { document.getElementById(`edit-${id}`).classList.toggle('hidden'); }
 
 async function saveArticle(id) {
-  await fetch('/api/articles/update', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, title: document.getElementById(`t-${id}`).value, content: document.getElementById(`c-${id}`).value, image: document.getElementById(`i-${id}`).value })
-  });
+  await fetch('/api/articles/update', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, title: document.getElementById(`t-${id}`).value, content: document.getElementById(`c-${id}`).value, image: document.getElementById(`i-${id}`).value }) });
   loadArticles();
 }
 
-async function deleteArticle(id) {
-  if (!confirm('Smazat článek?')) return;
-  await fetch(`/api/articles/delete?id=${id}`, { method: 'DELETE' });
-  loadArticles();
-}
+async function deleteArticle(id) { if (!confirm('Smazat?')) return; await fetch(`/api/articles/delete?id=${id}`, { method: 'DELETE' }); loadArticles(); }
 
 // ─── CITÁTY ───
 async function loadQuotes() {
@@ -472,10 +269,7 @@ async function loadQuotes() {
     const res = await fetch('/api/quotes/list');
     const data = await res.json();
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty.</td></tr>'; return; }
-    tbody.innerHTML = data.map(q => `
-      <tr><td>"${escapeHtml(q.text)}"</td><td>${escapeHtml(q.author) || '—'}</td>
-      <td><button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button></td></tr>
-    `).join('');
+    tbody.innerHTML = data.map(q => `<tr><td>"${escapeHtml(q.text)}"</td><td>${escapeHtml(q.author) || '—'}</td><td><button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button></td></tr>`).join('');
   } catch { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba.</td></tr>'; }
 }
 
@@ -486,11 +280,7 @@ async function createQuote() {
   document.getElementById('qText').value = ''; document.getElementById('qAuthor').value = ''; loadQuotes();
 }
 
-async function deleteQuote(key) {
-  if (!confirm('Smazat citát?')) return;
-  await fetch(`/api/quotes/delete?key=${key}`, { method: 'DELETE' });
-  loadQuotes();
-}
+async function deleteQuote(key) { if (!confirm('Smazat?')) return; await fetch(`/api/quotes/delete?key=${key}`, { method: 'DELETE' }); loadQuotes(); }
 
 // ─── SEKCE / PODSEKCE ───
 async function loadSections() {
@@ -521,84 +311,36 @@ async function createSubsection() {
 
 async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
 
-// ─── O ZAJDOVI – fotky z galerie ───
+// ─── O ZAJDOVI ───
 let aboutData = { title: '', text: '', photos: [], subsections: [] };
 
 async function loadAbout() {
-  try {
-    const res = await fetch('/api/about/get');
-    aboutData = await res.json();
-  } catch { aboutData = { title: '', text: '', photos: [], subsections: [] }; }
+  try { const res = await fetch('/api/about/get'); aboutData = await res.json(); } catch { aboutData = { title: '', text: '', photos: [], subsections: [] }; }
   document.getElementById('aboutTitle').value = aboutData.title || '';
   document.getElementById('aboutText').value = aboutData.text || '';
-  renderAboutPhotos();
-  renderAboutSubsections();
-  document.getElementById('aboutPreview').innerHTML = `
-    <h4>${escapeHtml(aboutData.title || 'O Zajdovi')}</h4>
-    <p>${escapeHtml(aboutData.text || '').replace(/\n/g, '<br>')}</p>
-    ${aboutData.photos.length ? `<div class="about-photos">${aboutData.photos.map(u => `<img src="${u}">`).join('')}</div>` : ''}
-  `;
+  renderAboutPhotos(); renderAboutSubs();
+  document.getElementById('aboutPreview').innerHTML = `<h4>${escapeHtml(aboutData.title || 'O Zajdovi')}</h4><p>${escapeHtml(aboutData.text || '').replace(/\n/g, '<br>')}</p>${aboutData.photos.length ? `<div class="about-photos">${aboutData.photos.map(u => `<img src="${u}">`).join('')}</div>` : ''}`;
 }
 
 function renderAboutPhotos() {
-  const box = document.getElementById('aboutPhotos');
-  box.innerHTML = aboutData.photos.map((u, i) => `
-    <div style="position:relative;display:inline-block">
-      <img src="${u}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #334155">
-      <button onclick="removeAboutPhoto(${i})" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px">×</button>
-    </div>
-  `).join('');
+  document.getElementById('aboutPhotos').innerHTML = aboutData.photos.map((u, i) => `<div style="position:relative;display:inline-block"><img src="${u}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #334155"><button onclick="aboutData.photos.splice(${i},1);renderAboutPhotos()" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px">×</button></div>`).join('');
 }
 
-function removeAboutPhoto(i) { aboutData.photos.splice(i, 1); renderAboutPhotos(); }
-
-// Výběr fotek z galerie místo uploadu
 function openGalleryPicker() {
-  if (!G.id || !G.photos.length) {
-    alert('Nejdřív nahraj fotky do galerie.');
-    return;
-  }
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155">
-      <h3 style="margin-bottom:1rem;color:#f8fafc">Vyber fotku z galerie</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem;">
-        ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='transparent'" onclick="pickAboutPhoto('${p.url}')">`).join('')}
-      </div>
-      <div style="text-align:center;margin-top:1rem">
-        <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
-      </div>
-    </div>
-  `;
-  modal.onclick = e => { if (e.target === modal) modal.remove(); };
-  document.body.appendChild(modal);
+  if (!G.photos.length) { alert('Nejdřív nahraj fotky do galerie.'); return; }
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Vyber fotku</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent" onclick="pickAboutPhoto('${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
 }
 
-function pickAboutPhoto(url) {
-  if (!aboutData.photos.includes(url)) aboutData.photos.push(url);
-  renderAboutPhotos();
-  const modal = document.querySelector('.modal');
-  if (modal) modal.remove();
+function pickAboutPhoto(url) { if (!aboutData.photos.includes(url)) aboutData.photos.push(url); renderAboutPhotos(); const m = document.querySelector('.modal'); if (m) m.remove(); }
+
+function renderAboutSubs() {
+  document.getElementById('aboutSubsections').innerHTML = aboutData.subsections.map((s, i) => `<div class="about-sub"><input type="text" placeholder="Nadpis" value="${escapeHtml(s.title || '')}" onchange="aboutData.subsections[${i}].title=this.value"><textarea placeholder="Text..." rows="3" onchange="aboutData.subsections[${i}].text=this.value">${escapeHtml(s.text || '')}</textarea><button onclick="aboutData.subsections.splice(${i},1);renderAboutSubs()" class="btn btn-red btn-sm">Odstranit</button></div>`).join('');
 }
 
-function renderAboutSubsections() {
-  const box = document.getElementById('aboutSubsections');
-  box.innerHTML = aboutData.subsections.map((s, i) => `
-    <div class="about-sub">
-      <input type="text" placeholder="Nadpis podsekce" value="${escapeHtml(s.title || '')}" onchange="aboutData.subsections[${i}].title=this.value">
-      <textarea placeholder="Text podsekce..." rows="3" onchange="aboutData.subsections[${i}].text=this.value">${escapeHtml(s.text || '')}</textarea>
-      <button onclick="removeAboutSub(${i})" class="btn btn-red btn-sm">Odstranit</button>
-    </div>
-  `).join('');
-}
-
-function addAboutSubsection() {
-  aboutData.subsections.push({ title: '', text: '' });
-  renderAboutSubsections();
-}
-
-function removeAboutSub(i) { aboutData.subsections.splice(i, 1); renderAboutSubsections(); }
+function addAboutSub() { aboutData.subsections.push({ title: '', text: '' }); renderAboutSubs(); }
 
 async function saveAbout() {
   aboutData.title = document.getElementById('aboutTitle').value;
