@@ -1,29 +1,22 @@
 export async function onRequestGet(context) {
-  const { env } = context;
-  
-  if (!env.PHOTOS_R2) {
-    return Response.json({ error: 'PHOTOS_R2 not bound' }, { status: 500 });
+  const { request, env } = context;
+  const { searchParams } = new URL(request.url);
+  const galleryId = searchParams.get('galleryId');
+
+  // Celkové R2 statistiky
+  let totalSize = 0, totalCount = 0, cursor;
+  do {
+    const list = await env['zajda-photos'].list({ cursor, limit: 1000 });
+    for (const o of list.objects || []) { totalSize += o.size; totalCount++; }
+    cursor = list.truncated ? list.cursor : undefined;
+  } while (cursor);
+
+  // Statistiky galerie
+  let galCount = 0, galSize = 0;
+  if (galleryId) {
+    const gal = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
+    if (gal?.photos) { galCount = gal.photos.length; galSize = gal.photos.reduce((a,p)=>a+(p.size||0),0); }
   }
 
-  try {
-    const list = await env.PHOTOS_R2.list();
-    const objects = list.objects || [];
-    
-    let totalSize = 0;
-    for (const obj of objects) totalSize += obj.size;
-    
-    let sizeText;
-    if (totalSize < 1024) sizeText = totalSize + ' B';
-    else if (totalSize < 1024 * 1024) sizeText = (totalSize / 1024).toFixed(1) + ' KB';
-    else if (totalSize < 1024 * 1024 * 1024) sizeText = (totalSize / (1024 * 1024)).toFixed(1) + ' MB';
-    else sizeText = (totalSize / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-
-    return Response.json({
-      count: objects.length,
-      totalSize,
-      sizeText
-    });
-  } catch (e) {
-    return Response.json({ error: e.message }, { status: 500 });
-  }
+  return Response.json({ totalCount, totalSize, galCount, galSize });
 }
