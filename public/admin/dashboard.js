@@ -16,7 +16,7 @@ function logout() {
 }
 
 function loadSection(name) {
-  if (name === 'galleries') loadGalleries();
+  if (name === 'galleries') loadGallery();
   if (name === 'articles') loadArticles();
   if (name === 'quotes') loadQuotes();
   if (name === 'sections') loadSections();
@@ -27,8 +27,8 @@ function loadSection(name) {
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 function fmtBytes(b) { return b ? (b / 1024 / 1024).toFixed(2) + ' MB' : '0 MB'; }
 
-// ─── GALERIE STATE ───
-let G = { galleries: [], current: null, photos: [], selected: new Set() };
+// ─── GALERIE STATE (JEN JEDNA) ───
+let G = { id: null, photos: [], selected: new Set() };
 let editor = {
   photo: null, img: null, zoom: 1, rotate: 0, panX: 0, panY: 0,
   crop: 'free', exportSize: 'max',
@@ -36,42 +36,52 @@ let editor = {
   dragging: false, lastX: 0, lastY: 0
 };
 
-// ─── GALERIE ───
-async function loadGalleries() {
-  const res = await fetch('/api/photos/galleries');
-  G.galleries = await res.json();
-  const tabs = document.getElementById('galleryTabs');
-  tabs.innerHTML = G.galleries.map(g => `
-    <div class="gallery-tab ${g.id === G.current ? 'active' : ''}" onclick="selectGallery('${g.id}')">${escapeHtml(g.title)}</div>
-  `).join('');
-  if (!G.current && G.galleries.length) selectGallery(G.galleries[0].id);
+// ─── JEDNA GALERIE – načte první nebo vytvoří ───
+async function loadGallery() {
+  try {
+    const res = await fetch('/api/photos/galleries');
+    const galleries = await res.json();
+
+    if (galleries.length === 0) {
+      // Vytvoří výchozí galerii
+      await fetch('/api/photos/galleries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Hlavní galerie' })
+      });
+      return loadGallery(); // znovu načte
+    }
+
+    G.id = galleries[0].id;
+    await refreshGallery();
+    document.getElementById('galleryToolbar').style.display = 'flex';
+  } catch (e) {
+    console.error('Chyba galerie:', e);
+  }
 }
 
-function createGalleryPrompt() {
-  const name = prompt('Název galerie:');
-  if (!name) return;
-  fetch('/api/photos/galleries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name }) })
-    .then(() => loadGalleries());
-}
+async function refreshGallery() {
+  if (!G.id) return;
+  G.selected.clear();
+  document.getElementById('bulkDeleteBtn').style.display = 'none';
 
-async function selectGallery(id) {
-  G.current = id; G.selected.clear(); document.getElementById('bulkDeleteBtn').style.display = 'none';
-  loadGalleries();
-  const res = await fetch(`/api/photos/list?galleryId=${id}`);
+  const res = await fetch(`/api/photos/list?galleryId=${G.id}`);
   G.photos = await res.json();
   renderGallery();
   loadStats();
-  document.getElementById('galleryToolbar').style.display = 'flex';
 }
 
 async function loadStats() {
   try {
-    const res = await fetch(`/api/photos/stats?galleryId=${G.current}`);
+    const res = await fetch(`/api/photos/stats?galleryId=${G.id}`);
     const s = await res.json();
-    document.getElementById('galCount').textContent = (s.galCount || 0) + ' fotek';
-    document.getElementById('galSize').textContent = fmtBytes(s.galSize);
-    document.getElementById('totalSize').textContent = 'Celkem R2: ' + fmtBytes(s.totalSize);
-  } catch {}
+    document.getElementById('galCount').textContent = (s.galCount || G.photos.length || 0) + ' fotek';
+    document.getElementById('galSize').textContent = fmtBytes(s.galSize || G.photos.reduce((a,p)=>a+(p.size||0),0));
+    document.getElementById('totalSize').textContent = 'Celkem R2: ' + fmtBytes(s.totalSize || 0);
+  } catch {
+    document.getElementById('galCount').textContent = G.photos.length + ' fotek';
+    document.getElementById('galSize').textContent = fmtBytes(G.photos.reduce((a,p)=>a+(p.size||0),0));
+  }
 }
 
 function renderGallery() {
@@ -88,6 +98,11 @@ function renderGallery() {
     if (typeof av === 'string') return dir === 1 ? av.localeCompare(bv) : bv.localeCompare(av);
     return av > bv ? dir : av < bv ? -dir : 0;
   });
+
+  if (list.length === 0) {
+    box.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">Galerie je prázdná. Nahraj první fotky.</p>';
+    return;
+  }
 
   box.innerHTML = list.map(p => {
     const checked = G.selected.has(p.id) ? 'checked' : '';
@@ -119,21 +134,28 @@ function toggleSelect(id) {
 async function bulkDelete() {
   if (!confirm(`Smazat ${G.selected.size} fotek?`)) return;
   const keys = Array.from(G.selected).join(',');
-  await fetch(`/api/photos/delete?galleryId=${G.current}&keys=${keys}`, { method: 'DELETE' });
-  G.selected.clear(); document.getElementById('bulkDeleteBtn').style.display = 'none';
-  selectGallery(G.current);
+  await fetch(`/api/photos/delete?galleryId=${G.id}&keys=${keys}`, { method: 'DELETE' });
+  G.selected.clear();
+  document.getElementById('bulkDeleteBtn').style.display = 'none';
+  refreshGallery();
 }
 
+// ─── UPLOAD – opravený ───
 async function uploadFiles(input) {
-  if (!input.files.length) return;
+  if (!input.files.length || !G.id) return;
+
   for (const file of input.files) {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('galleryId', G.current);
-    await fetch('/api/photos/upload', { method: 'POST', body: fd });
+    fd.append('galleryId', G.id);
+    try {
+      await fetch('/api/photos/upload', { method: 'POST', body: fd });
+    } catch (e) {
+      console.error('Upload chyba:', e);
+    }
   }
   input.value = '';
-  selectGallery(G.current);
+  await refreshGallery();
 }
 
 // ─── EDITOR ───
@@ -154,6 +176,7 @@ function openEditor(id) {
     resizeCanvas();
     drawEditor();
   };
+  img.onerror = () => alert('Obrázek se nepodařilo načíst');
   img.src = p.url;
 }
 
@@ -165,26 +188,25 @@ function closeEditor() {
 function resizeCanvas() {
   const box = document.querySelector('.editor-canvas-box');
   const canvas = document.getElementById('editorCanvas');
-  canvas.width = box.clientWidth;
-  canvas.height = box.clientHeight;
+  if (box && canvas) {
+    canvas.width = box.clientWidth;
+    canvas.height = box.clientHeight;
+  }
 }
 
 function updateFilterLabels() {
   const f = editor.filters;
-  document.getElementById('val-exposure').textContent = f.exposure;
-  document.getElementById('val-shadows').textContent = f.shadows;
-  document.getElementById('val-highlights').textContent = f.highlights;
-  document.getElementById('val-temp').textContent = f.temp;
-  document.getElementById('val-colors').textContent = f.colors;
-  document.getElementById('val-vibrance').textContent = f.vibrance;
-  document.getElementById('val-sharpness').textContent = f.sharpness;
-  document.getElementById('val-denoise').textContent = f.denoise;
-  document.getElementById('val-vignette').textContent = f.vignette;
+  const ids = { exposure: 'val-exposure', shadows: 'val-shadows', highlights: 'val-highlights', temp: 'val-temp', colors: 'val-colors', vibrance: 'val-vibrance', sharpness: 'val-sharpness', denoise: 'val-denoise', vignette: 'val-vignette' };
+  for (const [k, id] of Object.entries(ids)) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = f[k];
+  }
 }
 
 function setFilter(key, val) {
   editor.filters[key] = parseInt(val);
-  document.getElementById('val-' + key).textContent = val;
+  const el = document.getElementById('val-' + key);
+  if (el) el.textContent = val;
   drawEditor();
 }
 
@@ -196,8 +218,11 @@ function setCrop(mode) {
 function setExportSize(size) {
   editor.exportSize = size;
   ['max', '2000', 'fullhd'].forEach(s => {
-    document.getElementById('btn-' + s).classList.toggle('btn-blue', s === size);
-    document.getElementById('btn-' + s).classList.toggle('btn-sm', s !== size);
+    const btn = document.getElementById('btn-' + s);
+    if (btn) {
+      btn.classList.toggle('btn-blue', s === size);
+      btn.classList.toggle('btn-sm', s !== size);
+    }
   });
 }
 
@@ -209,7 +234,7 @@ function rotateEditor(deg) {
 function drawEditor() {
   const canvas = document.getElementById('editorCanvas');
   const ctx = canvas.getContext('2d');
-  if (!editor.img) return;
+  if (!editor.img || !canvas) return;
 
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
@@ -223,7 +248,6 @@ function drawEditor() {
   const ratio = Math.min(W / img.width, H / img.height) * 0.9;
   const dw = img.width * ratio, dh = img.height * ratio;
 
-  // Apply filters via CSS-like filter string on context
   const f = editor.filters;
   let filters = [];
   filters.push(`brightness(${100 + parseInt(f.exposure)}%)`);
@@ -238,40 +262,50 @@ function drawEditor() {
   ctx.filter = 'none';
   ctx.restore();
 
-  // Vignette overlay
-  document.getElementById('vignetteOverlay').style.opacity = f.vignette / 100;
+  const vig = document.getElementById('vignetteOverlay');
+  if (vig) vig.style.opacity = f.vignette / 100;
 
-  // Crop overlay
   const overlay = document.getElementById('cropOverlay');
-  if (editor.crop === 'free') {
-    overlay.classList.add('hidden');
-  } else {
-    overlay.classList.remove('hidden');
-    let cw = W * 0.7, ch = H * 0.7;
-    if (editor.crop === '1:1') ch = cw;
-    else if (editor.crop === '4:3') ch = cw * 0.75;
-    else if (editor.crop === '16:9') ch = cw / 1.777;
-    else if (editor.crop === 'original') ch = cw * (img.height / img.width);
-    overlay.style.width = cw + 'px';
-    overlay.style.height = ch + 'px';
+  if (overlay) {
+    if (editor.crop === 'free') {
+      overlay.classList.add('hidden');
+    } else {
+      overlay.classList.remove('hidden');
+      let cw = W * 0.7, ch = H * 0.7;
+      if (editor.crop === '1:1') ch = cw;
+      else if (editor.crop === '4:3') ch = cw * 0.75;
+      else if (editor.crop === '16:9') ch = cw / 1.777;
+      else if (editor.crop === 'original') ch = cw * (img.height / img.width);
+      overlay.style.width = cw + 'px';
+      overlay.style.height = ch + 'px';
+    }
   }
 }
 
-// Canvas pan events
-const canvasEl = () => document.getElementById('editorCanvas');
-function initEditorEvents() {
-  const c = canvasEl();
-  c.addEventListener('mousedown', e => { editor.dragging = true; editor.lastX = e.clientX; editor.lastY = e.clientY; c.style.cursor = 'grabbing'; });
-  window.addEventListener('mousemove', e => {
+// Drag – mouse + touch
+function initEditorDrag() {
+  const c = document.getElementById('editorCanvas');
+  if (!c) return;
+
+  const start = (x, y) => { editor.dragging = true; editor.lastX = x; editor.lastY = y; c.style.cursor = 'grabbing'; };
+  const move = (x, y) => {
     if (!editor.dragging) return;
-    editor.panX += e.clientX - editor.lastX;
-    editor.panY += e.clientY - editor.lastY;
-    editor.lastX = e.clientX; editor.lastY = e.clientY;
+    editor.panX += x - editor.lastX;
+    editor.panY += y - editor.lastY;
+    editor.lastX = x; editor.lastY = y;
     drawEditor();
-  });
-  window.addEventListener('mouseup', () => { editor.dragging = false; if (canvasEl()) canvasEl().style.cursor = 'grab'; });
+  };
+  const end = () => { editor.dragging = false; c.style.cursor = 'grab'; };
+
+  c.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+  window.addEventListener('mouseup', end);
+
+  c.addEventListener('touchstart', e => { if(e.touches.length===1) start(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+  window.addEventListener('touchmove', e => { if(editor.dragging && e.touches.length===1) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); } }, {passive:false});
+  window.addEventListener('touchend', end);
 }
-window.addEventListener('load', initEditorEvents);
+window.addEventListener('load', initEditorDrag);
 
 function getCropRect(srcW, srcH) {
   if (editor.crop === 'free') return { x: 0, y: 0, w: srcW, h: srcH };
@@ -280,7 +314,6 @@ function getCropRect(srcW, srcH) {
   else if (editor.crop === '4:3') h = w * 0.75;
   else if (editor.crop === '16:9') h = w / 1.777;
   else if (editor.crop === 'original') h = w * (editor.img.height / editor.img.width);
-  // Center crop
   const x = (srcW - w) / 2, y = (srcH - h) / 2;
   return { x: Math.max(0, x), y: Math.max(0, y), w: Math.min(w, srcW), h: Math.min(h, srcH) };
 }
@@ -304,17 +337,13 @@ function getExportDimensions(origW, origH) {
 async function saveEditor(mode) {
   if (!editor.img) return;
   const img = editor.img;
-
-  // Determine source crop
   const crop = getCropRect(img.width, img.height);
   const exp = getExportDimensions(crop.w, crop.h);
 
-  // Create export canvas
   const out = document.createElement('canvas');
   out.width = exp.w; out.height = exp.h;
   const ctx = out.getContext('2d');
 
-  // Apply filters
   const f = editor.filters;
   let filters = [];
   filters.push(`brightness(${100 + parseInt(f.exposure)}%)`);
@@ -325,7 +354,6 @@ async function saveEditor(mode) {
   if (f.sharpness > 0) filters.push(`contrast(${100 + f.sharpness * 0.5}%)`);
   ctx.filter = filters.join(' ');
 
-  // Draw with rotation
   ctx.save();
   ctx.translate(exp.w / 2, exp.h / 2);
   ctx.rotate(editor.rotate * Math.PI / 180);
@@ -334,7 +362,6 @@ async function saveEditor(mode) {
   ctx.drawImage(img, -crop.w / 2, -crop.h / 2, crop.w, crop.h);
   ctx.restore();
 
-  // AI enhancement simulation (slight unsharp mask or brightness boost)
   if (f.ai) {
     ctx.globalCompositeOperation = 'overlay';
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
@@ -342,7 +369,6 @@ async function saveEditor(mode) {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  // Vignette on export
   if (f.vignette > 0) {
     const grad = ctx.createRadialGradient(exp.w / 2, exp.h / 2, exp.w * 0.3, exp.w / 2, exp.h / 2, exp.w * 0.8);
     grad.addColorStop(0, 'transparent');
@@ -354,13 +380,13 @@ async function saveEditor(mode) {
   const blob = await new Promise(res => out.toBlob(res, 'image/jpeg', 0.92));
   const fd = new FormData();
   fd.append('file', blob, editor.photo.name || 'edited.jpg');
-  fd.append('galleryId', G.current);
+  fd.append('galleryId', G.id);
   fd.append('photoId', editor.photo.id);
   fd.append('mode', mode);
 
   await fetch('/api/photos/update', { method: 'POST', body: fd });
   closeEditor();
-  selectGallery(G.current);
+  refreshGallery();
 }
 
 // ─── ČLÁNKY ───
@@ -475,7 +501,7 @@ async function createSubsection() {
 
 async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
 
-// ─── O ZAJDOVI ───
+// ─── O ZAJDOVI – fotky z galerie ───
 let aboutData = { title: '', text: '', photos: [], subsections: [] };
 
 async function loadAbout() {
@@ -506,15 +532,34 @@ function renderAboutPhotos() {
 
 function removeAboutPhoto(i) { aboutData.photos.splice(i, 1); renderAboutPhotos(); }
 
-async function uploadAboutPhoto(input) {
-  if (!input.files[0]) return;
-  const fd = new FormData();
-  fd.append('file', input.files[0]);
-  const res = await fetch('/api/about/upload-photo', { method: 'POST', body: fd });
-  const data = await res.json();
-  aboutData.photos.push(data.url);
+// Výběr fotek z galerie místo uploadu
+function openGalleryPicker() {
+  if (!G.id || !G.photos.length) {
+    alert('Nejdřív nahraj fotky do galerie.');
+    return;
+  }
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155">
+      <h3 style="margin-bottom:1rem;color:#f8fafc">Vyber fotku z galerie</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem;">
+        ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='transparent'" onclick="pickAboutPhoto('${p.url}')">`).join('')}
+      </div>
+      <div style="text-align:center;margin-top:1rem">
+        <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
+      </div>
+    </div>
+  `;
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+function pickAboutPhoto(url) {
+  if (!aboutData.photos.includes(url)) aboutData.photos.push(url);
   renderAboutPhotos();
-  input.value = '';
+  const modal = document.querySelector('.modal');
+  if (modal) modal.remove();
 }
 
 function renderAboutSubsections() {
@@ -543,4 +588,4 @@ async function saveAbout() {
 }
 
 // ─── INIT ───
-loadGalleries();
+loadGallery();
