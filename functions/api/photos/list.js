@@ -1,11 +1,8 @@
 export async function onRequestGet(context) {
-  const { env } = context;
-  // Načteme všechny fotky z jedné hlavní galerie (první dostupná nebo main)
-  const list = await env.PHOTOS.list({ prefix: 'gallery:' });
-  if (!list.keys.length) return Response.json([]);
-  
-  // Použijeme první existující galerii jako hlavní
-  const mainKey = list.keys[0].name;
-  const data = await env.PHOTOS.get(mainKey, { type: 'json' });
-  return Response.json(data?.photos || []);
+  const { request, env } = context;
+  const { searchParams } = new URL(request.url);
+  const galleryId = searchParams.get('galleryId');
+  if (!galleryId) return Response.json({ error: 'Chybí galleryId' }, { status: 400 });
+  const gal = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
+  return Response.json(gal?.photos || []);
 }
