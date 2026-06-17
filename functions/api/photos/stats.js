@@ -1,30 +1,16 @@
 export async function onRequestGet(context) {
-  const { request, env } = context;
-  const { searchParams } = new URL(request.url);
-  const galleryId = searchParams.get('galleryId');
-  const r2 = env.PHOTOS_R2;
-
-  let totalSize = 0, totalCount = 0;
+  const { env } = context;
+  let totalSize = 0, totalCount = 0, cursor;
   
-  if (r2) {
-    try {
-      let cursor;
-      do {
-        const list = await r2.list({ cursor, limit: 1000 });
-        for (const o of list.objects || []) { totalSize += o.size; totalCount++; }
-        cursor = list.truncated ? list.cursor : undefined;
-      } while (cursor);
-    } catch {}
-  }
+  do {
+    const list = await env.PHOTOS_R2.list({ cursor, limit: 1000 });
+    for (const o of list.objects || []) { totalSize += o.size; totalCount++; }
+    cursor = list.truncated ? list.cursor : undefined;
+  } while (cursor);
 
   let galCount = 0, galSize = 0;
-  if (galleryId) {
-    const gal = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
-    if (gal?.photos) {
-      galCount = gal.photos.length;
-      galSize = gal.photos.reduce((a, p) => a + (p.size || 0), 0);
-    }
-  }
+  const galList = await env.PHOTOS_R2.list({ prefix: 'gallery-main/' });
+  for (const o of galList.objects || []) { galCount++; galSize += o.size; }
 
   return Response.json({ totalCount, totalSize, galCount, galSize });
 }
