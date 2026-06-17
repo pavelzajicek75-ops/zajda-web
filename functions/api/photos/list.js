@@ -1,10 +1,8 @@
 export async function onRequestGet(context) {
-  const { env } = context;
-  const list = await env.PHOTOS.list({ prefix: 'gallery:' });
-  const galleries = [];
-  for (const key of list.keys) {
-    const data = await env.PHOTOS.get(key.name, { type: 'json' });
-    if (data) galleries.push(data);
-  }
-  return Response.json(galleries);
+  const { request, env } = context;
+  const { searchParams } = new URL(request.url);
+  const galleryId = searchParams.get('galleryId');
+  if (!galleryId) return Response.json({ error: 'Chybí galleryId' }, { status: 400 });
+  const gal = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
+  return Response.json(gal?.photos || []);
 }
