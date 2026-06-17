@@ -1,16 +1,12 @@
 export async function onRequestDelete(context) {
   const { request, env } = context;
+  const r2 = env.QUOTES_R2;
+  if (!r2) return Response.json({ error: 'Chybí QUOTES_R2' }, { status: 500 });
+  
   const { searchParams } = new URL(request.url);
   const key = searchParams.get('key');
-
-  if (!env.QUOTES_R2) {
-    return Response.json({ error: 'R2 binding QUOTES_R2 není připojený.' }, { status: 500 });
-  }
-
-  if (!key) {
-    return Response.json({ error: 'Chybí klíč souboru' }, { status: 400 });
-  }
+  if (!key) return Response.json({ error: 'Chybí klíč' }, { status: 400 });
   
-  await env.QUOTES_R2.delete(key);
+  await r2.delete(key);
   return Response.json({ success: true });
 }
