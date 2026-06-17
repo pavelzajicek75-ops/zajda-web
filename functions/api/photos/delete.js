@@ -1,33 +1,18 @@
 export async function onRequestDelete(context) {
   const { request, env } = context;
   const { searchParams } = new URL(request.url);
-  const id = searchParams.get('id');
-  const type = searchParams.get('type');
   const galleryId = searchParams.get('galleryId');
+  const keys = searchParams.get('keys');
 
-  if (!env.PHOTOS_R2) {
-    return Response.json({ error: 'R2 binding PHOTOS_R2 není připojený.' }, { status: 500 });
-  }
+  if (!galleryId) return Response.json({ error: 'Chybí galleryId' }, { status: 400 });
+  const gal = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
+  if (!gal) return Response.json({ error: 'Galerie nenalezena' }, { status: 404 });
 
-  if (type === 'photo' && galleryId) {
-    const gallery = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
-    if (gallery?.photos) {
-      const photo = gallery.photos.find(p => p.id === id);
-      if (photo) {
-        await env.PHOTOS_R2.delete(photo.key);
-        gallery.photos = gallery.photos.filter(p => p.id !== id);
-        await env.PHOTOS.put(`gallery:${galleryId}`, JSON.stringify(gallery));
-      }
-    }
-    return Response.json({ success: true });
+  const ids = keys ? keys.split(',') : [];
+  for (const pid of ids) {
+    const p = gal.photos.find(x => x.id === pid);
+    if (p) { await env['zajda-photos'].delete(p.key); gal.photos = gal.photos.filter(x => x.id !== pid); }
   }
-
-  const gallery = await env.PHOTOS.get(`gallery:${id}`, { type: 'json' });
-  if (gallery?.photos) {
-    for (const p of gallery.photos) {
-      await env.PHOTOS_R2.delete(p.key);
-    }
-  }
-  await env.PHOTOS.delete(`gallery:${id}`);
-  return Response.json({ success: true });
+  await env.PHOTOS.put(`gallery:${galleryId}`, JSON.stringify(gal));
+  return Response.json({ success: true, removed: ids.length });
 }
