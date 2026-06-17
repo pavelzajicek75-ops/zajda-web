@@ -19,7 +19,6 @@
 </nav>
 
 <main class="content">
-  <!-- GALERIE -->
   <section id="galleries" class="section active">
     <h2>Galerie</h2>
     <div class="toolbar">
@@ -49,7 +48,6 @@
     <div id="galleryView" class="gallery-view grid-view"></div>
   </section>
 
-  <!-- ČLÁNKY -->
   <section id="articles" class="section">
     <h2>Články</h2>
     <div class="form-card">
@@ -61,7 +59,6 @@
     <div id="articleList" class="list"></div>
   </section>
 
-  <!-- CITÁTY -->
   <section id="quotes" class="section">
     <h2>Citáty</h2>
     <div class="form-card">
@@ -77,7 +74,6 @@
     </div>
   </section>
 
-  <!-- SEKCE -->
   <section id="sections" class="section">
     <h2>Sekce</h2>
     <div class="form-card">
@@ -89,7 +85,6 @@
     <div class="table-wrap"><table class="data-table"><thead><tr><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr></thead><tbody id="sectionTableBody"></tbody></table></div>
   </section>
 
-  <!-- PODSEKCE -->
   <section id="subsections" class="section">
     <h2>Podsekce</h2>
     <div class="form-card">
@@ -102,7 +97,6 @@
     <div class="table-wrap"><table class="data-table"><thead><tr><th>Sekce</th><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr></thead><tbody id="subsectionTableBody"></tbody></table></div>
   </section>
 
-  <!-- O ZAJDOVI -->
   <section id="about" class="section">
     <h2>O Zajdovi</h2>
     <div class="form-card">
@@ -120,7 +114,6 @@
   </section>
 </main>
 
-<!-- EDITOR -->
 <div id="editorModal" class="modal hidden">
   <div class="editor-frame">
     <div class="editor-header">
@@ -145,14 +138,12 @@
           <button onclick="rotateEditor(90)" class="btn btn-blue btn-sm">↻ +90°</button>
         </div>
       </div>
-      
       <div class="editor-canvas-box" id="canvasBox">
         <canvas id="editorCanvas"></canvas>
         <div id="cropFrame" class="crop-frame hidden">
           <div class="crop-grid"></div>
         </div>
       </div>
-      
       <div class="editor-filters">
         <h4>Filtry</h4>
         <label>Expozice <span id="fval-exposure">0</span></label>
