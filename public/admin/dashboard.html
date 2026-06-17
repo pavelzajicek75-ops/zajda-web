@@ -9,7 +9,7 @@
 <body>
 <nav class="sidebar">
   <h2>📊 Admin</h2>
-  <a href="#" class="nav-link active" data-section="galleries">🖼️ Fotografie</a>
+  <a href="#" class="nav-link active" data-section="galleries">🖼️ Galerie</a>
   <a href="#" class="nav-link" data-section="articles">📝 Články</a>
   <a href="#" class="nav-link" data-section="quotes">💬 Citáty</a>
   <a href="#" class="nav-link" data-section="sections">📁 Sekce</a>
@@ -19,74 +19,42 @@
 </nav>
 
 <main class="content">
-  <!-- GALERIE -->
- <section id="galleries" class="section active">
-  <h2>Fotografie / Galerie</h2>
+  <section id="galleries" class="section active">
+    <h2>Galerie</h2>
+    <div class="gallery-tabs-wrap">
+      <div class="gallery-tabs" id="galleryTabs"></div>
+      <button onclick="createGalleryPrompt()" class="btn btn-green btn-sm" style="margin-left:0.5rem">+ Nová galerie</button>
+    </div>
 
-  <!-- Karty galerií (Excel listy) -->
-  <div class="gallery-tabs" id="galleryTabs">
-    <button onclick="createGallery()" class="tab-btn tab-add" title="Nová galerie">+</button>
-  </div>
-
-  <!-- Ovládací panel -->
-  <div class="gallery-toolbar">
-    <div class="toolbar-info">
-      <span id="galleryStats">0 fotek | 0 MB</span>
-    </div>
-    <div class="toolbar-view">
-      <button onclick="setView('thumbnails')" id="view-thumb" class="btn btn-blue active">🔲 Miniatury</button>
-      <button onclick="setView('small')" id="view-small" class="btn btn-blue">▫️ Malé</button>
-      <button onclick="setView('list')" id="view-list" class="btn btn-blue">☰ Seznam</button>
-    </div>
-    <div class="toolbar-sort">
-      <select id="sortBy" onchange="renderGallery()">
-        <option value="name">Název</option>
-        <option value="date">Datum</option>
-        <option value="size">Velikost</option>
-      </select>
-      <button onclick="toggleSortDir()" id="sortDirBtn" class="btn btn-blue">↑ Vzestupně</button>
-    </div>
-    <div class="toolbar-actions">
-      <button onclick="document.getElementById('galleryUpload').click()" class="btn btn-green">📤 Přidat fotky</button>
-      <button onclick="deleteSelected()" class="btn btn-red">🗑️ Smazat vybrané (<span id="selectedCount">0</span>)</button>
-      <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="uploadToGallery(event)">
-    </div>
-  </div>
-
-  <!-- Obsah galerie -->
-  <div id="galleryContent" class="gallery-view view-thumbnails"></div>
-</section>
-
-<!-- Editor fotografií -->
-<div id="editorModal" class="modal hidden">
-  <div class="modal-content editor-modal">
-    <h3>🎨 Editor fotografií</h3>
-    <div class="editor-canvas-wrap">
-      <canvas id="editorCanvas"></canvas>
-    </div>
-    <div class="editor-tools">
-      <div class="tool-group">
-        <button onclick="editorRotate(-90)" class="btn btn-blue" title="Otočit doleva">↺ 90°</button>
-        <button onclick="editorRotate(90)" class="btn btn-blue" title="Otočit doprava">↻ 90°</button>
-        <button onclick="editorFlip('h')" class="btn btn-blue" title="Zrcadlit vodorovně">↔</button>
-        <button onclick="editorFlip('v')" class="btn btn-blue" title="Zrcadlit svisle">↕</button>
+    <div class="gallery-toolbar" id="galleryToolbar" style="display:none">
+      <div class="toolbar-info">
+        <span id="photoCount">0 fotek</span>
+        <span id="photoSize">0 MB</span>
       </div>
-      <div class="tool-group sliders">
-        <label>Jas: <input type="range" id="edBrightness" min="0" max="200" value="100" oninput="editorApply()"></label>
-        <label>Kontrast: <input type="range" id="edContrast" min="0" max="200" value="100" oninput="editorApply()"></label>
-        <label>Saturace: <input type="range" id="edSaturation" min="0" max="200" value="100" oninput="editorApply()"></label>
+      <div class="toolbar-actions">
+        <select id="viewMode" onchange="renderGallery()">
+          <option value="grid">Mřížka</option>
+          <option value="small">Malé miniatury</option>
+          <option value="list">Seznam</option>
+        </select>
+        <select id="sortBy" onchange="renderGallery()">
+          <option value="date-desc">Nejnovější</option>
+          <option value="date-asc">Nejstarší</option>
+          <option value="name-asc">Název A-Z</option>
+          <option value="name-desc">Název Z-A</option>
+          <option value="size-desc">Největší</option>
+          <option value="size-asc">Nejmenší</option>
+        </select>
+        <button onclick="document.getElementById('galleryUpload').click()" class="btn btn-blue">Přidat fotky</button>
+        <button onclick="deleteSelectedPhotos()" class="btn btn-red" id="bulkDeleteBtn" style="display:none">Smazat vybrané</button>
       </div>
     </div>
-    <div class="editor-actions">
-      <button onclick="saveEdit('overwrite')" class="btn btn-green">💾 Uložit (přepsat)</button>
-      <button onclick="saveEdit('saveas')" class="btn btn-blue">💾 Uložit jako kopii</button>
-      <button onclick="closeEditor()" class="btn btn-red">❌ Zrušit</button>
-    </div>
-  </div>
-</div>
 
+    <input type="file" id="galleryUpload" multiple accept="image/*" style="display:none" onchange="uploadGalleryPhotos(this)">
 
-  <!-- ČLÁNKY -->
+    <div id="galleryContent" class="gallery-view grid-view"></div>
+  </section>
+
   <section id="articles" class="section">
     <h2>Články</h2>
     <div class="form-card">
@@ -99,7 +67,6 @@
     <div id="articleList" class="list"></div>
   </section>
 
-  <!-- CITÁTY -->
   <section id="quotes" class="section">
     <h2>Citáty</h2>
     <div class="form-card">
@@ -110,23 +77,18 @@
     </div>
     <div class="table-wrap">
       <table class="data-table">
-        <thead>
-          <tr><th style="width:60%">Citát</th><th style="width:25%">Autor</th><th style="width:15%">Akce</th></tr>
-        </thead>
-        <tbody id="quoteTableBody">
-          <tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>
-        </tbody>
+        <thead><tr><th style="width:60%">Citát</th><th style="width:25%">Autor</th><th style="width:15%">Akce</th></tr></thead>
+        <tbody id="quoteTableBody"><tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr></tbody>
       </table>
     </div>
   </section>
 
-  <!-- SEKCE -->
   <section id="sections" class="section">
     <h2>Sekce</h2>
     <div class="form-card">
       <h3>Nová sekce</h3>
       <input type="text" id="sName" placeholder="Název sekce">
-      <input type="text" id="sSlug" placeholder="URL slug (např. galerie)">
+      <input type="text" id="sSlug" placeholder="URL slug">
       <input type="number" id="sOrder" placeholder="Pořadí" value="0">
       <button onclick="createSection()" class="btn btn-green">Vytvořit sekci</button>
     </div>
@@ -138,7 +100,6 @@
     </div>
   </section>
 
-  <!-- PODSEKCE -->
   <section id="subsections" class="section">
     <h2>Podsekce</h2>
     <div class="form-card">
@@ -157,7 +118,6 @@
     </div>
   </section>
 
-  <!-- O ZAJDOVI -->
   <section id="about" class="section">
     <h2>O Zajdovi</h2>
     <div class="form-card">
@@ -170,39 +130,38 @@
   </section>
 </main>
 
-<!-- EDITOR FOTEK -->
-<div id="photoEditor" class="modal hidden">
+<!-- Lightbox -->
+<div id="lightbox" class="modal hidden" onclick="closeLightbox(event)">
+  <div class="lightbox-content">
+    <img id="lightboxImg" src="" alt="">
+    <div class="lightbox-actions">
+      <button onclick="openEditorFromLightbox()" class="btn btn-blue">✏️ Editor</button>
+      <button onclick="deleteLightboxPhoto()" class="btn btn-red">🗑️ Smazat</button>
+      <button onclick="closeLightbox()" class="btn btn-gray">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editor -->
+<div id="editorModal" class="modal hidden">
   <div class="modal-content editor-modal">
-    <h3>✏️ Editor fotky</h3>
+    <h3>Editor fotografie</h3>
     <div class="editor-canvas-wrap">
       <canvas id="editorCanvas"></canvas>
     </div>
-    <div class="editor-tools">
-      <div class="tool-group">
-        <label>Rotace:</label>
-        <button onclick="editorRotate(-90)" class="btn btn-sm">↺ -90°</button>
-        <button onclick="editorRotate(90)" class="btn btn-sm">↻ +90°</button>
-      </div>
-      <div class="tool-group">
-        <label>Zrcadlit:</label>
-        <button onclick="editorFlip('h')" class="btn btn-sm">↔ Vodorovně</button>
-        <button onclick="editorFlip('v')" class="btn btn-sm">↕ Svisle</button>
-      </div>
-      <div class="tool-group">
-        <label>Rozměry:</label>
-        <input type="number" id="editorWidth" placeholder="Šířka" onchange="editorResize()">
-        <input type="number" id="editorHeight" placeholder="Výška" onchange="editorResize()">
-      </div>
-      <div class="tool-group">
-        <label>Kvalita (JPEG):</label>
-        <input type="range" id="editorQuality" min="0.1" max="1" step="0.1" value="0.9">
-        <span id="qualityVal">90%</span>
+    <div class="editor-controls">
+      <label>Ořez (zoom): <input type="range" id="cropZoom" min="1" max="3" step="0.1" value="1" oninput="refreshEditor()"></label>
+      <label>Jas: <input type="range" id="brightness" min="50" max="150" value="100" oninput="refreshEditor()"></label>
+      <label>Kontrast: <input type="range" id="contrast" min="50" max="150" value="100" oninput="refreshEditor()"></label>
+      <div class="editor-buttons">
+        <button onclick="rotateEditor(-90)" class="btn btn-blue">↺ Vlevo</button>
+        <button onclick="rotateEditor(90)" class="btn btn-blue">↻ Vpravo</button>
       </div>
     </div>
     <div class="editor-actions">
-      <button onclick="closeEditor()" class="btn">Zavřít</button>
-      <button onclick="saveEditor('overwrite')" class="btn btn-green">💾 Uložit (přepsat)</button>
-      <button onclick="saveEditor('copy')" class="btn btn-blue">📄 Uložit jako novou</button>
+      <button onclick="saveEditor('replace')" class="btn btn-green">💾 Uložit (přepsat)</button>
+      <button onclick="saveEditor('saveas')" class="btn btn-blue">💾 Uložit jako novou</button>
+      <button onclick="closeEditor()" class="btn btn-red">Zavřít</button>
     </div>
   </div>
 </div>
