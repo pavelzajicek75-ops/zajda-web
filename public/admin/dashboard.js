@@ -30,278 +30,234 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function formatSize(bytes) {
-  if (!bytes) return '-';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
+// ─── GALERIE STATE ───
+let galleryState = {
+  galleries: [],
+  currentGalleryId: null,
+  photos: [],
+  selected: new Set(),
+  editor: { img: null, rotation: 0, photoId: null }
+};
 
-// ═══════════════════════════════════════
-// GALERIE
-// ═══════════════════════════════════════
-let galleriesData = [];
-let currentGalleryId = null;
-let currentView = 'grid';
-let currentSort = 'date-desc';
-let selectedPhotos = new Set();
-let editorState = { img: null, rotation: 0, flipH: 1, flipV: 1, originalKey: null };
-
+// ─── GALERIE ───
 async function loadGalleries() {
-  const res = await fetch('/api/photos/list');
-  galleriesData = await res.json();
-  
+  const res = await fetch('/api/photos/galleries');
+  galleryState.galleries = await res.json();
   const tabs = document.getElementById('galleryTabs');
-  if (!galleriesData.length) {
-    tabs.innerHTML = '<p style="color:#64748b">Zatím žádné galerie.</p>';
-    document.getElementById('galleryToolbar').style.display = 'none';
-    document.getElementById('galleryContent').innerHTML = '';
-    return;
-  }
-
-  tabs.innerHTML = galleriesData.map(g => `
-    <button class="gallery-tab ${g.id === currentGalleryId ? 'active' : ''}" 
-            onclick="switchGallery('${g.id}')">${escapeHtml(g.title)}</button>
+  tabs.innerHTML = galleryState.galleries.map(g => `
+    <div class="gallery-tab ${g.id === galleryState.currentGalleryId ? 'active' : ''}" onclick="selectGallery('${g.id}')">
+      ${escapeHtml(g.title)}
+    </div>
   `).join('');
-
-  if (!currentGalleryId || !galleriesData.find(g => g.id === currentGalleryId)) {
-    currentGalleryId = galleriesData[0].id;
+  if (!galleryState.currentGalleryId && galleryState.galleries.length > 0) {
+    selectGallery(galleryState.galleries[0].id);
   }
-  
-  document.getElementById('galleryToolbar').style.display = 'flex';
+}
+
+function createGalleryPrompt() {
+  const name = prompt('Název nové galerie:');
+  if (!name) return;
+  fetch('/api/photos/galleries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: name })
+  }).then(() => loadGalleries());
+}
+
+async function selectGallery(id) {
+  galleryState.currentGalleryId = id;
+  galleryState.selected.clear();
+  document.getElementById('bulkDeleteBtn').style.display = 'none';
+  loadGalleries(); // refresh tabs
+
+  const res = await fetch(`/api/photos/list?galleryId=${id}`);
+  galleryState.photos = await res.json();
   renderGallery();
-  loadGalleryStats();
+  loadStats();
+  document.getElementById('galleryToolbar').style.display = 'flex';
 }
 
-function switchGallery(id) {
-  currentGalleryId = id;
-  selectedPhotos.clear();
-  updateSelectionUI();
-  loadGalleries();
-}
-
-async function loadGalleryStats() {
+async function loadStats() {
   try {
     const res = await fetch('/api/photos/stats');
     const stats = await res.json();
-    const g = galleriesData.find(x => x.id === currentGalleryId);
-    const count = g?.photos?.length || 0;
-    document.getElementById('galleryStats').textContent = 
-      `Galerie: ${count} fotek | Celkem v R2: ${stats.count} fotek / ${stats.sizeText}`;
+    document.getElementById('photoCount').textContent = (stats.count || 0) + ' fotek';
+    document.getElementById('photoSize').textContent = ((stats.totalSize || 0) / 1024 / 1024).toFixed(2) + ' MB';
   } catch {
-    document.getElementById('galleryStats').textContent = 'Statistiky nedostupné';
+    document.getElementById('photoCount').textContent = galleryState.photos.length + ' fotek';
+    const size = galleryState.photos.reduce((a, p) => a + (p.size || 0), 0);
+    document.getElementById('photoSize').textContent = (size / 1024 / 1024).toFixed(2) + ' MB';
   }
-}
-
-function setView(view) {
-  currentView = view;
-  document.getElementById('btnGrid').classList.toggle('active', view === 'grid');
-  document.getElementById('btnSmall').classList.toggle('active', view === 'small');
-  document.getElementById('btnList').classList.toggle('active', view === 'list');
-  renderGallery();
-}
-
-function sortPhotos(sortValue) {
-  currentSort = sortValue;
-  renderGallery();
-}
-
-function getSortedPhotos() {
-  const g = galleriesData.find(x => x.id === currentGalleryId);
-  if (!g?.photos) return [];
-  const photos = [...g.photos];
-  
-  const [field, dir] = currentSort.split('-');
-  photos.sort((a, b) => {
-    let va = a[field] || 0, vb = b[field] || 0;
-    if (field === 'name') { va = a.name || ''; vb = b.name || ''; }
-    if (va < vb) return dir === 'asc' ? -1 : 1;
-    if (va > vb) return dir === 'asc' ? 1 : -1;
-    return 0;
-  });
-  return photos;
 }
 
 function renderGallery() {
-  const photos = getSortedPhotos();
+  const mode = document.getElementById('viewMode').value;
+  const sort = document.getElementById('sortBy').value;
   const container = document.getElementById('galleryContent');
-  container.className = currentView === 'list' ? 'gallery-list' : currentView === 'small' ? 'gallery-small' : 'gallery-grid';
-  
-  if (!photos.length) {
-    container.innerHTML = '<p style="color:#64748b;grid-column:1/-1">Galerie je prázdná.</p>';
-    return;
-  }
+  container.className = 'gallery-view ' + mode + '-view';
+
+  let photos = [...galleryState.photos];
+  const [field, dir] = sort.split('-');
+  photos.sort((a, b) => {
+    let va = a[field === 'date' ? 'uploaded' : field] || '';
+    let vb = b[field === 'date' ? 'uploaded' : field] || '';
+    if (field === 'size') { va = a.size || 0; vb = b.size || 0; }
+    if (dir === 'asc') return va > vb ? 1 : -1;
+    return va < vb ? 1 : -1;
+  });
 
   container.innerHTML = photos.map(p => {
-    const checked = selectedPhotos.has(p.key) ? 'checked' : '';
-    if (currentView === 'list') {
+    const checked = galleryState.selected.has(p.id) ? 'checked' : '';
+    if (mode === 'list') {
       return `
-        <div class="list-row" data-key="${p.key}">
-          <input type="checkbox" ${checked} onchange="toggleSelect('${p.key}')">
-          <img src="${p.url}" onclick="openEditor('${p.key}','${p.url}')">
-          <div class="list-info">
-            <strong>${escapeHtml(p.name)}</strong>
-            <small>${formatSize(p.size)} | ${new Date(p.uploaded).toLocaleDateString('cs')}</small>
+        <div class="gallery-item" onclick="openLightbox('${p.id}')">
+          <input type="checkbox" class="select-box" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
+          <img src="${p.url}" alt="" loading="lazy">
+          <div class="gallery-meta">
+            <div>${escapeHtml(p.name)}</div>
+            <small>${(p.size / 1024).toFixed(1)} kB • ${new Date(p.uploaded).toLocaleDateString('cs')}</small>
           </div>
-          <button onclick="deletePhoto('${currentGalleryId}','${p.id}')" class="btn btn-red btn-sm">🗑️</button>
         </div>`;
     }
-    const cls = currentView === 'small' ? 'photo-small' : 'photo-card';
     return `
-      <div class="${cls}" data-key="${p.key}">
-        <input type="checkbox" class="photo-check" ${checked} onchange="toggleSelect('${p.key}')">
-        <img src="${p.url}" onclick="openEditor('${p.key}','${p.url}')" loading="lazy">
-        <div class="photo-overlay">
-          <small>${escapeHtml(p.name)}</small>
-          <small>${formatSize(p.size)}</small>
-        </div>
+      <div class="gallery-item" onclick="openLightbox('${p.id}')">
+        <input type="checkbox" class="select-box" ${checked} onclick="event.stopPropagation(); toggleSelect('${p.id}')">
+        <img src="${p.url}" alt="" loading="lazy">
       </div>`;
   }).join('');
 }
 
-function toggleSelect(key) {
-  if (selectedPhotos.has(key)) selectedPhotos.delete(key);
-  else selectedPhotos.add(key);
-  updateSelectionUI();
+function toggleSelect(id) {
+  if (galleryState.selected.has(id)) galleryState.selected.delete(id);
+  else galleryState.selected.add(id);
+  document.getElementById('bulkDeleteBtn').style.display = galleryState.selected.size > 0 ? 'inline-block' : 'none';
+  renderGallery();
 }
 
-function updateSelectionUI() {
-  const count = selectedPhotos.size;
-  document.getElementById('selCount').textContent = count;
-  document.getElementById('bulkDeleteBtn').style.display = count > 0 ? 'inline-block' : 'none';
+async function deleteSelectedPhotos() {
+  if (!confirm(`Smazat ${galleryState.selected.size} fotek?`)) return;
+  const ids = Array.from(galleryState.selected).join(',');
+  await fetch(`/api/photos/delete?galleryId=${galleryState.currentGalleryId}&keys=${ids}`, { method: 'DELETE' });
+  galleryState.selected.clear();
+  document.getElementById('bulkDeleteBtn').style.display = 'none';
+  selectGallery(galleryState.currentGalleryId);
 }
 
-async function deleteSelected() {
-  if (!confirm(`Smazat ${selectedPhotos.size} fotek?`)) return;
-  await fetch('/api/photos/bulk-delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ keys: Array.from(selectedPhotos), galleryId: currentGalleryId })
-  });
-  selectedPhotos.clear();
-  updateSelectionUI();
-  loadGalleries();
-}
-
-async function createGallery() {
-  const title = document.getElementById('gTitle').value.trim();
-  if (!title) return alert('Zadej název galerie');
-  await fetch('/api/photos/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, desc: document.getElementById('gDesc').value.trim() })
-  });
-  document.getElementById('gTitle').value = '';
-  document.getElementById('gDesc').value = '';
-  loadGalleries();
-}
-
-async function uploadToGallery(e) {
-  const files = e.target.files;
-  if (!files.length || !currentGalleryId) return;
-  
-  for (const file of files) {
+async function uploadGalleryPhotos(input) {
+  if (!input.files.length) return;
+  for (const file of input.files) {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('galleryId', currentGalleryId);
+    formData.append('galleryId', galleryState.currentGalleryId);
     await fetch('/api/photos/upload', { method: 'POST', body: formData });
   }
-  e.target.value = '';
-  loadGalleries();
+  input.value = '';
+  selectGallery(galleryState.currentGalleryId);
 }
 
-async function deletePhoto(galleryId, photoId) {
-  if (!confirm('Smazat fotku?')) return;
-  await fetch(`/api/photos/delete?id=${photoId}&galleryId=${galleryId}&type=photo`, { method: 'DELETE' });
-  loadGalleries();
+// ─── LIGHTBOX ───
+function openLightbox(id) {
+  const p = galleryState.photos.find(x => x.id === id);
+  if (!p) return;
+  galleryState.editor.photoId = id;
+  document.getElementById('lightboxImg').src = p.url;
+  document.getElementById('lightbox').classList.remove('hidden');
 }
 
-// ═══════════════════════════════════════
-// EDITOR FOTEK (Canvas)
-// ═══════════════════════════════════════
-function openEditor(key, url) {
-  editorState = { img: new Image(), rotation: 0, flipH: 1, flipV: 1, originalKey: key, originalUrl: url };
-  editorState.img.crossOrigin = 'anonymous';
-  editorState.img.onload = () => {
-    document.getElementById('editorWidth').value = editorState.img.width;
-    document.getElementById('editorHeight').value = editorState.img.height;
-    document.getElementById('editorQuality').addEventListener('input', e => {
-      document.getElementById('qualityVal').textContent = Math.round(e.target.value * 100) + '%';
-    });
-    drawEditor();
-    document.getElementById('photoEditor').classList.remove('hidden');
+function closeLightbox(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('lightbox').classList.add('hidden');
+}
+
+function deleteLightboxPhoto() {
+  const id = galleryState.editor.photoId;
+  closeLightbox();
+  fetch(`/api/photos/delete?galleryId=${galleryState.currentGalleryId}&photoId=${id}`, { method: 'DELETE' })
+    .then(() => selectGallery(galleryState.currentGalleryId));
+}
+
+// ─── EDITOR ───
+function openEditorFromLightbox() {
+  const id = galleryState.editor.photoId;
+  const p = galleryState.photos.find(x => x.id === id);
+  closeLightbox();
+  if (!p) return;
+
+  const modal = document.getElementById('editorModal');
+  modal.classList.remove('hidden');
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    galleryState.editor.img = img;
+    galleryState.editor.rotation = 0;
+    document.getElementById('cropZoom').value = 1;
+    document.getElementById('brightness').value = 100;
+    document.getElementById('contrast').value = 100;
+    refreshEditor();
   };
-  editorState.img.src = url;
+  img.src = p.url;
 }
 
-function drawEditor() {
+function refreshEditor() {
   const canvas = document.getElementById('editorCanvas');
   const ctx = canvas.getContext('2d');
-  const img = editorState.img;
-  
-  const rad = editorState.rotation * Math.PI / 180;
-  const isSideways = Math.abs(editorState.rotation) % 180 === 90;
-  canvas.width = isSideways ? img.height : img.width;
-  canvas.height = isSideways ? img.width : img.height;
-  
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const img = galleryState.editor.img;
+  if (!img) return;
+
+  const zoom = parseFloat(document.getElementById('cropZoom').value);
+  const bright = document.getElementById('brightness').value;
+  const contrast = document.getElementById('contrast').value;
+  const rot = galleryState.editor.rotation;
+
+  // Výpočet rozměrů canvasu po rotaci
+  let w = img.width / zoom;
+  let h = img.height / zoom;
+
+  if (rot % 180 !== 0) {
+    canvas.width = h;
+    canvas.height = w;
+  } else {
+    canvas.width = w;
+    canvas.height = h;
+  }
+
+  ctx.filter = `brightness(${bright}%) contrast(${contrast}%)`;
   ctx.save();
   ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(rad);
-  ctx.scale(editorState.flipH, editorState.flipV);
-  ctx.drawImage(img, -img.width / 2, -img.height / 2);
+  ctx.rotate(rot * Math.PI / 180);
+
+  const sx = (img.width - w) / 2;
+  const sy = (img.height - h) / 2;
+  ctx.drawImage(img, sx, sy, w, h, -w / 2, -h / 2, w, h);
   ctx.restore();
 }
 
-function editorRotate(deg) {
-  editorState.rotation = (editorState.rotation + deg) % 360;
-  drawEditor();
-}
-
-function editorFlip(dir) {
-  if (dir === 'h') editorState.flipH *= -1;
-  else editorState.flipV *= -1;
-  drawEditor();
-}
-
-function editorResize() {
-  // Resize se aplikuje až při uložení - zde jen náhled
-  drawEditor();
+function rotateEditor(deg) {
+  galleryState.editor.rotation = (galleryState.editor.rotation + deg) % 360;
+  refreshEditor();
 }
 
 function closeEditor() {
-  document.getElementById('photoEditor').classList.add('hidden');
+  document.getElementById('editorModal').classList.add('hidden');
+  galleryState.editor.img = null;
 }
 
 async function saveEditor(mode) {
   const canvas = document.getElementById('editorCanvas');
-  const quality = parseFloat(document.getElementById('editorQuality').value);
-  
-  canvas.toBlob(async (blob) => {
-    const formData = new FormData();
-    const fileName = editorState.originalKey.split('/').pop();
-    const newFile = new File([blob], fileName, { type: 'image/jpeg' });
-    
-    formData.append('file', newFile);
-    
-    if (mode === 'overwrite') {
-      formData.append('key', editorState.originalKey);
-      formData.append('galleryId', currentGalleryId);
-      await fetch('/api/photos/update', { method: 'POST', body: formData });
-    } else {
-      // Uložit jako novou - normální upload
-      formData.append('galleryId', currentGalleryId);
-      await fetch('/api/photos/upload', { method: 'POST', body: formData });
-    }
-    
-    closeEditor();
-    loadGalleries();
-  }, 'image/jpeg', quality);
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.9));
+  const formData = new FormData();
+  formData.append('file', blob, 'edited.jpg');
+  formData.append('galleryId', galleryState.currentGalleryId);
+  formData.append('photoId', galleryState.editor.photoId);
+  formData.append('mode', mode);
+
+  await fetch('/api/photos/update', { method: 'POST', body: formData });
+  closeEditor();
+  selectGallery(galleryState.currentGalleryId);
 }
 
-// ═══════════════════════════════════════
-// ČLÁNKY
-// ═══════════════════════════════════════
+// ─── ČLÁNKY ───
 async function loadArticles() {
   const res = await fetch('/api/articles/list');
   const data = await res.json();
@@ -331,11 +287,7 @@ async function createArticle() {
   await fetch('/api/articles/create', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      title,
-      content,
-      image: document.getElementById('aImage').value.trim()
-    })
+    body: JSON.stringify({ title, content, image: document.getElementById('aImage').value.trim() })
   });
   document.getElementById('aTitle').value = '';
   document.getElementById('aContent').value = '';
@@ -343,20 +295,13 @@ async function createArticle() {
   loadArticles();
 }
 
-function toggleEdit(id) {
-  document.getElementById(`edit-${id}`).classList.toggle('hidden');
-}
+function toggleEdit(id) { document.getElementById(`edit-${id}`).classList.toggle('hidden'); }
 
 async function saveArticle(id) {
   await fetch('/api/articles/update', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      id,
-      title: document.getElementById(`t-${id}`).value,
-      content: document.getElementById(`c-${id}`).value,
-      image: document.getElementById(`i-${id}`).value
-    })
+    body: JSON.stringify({ id, title: document.getElementById(`t-${id}`).value, content: document.getElementById(`c-${id}`).value, image: document.getElementById(`i-${id}`).value })
   });
   loadArticles();
 }
@@ -367,42 +312,26 @@ async function deleteArticle(id) {
   loadArticles();
 }
 
-// ═══════════════════════════════════════
-// CITÁTY
-// ═══════════════════════════════════════
+// ─── CITÁTY ───
 async function loadQuotes() {
   const tbody = document.getElementById('quoteTableBody');
   tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr>';
   try {
     const res = await fetch('/api/quotes/list');
     const data = await res.json();
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty.</td></tr>';
-      return;
-    }
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty.</td></tr>'; return; }
     tbody.innerHTML = data.map(q => `
-      <tr>
-        <td>"${escapeHtml(q.text)}"</td>
-        <td>${escapeHtml(q.author) || '—'}</td>
-        <td><button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button></td>
-      </tr>
+      <tr><td>"${escapeHtml(q.text)}"</td><td>${escapeHtml(q.author) || '—'}</td>
+      <td><button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button></td></tr>
     `).join('');
-  } catch {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba při načítání.</td></tr>';
-  }
+  } catch { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba.</td></tr>'; }
 }
 
 async function createQuote() {
   const text = document.getElementById('qText').value.trim();
   if (!text) return alert('Zadej text citátu');
-  await fetch('/api/quotes/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, author: document.getElementById('qAuthor').value.trim() })
-  });
-  document.getElementById('qText').value = '';
-  document.getElementById('qAuthor').value = '';
-  loadQuotes();
+  await fetch('/api/quotes/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, author: document.getElementById('qAuthor').value.trim() }) });
+  document.getElementById('qText').value = ''; document.getElementById('qAuthor').value = ''; loadQuotes();
 }
 
 async function deleteQuote(key) {
@@ -411,95 +340,41 @@ async function deleteQuote(key) {
   loadQuotes();
 }
 
-// ═══════════════════════════════════════
-// SEKCE & PODSEKCE
-// ═══════════════════════════════════════
+// ─── SEKCE / PODSEKCE / ABOUT ───
 async function loadSections() {
   const res = await fetch('/api/sections/list');
   const data = await res.json();
-  document.getElementById('sectionTableBody').innerHTML = data.map(s => `
-    <tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td>
-    <td><button onclick="deleteSection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>
-  `).join('');
-  const select = document.getElementById('ssSection');
-  select.innerHTML = '<option value="">— Vyber sekci —</option>' +
-    data.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  document.getElementById('sectionTableBody').innerHTML = data.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td><td><button onclick="deleteSection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>`).join('');
+  document.getElementById('ssSection').innerHTML = '<option value="">— Vyber sekci —</option>' + data.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
 }
 
 async function createSection() {
-  const name = document.getElementById('sName').value.trim();
-  if (!name) return alert('Zadej název');
-  await fetch('/api/sections/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, slug: document.getElementById('sSlug').value.trim(), order: parseInt(document.getElementById('sOrder').value) || 0 })
-  });
-  document.getElementById('sName').value = '';
-  loadSections();
+  await fetch('/api/sections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('sName').value, slug: document.getElementById('sSlug').value, order: parseInt(document.getElementById('sOrder').value) || 0 }) });
+  document.getElementById('sName').value = ''; document.getElementById('sSlug').value = ''; loadSections();
 }
 
-async function deleteSection(id) {
-  if (!confirm('Smazat?')) return;
-  await fetch(`/api/sections/delete?id=${id}`, { method: 'DELETE' });
-  loadSections();
-}
+async function deleteSection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/sections/delete?id=${id}`, { method: 'DELETE' }); loadSections(); }
 
 async function loadSubsections() {
   const res = await fetch('/api/subsections/list');
   const data = await res.json();
-  document.getElementById('subsectionTableBody').innerHTML = data.map(s => `
-    <tr><td>${escapeHtml(s.sectionName || s.sectionId)}</td><td>${escapeHtml(s.name)}</td>
-    <td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td>
-    <td><button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>
-  `).join('');
+  document.getElementById('subsectionTableBody').innerHTML = data.map(s => `<tr><td>${escapeHtml(s.sectionId)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td><td><button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>`).join('');
 }
 
 async function createSubsection() {
   const name = document.getElementById('ssName').value.trim();
-  const sectionId = document.getElementById('ssSection').value;
-  if (!name || !sectionId) return alert('Vyplň vše');
-  await fetch('/api/subsections/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sectionId, name, slug: document.getElementById('ssSlug').value.trim(), order: parseInt(document.getElementById('ssOrder').value) || 0 })
-  });
-  document.getElementById('ssName').value = '';
-  loadSubsections();
+  if (!name || !document.getElementById('ssSection').value) return alert('Vyplň název a sekci');
+  await fetch('/api/subsections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sectionId: document.getElementById('ssSection').value, name, slug: document.getElementById('ssSlug').value, order: parseInt(document.getElementById('ssOrder').value) || 0 }) });
+  document.getElementById('ssName').value = ''; document.getElementById('ssSlug').value = ''; loadSubsections();
 }
 
-async function deleteSubsection(id) {
-  if (!confirm('Smazat?')) return;
-  await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' });
-  loadSubsections();
-}
+async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
 
-// ═══════════════════════════════════════
-// O ZAJDOVI
-// ═══════════════════════════════════════
 async function loadAbout() {
-  try {
-    const res = await fetch('/api/about/get');
-    const data = await res.json();
-    document.getElementById('aboutTitle').value = data.title || '';
-    document.getElementById('aboutText').value = data.text || '';
-    document.getElementById('aboutPreview').innerHTML = `
-      <h4>${escapeHtml(data.title || 'O Zajdovi')}</h4>
-      <p>${escapeHtml(data.text || '').replace(/\n/g, '<br>')}</p>`;
-  } catch {
-    document.getElementById('aboutPreview').innerHTML = '<p style="color:#64748b">Zatím žádný obsah.</p>';
-  }
+  try { const res = await fetch('/api/about/get'); const data = await res.json(); document.getElementById('aboutTitle').value = data.title || ''; document.getElementById('aboutText').value = data.text || ''; document.getElementById('aboutPreview').innerHTML = `<h4>${escapeHtml(data.title || 'O Zajdovi')}</h4><p>${escapeHtml(data.text || '').replace(/\n/g, '<br>')}</p>`; } catch {}
 }
 
-async function saveAbout() {
-  await fetch('/api/about/update', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: document.getElementById('aboutTitle').value, text: document.getElementById('aboutText').value })
-  });
-  loadAbout();
-}
+async function saveAbout() { await fetch('/api/about/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: document.getElementById('aboutTitle').value, text: document.getElementById('aboutText').value }) }); loadAbout(); }
 
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
+// ─── INIT ───
 loadGalleries();
