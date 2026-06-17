@@ -1,26 +1,30 @@
 export async function onRequestGet(context) {
-  const { env } = context;
+  const { request, env } = context;
+  const { searchParams } = new URL(request.url);
+  const galleryId = searchParams.get('galleryId');
+  const r2 = env.PHOTOS_R2;
+
+  let totalSize = 0, totalCount = 0;
   
-  const list = await env.PHOTOS.list({ prefix: 'gallery:' });
-  const mainKey = list.keys[0]?.name;
-  
-  let count = 0, size = 0;
-  
-  if (mainKey) {
-    const gallery = await env.PHOTOS.get(mainKey, { type: 'json' });
-    if (gallery?.photos) {
-      count = gallery.photos.length;
-      size = gallery.photos.reduce((a, p) => a + (p.size || 0), 0);
+  if (r2) {
+    try {
+      let cursor;
+      do {
+        const list = await r2.list({ cursor, limit: 1000 });
+        for (const o of list.objects || []) { totalSize += o.size; totalCount++; }
+        cursor = list.truncated ? list.cursor : undefined;
+      } while (cursor);
+    } catch {}
+  }
+
+  let galCount = 0, galSize = 0;
+  if (galleryId) {
+    const gal = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
+    if (gal?.photos) {
+      galCount = gal.photos.length;
+      galSize = gal.photos.reduce((a, p) => a + (p.size || 0), 0);
     }
   }
 
-  // Celkové R2 statistiky (všechny objekty v bucketu)
-  let totalSize = 0, totalCount = 0, cursor;
-  do {
-    const r2list = await env['zajda-photos'].list({ cursor, limit: 1000 });
-    for (const o of r2list.objects || []) { totalSize += o.size; totalCount++; }
-    cursor = r2list.truncated ? r2list.cursor : undefined;
-  } while (cursor);
-
-  return Response.json({ count, size, totalCount, totalSize });
+  return Response.json({ totalCount, totalSize, galCount, galSize });
 }
