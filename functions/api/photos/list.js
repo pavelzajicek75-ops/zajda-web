@@ -10,11 +10,10 @@ export async function onRequestGet(context) {
   for (const obj of list.objects || []) {
     const id = obj.key.split('/').pop().split('.')[0];
     const ext = obj.key.split('.').pop();
-    const url = `https://pub-ce1c3ab85a304b4b9fb2213045f09c2c.r2.dev/${obj.key}?v=${Date.now()}`;
     photos.push({
       id,
       key: obj.key,
-      url,
+      url: `/api/photos/file?key=${encodeURIComponent(obj.key)}`,
       name: `${id}.${ext}`,
       size: obj.size,
       uploaded: new Date(obj.uploaded).toISOString()
