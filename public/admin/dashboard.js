@@ -162,6 +162,7 @@ async function uploadFiles(input) {
 function openEditor(id) {
   const p = G.photos.find(x => x.id === id);
   if (!p) return;
+  
   editor.photo = p;
   editor.zoom = 1; editor.rotate = 0; editor.panX = 0; editor.panY = 0;
   editor.crop = 'free'; editor.exportSize = 'max';
@@ -170,14 +171,33 @@ function openEditor(id) {
 
   const img = new Image();
   img.crossOrigin = 'anonymous';
+  
+  // Přidáme cache-busting, aby se načetla aktuální verze po editaci
+  const cacheUrl = p.url + (p.url.includes('?') ? '&' : '?') + 'edit=' + Date.now();
+  
   img.onload = () => {
     editor.img = img;
     document.getElementById('editorModal').classList.remove('hidden');
     resizeCanvas();
     drawEditor();
   };
-  img.onerror = () => alert('Obrázek se nepodařilo načíst');
-  img.src = p.url;
+  img.onerror = () => {
+    // Zkusíme ještě jednou bez cache
+    const retry = new Image();
+    retry.crossOrigin = 'anonymous';
+    retry.onload = () => {
+      editor.img = retry;
+      document.getElementById('editorModal').classList.remove('hidden');
+      resizeCanvas();
+      drawEditor();
+    };
+    retry.onerror = () => alert('Obrázek se nepodařilo načíst. Zkus obnovit stránku.');
+    retry.src = p.url.split('?')[0] + '?v=' + Date.now();
+  };
+  
+  img.src = cacheUrl;
+}
+
 }
 
 function closeEditor() {
