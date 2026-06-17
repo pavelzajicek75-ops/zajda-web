@@ -1,23 +1,26 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const r2 = env.PHOTOS_R2;
+  
+  if (!r2) return Response.json({ error: 'Chybí R2 binding PHOTOS_R2' }, { status: 500 });
+
   const formData = await request.formData();
   const file = formData.get('file');
+  const galleryId = formData.get('galleryId');
   const photoId = formData.get('photoId');
   const mode = formData.get('mode') || 'replace';
 
-  if (!file) return Response.json({ error: 'Chybí soubor' }, { status: 400 });
+  if (!file || !galleryId) return Response.json({ error: 'Chybí data' }, { status: 400 });
 
-  const list = await env.PHOTOS.list({ prefix: 'gallery:' });
-  const mainKey = list.keys[0]?.name;
-  if (!mainKey) return Response.json({ error: 'Žádná galerie' }, { status: 404 });
+  const gal = await env.PHOTOS.get(`gallery:${galleryId}`, { type: 'json' });
+  if (!gal) return Response.json({ error: 'Galerie nenalezena' }, { status: 404 });
 
-  const gallery = await env.PHOTOS.get(mainKey, { type: 'json' });
-  const old = gallery.photos.find(p => p.id === photoId);
+  const old = gal.photos.find(p => p.id === photoId);
   const id = mode === 'saveas' ? crypto.randomUUID() : photoId;
   const ext = file.name.split('.').pop();
-  const key = `gallery-main/${id}.${ext}`;
+  const key = `gallery-${galleryId}/${id}.${ext}`;
 
-  await env['zajda-photos'].put(key, file.stream(), { httpMetadata: { contentType: file.type } });
+  await r2.put(key, file.stream(), { httpMetadata: { contentType: file.type } });
   
   const publicUrl = env.CDN_BASE_URL 
     ? `${env.CDN_BASE_URL}/${key}` 
@@ -26,13 +29,13 @@ export async function onRequestPost(context) {
   const photo = { id, key, url: publicUrl, name: file.name, size: file.size, type: file.type, uploaded: Date.now() };
 
   if (mode === 'replace' && old) {
-    await env['zajda-photos'].delete(old.key);
-    const idx = gallery.photos.findIndex(p => p.id === photoId);
-    if (idx !== -1) gallery.photos[idx] = photo;
+    await r2.delete(old.key);
+    const idx = gal.photos.findIndex(p => p.id === photoId);
+    if (idx !== -1) gal.photos[idx] = photo;
   } else {
-    gallery.photos.push(photo);
+    gal.photos.push(photo);
   }
-
-  await env.PHOTOS.put(mainKey, JSON.stringify(gallery));
+  
+  await env.PHOTOS.put(`gallery:${galleryId}`, JSON.stringify(gal));
   return Response.json(photo);
 }
