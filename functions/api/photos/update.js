@@ -22,7 +22,7 @@ export async function onRequestPost(context) {
 
   return Response.json({
     id, key,
-    url: `https://pub-ce1c3ab85a304b4b9fb2213045f09c2c.r2.dev/${key}`,
+    url: `/api/photos/file?key=${encodeURIComponent(key)}`,
     name: file.name,
     size: file.size,
     uploaded: new Date().toISOString()
