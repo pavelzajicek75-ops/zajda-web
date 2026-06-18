@@ -1,28 +1,13 @@
 export async function onRequestGet(context) {
-  const url = new URL(context.request.url);
-  const section = url.searchParams.get("section");
-
-  const list = [];
-  const objects = await context.env.ARTICLES_BUCKET.list({
-    prefix: `articles/${section}/`
-  });
-
-  for (const obj of objects.objects) {
-    const file = await context.env.ARTICLES_BUCKET.get(obj.key);
-    const json = await file.json();
-
-    list.push({
-      title: json.title,
-      date: json.date,
-      place: json.place,
-      subsection: json.subsection,
-      leadImage: json.leadImage || null,
-      slug: obj.key.split("/").pop().replace(".json", "")
-    });
+  const { env } = context;
+  const { searchParams } = new URL(context.request.url);
+  const sectionId = searchParams.get('sectionId');
+  const subsectionId = searchParams.get('subsectionId');
+  const list = await env.ARTICLES.list({ prefix: 'article:' });
+  const articles = [];
+  for (const key of list.keys) {
+    const data = await env.ARTICLES.get(key.name, { type: 'json' });
+    if (data && (!sectionId || data.sectionId === sectionId) && (!subsectionId || data.subsectionId === subsectionId)) articles.push(data);
   }
-
-  list.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  return Response.json(list);
+  return Response.json(articles.sort((a, b) => (b.created || 0) - (a.created || 0)));
 }
-
