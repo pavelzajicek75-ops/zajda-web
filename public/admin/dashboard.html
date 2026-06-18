@@ -12,14 +12,12 @@
   <a href="#" class="nav-link active" data-section="galleries">🖼️ Galerie</a>
   <a href="#" class="nav-link" data-section="articles">📝 Články</a>
   <a href="#" class="nav-link" data-section="quotes">💬 Citáty</a>
-  <a href="#" class="nav-link" data-section="sections">📁 Sekce</a>
   <a href="#" class="nav-link" data-section="subsections">📂 Podsekce</a>
   <a href="#" class="nav-link" data-section="about">👤 O Zajdovi</a>
   <button onclick="logout()" class="btn btn-red" style="margin-top:auto">Odhlásit</button>
 </nav>
 
 <main class="content">
-  <!-- GALERIE -->
   <section id="galleries" class="section active">
     <h2>Galerie</h2>
     <div class="toolbar">
@@ -49,17 +47,22 @@
     <div id="galleryView" class="gallery-view grid-view"></div>
   </section>
 
-  <!-- ČLÁNKY -->
   <section id="articles" class="section">
     <h2>Články</h2>
     <div class="form-card">
       <input type="text" id="artTitle" placeholder="Nadpis článku">
       <div class="form-row">
-        <select id="artSection"><option value="">— Sekce —</option></select>
+        <select id="artSection" onchange="loadArtSubsections()">
+          <option value="">— Sekce —</option>
+          <option value="travel">Cestování / Travel</option>
+          <option value="photo">Fotografování / Photo</option>
+          <option value="projects">Projekty / Projects</option>
+          <option value="about">O Zajdovi / About</option>
+        </select>
         <select id="artSubsection"><option value="">— Podsekce —</option></select>
       </div>
       <div class="form-row">
-        <input type="date" id="artDate" placeholder="Datum">
+        <input type="date" id="artDate">
         <input type="text" id="artPlace" placeholder="Místo">
       </div>
       <div class="wysiwyg-toolbar">
@@ -67,7 +70,9 @@
         <button onclick="execCmd('italic')" class="btn btn-sm">𝐼</button>
         <button onclick="execCmd('formatBlock','H2')" class="btn btn-sm">H2</button>
         <button onclick="execCmd('formatBlock','P')" class="btn btn-sm">P</button>
-        <button onclick="insertImgTo('artEditor')" class="btn btn-sm">🖼️ Fotka</button>
+        <button onclick="insertImgTo('artEditor','left')" class="btn btn-sm">🖼️⬅️</button>
+        <button onclick="insertImgTo('artEditor','center')" class="btn btn-sm">⏺</button>
+        <button onclick="insertImgTo('artEditor','right')" class="btn btn-sm">➡️🖼️</button>
       </div>
       <div id="artEditor" class="wysiwyg-editor" contenteditable="true" placeholder="Obsah článku..."></div>
       <button onclick="createArticle()" class="btn btn-green">Publikovat</button>
@@ -75,7 +80,6 @@
     <div id="articleList" class="list"></div>
   </section>
 
-  <!-- CITÁTY -->
   <section id="quotes" class="section">
     <h2>Citáty</h2>
     <div class="form-card">
@@ -91,32 +95,23 @@
     </div>
   </section>
 
-  <!-- SEKCE -->
-  <section id="sections" class="section">
-    <h2>Sekce</h2>
-    <div class="form-card">
-      <input type="text" id="sName" placeholder="Název sekce">
-      <input type="text" id="sSlug" placeholder="Slug">
-      <input type="number" id="sOrder" value="0">
-      <button onclick="createSection()" class="btn btn-green">Vytvořit</button>
-    </div>
-    <div class="table-wrap"><table class="data-table"><thead><tr><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr></thead><tbody id="sectionTableBody"></tbody></table></div>
-  </section>
-
-  <!-- PODSEKCE -->
   <section id="subsections" class="section">
     <h2>Podsekce</h2>
     <div class="form-card">
-      <select id="ssSection"><option value="">— Vyber sekci —</option></select>
+      <select id="ssSection">
+        <option value="">— Vyber sekci —</option>
+        <option value="travel">Cestování / Travel</option>
+        <option value="photo">Fotografování / Photo</option>
+        <option value="projects">Projekty / Projects</option>
+        <option value="about">O Zajdovi / About</option>
+      </select>
       <input type="text" id="ssName" placeholder="Název podsekce">
-      <input type="text" id="ssSlug" placeholder="Slug">
-      <input type="number" id="ssOrder" value="0">
+      <input type="number" id="ssOrder" placeholder="Pořadí" value="0">
       <button onclick="createSubsection()" class="btn btn-green">Vytvořit</button>
     </div>
     <div class="table-wrap"><table class="data-table"><thead><tr><th>Sekce</th><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr></thead><tbody id="subsectionTableBody"></tbody></table></div>
   </section>
 
-  <!-- O ZAJDOVI -->
   <section id="about" class="section">
     <h2>O Zajdovi</h2>
     <div class="form-card">
@@ -125,7 +120,7 @@
         <button onclick="execCmd('bold')" class="btn btn-sm">𝐁</button>
         <button onclick="execCmd('italic')" class="btn btn-sm">𝐼</button>
         <button onclick="execCmd('formatBlock','H2')" class="btn btn-sm">H2</button>
-        <button onclick="insertImgTo('aboutEditor')" class="btn btn-sm">🖼️ Fotka</button>
+        <button onclick="insertImgTo('aboutEditor','center')" class="btn btn-sm">🖼️ Vložit fotku</button>
       </div>
       <div id="aboutEditor" class="wysiwyg-editor" contenteditable="true" placeholder="Text o Zajdovi..."></div>
       <button onclick="saveAbout()" class="btn btn-green">💾 Uložit</button>
@@ -134,7 +129,6 @@
   </section>
 </main>
 
-<!-- EDITOR MODAL -->
 <div id="editorModal" class="modal hidden">
   <div class="editor-frame">
     <div class="editor-header">
@@ -173,7 +167,6 @@
         <input type="range" min="0" max="100" value="0" oninput="setFilter('vignette',this.value)">
         <label><input type="checkbox" id="aiCheck" onchange="ED.filters.ai=this.checked"> ✨ AI vylepšení</label>
       </div>
-      
       <div class="editor-preview" id="editPreview">
         <img id="editImg" src="" alt="" draggable="false">
         <div class="crop-layer" id="cropLayer">
