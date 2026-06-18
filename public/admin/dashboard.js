@@ -1,3 +1,6 @@
+// ═══════════════════════════════════════
+// AUTH & NAV
+// ═══════════════════════════════════════
 fetch('/api/auth/me').then(r => { if (!r.ok) window.location = '/admin/login.html'; });
 
 document.querySelectorAll('.nav-link').forEach(l => {
@@ -31,13 +34,6 @@ function fmtBytes(b) { return b ? (b / 1024 / 1024).toFixed(2) + ' MB' : '0 MB';
 // GALERIE
 // ═══════════════════════════════════════
 let G = { photos: [], selected: new Set() };
-let ED = {
-  photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0,
-  crop: 'free', export: 'max',
-  filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false },
-  drag: false, resize: null, lx: 0, ly: 0,
-  cropX: 0, cropY: 0, cropW: 0, cropH: 0
-};
 
 async function loadGallery() {
   try {
@@ -54,19 +50,22 @@ async function loadStats() {
   try {
     const res = await fetch('/api/photos/stats?galleryId=main');
     const s = await res.json();
-    document.getElementById('galCount').textContent = (s.galCount || G.photos.length) + ' fotek';
-    document.getElementById('galSize').textContent = fmtBytes(s.galSize);
-    document.getElementById('totalSize').textContent = 'R2: ' + fmtBytes(s.totalSize);
+    const c = document.getElementById('galCount'), g = document.getElementById('galSize'), t = document.getElementById('totalSize');
+    if (c) c.textContent = (s.galCount || G.photos.length) + ' fotek';
+    if (g) g.textContent = fmtBytes(s.galSize);
+    if (t) t.textContent = 'R2: ' + fmtBytes(s.totalSize);
   } catch {
-    document.getElementById('galCount').textContent = G.photos.length + ' fotek';
-    document.getElementById('galSize').textContent = fmtBytes(G.photos.reduce((a, p) => a + (p.size || 0), 0));
+    const c = document.getElementById('galCount'), g = document.getElementById('galSize');
+    if (c) c.textContent = G.photos.length + ' fotek';
+    if (g) g.textContent = fmtBytes(G.photos.reduce((a, p) => a + (p.size || 0), 0));
   }
 }
 
 function renderGallery() {
-  const mode = document.getElementById('viewMode').value;
-  const sort = document.getElementById('sortMode').value;
+  const mode = document.getElementById('viewMode')?.value || 'grid';
+  const sort = document.getElementById('sortMode')?.value || 'new';
   const box = document.getElementById('galleryView');
+  if (!box) return;
   box.className = 'gallery-view ' + mode + '-view';
 
   let list = [...G.photos];
@@ -106,7 +105,7 @@ async function bulkDelete() {
 }
 
 async function uploadFiles(input) {
-  if (!input.files.length) return;
+  if (!input?.files?.length) return;
   for (const file of input.files) {
     const fd = new FormData(); fd.append('file', file); fd.append('galleryId', 'main');
     try { await fetch('/api/photos/upload', { method: 'POST', body: fd }); } catch (e) { console.error(e); }
@@ -117,6 +116,14 @@ async function uploadFiles(input) {
 // ═══════════════════════════════════════
 // EDITOR FOTOGRAFIÍ
 // ═══════════════════════════════════════
+let ED = {
+  photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0,
+  crop: 'free', export: 'max',
+  filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false },
+  drag: false, resize: null, lx: 0, ly: 0,
+  cropX: 0, cropY: 0, cropW: 0, cropH: 0
+};
+
 function openEditor(id) {
   const p = G.photos.find(x => x.id === id);
   if (!p) return;
@@ -128,17 +135,17 @@ function openEditor(id) {
   const img = new Image();
   img.onload = () => {
     ED.img = img;
-    document.getElementById('editorModal').classList.remove('hidden');
+    const modal = document.getElementById('editorModal');
+    if (modal) modal.classList.remove('hidden');
     const imgEl = document.getElementById('editImg');
-    imgEl.src = p.url + '?t=' + Date.now();
-    imgEl.style.width = '100%'; imgEl.style.height = 'auto'; imgEl.style.transform = 'none'; imgEl.style.filter = 'none';
+    if (imgEl) { imgEl.src = p.url + '?t=' + Date.now(); imgEl.style.width = '100%'; imgEl.style.height = 'auto'; imgEl.style.transform = 'none'; imgEl.style.filter = 'none'; }
     initEditorDrag(); initCropDrag();
   };
   img.onerror = () => alert('Obrázek se nepodařilo načíst.');
   img.src = p.url + '?t=' + Date.now();
 }
 
-function closeEditor() { document.getElementById('editorModal').classList.add('hidden'); ED.img = null; ED.photo = null; }
+function closeEditor() { const m = document.getElementById('editorModal'); if (m) m.classList.add('hidden'); ED.img = null; ED.photo = null; }
 
 function editorSetZoom(v) { ED.scale = parseFloat(v); updatePreviewTransform(); }
 
@@ -195,20 +202,19 @@ function updateCropOverlay() {
   ED.cropW = w; ED.cropH = h;
   ED.cropX = (W - w) / 2; ED.cropY = (H - h) / 2;
 
-  rect.style.left = ED.cropX + 'px'; rect.style.top = ED.cropY + 'px';
-  rect.style.width = w + 'px'; rect.style.height = h + 'px';
+  if (rect) { rect.style.left = ED.cropX + 'px'; rect.style.top = ED.cropY + 'px'; rect.style.width = w + 'px'; rect.style.height = h + 'px'; }
 
-  document.getElementById('maskTop').style.cssText = `left:0;top:0;width:${W}px;height:${ED.cropY}px`;
-  document.getElementById('maskBottom').style.cssText = `left:0;top:${ED.cropY + h}px;width:${W}px;height:${H - ED.cropY - h}px`;
-  document.getElementById('maskLeft').style.cssText = `left:0;top:${ED.cropY}px;width:${ED.cropX}px;height:${h}px`;
-  document.getElementById('maskRight').style.cssText = `left:${ED.cropX + w}px;top:${ED.cropY}px;width:${W - ED.cropX - w}px;height:${h}px`;
+  const t = document.getElementById('maskTop'); if (t) t.style.cssText = `left:0;top:0;width:${W}px;height:${ED.cropY}px`;
+  const btm = document.getElementById('maskBottom'); if (btm) btm.style.cssText = `left:0;top:${ED.cropY + h}px;width:${W}px;height:${H - ED.cropY - h}px`;
+  const l = document.getElementById('maskLeft'); if (l) l.style.cssText = `left:0;top:${ED.cropY}px;width:${ED.cropX}px;height:${h}px`;
+  const r = document.getElementById('maskRight'); if (r) r.style.cssText = `left:${ED.cropX + w}px;top:${ED.cropY}px;width:${W - ED.cropX - w}px;height:${h}px`;
 }
 
 function setExport(size) { ED.export = size; ['max', '2000', 'fullhd'].forEach(s => { const b = document.getElementById('ex-' + s); if (b) b.classList.toggle('btn-blue', s === size); }); }
 
 function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewTransform(); }
 
-// Posun obrázku pod mřížkou (myš i touch)
+// Posun obrázku pod mřížkou
 function initEditorDrag() {
   const preview = document.getElementById('editPreview');
   if (!preview) return;
@@ -225,7 +231,7 @@ function initEditorDrag() {
   window.addEventListener('touchend', end);
 }
 
-// Změna velikosti ořezu táhnutím za rohy
+// Změna velikosti ořezu
 function initCropDrag() {
   const handles = document.querySelectorAll('.crop-handle');
   const doResize = (dx, dy) => {
@@ -286,7 +292,7 @@ async function saveEditor(mode) {
     ctx.drawImage(temp, 0, 0);
   }
 
-  // AI vylepšení
+  // AI
   if (f.ai) {
     ctx.globalCompositeOperation = 'overlay';
     ctx.fillStyle = 'rgba(200,220,255,0.08)';
@@ -297,7 +303,7 @@ async function saveEditor(mode) {
   // Viněta
   if (f.vignette > 0) {
     const grad = ctx.createRadialGradient(dim.w / 2, dim.h / 2, dim.w * 0.25, dim.w / 2, dim.h / 2, dim.w * 0.9);
-    grad.addColorStop(0, 'transparent
+    grad.addColorStop(0, 'transparent');
     grad.addColorStop(1, `rgba(0,0,0,${f.vignette / 100})`);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, dim.w, dim.h);
@@ -343,7 +349,9 @@ function insertImgUrl(editorId, url) {
 async function loadArticles() {
   const res = await fetch('/api/articles/list');
   const data = await res.json();
-  document.getElementById('articleList').innerHTML = data.map(a => `
+  const box = document.getElementById('articleList');
+  if (!box) return;
+  box.innerHTML = data.map(a => `
     <div class="card">
       <h4>${escapeHtml(a.title)}</h4>
       <p><small>${a.section || ''} ${a.subsection || ''} | ${a.place || ''} | ${new Date(a.date || a.created).toLocaleDateString('cs')}</small></p>
@@ -369,8 +377,8 @@ async function loadArtSections() {
 }
 
 async function createArticle() {
-  const title = document.getElementById('artTitle').value.trim();
-  const content = document.getElementById('artEditor').innerHTML;
+  const title = document.getElementById('artTitle')?.value.trim();
+  const content = document.getElementById('artEditor')?.innerHTML;
   if (!title || !content) return alert('Vyplň nadpis a obsah');
   await fetch('/api/articles/create', {
     method: 'POST',
@@ -378,10 +386,10 @@ async function createArticle() {
     body: JSON.stringify({
       title,
       content,
-      sectionId: document.getElementById('artSection').value,
-      subsectionId: document.getElementById('artSubsection').value,
-      date: document.getElementById('artDate').value,
-      place: document.getElementById('artPlace').value
+      sectionId: document.getElementById('artSection')?.value,
+      subsectionId: document.getElementById('artSubsection')?.value,
+      date: document.getElementById('artDate')?.value,
+      place: document.getElementById('artPlace')?.value
     })
   });
   document.getElementById('artTitle').value = '';
@@ -417,9 +425,9 @@ async function loadQuotes() {
 }
 
 async function createQuote() {
-  const text = document.getElementById('qText').value.trim();
+  const text = document.getElementById('qText')?.value.trim();
   if (!text) return alert('Zadej text citátu');
-  await fetch('/api/quotes/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, author: document.getElementById('qAuthor').value.trim() }) });
+  await fetch('/api/quotes/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, author: document.getElementById('qAuthor')?.value.trim() }) });
   document.getElementById('qText').value = ''; document.getElementById('qAuthor').value = ''; loadQuotes();
 }
 
@@ -436,8 +444,10 @@ async function loadSections() {
 }
 
 async function createSection() {
-  await fetch('/api/sections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('sName').value, slug: document.getElementById('sSlug').value, order: parseInt(document.getElementById('sOrder').value) || 0 }) });
-  document.getElementById('sName').value = ''; document.getElementById('sSlug').value = ''; loadSections();
+  await fetch('/api/sections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('sName')?.value, slug: document.getElementById('sSlug')?.value, order: parseInt(document.getElementById('sOrder')?.value) || 0 }) });
+  if (document.getElementById('sName')) document.getElementById('sName').value = '';
+  if (document.getElementById('sSlug')) document.getElementById('sSlug').value = '';
+  loadSections();
 }
 
 async function deleteSection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/sections/delete?id=${id}`, { method: 'DELETE' }); loadSections(); }
@@ -450,9 +460,11 @@ async function loadSubsections() {
 }
 
 async function createSubsection() {
-  if (!document.getElementById('ssSection').value || !document.getElementById('ssName').value.trim()) return alert('Vyplň sekci a název');
-  await fetch('/api/subsections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sectionId: document.getElementById('ssSection').value, name: document.getElementById('ssName').value, slug: document.getElementById('ssSlug').value, order: parseInt(document.getElementById('ssOrder').value) || 0 }) });
-  document.getElementById('ssName').value = ''; document.getElementById('ssSlug').value = ''; loadSubsections();
+  if (!document.getElementById('ssSection')?.value || !document.getElementById('ssName')?.value.trim()) return alert('Vyplň sekci a název');
+  await fetch('/api/subsections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sectionId: document.getElementById('ssSection').value, name: document.getElementById('ssName').value, slug: document.getElementById('ssSlug')?.value, order: parseInt(document.getElementById('ssOrder')?.value) || 0 }) });
+  if (document.getElementById('ssName')) document.getElementById('ssName').value = '';
+  if (document.getElementById('ssSlug')) document.getElementById('ssSlug').value = '';
+  loadSubsections();
 }
 
 async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
@@ -464,11 +476,12 @@ let aboutData = { title: '', text: '', photos: [], subsections: [] };
 
 async function loadAbout() {
   try { const res = await fetch('/api/about/get'); aboutData = await res.json(); } catch { aboutData = { title: '', text: '', photos: [], subsections: [] }; }
-  document.getElementById('aboutTitle').value = aboutData.title || '';
+  const titleIn = document.getElementById('aboutTitle');
   const editor = document.getElementById('aboutEditor');
+  const preview = document.getElementById('aboutPreview');
+  if (titleIn) titleIn.value = aboutData.title || '';
   if (editor) editor.innerHTML = aboutData.text || '';
   renderAboutPhotos(); renderAboutSubs();
-  const preview = document.getElementById('aboutPreview');
   if (preview) preview.innerHTML = `<h4>${escapeHtml(aboutData.title || 'O Zajdovi')}</h4><div>${aboutData.text || ''}</div>${aboutData.photos.length ? `<div class="about-photos">${aboutData.photos.map(u => `<img src="${u}">`).join('')}</div>` : ''}`;
 }
 
@@ -497,8 +510,8 @@ function renderAboutSubs() {
 function addAboutSub() { aboutData.subsections.push({ title: '', text: '' }); renderAboutSubs(); }
 
 async function saveAbout() {
-  aboutData.title = document.getElementById('aboutTitle').value;
-  aboutData.text = document.getElementById('aboutEditor').innerHTML;
+  aboutData.title = document.getElementById('aboutTitle')?.value || '';
+  aboutData.text = document.getElementById('aboutEditor')?.innerHTML || '';
   await fetch('/api/about/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aboutData) });
   loadAbout();
 }
