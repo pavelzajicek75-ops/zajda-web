@@ -1,18 +1,8 @@
-export async function onRequest(context) {
-  const { request, env } = context;
-  const url = new URL(request.url);
-  const id = url.searchParams.get("id");
-
-  if (!id) {
-    return new Response(JSON.stringify({ error: "Missing id" }), { status: 400 });
-  }
-
-  const raw = await env.ARTICLES.get(id);
-  if (!raw) {
-    return new Response(JSON.stringify({ error: "Not found" }), { status: 404 });
-  }
-
-  return new Response(raw, {
-    headers: { "Content-Type": "application/json" }
-  });
+export async function onRequestGet(context) {
+  const { env } = context;
+  const { searchParams } = new URL(context.request.url);
+  const id = searchParams.get('id');
+  const data = await env.ARTICLES.get(`article:${id}`, { type: 'json' });
+  if (!data) return Response.json({ error: 'Nenalezeno' }, { status: 404 });
+  return Response.json(data);
 }
