@@ -50,8 +50,7 @@ async function loadStats() {
     document.getElementById('totalSize').textContent = 'R2: ' + fmtBytes(s.totalSize);
   } catch {
     document.getElementById('galCount').textContent = G.photos.length + ' fotek';
-    const sz = G.photos.reduce((a, p) => a + (p.size || 0), 0);
-    document.getElementById('galSize').textContent = fmtBytes(sz);
+    document.getElementById('galSize').textContent = fmtBytes(G.photos.reduce((a, p) => a + (p.size || 0), 0));
   }
 }
 
@@ -70,7 +69,7 @@ function renderGallery() {
     return av > bv ? dir : av < bv ? -dir : 0;
   });
 
-  if (!list.length) { box.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">Galerie je prázdná.</p>'; return; }
+  if (!list.length) { box.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">Galerie je prázdná. Nahraj fotky.</p>'; return; }
 
   box.innerHTML = list.map(p => {
     const checked = G.selected.has(p.id) ? 'checked' : '';
@@ -115,10 +114,13 @@ function openEditor(id) {
   updateFilterLabels(); setCrop('free'); setExport('max');
 
   const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => { ED.img = img; document.getElementById('editorModal').classList.remove('hidden'); resizeCanvas(); drawEditor(); };
-  img.onerror = () => alert('Nepodařilo se načíst obrázek');
-  img.src = p.url.split('?')[0] + '?v=' + Date.now();
+  img.onload = () => {
+    ED.img = img;
+    document.getElementById('editorModal').classList.remove('hidden');
+    resizeCanvas(); drawEditor();
+  };
+  img.onerror = () => alert('Obrázek se nepodařilo načíst.');
+  img.src = p.url + '&t=' + Date.now();
 }
 
 function closeEditor() { document.getElementById('editorModal').classList.add('hidden'); ED.img = null; ED.photo = null; }
@@ -128,6 +130,8 @@ function resizeCanvas() {
   const c = document.getElementById('editorCanvas');
   if (box && c) { c.width = box.clientWidth; c.height = box.clientHeight; }
 }
+
+window.addEventListener('resize', () => { if (!document.getElementById('editorModal').classList.contains('hidden')) { resizeCanvas(); drawEditor(); } });
 
 function updateFilterLabels() {
   const f = ED.filters, ids = { exposure: 'fval-exposure', contrast: 'fval-contrast', saturation: 'fval-saturation', temp: 'fval-temp', vignette: 'fval-vignette' };
@@ -139,16 +143,16 @@ function setFilter(key, val) { ED.filters[key] = parseInt(val); const el = docum
 function setCrop(mode) {
   ED.crop = mode;
   document.querySelectorAll('.editor-tools .btn').forEach(b => b.classList.remove('btn-blue'));
-  const btn = Array.from(document.querySelectorAll('.editor-tools .btn')).find(b => b.textContent.includes(mode === 'free' ? 'Voln' : mode));
+  const labels = { free: 'Voln', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4', '16:9': '16:9' };
+  const btn = Array.from(document.querySelectorAll('.editor-tools .btn')).find(b => b.textContent.trim() === labels[mode]);
   if (btn) btn.classList.add('btn-blue');
   const frame = document.getElementById('cropFrame');
   if (mode === 'free') { frame.classList.add('hidden'); return; }
   frame.classList.remove('hidden');
   const box = document.querySelector('.editor-canvas-box');
   const W = box.clientWidth, H = box.clientHeight;
-  let w = W * 0.7, h = H * 0.7;
-  if (mode === '1:1') h = w;
-  else if (mode === '4:3') h = w * 0.75;
+  let w = Math.min(W, H) * 0.7, h = w;
+  if (mode === '4:3') h = w * 0.75;
   else if (mode === '3:4') h = w * 4 / 3;
   else if (mode === '16:9') h = w / 1.777;
   frame.style.width = Math.min(w, W * 0.9) + 'px';
@@ -171,24 +175,26 @@ function drawEditor() {
   const img = ED.img, ratio = Math.min(W / img.width, H / img.height) * 0.85;
   const dw = img.width * ratio, dh = img.height * ratio;
   const f = ED.filters;
-  ctx.filter = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
-  if (f.temp > 0) ctx.filter += ` sepia(${f.temp * 0.5}%)`;
-  else ctx.filter += ` hue-rotate(${f.temp * 0.3}deg)`;
+  let filterStr = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
+  if (f.temp > 0) filterStr += ` sepia(${f.temp * 0.5}%)`; else filterStr += ` hue-rotate(${f.temp * 0.3}deg)`;
+  ctx.filter = filterStr;
   ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
   ctx.filter = 'none'; ctx.restore();
 }
 
-// Drag - mouse + touch
+// Drag - myš + touch
 function initDrag() {
   const c = document.getElementById('editorCanvas');
   if (!c) return;
   const start = (x, y) => { ED.drag = true; ED.lx = x; ED.ly = y; c.style.cursor = 'grabbing'; };
   const move = (x, y) => { if (!ED.drag) return; ED.panX += x - ED.lx; ED.panY += y - ED.ly; ED.lx = x; ED.ly = y; drawEditor(); };
   const end = () => { ED.drag = false; c.style.cursor = 'grab'; };
-  c.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+  
+  c.addEventListener('mousedown', e => { e.preventDefault(); start(e.clientX, e.clientY); });
   window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
   window.addEventListener('mouseup', end);
-  c.addEventListener('touchstart', e => { if (e.touches.length === 1) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+
+  c.addEventListener('touchstart', e => { if (e.touches.length === 1) { e.preventDefault(); start(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
   window.addEventListener('touchmove', e => { if (ED.drag && e.touches.length === 1) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
   window.addEventListener('touchend', end);
 }
@@ -209,9 +215,9 @@ async function saveEditor(mode) {
   out.width = dim.w; out.height = dim.h;
   const ctx = out.getContext('2d');
   const f = ED.filters;
-  ctx.filter = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
-  if (f.temp > 0) ctx.filter += ` sepia(${f.temp * 0.5}%)`;
-  else ctx.filter += ` hue-rotate(${f.temp * 0.3}deg)`;
+  let filterStr = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
+  if (f.temp > 0) filterStr += ` sepia(${f.temp * 0.5}%)`; else filterStr += ` hue-rotate(${f.temp * 0.3}deg)`;
+  ctx.filter = filterStr;
   ctx.save(); ctx.translate(dim.w / 2, dim.h / 2); ctx.rotate(ED.rotate * Math.PI / 180); ctx.scale(ED.scale, ED.scale);
   const ratio = Math.min(dim.w / img.width, dim.h / img.height);
   ctx.drawImage(img, -img.width * ratio / 2, -img.height * ratio / 2, img.width * ratio, img.height * ratio);
