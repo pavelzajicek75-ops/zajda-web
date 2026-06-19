@@ -1,4 +1,21 @@
 // ═══════════════════════════════════════
+// KONFIGURACE
+// ═══════════════════════════════════════
+const SECTIONS = [
+  { id: 'travel', name: 'Cestování / Travel' },
+  { id: 'photo', name: 'Fotografování / Photo' },
+  { id: 'projects', name: 'Projekty / Projects' },
+  { id: 'about', name: 'O Zajdovi / About' }
+];
+
+// ═══════════════════════════════════════
+// STAV
+// ═══════════════════════════════════════
+let G = { photos: [], selected: new Set() };
+let aboutData = { title: '', text: '', photos: [], subsections: [] };
+let ED = { photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0, crop: 'free', export: 'max', filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false }, drag: false, resize: null, lx: 0, ly: 0, cropX: 0, cropY: 0, cropW: 0, cropH: 0 };
+
+// ═══════════════════════════════════════
 // AUTH & NAV
 // ═══════════════════════════════════════
 fetch('/api/auth/me').then(r => { if (!r.ok) window.location = '/admin/login.html'; });
@@ -20,35 +37,30 @@ function logout() {
 
 function loadSection(name) {
   if (name === 'galleries') loadGallery();
-  if (name === 'articles') { loadArticles(); loadArtSections(); }
+  if (name === 'articles') { loadArtSections(); loadArticles(); }
   if (name === 'quotes') loadQuotes();
-  if (name === 'sections') loadSections();
   if (name === 'subsections') loadSubsections();
   if (name === 'about') loadAbout();
 }
 
 function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
-function fmtBytes(b) { return b ? (b / 1024 / 1024).toFixed(2) + ' MB' : '0 MB'; }
+function fmtBytes(b) { if (!b) return '0 B'; const u = ['B','KB','MB','GB']; let i = 0; while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; } return b.toFixed(1) + ' ' + u[i]; }
 
 // ═══════════════════════════════════════
 // GALERIE
 // ═══════════════════════════════════════
-let G = { photos: [], selected: new Set() };
-
 async function loadGallery() {
   try {
     const res = await fetch('/api/photos/list?galleryId=main');
     G.photos = await res.json();
     renderGallery();
     loadStats();
-    const t = document.getElementById('galleryToolbar');
-    if (t) t.style.display = 'flex';
   } catch (e) { console.error('Galerie chyba:', e); }
 }
 
 async function loadStats() {
   try {
-    const res = await fetch('/api/photos/stats?galleryId=main');
+    const res = await fetch('/api/photos/stats');
     const s = await res.json();
     const c = document.getElementById('galCount'), g = document.getElementById('galSize'), t = document.getElementById('totalSize');
     if (c) c.textContent = (s.galCount || G.photos.length) + ' fotek';
@@ -93,15 +105,24 @@ function renderGallery() {
       <img src="${p.url}" alt="" loading="lazy">
     </div>`;
   }).join('');
+
+  const b = document.getElementById('delBtn');
+  if (b) b.style.display = G.selected.size ? 'inline-flex' : 'none';
 }
 
-function toggleSel(id) { G.selected.has(id) ? G.selected.delete(id) : G.selected.add(id); const b = document.getElementById('delBtn'); if (b) b.style.display = G.selected.size ? 'inline-flex' : 'none'; renderGallery(); }
+function toggleSel(id) {
+  G.selected.has(id) ? G.selected.delete(id) : G.selected.add(id);
+  renderGallery();
+}
 
 async function bulkDelete() {
+  if (!G.selected.size) return;
   if (!confirm(`Smazat ${G.selected.size} fotek?`)) return;
   const keys = Array.from(G.selected).map(id => G.photos.find(p => p.id === id)?.key).filter(Boolean).join(',');
   if (keys) await fetch(`/api/photos/delete?keys=${encodeURIComponent(keys)}`, { method: 'DELETE' });
-  G.selected.clear(); const b = document.getElementById('delBtn'); if (b) b.style.display = 'none'; loadGallery();
+  G.selected.clear();
+  const b = document.getElementById('delBtn'); if (b) b.style.display = 'none';
+  loadGallery();
 }
 
 async function uploadFiles(input) {
@@ -116,14 +137,6 @@ async function uploadFiles(input) {
 // ═══════════════════════════════════════
 // EDITOR FOTOGRAFIÍ
 // ═══════════════════════════════════════
-let ED = {
-  photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0,
-  crop: 'free', export: 'max',
-  filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false },
-  drag: false, resize: null, lx: 0, ly: 0,
-  cropX: 0, cropY: 0, cropW: 0, cropH: 0
-};
-
 function openEditor(id) {
   const p = G.photos.find(x => x.id === id);
   if (!p) return;
@@ -133,19 +146,29 @@ function openEditor(id) {
   updateFilterLabels(); setCrop('free'); setExport('max');
 
   const img = new Image();
+  img.crossOrigin = 'anonymous';
   img.onload = () => {
     ED.img = img;
     const modal = document.getElementById('editorModal');
     if (modal) modal.classList.remove('hidden');
     const imgEl = document.getElementById('editImg');
-    if (imgEl) { imgEl.src = p.url + '?t=' + Date.now(); imgEl.style.width = '100%'; imgEl.style.height = 'auto'; imgEl.style.transform = 'none'; imgEl.style.filter = 'none'; }
-    initEditorDrag(); initCropDrag();
+    if (imgEl) {
+      imgEl.src = p.url + '?t=' + Date.now();
+      imgEl.style.width = 'auto'; imgEl.style.height = 'auto';
+      imgEl.style.maxWidth = '100%'; imgEl.style.maxHeight = '100%';
+      updatePreviewTransform();
+    }
+    updateCropOverlay();
   };
   img.onerror = () => alert('Obrázek se nepodařilo načíst.');
   img.src = p.url + '?t=' + Date.now();
 }
 
-function closeEditor() { const m = document.getElementById('editorModal'); if (m) m.classList.add('hidden'); ED.img = null; ED.photo = null; }
+function closeEditor() {
+  const m = document.getElementById('editorModal');
+  if (m) m.classList.add('hidden');
+  ED.img = null; ED.photo = null;
+}
 
 function editorSetZoom(v) { ED.scale = parseFloat(v); updatePreviewTransform(); }
 
@@ -170,12 +193,16 @@ function updateFilterLabels() {
   for (const [k, id] of Object.entries(ids)) { const el = document.getElementById(id); if (el) el.textContent = f[k]; }
 }
 
-function setFilter(key, val) { ED.filters[key] = parseInt(val); const el = document.getElementById('fval-' + key); if (el) el.textContent = val; applyFilters(); }
+function setFilter(key, val) {
+  ED.filters[key] = parseInt(val || 0);
+  const el = document.getElementById('fval-' + key); if (el) el.textContent = val;
+  applyFilters();
+}
 
 function setCrop(mode) {
   ED.crop = mode;
   document.querySelectorAll('.editor-sidebar .tool-row:first-of-type .btn').forEach(b => b.classList.remove('btn-blue'));
-  const labels = { free: 'Voln', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4', '16:9': '16:9' };
+  const labels = { free: 'Volný', '1:1': '1:1', '4:3': '4:3', '3:4': '3:4', '16:9': '16:9' };
   const btn = Array.from(document.querySelectorAll('.editor-sidebar .tool-row:first-of-type .btn')).find(b => b.textContent.trim() === labels[mode]);
   if (btn) btn.classList.add('btn-blue');
   updateCropOverlay();
@@ -187,7 +214,6 @@ function updateCropOverlay() {
   const preview = document.getElementById('editPreview');
   if (!preview) return;
   const W = preview.clientWidth, H = preview.clientHeight;
-
   if (ED.crop === 'free') { if (layer) layer.style.display = 'none'; return; }
   if (layer) layer.style.display = 'block';
 
@@ -204,18 +230,23 @@ function updateCropOverlay() {
 
   if (rect) { rect.style.left = ED.cropX + 'px'; rect.style.top = ED.cropY + 'px'; rect.style.width = w + 'px'; rect.style.height = h + 'px'; }
 
-  const t = document.getElementById('maskTop'); if (t) t.style.cssText = `left:0;top:0;width:${W}px;height:${ED.cropY}px`;
-  const btm = document.getElementById('maskBottom'); if (btm) btm.style.cssText = `left:0;top:${ED.cropY + h}px;width:${W}px;height:${H - ED.cropY - h}px`;
-  const l = document.getElementById('maskLeft'); if (l) l.style.cssText = `left:0;top:${ED.cropY}px;width:${ED.cropX}px;height:${h}px`;
-  const r = document.getElementById('maskRight'); if (r) r.style.cssText = `left:${ED.cropX + w}px;top:${ED.cropY}px;width:${W - ED.cropX - w}px;height:${h}px`;
+  if (document.getElementById('maskTop')) document.getElementById('maskTop').style.cssText = `left:0;top:0;width:${W}px;height:${ED.cropY}px`;
+  if (document.getElementById('maskBottom')) document.getElementById('maskBottom').style.cssText = `left:0;top:${ED.cropY + h}px;width:${W}px;height:${H - ED.cropY - h}px`;
+  if (document.getElementById('maskLeft')) document.getElementById('maskLeft').style.cssText = `left:0;top:${ED.cropY}px;width:${ED.cropX}px;height:${h}px`;
+  if (document.getElementById('maskRight')) document.getElementById('maskRight').style.cssText = `left:${ED.cropX + w}px;top:${ED.cropY}px;width:${W - ED.cropX - w}px;height:${h}px`;
 }
 
-function setExport(size) { ED.export = size; ['max', '2000', 'fullhd'].forEach(s => { const b = document.getElementById('ex-' + s); if (b) b.classList.toggle('btn-blue', s === size); }); }
+function setExport(size) {
+  ED.export = size;
+  ['max', '2000', 'fullhd'].forEach(s => {
+    const b = document.getElementById('ex-' + s); if (b) b.classList.toggle('btn-blue', s === size);
+  });
+}
 
 function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewTransform(); }
 
-// Posun obrázku pod mřížkou
-function initEditorDrag() {
+// Editor drag (attached once)
+(function initEditorDrag() {
   const preview = document.getElementById('editPreview');
   if (!preview) return;
   const start = (x, y) => { if (ED.resize) return; ED.drag = true; ED.lx = x; ED.ly = y; };
@@ -225,14 +256,13 @@ function initEditorDrag() {
   preview.addEventListener('mousedown', e => { if (e.target.closest('.crop-handle') || e.target.id === 'cropRect') return; start(e.clientX, e.clientY); });
   window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
   window.addEventListener('mouseup', end);
-
   preview.addEventListener('touchstart', e => { if (e.target.closest('.crop-handle') || e.target.id === 'cropRect') return; if (e.touches.length === 1) start(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
   window.addEventListener('touchmove', e => { if (ED.drag && e.touches.length === 1) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
   window.addEventListener('touchend', end);
-}
+})();
 
-// Změna velikosti ořezu
-function initCropDrag() {
+// Crop drag (attached once)
+(function initCropDrag() {
   const handles = document.querySelectorAll('.crop-handle');
   const doResize = (dx, dy) => {
     if (!ED.resize) return;
@@ -251,7 +281,7 @@ function initCropDrag() {
   window.addEventListener('touchmove', e => { if (!ED.resize) return; doResize(e.touches[0].clientX - ED.lx, e.touches[0].clientY - ED.ly); ED.lx = e.touches[0].clientX; ED.ly = e.touches[0].clientY; }, { passive: false });
   window.addEventListener('mouseup', () => ED.resize = null);
   window.addEventListener('touchend', () => ED.resize = null);
-}
+})();
 
 function getExportDim(w, h) {
   if (ED.export === 'max') return { w, h };
@@ -269,8 +299,9 @@ async function saveEditor(mode) {
   const ctx = out.getContext('2d');
 
   const f = ED.filters;
-  ctx.filter = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
-  if (f.temp > 0) ctx.filter += ` sepia(${f.temp * 0.5}%)`; else ctx.filter += ` hue-rotate(${f.temp * 0.3}deg)`;
+  const filters = [`brightness(${100 + f.exposure}%)`, `contrast(${100 + f.contrast}%)`, `saturate(${100 + f.saturation}%)`];
+  if (f.temp > 0) filters.push(`sepia(${f.temp * 0.5}%)`); else filters.push(`hue-rotate(${f.temp * 0.3}deg)`);
+  ctx.filter = filters.join(' ');
 
   ctx.save();
   ctx.translate(dim.w / 2, dim.h / 2);
@@ -280,19 +311,14 @@ async function saveEditor(mode) {
   ctx.drawImage(img, -img.naturalWidth * ratio / 2 + ED.panX / ED.scale, -img.naturalHeight * ratio / 2 + ED.panY / ED.scale, img.naturalWidth * ratio, img.naturalHeight * ratio);
   ctx.restore();
 
-  // Doostření
   if (f.sharpen > 0) {
     const temp = document.createElement('canvas'); temp.width = dim.w; temp.height = dim.h;
     const tctx = temp.getContext('2d');
-    tctx.drawImage(out, 0, 0);
-    tctx.globalCompositeOperation = 'overlay';
     tctx.filter = `contrast(${100 + f.sharpen * 2}%)`;
-    tctx.drawImage(temp, 0, 0);
-    ctx.globalCompositeOperation = 'source-over';
+    tctx.drawImage(out, 0, 0);
     ctx.drawImage(temp, 0, 0);
   }
 
-  // AI
   if (f.ai) {
     ctx.globalCompositeOperation = 'overlay';
     ctx.fillStyle = 'rgba(200,220,255,0.08)';
@@ -300,7 +326,6 @@ async function saveEditor(mode) {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  // Viněta
   if (f.vignette > 0) {
     const grad = ctx.createRadialGradient(dim.w / 2, dim.h / 2, dim.w * 0.25, dim.w / 2, dim.h / 2, dim.w * 0.9);
     grad.addColorStop(0, 'transparent');
@@ -330,13 +355,14 @@ function insertImgTo(editorId) {
   if (!G.photos.length) { alert('Nejdřív nahraj fotky do galerie.'); return; }
   const editor = document.getElementById(editorId);
   const m = document.createElement('div'); m.className = 'modal';
-  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Vložit fotku</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:120px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
+  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Vložit fotku</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:120px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='transparent'" onclick="insertImgUrl('${editorId}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
   m.onclick = e => { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
 }
 
 function insertImgUrl(editorId, url) {
   const editor = document.getElementById(editorId);
+  if (!editor) return;
   const img = `<img src="${url}" style="max-width:100%;border-radius:6px;margin:0.5rem 0;display:block">`;
   editor.focus();
   document.execCommand('insertHTML', false, img);
@@ -347,32 +373,39 @@ function insertImgUrl(editorId, url) {
 // ČLÁNKY
 // ═══════════════════════════════════════
 async function loadArticles() {
-  const res = await fetch('/api/articles/list');
-  const data = await res.json();
-  const box = document.getElementById('articleList');
-  if (!box) return;
-  box.innerHTML = data.map(a => `
-    <div class="card">
-      <h4>${escapeHtml(a.title)}</h4>
-      <p><small>${a.section || ''} ${a.subsection || ''} | ${a.place || ''} | ${new Date(a.date || a.created).toLocaleDateString('cs')}</small></p>
-      <div class="article-preview">${a.content}</div>
-      <div class="actions">
-        <button onclick="editArticle('${a.id}')" class="btn btn-blue">Upravit</button>
-        <button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button>
-      </div>
-    </div>`).join('');
+  try {
+    const res = await fetch('/api/articles/list');
+    const data = await res.json();
+    const box = document.getElementById('articleList');
+    if (!box) return;
+    if (!data.length) { box.innerHTML = '<p style="color:#64748b;text-align:center;padding:2rem">Žádné články.</p>'; return; }
+    box.innerHTML = data.map(a => {
+      const sec = SECTIONS.find(s => s.id === a.sectionId);
+      return `<div class="card">
+        <h4>${escapeHtml(a.title)}</h4>
+        <p><small>${sec ? sec.name : (a.sectionId || '')} ${a.subsectionId ? '• ' + escapeHtml(a.subsectionId) : ''} ${a.place ? '| ' + escapeHtml(a.place) : ''} | ${new Date(a.date || a.created).toLocaleDateString('cs')}</small></p>
+        <div class="article-preview">${a.content}</div>
+        <div class="actions">
+          <button onclick="editArticle('${a.id}')" class="btn btn-blue">Upravit</button>
+          <button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) { console.error('Články chyba:', e); }
 }
 
-async function loadArtSections() {
-  const [sRes, ssRes] = await Promise.all([fetch('/api/sections/list'), fetch('/api/subsections/list')]);
-  const sections = await sRes.json(), subsections = await ssRes.json();
-  const sSel = document.getElementById('artSection'), ssSel = document.getElementById('artSubsection');
+function loadArtSections() {
+  const sSel = document.getElementById('artSection');
+  const ssSel = document.getElementById('artSubsection');
   if (!sSel) return;
-  sSel.innerHTML = '<option value="">— Sekce —</option>' + sections.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
-  sSel.onchange = () => {
+  sSel.onchange = async () => {
     const sid = sSel.value;
-    const related = subsections.filter(ss => ss.sectionId === sid);
-    ssSel.innerHTML = '<option value="">— Podsekce —</option>' + related.map(ss => `<option value="${ss.id}">${escapeHtml(ss.name)}</option>`).join('');
+    if (!sid) { if (ssSel) ssSel.innerHTML = '<option value="">— Podsekce —</option>'; return; }
+    try {
+      const res = await fetch(`/api/subsections/by-section?sectionId=${sid}`);
+      const data = await res.json();
+      if (ssSel) ssSel.innerHTML = '<option value="">— Podsekce —</option>' + data.map(ss => `<option value="${ss.id}">${escapeHtml(ss.name)}</option>`).join('');
+    } catch { if (ssSel) ssSel.innerHTML = '<option value="">— Podsekce —</option>'; }
   };
 }
 
@@ -384,8 +417,7 @@ async function createArticle() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      title,
-      content,
+      title, content,
       sectionId: document.getElementById('artSection')?.value,
       subsectionId: document.getElementById('artSubsection')?.value,
       date: document.getElementById('artDate')?.value,
@@ -396,11 +428,12 @@ async function createArticle() {
   document.getElementById('artEditor').innerHTML = '';
   document.getElementById('artDate').value = '';
   document.getElementById('artPlace').value = '';
+  const ss = document.getElementById('artSubsection'); if (ss) ss.innerHTML = '<option value="">— Podsekce —</option>';
   loadArticles();
 }
 
 function editArticle(id) {
-  alert('Editace článku: ' + id);
+  alert('Editace článku: ' + id + '\n\nFunkce připravena – napoj na formulář podle ID.');
 }
 
 async function deleteArticle(id) {
@@ -421,7 +454,7 @@ async function loadQuotes() {
     const data = await res.json();
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Žádné citáty.</td></tr>'; return; }
     tbody.innerHTML = data.map(q => `<tr><td>"${escapeHtml(q.text)}"</td><td>${escapeHtml(q.author) || '—'}</td><td><button onclick="deleteQuote('${encodeURIComponent(q.key)}')" class="btn btn-red btn-sm">Smazat</button></td></tr>`).join('');
-  } catch { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba.</td></tr>'; }
+  } catch { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444">Chyba načítání.</td></tr>'; }
 }
 
 async function createQuote() {
@@ -431,49 +464,48 @@ async function createQuote() {
   document.getElementById('qText').value = ''; document.getElementById('qAuthor').value = ''; loadQuotes();
 }
 
-async function deleteQuote(key) { if (!confirm('Smazat?')) return; await fetch(`/api/quotes/delete?key=${key}`, { method: 'DELETE' }); loadQuotes(); }
+async function deleteQuote(key) { if (!confirm('Smazat citát?')) return; await fetch(`/api/quotes/delete?key=${key}`, { method: 'DELETE' }); loadQuotes(); }
 
 // ═══════════════════════════════════════
-// SEKCE / PODSEKCE
+// PODSEKCE (sekce jsou hardcoded 4)
 // ═══════════════════════════════════════
-async function loadSections() {
-  const res = await fetch('/api/sections/list');
-  const data = await res.json();
-  const tbody = document.getElementById('sectionTableBody');
-  if (tbody) tbody.innerHTML = data.map(s => `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td><td><button onclick="deleteSection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>`).join('');
-}
-
-async function createSection() {
-  await fetch('/api/sections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('sName')?.value, slug: document.getElementById('sSlug')?.value, order: parseInt(document.getElementById('sOrder')?.value) || 0 }) });
-  if (document.getElementById('sName')) document.getElementById('sName').value = '';
-  if (document.getElementById('sSlug')) document.getElementById('sSlug').value = '';
-  loadSections();
-}
-
-async function deleteSection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/sections/delete?id=${id}`, { method: 'DELETE' }); loadSections(); }
-
 async function loadSubsections() {
-  const res = await fetch('/api/subsections/list');
-  const data = await res.json();
   const tbody = document.getElementById('subsectionTableBody');
-  if (tbody) tbody.innerHTML = data.map(s => `<tr><td>${escapeHtml(s.sectionId)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td><td><button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>`).join('');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b">Načítání...</td></tr>';
+  try {
+    const all = [];
+    await Promise.all(SECTIONS.map(async s => {
+      const res = await fetch(`/api/subsections/by-section?sectionId=${s.id}`);
+      const data = await res.json();
+      all.push(...data.map(d => ({...d, sectionName: s.name})));
+    }));
+    all.sort((a, b) => (a.order || 0) - (b.order || 0));
+    if (!all.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b">Žádné podsekce.</td></tr>'; return; }
+    tbody.innerHTML = all.map(s => `<tr><td>${escapeHtml(s.sectionName)}</td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.slug)}</td><td>${s.order || 0}</td><td><button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button></td></tr>`).join('');
+  } catch { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ef4444">Chyba načítání.</td></tr>'; }
 }
 
 async function createSubsection() {
-  if (!document.getElementById('ssSection')?.value || !document.getElementById('ssName')?.value.trim()) return alert('Vyplň sekci a název');
-  await fetch('/api/subsections/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sectionId: document.getElementById('ssSection').value, name: document.getElementById('ssName').value, slug: document.getElementById('ssSlug')?.value, order: parseInt(document.getElementById('ssOrder')?.value) || 0 }) });
-  if (document.getElementById('ssName')) document.getElementById('ssName').value = '';
-  if (document.getElementById('ssSlug')) document.getElementById('ssSlug').value = '';
+  const sectionId = document.getElementById('ssSection')?.value;
+  const name = document.getElementById('ssName')?.value.trim();
+  if (!sectionId || !name) return alert('Vyplň sekci a název');
+  const order = parseInt(document.getElementById('ssOrder')?.value) || 0;
+  await fetch('/api/subsections/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sectionId, name, order })
+  });
+  document.getElementById('ssName').value = '';
+  document.getElementById('ssOrder').value = '0';
   loadSubsections();
 }
 
-async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
+async function deleteSubsection(id) { if (!confirm('Smazat podsekci?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
 
 // ═══════════════════════════════════════
 // O ZAJDOVI
 // ═══════════════════════════════════════
-let aboutData = { title: '', text: '', photos: [], subsections: [] };
-
 async function loadAbout() {
   try { const res = await fetch('/api/about/get'); aboutData = await res.json(); } catch { aboutData = { title: '', text: '', photos: [], subsections: [] }; }
   const titleIn = document.getElementById('aboutTitle');
@@ -482,41 +514,21 @@ async function loadAbout() {
   if (titleIn) titleIn.value = aboutData.title || '';
   if (editor) editor.innerHTML = aboutData.text || '';
   renderAboutPhotos(); renderAboutSubs();
-  if (preview) preview.innerHTML = `<h4>${escapeHtml(aboutData.title || 'O Zajdovi')}</h4><div>${aboutData.text || ''}</div>${aboutData.photos.length ? `<div class="about-photos">${aboutData.photos.map(u => `<img src="${u}">`).join('')}</div>` : ''}`;
+  if (preview) preview.innerHTML = `<h4>${escapeHtml(aboutData.title || 'O Zajdovi')}</h4><div>${aboutData.text || ''}</div>${(aboutData.photos || []).length ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem">${aboutData.photos.map(u => `<img src="${u}" style="width:100px;height:100px;object-fit:cover;border-radius:6px;border:1px solid #334155">`).join('')}</div>` : ''}`;
 }
 
 function renderAboutPhotos() {
   const box = document.getElementById('aboutPhotos');
   if (!box) return;
-  box.innerHTML = aboutData.photos.map((u, i) => `<div style="position:relative;display:inline-block"><img src="${u}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #334155"><button onclick="aboutData.photos.splice(${i},1);renderAboutPhotos()" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px">×</button></div>`).join('');
+  box.innerHTML = (aboutData.photos || []).map((u, i) => `<div style="position:relative;display:inline-block"><img src="${u}" style="width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #334155"><button onclick="aboutData.photos.splice(${i},1);renderAboutPhotos()" style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:12px;line-height:1">×</button></div>`).join('');
 }
 
 function openGalleryPicker() {
   if (!G.photos.length) { alert('Nejdřív nahraj fotky do galerie.'); return; }
   const m = document.createElement('div'); m.className = 'modal';
-  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Vyber fotku</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent" onclick="pickAboutPhoto('${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
+  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Vyber fotku</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid transparent" onmouseover="this.style.borderColor='#3b82f6'" onmouseout="this.style.borderColor='transparent'" onclick="pickAboutPhoto('${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
   m.onclick = e => { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
 }
 
-function pickAboutPhoto(url) { if (!aboutData.photos.includes(url)) aboutData.photos.push(url); renderAboutPhotos(); const m = document.querySelector('.modal'); if (m) m.remove(); }
-
-function renderAboutSubs() {
-  const box = document.getElementById('aboutSubsections');
-  if (!box) return;
-  box.innerHTML = aboutData.subsections.map((s, i) => `<div class="about-sub"><input type="text" placeholder="Nadpis" value="${escapeHtml(s.title || '')}" onchange="aboutData.subsections[${i}].title=this.value"><textarea placeholder="Text..." rows="3" onchange="aboutData.subsections[${i}].text=this.value">${escapeHtml(s.text || '')}</textarea><button onclick="aboutData.subsections.splice(${i},1);renderAboutSubs()" class="btn btn-red btn-sm">Odstranit</button></div>`).join('');
-}
-
-function addAboutSub() { aboutData.subsections.push({ title: '', text: '' }); renderAboutSubs(); }
-
-async function saveAbout() {
-  aboutData.title = document.getElementById('aboutTitle')?.value || '';
-  aboutData.text = document.getElementById('aboutEditor')?.innerHTML || '';
-  await fetch('/api/about/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(aboutData) });
-  loadAbout();
-}
-
-// ═══════════════════════════════════════
-// START
-// ═══════════════════════════════════════
-loadGallery();
+function pickAboutPhoto(url) { if (!(aboutData.photos || []).includes(url)) aboutData.photos.push(url); renderAboutPhotos(); const m = document.querySelector('.modal'); if (m) m
