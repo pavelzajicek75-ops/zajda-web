@@ -30,6 +30,21 @@ function escapeHtml(t) { const d = document.createElement('div'); d.textContent 
 function fmtBytes(b) { return b ? (b / 1024 / 1024).toFixed(2) + ' MB' : '0 MB'; }
 
 // ═══════════════════════════════════════
+// LIGHTBOX (pro články i galerii)
+// ═══════════════════════════════════════
+function openLightbox(src) {
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.style.cssText = 'background:rgba(0,0,0,0.95);display:flex;justify-content:center;align-items:center;padding:1rem;z-index:2000;';
+  m.innerHTML = `<div style="position:relative;max-width:95vw;max-height:95vh;display:flex;flex-direction:column;align-items:center;gap:0.75rem;">
+    <img src="${src}" style="max-width:95vw;max-height:85vh;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.5);cursor:default;">
+    <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
+  </div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+}
+
+// ═══════════════════════════════════════
 // GALERIE
 // ═══════════════════════════════════════
 let G = { photos: [], selected: new Set() };
@@ -111,39 +126,54 @@ async function uploadFiles(input) {
 }
 
 // ═══════════════════════════════════════
-// EDITOR FOTOGRAFIÍ
+// EDITOR FOTOGRAFIÍ (bez CORS!)
 // ═══════════════════════════════════════
 let ED = {
   photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0,
-  crop: 'free', export: 'max',
+  crop: 'free', export: 'max', blobUrl: null,
   filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false },
   drag: false, resize: null, lx: 0, ly: 0,
   cropX: 0, cropY: 0, cropW: 0, cropH: 0
 };
 
-function openEditor(id) {
+async function openEditor(id) {
   const p = G.photos.find(x => x.id === id);
   if (!p) return;
   ED.photo = p; ED.scale = 1; ED.rotate = 0; ED.panX = 0; ED.panY = 0; ED.crop = 'free'; ED.export = 'max';
   ED.filters = { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false };
+  if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
   const ai = document.getElementById('aiCheck'); if (ai) ai.checked = false;
   updateFilterLabels(); setCrop('free'); setExport('max');
 
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    ED.img = img;
-    const modal = document.getElementById('editorModal');
-    if (modal) modal.classList.remove('hidden');
-    const imgEl = document.getElementById('editImg');
-    if (imgEl) { imgEl.src = p.url + '?t=' + Date.now(); updatePreviewTransform(); }
-    initEditorDrag(); initCropDrag();
-  };
-  img.onerror = () => alert('Obrázek se nepodařilo načíst.');
-  img.src = p.url + '?t=' + Date.now();
+  try {
+    const res = await fetch(p.url);
+    if (!res.ok) throw new Error('fetch failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    ED.blobUrl = url;
+    const img = new Image();
+    img.onload = () => {
+      ED.img = img;
+      const modal = document.getElementById('editorModal');
+      if (modal) modal.classList.remove('hidden');
+      const imgEl = document.getElementById('editImg');
+      if (imgEl) { imgEl.src = url; updatePreviewTransform(); }
+      initEditorDrag(); initCropDrag();
+    };
+    img.onerror = () => { alert('Obrázek se nepodařilo načíst.'); URL.revokeObjectURL(url); ED.blobUrl = null; };
+    img.src = url;
+  } catch (e) {
+    console.error(e);
+    alert('Obrázek se nepodařilo načíst.');
+  }
 }
 
-function closeEditor() { const m = document.getElementById('editorModal'); if (m) m.classList.add('hidden'); ED.img = null; ED.photo = null; }
+function closeEditor() {
+  const m = document.getElementById('editorModal');
+  if (m) m.classList.add('hidden');
+  if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
+  ED.img = null; ED.photo = null;
+}
 
 function editorSetZoom(v) { ED.scale = parseFloat(v); updatePreviewTransform(); }
 
@@ -324,11 +354,11 @@ function insertImgTo(editorId, align) {
 
 function insertImgUrl(editorId, url, align) {
   const editor = document.getElementById(editorId);
-  let style = 'max-width:100%;border-radius:6px;margin:0.5rem 0;display:block';
-  if (align === 'left') style += ';float:left;margin:0.5rem 1rem 0.5rem 0';
-  if (align === 'right') style += ';float:right;margin:0.5rem 0 0.5rem 1rem';
-  if (align === 'center') style += ';margin:0.5rem auto';
-  const img = `<img src="${url}" style="${style}">`;
+  let style = 'max-width:100%;border-radius:6px;margin:0.5rem 0;display:block;cursor:pointer;';
+  if (align === 'left') style += 'float:left;margin:0.5rem 1rem 0.5rem 0;';
+  if (align === 'right') style += 'float:right;margin:0.5rem 0 0.5rem 1rem;';
+  if (align === 'center') style += 'margin:0.5rem auto;';
+  const img = `<img src="${url}" style="${style}" onclick="openLightbox('${url}')">`;
   editor.focus();
   document.execCommand('insertHTML', false, img);
   const m = document.querySelector('.modal'); if (m) m.remove();
@@ -364,6 +394,16 @@ async function loadArticles() {
           <button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button>
         </div>
       </div>`).join('');
+    // Responzivní náhledy + lightbox na všechny fotky v článcích
+    box.querySelectorAll('.article-preview img').forEach(img => {
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      img.style.borderRadius = '6px';
+      img.style.margin = '0.5rem 0';
+      img.style.display = 'block';
+      img.style.cursor = 'pointer';
+      img.addEventListener('click', e => { e.stopPropagation(); openLightbox(img.src); });
+    });
   } catch (e) { console.error('Články chyba:', e); }
 }
 
@@ -457,6 +497,11 @@ async function loadAbout() {
     if (titleIn) titleIn.value = data.title || '';
     if (editor) editor.innerHTML = data.text || '';
     if (preview) preview.innerHTML = `<h4>${escapeHtml(data.title || 'O Zajdovi')}</h4><div>${data.text || ''}</div>`;
+    // Lightbox i v about preview
+    if (preview) preview.querySelectorAll('img').forEach(img => {
+      img.style.cursor = 'pointer';
+      img.addEventListener('click', () => openLightbox(img.src));
+    });
   } catch (e) { console.error('About chyba:', e); }
 }
 
