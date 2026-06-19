@@ -37,8 +37,9 @@ h2 { margin-bottom: 1.25rem; color: #f8fafc; font-size: 1.5rem; }
 .wysiwyg-toolbar .btn { min-width: 36px; justify-content: center; }
 .wysiwyg-editor { min-height: 200px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 1rem; color: #e2e8f0; line-height: 1.6; overflow-y: auto; }
 .wysiwyg-editor:empty:before { content: attr(placeholder); color: #64748b; }
-.wysiwyg-editor img { max-width: 100%; border-radius: 6px; margin: 0.5rem 0; cursor: pointer; }
-.wysiwyg-editor img:hover { outline: 2px solid #3b82f6; }
+.wysiwyg-editor img { max-width: min(100%, 320px); border-radius: 6px; margin: 0.5rem 0; cursor: zoom-in; transition: transform .15s; display: block; }
+.wysiwyg-editor img:hover { transform: scale(1.02); }
+.wysiwyg-editor img[style*="float"] { max-width: min(100%, 260px); }
 
 .toolbar { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #334155; flex-wrap: wrap; gap: 0.75rem; }
 .toolbar-info { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -61,6 +62,12 @@ h2 { margin-bottom: 1.25rem; color: #f8fafc; font-size: 1.5rem; }
 .list-view .meta { color: #94a3b8; font-size: 0.875rem; flex: 1; }
 .list-view .meta strong { color: #e2e8f0; display: block; margin-bottom: 0.25rem; font-weight: 500; }
 
+/* Články - náhledy */
+.article-preview { line-height: 1.7; color: #cbd5e1; }
+.article-preview img, #aboutPreview img { max-width: min(100%, 360px); border-radius: 8px; margin: 0.75rem 0; cursor: zoom-in; transition: transform .15s; display: block; }
+.article-preview img:hover, #aboutPreview img:hover { transform: scale(1.02); }
+.article-preview img[style*="float"] { max-width: min(100%, 280px); }
+
 .table-wrap { overflow-x: auto; margin-top: 1rem; }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .data-table th { text-align: left; padding: 0.75rem 1rem; background: #1e293b; color: #94a3b8; font-weight: 600; border-bottom: 2px solid #334155; white-space: nowrap; }
@@ -71,6 +78,11 @@ h2 { margin-bottom: 1.25rem; color: #f8fafc; font-size: 1.5rem; }
 .card h4 { color: #60a5fa; margin-bottom: 0.5rem; }
 .actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
 .hidden { display: none !important; }
+
+/* Lightbox */
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; display: flex; justify-content: center; align-items: center; padding: 1rem; animation: fadeIn .2s; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); cursor: default; pointer-events: none; }
+.lightbox .lb-close { position: absolute; top: 1rem; right: 1rem; background: rgba(30,41,59,0.9); border: 1px solid #334155; color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
 
 /* Modal / Editor */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: flex; justify-content: center; align-items: center; padding: 1rem; }
@@ -121,4 +133,5 @@ h2 { margin-bottom: 1.25rem; color: #f8fafc; font-size: 1.5rem; }
   .crop-handle { width: 20px; height: 20px; }
   .form-row { flex-direction: column; gap: 0.5rem; }
   .grid-view { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+  .wysiwyg-editor img, .article-preview img, #aboutPreview img { max-width: 100% !important; float: none !important; margin-left: auto !important; margin-right: auto !important; }
 }
