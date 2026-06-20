@@ -95,15 +95,22 @@ async function uploadFiles(input) {
 // ═══════════════════════════════════════
 // EDITOR FOTOGRAFIÍ
 // ═══════════════════════════════════════
-let ED = { photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0, crop: 'free', export: 'max', blobUrl: null, filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false }, drag: false, resize: null, lx: 0, ly: 0, cropX: 0, cropY: 0, cropW: 0, cropH: 0 };
+let ED = {
+  photo: null, img: null, scale: 1, rotate: 0, panX: 0, panY: 0,
+  crop: 'free', export: 'max', blobUrl: null,
+  filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
+  cropRect: { x: 0, y: 0, w: 0, h: 0 },
+  isDragging: false, isResizing: false, resizeDir: '', lastX: 0, lastY: 0
+};
 
 async function openEditor(id) {
   const p = G.photos.find(x => x.id === id); if (!p) return;
-  ED.photo = p; ED.rotate = 0; ED.panX = 0; ED.panY = 0; ED.crop = 'free'; ED.export = 'max';
-  ED.filters = { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, ai: false };
+  ED.photo = p; ED.scale = 1; ED.rotate = 0; ED.panX = 0; ED.panY = 0; ED.crop = 'free'; ED.export = 'max';
+  ED.filters = { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false };
+  if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
   const aic = $('aiCheck'); if (aic) aic.checked = false;
   updateFilterLabels(); setCrop('free'); setExport('max');
-  if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
+
   try {
     const r = await fetch(p.url); if (!r.ok) throw new Error('fetch failed');
     const blob = await r.blob(); const url = URL.createObjectURL(blob); ED.blobUrl = url;
@@ -111,9 +118,13 @@ async function openEditor(id) {
     img.onload = () => {
       ED.img = img; const preview = $('editPreview');
       const fit = preview ? Math.min(preview.clientWidth / img.naturalWidth, preview.clientHeight / img.naturalHeight, 1) : 1;
-      ED.scale = fit; const zs = $('zoomSlider'); if (zs) { zs.min = Math.min(fit, 0.1); zs.max = 4; zs.value = fit; }
+      ED.scale = fit; const zs = $('zoomSlider'); if (zs) { zs.min = Math.min(fit, 0.1).toFixed(2); zs.max = 4; zs.value = fit.toFixed(2); }
       $('editorModal')?.classList.remove('hidden');
       const el = $('editImg'); if (el) { el.src = url; updatePreviewTransform(); }
+      // Vytvoř/resetuj vignette overlay
+      let vig = document.querySelector('.vignette-overlay');
+      if (!vig) { vig = document.createElement('div'); vig.className = 'vignette-overlay'; vig.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:4;border-radius:0;'; preview.appendChild(vig); }
+      vig.style.opacity = 0;
       updateCropOverlay();
     };
     img.onerror = () => { alert('Obrázek se nepodařilo načíst.'); URL.revokeObjectURL(url); ED.blobUrl = null; };
@@ -121,7 +132,13 @@ async function openEditor(id) {
   } catch { alert('Obrázek se nepodařilo načíst.'); }
 }
 
-function closeEditor() { $('editorModal')?.classList.add('hidden'); if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; } ED.img = null; ED.photo = null; }
+function closeEditor() {
+  $('editorModal')?.classList.add('hidden');
+  if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
+  ED.img = null; ED.photo = null;
+  const vig = document.querySelector('.vignette-overlay'); if (vig) vig.style.opacity = 0;
+}
+
 function editorSetZoom(v) { ED.scale = parseFloat(v); updatePreviewTransform(); }
 
 function updatePreviewTransform() {
@@ -129,14 +146,26 @@ function updatePreviewTransform() {
   img.style.transform = `translate(${ED.panX}px, ${ED.panY}px) scale(${ED.scale}) rotate(${ED.rotate}deg)`;
   applyFilters();
 }
+
 function applyFilters() {
   const img = $('editImg'); if (!img) return;
-  const f = ED.filters; let s = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
+  const f = ED.filters;
+  let s = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
   if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`; else s += ` hue-rotate(${f.temp * 0.3}deg)`;
+  if (f.sharpen > 0) s += ` drop-shadow(0 0 ${f.sharpen * 0.05}px rgba(255,255,255,0.3)) contrast(${100 + f.sharpen * 0.5}%)`;
+  if (f.denoise > 0) s += ` blur(${f.denoise * 0.01}px)`;
   img.style.filter = s;
+
+  // Viněta přes overlay
+  const vig = document.querySelector('.vignette-overlay');
+  if (vig && f.vignette > 0) {
+    vig.style.background = `radial-gradient(circle, transparent 30%, rgba(0,0,0,${f.vignette / 100}) 90%)`;
+    vig.style.opacity = 1;
+  } else if (vig) { vig.style.opacity = 0; }
 }
+
 function updateFilterLabels() {
-  const f = ED.filters, ids = { exposure: 'fval-exposure', contrast: 'fval-contrast', saturation: 'fval-saturation', temp: 'fval-temp', vignette: 'fval-vignette', sharpen: 'fval-sharpen' };
+  const f = ED.filters, ids = { exposure: 'fval-exposure', contrast: 'fval-contrast', saturation: 'fval-saturation', temp: 'fval-temp', vignette: 'fval-vignette', sharpen: 'fval-sharpen', denoise: 'fval-denoise' };
   for (const [k, id] of Object.entries(ids)) { const el = $(id); if (el) el.textContent = f[k]; }
 }
 function setFilter(key, val) { ED.filters[key] = parseInt(val); const el = $('fval-' + key); if (el) el.textContent = val; applyFilters(); }
@@ -150,49 +179,82 @@ function setCrop(mode) {
   updateCropOverlay();
 }
 
+function getCropRatio() {
+  if (ED.crop === '1:1') return 1;
+  if (ED.crop === '4:3') return 4 / 3;
+  if (ED.crop === '3:4') return 3 / 4;
+  if (ED.crop === '16:9') return 16 / 9;
+  return 0; // free
+}
+
 function updateCropOverlay() {
   const layer = $('cropLayer'), rect = $('cropRect'), preview = $('editPreview');
-  if (!preview) return; const W = preview.clientWidth, H = preview.clientHeight;
+  if (!preview) return;
+  const W = preview.clientWidth, H = preview.clientHeight;
+
   if (ED.crop === 'free') { if (layer) layer.style.display = 'none'; return; }
   if (layer) layer.style.display = 'block';
+
   let w, h;
   if (ED.crop === '1:1') w = h = Math.min(W, H) * 0.6;
   else if (ED.crop === '4:3') { w = Math.min(W, H) * 0.6; h = w * 0.75; }
   else if (ED.crop === '3:4') { h = Math.min(W, H) * 0.6; w = h * 0.75; }
   else if (ED.crop === '16:9') { w = Math.min(W, H) * 0.7; h = w / 1.777; }
   else { w = W * 0.7; h = H * 0.7; }
+
   w = Math.min(w, W - 20); h = Math.min(h, H - 20);
-  ED.cropW = w; ED.cropH = h; ED.cropX = (W - w) / 2; ED.cropY = (H - h) / 2;
-  if (rect) { rect.style.left = ED.cropX + 'px'; rect.style.top = ED.cropY + 'px'; rect.style.width = w + 'px'; rect.style.height = h + 'px'; }
-  const mt = $('maskTop'); if (mt) mt.style.cssText = `left:0;top:0;width:${W}px;height:${ED.cropY}px`;
-  const mb = $('maskBottom'); if (mb) mb.style.cssText = `left:0;top:${ED.cropY + h}px;width:${W}px;height:${H - ED.cropY - h}px`;
-  const ml = $('maskLeft'); if (ml) ml.style.cssText = `left:0;top:${ED.cropY}px;width:${ED.cropX}px;height:${h}px`;
-  const mr = $('maskRight'); if (mr) mr.style.cssText = `left:${ED.cropX + w}px;top:${ED.cropY}px;width:${W - ED.cropX - w}px;height:${h}px`;
+  ED.cropRect = { x: (W - w) / 2, y: (H - h) / 2, w, h };
+
+  if (rect) { rect.style.left = ED.cropRect.x + 'px'; rect.style.top = ED.cropRect.y + 'px'; rect.style.width = w + 'px'; rect.style.height = h + 'px'; }
+
+  const mt = $('maskTop'); if (mt) mt.style.cssText = `left:0;top:0;width:${W}px;height:${ED.cropRect.y}px`;
+  const mb = $('maskBottom'); if (mb) mb.style.cssText = `left:0;top:${ED.cropRect.y + h}px;width:${W}px;height:${H - ED.cropRect.y - h}px`;
+  const ml = $('maskLeft'); if (ml) ml.style.cssText = `left:0;top:${ED.cropRect.y}px;width:${ED.cropRect.x}px;height:${h}px`;
+  const mr = $('maskRight'); if (mr) mr.style.cssText = `left:${ED.cropRect.x + w}px;top:${ED.cropRect.y}px;width:${W - ED.cropRect.x - w}px;height:${h}px`;
 }
 
 function applyCrop() {
   if (!ED.img || ED.crop === 'free') return;
   if (ED.rotate !== 0) { alert('Pro ořez musí být rotace 0°. Klikni ↺ nebo ↻ pro návrat.'); return; }
-  const preview = $('editPreview'), IW = ED.img.naturalWidth, IH = ED.img.naturalHeight;
-  const PW = preview.clientWidth, PH = preview.clientHeight;
-  const imgLeft = PW / 2 + ED.panX - (IW * ED.scale) / 2;
-  const imgTop = PH / 2 + ED.panY - (IH * ED.scale) / 2;
-  let cX = (ED.cropX - imgLeft) / ED.scale, cY = (ED.cropY - imgTop) / ED.scale;
-  let cW = ED.cropW / ED.scale, cH = ED.cropH / ED.scale;
-  cX = Math.max(0, Math.min(cX, IW)); cY = Math.max(0, Math.min(cY, IH));
-  cW = Math.max(1, Math.min(cW, IW - cX)); cH = Math.max(1, Math.min(cH, IH - cY));
+
+  const preview = $('editPreview');
+  const imgW = ED.img.naturalWidth, imgH = ED.img.naturalHeight;
+  const previewW = preview.clientWidth, previewH = preview.clientHeight;
+
+  // Spočítat, kde je obrázek vzhledem k preview
+  const imgDisplayW = imgW * ED.scale;
+  const imgDisplayH = imgH * ED.scale;
+  const imgLeft = (previewW - imgDisplayW) / 2 + ED.panX;
+  const imgTop = (previewH - imgDisplayH) / 2 + ED.panY;
+
+  // Souřadnice cropu vůči obrázku
+  let cX = (ED.cropRect.x - imgLeft) / ED.scale;
+  let cY = (ED.cropRect.y - imgTop) / ED.scale;
+  let cW = ED.cropRect.w / ED.scale;
+  let cH = ED.cropRect.h / ED.scale;
+
+  // Omezit na rozměry obrázku
+  cX = Math.max(0, Math.min(cX, imgW));
+  cY = Math.max(0, Math.min(cY, imgH));
+  cW = Math.max(1, Math.min(cW, imgW - cX));
+  cH = Math.max(1, Math.min(cH, imgH - cY));
+
+  if (cW < 10 || cH < 10) { alert('Ořez je příliš malý.'); return; }
+
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(cW); canvas.height = Math.round(cH);
+  canvas.width = Math.round(cW);
+  canvas.height = Math.round(cH);
   canvas.getContext('2d').drawImage(ED.img, cX, cY, cW, cH, 0, 0, cW, cH);
+
   canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     if (ED.blobUrl) URL.revokeObjectURL(ED.blobUrl);
     ED.blobUrl = url;
     const img = new Image();
     img.onload = () => {
-      ED.img = img; ED.crop = 'free'; ED.panX = 0; ED.panY = 0;
+      ED.img = img; ED.crop = 'free'; ED.panX = 0; ED.panY = 0; ED.rotate = 0;
       const fit = Math.min(preview.clientWidth / img.naturalWidth, preview.clientHeight / img.naturalHeight, 1);
-      ED.scale = fit; const zs = $('zoomSlider'); if (zs) zs.value = fit;
+      ED.scale = fit; const zs = $('zoomSlider'); if (zs) zs.value = fit.toFixed(2);
       updatePreviewTransform(); updateCropOverlay(); if ($('cropLayer')) $('cropLayer').style.display = 'none';
     };
     img.src = url;
@@ -200,39 +262,95 @@ function applyCrop() {
 }
 
 function setExport(size) { ED.export = size; ['max', '2000', 'fullhd'].forEach(s => { const b = $('ex-' + s); if (b) b.classList.toggle('btn-blue', s === size); }); }
-function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewTransform(); }
+function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewTransform(); updateCropOverlay(); }
 
-// Globální drag handlers (jednou)
-(function () {
-  let isDrag = false, isResize = false;
-  const start = (x, y, type, dir) => { if (type === 'resize') { isResize = true; ED.resize = dir; } else { isDrag = true; ED.drag = true; } ED.lx = x; ED.ly = y; };
-  const move = (x, y) => {
-    if (!ED.img) return;
-    if (isResize && ED.resize) {
-      const dx = x - ED.lx, dy = y - ED.ly; ED.lx = x; ED.ly = y; const min = 50;
-      if (ED.resize.includes('e')) ED.cropW = Math.max(min, ED.cropW + dx);
-      if (ED.resize.includes('s')) ED.cropH = Math.max(min, ED.cropH + dy);
-      if (ED.resize.includes('w')) { const nw = Math.max(min, ED.cropW - dx); ED.cropX += ED.cropW - nw; ED.cropW = nw; }
-      if (ED.resize.includes('n')) { const nh = Math.max(min, ED.cropH - dy); ED.cropY += ED.cropH - nh; ED.cropH = nh; }
-      updateCropOverlay();
-    } else if (isDrag && ED.drag) {
-      const dx = x - ED.lx, dy = y - ED.ly; ED.lx = x; ED.ly = y; ED.panX += dx; ED.panY += dy; updatePreviewTransform();
+// ─── Crop drag & resize handlers ───
+(function initCropSystem() {
+  const preview = document.getElementById('editPreview');
+  if (!preview) return;
+
+  const onStart = (x, y, type, dir) => {
+    if (!ED.img || ED.crop === 'free') return;
+    ED.isDragging = (type === 'drag');
+    ED.isResizing = (type === 'resize');
+    ED.resizeDir = dir || '';
+    ED.lastX = x; ED.lastY = y;
+  };
+
+  const onMove = (x, y) => {
+    if (!ED.img || ED.crop === 'free') return;
+    const dx = x - ED.lastX, dy = y - ED.lastY;
+    ED.lastX = x; ED.lastY = y;
+    const ratio = getCropRatio();
+    let r = ED.cropRect;
+
+    if (ED.isResizing) {
+      let { x: nx, y: ny, w: nw, h: nh } = r;
+
+      if (ED.resizeDir.includes('e')) nw = Math.max(50, nw + dx);
+      if (ED.resizeDir.includes('s')) nh = Math.max(50, nh + dy);
+      if (ED.resizeDir.includes('w')) { const w2 = Math.max(50, nw - dx); nx += nw - w2; nw = w2; }
+      if (ED.resizeDir.includes('n')) { const h2 = Math.max(50, nh - dy); ny += nh - h2; nh = h2; }
+
+      // Udržet poměr stran
+      if (ratio > 0) {
+        if (ED.resizeDir.includes('e') || ED.resizeDir.includes('w')) {
+          nh = nw / ratio;
+          if (ED.resizeDir.includes('n')) ny = r.y + r.h - nh;
+        } else if (ED.resizeDir.includes('s') || ED.resizeDir.includes('n')) {
+          nw = nh * ratio;
+          if (ED.resizeDir.includes('w')) nx = r.x + r.w - nw;
+        }
+      }
+
+      // Omezit na preview
+      const pW = preview.clientWidth, pH = preview.clientHeight;
+      if (nx < 0) { nw += nx; nx = 0; if (ratio > 0) nh = nw / ratio; }
+      if (ny < 0) { nh += ny; ny = 0; if (ratio > 0) nw = nh * ratio; }
+      if (nx + nw > pW) { nw = pW - nx; if (ratio > 0) nh = nw / ratio; }
+      if (ny + nh > pH) { nh = pH - ny; if (ratio > 0) nw = nh * ratio; }
+
+      ED.cropRect = { x: nx, y: ny, w: nw, h: nh };
+      updateCropVisuals();
+    } else if (ED.isDragging) {
+      let nx = r.x + dx, ny = r.y + dy;
+      const pW = preview.clientWidth, pH = preview.clientHeight;
+      nx = Math.max(0, Math.min(nx, pW - r.w));
+      ny = Math.max(0, Math.min(ny, pH - r.h));
+      ED.cropRect = { ...r, x: nx, y: ny };
+      updateCropVisuals();
     }
   };
-  const end = () => { isDrag = false; isResize = false; ED.drag = false; ED.resize = null; };
 
-  window.addEventListener('mousedown', e => {
+  const onEnd = () => { ED.isDragging = false; ED.isResizing = false; ED.resizeDir = ''; };
+
+  const updateCropVisuals = () => {
+    const r = ED.cropRect, rect = $('cropRect'), W = preview.clientWidth, H = preview.clientHeight;
+    if (rect) { rect.style.left = r.x + 'px'; rect.style.top = r.y + 'px'; rect.style.width = r.w + 'px'; rect.style.height = r.h + 'px'; }
+    const mt = $('maskTop'); if (mt) mt.style.cssText = `left:0;top:0;width:${W}px;height:${r.y}px`;
+    const mb = $('maskBottom'); if (mb) mb.style.cssText = `left:0;top:${r.y + r.h}px;width:${W}px;height:${H - r.y - r.h}px`;
+    const ml = $('maskLeft'); if (ml) ml.style.cssText = `left:0;top:${r.y}px;width:${r.x}px;height:${r.h}px`;
+    const mr = $('maskRight'); if (mr) mr.style.cssText = `left:${r.x + r.w}px;top:${r.y}px;width:${W - r.x - r.w}px;height:${r.h}px`;
+  };
+
+  preview.addEventListener('mousedown', e => {
     if (!ED.img) return;
-    const h = e.target.closest('.crop-handle'); if (h) { e.stopPropagation(); start(e.clientX, e.clientY, 'resize', h.dataset.dir); return; }
-    if (e.target.closest('#cropRect')) { start(e.clientX, e.clientY, 'drag'); return; }
-    if (e.target.closest('#editPreview')) start(e.clientX, e.clientY, 'drag');
+    const h = e.target.closest('.crop-handle');
+    if (h) { e.stopPropagation(); onStart(e.clientX, e.clientY, 'resize', h.dataset.dir); return; }
+    if (e.target.closest('#cropRect')) { onStart(e.clientX, e.clientY, 'drag'); return; }
   });
-  window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
-  window.addEventListener('mouseup', end);
+  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', onEnd);
 
-  window.addEventListener('touchstart', e => { if (!ED.img || e.touches.length !== 1) return; const t = e.touches[0], el = document.elementFromPoint(t.clientX, t.clientY); const h = el?.closest('.crop-handle'); if (h) { start(t.clientX, t.clientY, 'resize', h.dataset.dir); } else if (el?.closest('#editPreview')) start(t.clientX, t.clientY, 'drag'); }, { passive: false });
-  window.addEventListener('touchmove', e => { if ((isDrag || isResize) && e.touches.length === 1) { e.preventDefault(); move(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
-  window.addEventListener('touchend', end);
+  preview.addEventListener('touchstart', e => {
+    if (!ED.img || e.touches.length !== 1) return;
+    const t = e.touches[0], el = document.elementFromPoint(t.clientX, t.clientY);
+    const h = el?.closest('.crop-handle');
+    if (h) { e.stopPropagation(); onStart(t.clientX, t.clientY, 'resize', h.dataset.dir); }
+    else if (el?.closest('#cropRect')) { onStart(t.clientX, t.clientY, 'drag'); }
+  }, { passive: false });
+  window.addEventListener('touchmove', e => { if ((ED.isDragging || ED.isResizing) && e.touches.length === 1) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
+  window.addEventListener('touchend', onEnd);
 })();
 
 function getExportDim(w, h) {
@@ -252,10 +370,19 @@ async function saveEditor(mode) {
   ctx.restore();
 
   const f = ED.filters;
+  // Doostření (unsharp mask)
   if (f.sharpen > 0) {
     const temp = document.createElement('canvas'); temp.width = dim.w; temp.height = dim.h; const tctx = temp.getContext('2d');
-    tctx.filter = `contrast(${100 + f.sharpen * 2}%)`; tctx.drawImage(out, 0, 0);
-    ctx.globalCompositeOperation = 'overlay'; ctx.drawImage(temp, 0, 0); ctx.globalCompositeOperation = 'source-over';
+    tctx.filter = `contrast(${100 + f.sharpen}%)`; tctx.drawImage(out, 0, 0);
+    ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = Math.min(f.sharpen / 100, 0.6);
+    ctx.drawImage(temp, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+  // Redukce šumu
+  if (f.denoise > 0) {
+    const temp = document.createElement('canvas'); temp.width = dim.w; temp.height = dim.h; const tctx = temp.getContext('2d');
+    tctx.filter = `blur(${f.denoise * 0.02}px) contrast(${100 + f.denoise * 0.3}%)`;
+    tctx.drawImage(out, 0, 0);
+    ctx.drawImage(temp, 0, 0);
   }
   if (f.ai) { ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = 'rgba(200,220,255,0.08)'; ctx.fillRect(0, 0, dim.w, dim.h); ctx.globalCompositeOperation = 'source-over'; }
   if (f.vignette > 0) {
@@ -268,7 +395,6 @@ async function saveEditor(mode) {
   await fetch('/api/photos/update', { method: 'POST', body: fd });
   closeEditor(); loadGallery();
 }
-
 // ═══════════════════════════════════════
 // WYSIWYG + mazání fotek
 // ═══════════════════════════════════════
