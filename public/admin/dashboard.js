@@ -121,9 +121,8 @@ async function openEditor(id) {
       ED.scale = fit; const zs = $('zoomSlider'); if (zs) { zs.min = Math.min(fit, 0.1).toFixed(2); zs.max = 4; zs.value = fit.toFixed(2); }
       $('editorModal')?.classList.remove('hidden');
       const el = $('editImg'); if (el) { el.src = url; updatePreviewTransform(); }
-      // Vytvoř/resetuj vignette overlay
       let vig = document.querySelector('.vignette-overlay');
-      if (!vig) { vig = document.createElement('div'); vig.className = 'vignette-overlay'; vig.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:4;border-radius:0;'; preview.appendChild(vig); }
+      if (!vig) { vig = document.createElement('div'); vig.className = 'vignette-overlay'; vig.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:4;'; preview.appendChild(vig); }
       vig.style.opacity = 0;
       updateCropOverlay();
     };
@@ -156,10 +155,9 @@ function applyFilters() {
   if (f.denoise > 0) s += ` blur(${f.denoise * 0.01}px)`;
   img.style.filter = s;
 
-  // Viněta přes overlay
   const vig = document.querySelector('.vignette-overlay');
   if (vig && f.vignette > 0) {
-    vig.style.background = `radial-gradient(circle, transparent 30%, rgba(0,0,0,${f.vignette / 100}) 90%)`;
+    vig.style.background = `radial-gradient(circle at center, transparent 30%, rgba(0,0,0,${f.vignette / 100}) 90%)`;
     vig.style.opacity = 1;
   } else if (vig) { vig.style.opacity = 0; }
 }
@@ -184,14 +182,12 @@ function getCropRatio() {
   if (ED.crop === '4:3') return 4 / 3;
   if (ED.crop === '3:4') return 3 / 4;
   if (ED.crop === '16:9') return 16 / 9;
-  return 0; // free
+  return 0;
 }
 
 function updateCropOverlay() {
   const layer = $('cropLayer'), rect = $('cropRect'), preview = $('editPreview');
-  if (!preview) return;
-  const W = preview.clientWidth, H = preview.clientHeight;
-
+  if (!preview) return; const W = preview.clientWidth, H = preview.clientHeight;
   if (ED.crop === 'free') { if (layer) layer.style.display = 'none'; return; }
   if (layer) layer.style.display = 'block';
 
@@ -206,7 +202,6 @@ function updateCropOverlay() {
   ED.cropRect = { x: (W - w) / 2, y: (H - h) / 2, w, h };
 
   if (rect) { rect.style.left = ED.cropRect.x + 'px'; rect.style.top = ED.cropRect.y + 'px'; rect.style.width = w + 'px'; rect.style.height = h + 'px'; }
-
   const mt = $('maskTop'); if (mt) mt.style.cssText = `left:0;top:0;width:${W}px;height:${ED.cropRect.y}px`;
   const mb = $('maskBottom'); if (mb) mb.style.cssText = `left:0;top:${ED.cropRect.y + h}px;width:${W}px;height:${H - ED.cropRect.y - h}px`;
   const ml = $('maskLeft'); if (ml) ml.style.cssText = `left:0;top:${ED.cropRect.y}px;width:${ED.cropRect.x}px;height:${h}px`;
@@ -221,19 +216,16 @@ function applyCrop() {
   const imgW = ED.img.naturalWidth, imgH = ED.img.naturalHeight;
   const previewW = preview.clientWidth, previewH = preview.clientHeight;
 
-  // Spočítat, kde je obrázek vzhledem k preview
   const imgDisplayW = imgW * ED.scale;
   const imgDisplayH = imgH * ED.scale;
   const imgLeft = (previewW - imgDisplayW) / 2 + ED.panX;
   const imgTop = (previewH - imgDisplayH) / 2 + ED.panY;
 
-  // Souřadnice cropu vůči obrázku
   let cX = (ED.cropRect.x - imgLeft) / ED.scale;
   let cY = (ED.cropRect.y - imgTop) / ED.scale;
   let cW = ED.cropRect.w / ED.scale;
   let cH = ED.cropRect.h / ED.scale;
 
-  // Omezit na rozměry obrázku
   cX = Math.max(0, Math.min(cX, imgW));
   cY = Math.max(0, Math.min(cY, imgH));
   cW = Math.max(1, Math.min(cW, imgW - cX));
@@ -242,8 +234,7 @@ function applyCrop() {
   if (cW < 10 || cH < 10) { alert('Ořez je příliš malý.'); return; }
 
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(cW);
-  canvas.height = Math.round(cH);
+  canvas.width = Math.round(cW); canvas.height = Math.round(cH);
   canvas.getContext('2d').drawImage(ED.img, cX, cY, cW, cH, 0, 0, cW, cH);
 
   canvas.toBlob(blob => {
@@ -264,66 +255,46 @@ function applyCrop() {
 function setExport(size) { ED.export = size; ['max', '2000', 'fullhd'].forEach(s => { const b = $('ex-' + s); if (b) b.classList.toggle('btn-blue', s === size); }); }
 function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewTransform(); updateCropOverlay(); }
 
-// ─── Crop drag & resize handlers ───
+// ─── Crop drag & resize ───
 (function initCropSystem() {
-  const preview = document.getElementById('editPreview');
-  if (!preview) return;
-
+  const preview = document.getElementById('editPreview'); if (!preview) return;
   const onStart = (x, y, type, dir) => {
     if (!ED.img || ED.crop === 'free') return;
-    ED.isDragging = (type === 'drag');
-    ED.isResizing = (type === 'resize');
-    ED.resizeDir = dir || '';
+    ED.isDragging = (type === 'drag'); ED.isResizing = (type === 'resize'); ED.resizeDir = dir || '';
     ED.lastX = x; ED.lastY = y;
   };
-
   const onMove = (x, y) => {
     if (!ED.img || ED.crop === 'free') return;
-    const dx = x - ED.lastX, dy = y - ED.lastY;
-    ED.lastX = x; ED.lastY = y;
-    const ratio = getCropRatio();
-    let r = ED.cropRect;
+    const dx = x - ED.lastX, dy = y - ED.lastY; ED.lastX = x; ED.lastY = y;
+    const ratio = getCropRatio(); let r = ED.cropRect;
 
     if (ED.isResizing) {
       let { x: nx, y: ny, w: nw, h: nh } = r;
-
       if (ED.resizeDir.includes('e')) nw = Math.max(50, nw + dx);
       if (ED.resizeDir.includes('s')) nh = Math.max(50, nh + dy);
       if (ED.resizeDir.includes('w')) { const w2 = Math.max(50, nw - dx); nx += nw - w2; nw = w2; }
       if (ED.resizeDir.includes('n')) { const h2 = Math.max(50, nh - dy); ny += nh - h2; nh = h2; }
 
-      // Udržet poměr stran
       if (ratio > 0) {
-        if (ED.resizeDir.includes('e') || ED.resizeDir.includes('w')) {
-          nh = nw / ratio;
-          if (ED.resizeDir.includes('n')) ny = r.y + r.h - nh;
-        } else if (ED.resizeDir.includes('s') || ED.resizeDir.includes('n')) {
-          nw = nh * ratio;
-          if (ED.resizeDir.includes('w')) nx = r.x + r.w - nw;
-        }
+        if (ED.resizeDir.includes('e') || ED.resizeDir.includes('w')) { nh = nw / ratio; if (ED.resizeDir.includes('n')) ny = r.y + r.h - nh; }
+        else if (ED.resizeDir.includes('s') || ED.resizeDir.includes('n')) { nw = nh * ratio; if (ED.resizeDir.includes('w')) nx = r.x + r.w - nw; }
       }
-
-      // Omezit na preview
       const pW = preview.clientWidth, pH = preview.clientHeight;
       if (nx < 0) { nw += nx; nx = 0; if (ratio > 0) nh = nw / ratio; }
       if (ny < 0) { nh += ny; ny = 0; if (ratio > 0) nw = nh * ratio; }
       if (nx + nw > pW) { nw = pW - nx; if (ratio > 0) nh = nw / ratio; }
       if (ny + nh > pH) { nh = pH - ny; if (ratio > 0) nw = nh * ratio; }
-
       ED.cropRect = { x: nx, y: ny, w: nw, h: nh };
       updateCropVisuals();
     } else if (ED.isDragging) {
       let nx = r.x + dx, ny = r.y + dy;
-      const pW = preview.clientWidth, pH = preview.clientHeight;
-      nx = Math.max(0, Math.min(nx, pW - r.w));
-      ny = Math.max(0, Math.min(ny, pH - r.h));
+      nx = Math.max(0, Math.min(nx, preview.clientWidth - r.w));
+      ny = Math.max(0, Math.min(ny, preview.clientHeight - r.h));
       ED.cropRect = { ...r, x: nx, y: ny };
       updateCropVisuals();
     }
   };
-
   const onEnd = () => { ED.isDragging = false; ED.isResizing = false; ED.resizeDir = ''; };
-
   const updateCropVisuals = () => {
     const r = ED.cropRect, rect = $('cropRect'), W = preview.clientWidth, H = preview.clientHeight;
     if (rect) { rect.style.left = r.x + 'px'; rect.style.top = r.y + 'px'; rect.style.width = r.w + 'px'; rect.style.height = r.h + 'px'; }
@@ -334,18 +305,14 @@ function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewT
   };
 
   preview.addEventListener('mousedown', e => {
-    if (!ED.img) return;
-    const h = e.target.closest('.crop-handle');
+    if (!ED.img) return; const h = e.target.closest('.crop-handle');
     if (h) { e.stopPropagation(); onStart(e.clientX, e.clientY, 'resize', h.dataset.dir); return; }
-    if (e.target.closest('#cropRect')) { onStart(e.clientX, e.clientY, 'drag'); return; }
+    if (e.target.closest('#cropRect')) { onStart(e.clientX, e.clientY, 'drag'); }
   });
   window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
   window.addEventListener('mouseup', onEnd);
-
   preview.addEventListener('touchstart', e => {
-    if (!ED.img || e.touches.length !== 1) return;
-    const t = e.touches[0], el = document.elementFromPoint(t.clientX, t.clientY);
-    const h = el?.closest('.crop-handle');
+    if (!ED.img || e.touches.length !== 1) return; const t = e.touches[0], el = document.elementFromPoint(t.clientX, t.clientY); const h = el?.closest('.crop-handle');
     if (h) { e.stopPropagation(); onStart(t.clientX, t.clientY, 'resize', h.dataset.dir); }
     else if (el?.closest('#cropRect')) { onStart(t.clientX, t.clientY, 'drag'); }
   }, { passive: false });
@@ -370,18 +337,15 @@ async function saveEditor(mode) {
   ctx.restore();
 
   const f = ED.filters;
-  // Doostření (unsharp mask)
   if (f.sharpen > 0) {
     const temp = document.createElement('canvas'); temp.width = dim.w; temp.height = dim.h; const tctx = temp.getContext('2d');
     tctx.filter = `contrast(${100 + f.sharpen}%)`; tctx.drawImage(out, 0, 0);
     ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = Math.min(f.sharpen / 100, 0.6);
     ctx.drawImage(temp, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
-  // Redukce šumu
   if (f.denoise > 0) {
     const temp = document.createElement('canvas'); temp.width = dim.w; temp.height = dim.h; const tctx = temp.getContext('2d');
-    tctx.filter = `blur(${f.denoise * 0.02}px) contrast(${100 + f.denoise * 0.3}%)`;
-    tctx.drawImage(out, 0, 0);
+    tctx.filter = `blur(${f.denoise * 0.02}px) contrast(${100 + f.denoise * 0.3}%)`; tctx.drawImage(out, 0, 0);
     ctx.drawImage(temp, 0, 0);
   }
   if (f.ai) { ctx.globalCompositeOperation = 'overlay'; ctx.fillStyle = 'rgba(200,220,255,0.08)'; ctx.fillRect(0, 0, dim.w, dim.h); ctx.globalCompositeOperation = 'source-over'; }
@@ -513,7 +477,7 @@ async function createSubsection() {
 async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
 
 async function pickSubsectionCover(id) {
-  if (!G.photos.length) { alert('Galerie je prázdná. Počkej na načtení, nebo refreshni.'); return; }
+  if (!G.photos.length) { alert('Galerie se ještě načítá. Počkej chvíli, nebo refreshni stránku.'); return; }
   const m = document.createElement('div'); m.className = 'modal';
   m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover podsekce</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSubsectionCover('${id}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
   m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m);
@@ -523,7 +487,6 @@ async function saveSubsectionCover(id, url) {
   const m = document.querySelector('.modal'); if (m) m.remove(); loadSubsections();
 }
 
-// Cover hlavních sekcí
 async function loadSectionCovers() {
   const box = $('sectionCovers'); if (!box) return;
   const secs = [{id:'travel',n:'Cestování'},{id:'photo',n:'Fotografování'},{id:'projects',n:'Projekty'},{id:'about',n:'O Zajdovi'}];
@@ -540,7 +503,7 @@ async function loadSectionCovers() {
   html += '</div>'; box.innerHTML = html;
 }
 function pickSectionCover(sectionId) {
-  if (!G.photos.length) { alert('Galerie se ještě načítá. Zkus to za chvíli, nebo jdi nejdřív do Galerie.'); return; }
+  if (!G.photos.length) { alert('Galerie se ještě načítá. Jdi nejdřív do Galerie, počkej na načtení, pak sem vrať.'); return; }
   const m = document.createElement('div'); m.className = 'modal';
   m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover sekce</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover('${sectionId}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
   m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m);
@@ -549,6 +512,7 @@ async function saveSectionCover(sectionId, url) {
   try { const r = await fetch(url); const blob = await r.blob(); const fd = new FormData(); fd.append('file', blob, 'cover.jpg'); fd.append('sectionId', sectionId); await fetch('/api/sections/cover', { method: 'POST', body: fd }); } catch (e) { console.error(e); }
   const m = document.querySelector('.modal'); if (m) m.remove(); loadSectionCovers();
 }
+
 
 // ═══════════════════════════════════════
 // O ZAJDOVI
