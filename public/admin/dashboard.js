@@ -490,7 +490,10 @@ async function loadSubsections() {
   for (const sid of secs) { try { const r = await fetch('/api/subsections/by-section?sectionId=' + sid); const arr = await r.json(); all.push(...arr); } catch {} }
   tbody.innerHTML = all.map(s => `<tr>
     <td>${escapeHtml(s.sectionId)}</td>
-    <td>${s.coverUrl ? `<img src="${s.coverUrl}" style="width:40px;height:30px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:0.5rem">` : ''}${escapeHtml(s.name)}</td>
+    <td style="display:flex;align-items:center;gap:0.75rem">
+      ${s.coverUrl ? `<img src="${s.coverUrl}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #334155;flex-shrink:0">` : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;border:1px solid #334155;flex-shrink:0"></div>'}
+      <span>${escapeHtml(s.name)}</span>
+    </td>
     <td>${escapeHtml(s.slug)}</td>
     <td>${s.order || 0}</td>
     <td>
@@ -499,6 +502,7 @@ async function loadSubsections() {
     </td>
   </tr>`).join('');
 }
+
 async function createSubsection() {
   const sec = $('ssSection')?.value, name = $('ssName')?.value.trim();
   if (!sec || !name) return alert('Vyplň sekci a název');
@@ -509,9 +513,9 @@ async function createSubsection() {
 async function deleteSubsection(id) { if (!confirm('Smazat?')) return; await fetch(`/api/subsections/delete?id=${id}`, { method: 'DELETE' }); loadSubsections(); }
 
 async function pickSubsectionCover(id) {
-  if (!G.photos.length) { alert('Galerie je prázdná.'); return; }
+  if (!G.photos.length) { alert('Galerie je prázdná. Počkej na načtení, nebo refreshni.'); return; }
   const m = document.createElement('div'); m.className = 'modal';
-  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover podsekce</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:120px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSubsectionCover('${id}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
+  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover podsekce</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSubsectionCover('${id}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
   m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m);
 }
 async function saveSubsectionCover(id, url) {
@@ -523,22 +527,22 @@ async function saveSubsectionCover(id, url) {
 async function loadSectionCovers() {
   const box = $('sectionCovers'); if (!box) return;
   const secs = [{id:'travel',n:'Cestování'},{id:'photo',n:'Fotografování'},{id:'projects',n:'Projekty'},{id:'about',n:'O Zajdovi'}];
-  let html = '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">';
+  let html = '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">';
   for (const s of secs) {
     let url = '';
     try { const r = await fetch('/api/sections/cover?sectionId=' + s.id); const d = await r.json(); url = d.url || ''; } catch {}
-    html += `<div style="background:#1e293b;padding:0.75rem;border-radius:8px;border:1px solid #334155;text-align:center;min-width:100px">
+    html += `<div style="background:#1e293b;padding:0.75rem;border-radius:8px;border:1px solid #334155;text-align:center;min-width:140px">
       <div style="font-size:0.875rem;margin-bottom:0.5rem">${escapeHtml(s.n)}</div>
-      ${url ? `<img src="${url}" style="width:80px;height:60px;object-fit:cover;border-radius:4px;margin:0 auto 0.5rem;display:block">` : '<div style="width:80px;height:60px;background:#0f172a;border-radius:4px;margin:0 auto 0.5rem"></div>'}
+      ${url ? `<img src="${url}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #334155">` : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #334155"></div>'}
       <button onclick="pickSectionCover('${s.id}')" class="btn btn-blue btn-sm">Změnit</button>
     </div>`;
   }
   html += '</div>'; box.innerHTML = html;
 }
 function pickSectionCover(sectionId) {
-  if (!G.photos.length) { alert('Galerie je prázdná.'); return; }
+  if (!G.photos.length) { alert('Galerie se ještě načítá. Zkus to za chvíli, nebo jdi nejdřív do Galerie.'); return; }
   const m = document.createElement('div'); m.className = 'modal';
-  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover sekce</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:120px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover('${sectionId}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
+  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover sekce</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover('${sectionId}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
   m.onclick = e => { if (e.target === m) m.remove(); }; document.body.appendChild(m);
 }
 async function saveSectionCover(sectionId, url) {
