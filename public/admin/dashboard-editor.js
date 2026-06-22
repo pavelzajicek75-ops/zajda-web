@@ -18,6 +18,27 @@ let ED = {
   lastY: 0
 };
 
+/* === SVG filtry pro opravdové doostření (konvoluce) === */
+(function initEditorFilters() {
+  if (document.getElementById('editor-filters-svg')) return;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.id = 'editor-filters-svg';
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  svg.style.cssText = 'position:absolute;pointer-events:none;';
+  svg.innerHTML = `
+    <defs>
+      <filter id="ed-sharpen" x="-20%" y="-20%" width="140%" height="140%">
+        <feConvolveMatrix order="3" kernelMatrix="0 -1 0 -1 5 -1 0 -1 0" preserveAlpha="true"/>
+      </filter>
+      <filter id="ed-sharpen-strong" x="-20%" y="-20%" width="140%" height="140%">
+        <feConvolveMatrix order="3" kernelMatrix="0 -1.5 0 -1.5 7 -1.5 0 -1.5 0" preserveAlpha="true"/>
+      </filter>
+    </defs>
+  `;
+  document.body.appendChild(svg);
+})();
+
 async function openEditor(id) {
   const p = G.photos.find(x => x.id === id);
   if (!p) return;
@@ -123,9 +144,15 @@ function applyFilters() {
   let s = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
   if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`;
   else s += ` hue-rotate(${f.temp * 0.3}deg)`;
-  if (f.sharpen > 0) s += ` contrast(${100 + f.sharpen * 0.8}%)`;
-  if (f.denoise > 0) s += ` blur(${f.denoise * 0.01}px)`;
+  if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
+  if (f.sharpen > 0) {
+    s += f.sharpen > 50 ? ' url(#ed-sharpen-strong)' : ' url(#ed-sharpen)';
+  }
+  if (f.ai) {
+    s += ' brightness(105%) contrast(110%) saturate(115%) url(#ed-sharpen)';
+  }
   img.style.filter = s;
+
   const vig = document.querySelector('.vignette-overlay');
   if (vig && f.vignette > 0) {
     vig.style.background = `radial-gradient(circle at center, transparent 30%, rgba(0,0,0,${f.vignette / 100}) 90%)`;
@@ -218,6 +245,7 @@ function renderCropRect() {
   const mr = $('maskRight');
   if (mr) mr.style.cssText = `left:${r.x + r.w}px;top:${r.y}px;width:${W - r.x - r.w}px;height:${r.h}px`;
 }
+
 (function initCropSystem() {
   const preview = $('editPreview');
   if (!preview || preview.dataset.cropReady) return;
@@ -380,6 +408,7 @@ function applyCrop() {
   canvas.height = Math.round(srcH);
   canvas.getContext('2d').drawImage(ED.img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
+  /* === ZMĚNA: PNG místo JPEG pro bezeztrátový mezistupeň === */
   canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     if (ED.blobUrl) URL.revokeObjectURL(ED.blobUrl);
@@ -401,8 +430,9 @@ function applyCrop() {
       ED.cropRect = null;
     };
     newImg.src = url;
-  }, 'image/jpeg', 1.0);
+  }, 'image/png');
 }
+
 function setExport(size) {
   ED.export = size;
   ['max', '2000', 'fullhd'].forEach(s => {
@@ -442,26 +472,34 @@ async function saveEditor(mode) {
   let filterStr = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
   if (f.temp > 0) filterStr += ` sepia(${f.temp * 0.5}%)`;
   else filterStr += ` hue-rotate(${f.temp * 0.3}deg)`;
-  if (f.sharpen > 0) filterStr += ` contrast(${100 + f.sharpen * 0.8}%)`;
+  if (f.denoise > 0) filterStr += ` blur(${f.denoise * 0.05}px)`;
+  if (f.sharpen > 0) {
+    filterStr += f.sharpen > 50 ? ' url(#ed-sharpen-strong)' : ' url(#ed-sharpen)';
+  }
+  if (f.ai) {
+    filterStr += ' brightness(105%) contrast(110%) saturate(115%) url(#ed-sharpen)';
+  }
   ctx.filter = filterStr;
 
   ctx.save();
   ctx.translate(dim.w / 2, dim.h / 2);
   ctx.rotate(ED.rotate * Math.PI / 180);
-  ctx.scale(ED.scale, ED.scale);
-  const ratio = Math.min(dim.w / img.naturalWidth, dim.h / img.naturalHeight);
+
+  /* === ZMĚNA: žádný ED.scale z náhledu, žádné panX/panY === */
+  const drawScale = Math.min(dim.w / img.naturalWidth, dim.h / img.naturalHeight);
   ctx.drawImage(
     img,
-    -img.naturalWidth * ratio / 2 + ED.panX / ED.scale,
-    -img.naturalHeight * ratio / 2 + ED.panY / ED.scale,
-    img.naturalWidth * ratio,
-    img.naturalHeight * ratio
+    -img.naturalWidth * drawScale / 2,
+    -img.naturalHeight * drawScale / 2,
+    img.naturalWidth * drawScale,
+    img.naturalHeight * drawScale
   );
   ctx.restore();
 
+  /* AI overlay - jemnější, méně modrý */
   if (f.ai) {
     ctx.globalCompositeOperation = 'overlay';
-    ctx.fillStyle = 'rgba(200,220,255,0.08)';
+    ctx.fillStyle = 'rgba(200,220,255,0.04)';
     ctx.fillRect(0, 0, dim.w, dim.h);
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -477,7 +515,8 @@ async function saveEditor(mode) {
     ctx.fillRect(0, 0, dim.w, dim.h);
   }
 
-  const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 1.0));
+  /* === ZMĚNA: kvalita 0.95 místo 1.0 (stejná kvalita, menší soubor) === */
+  const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.95));
   const fd = new FormData();
   fd.append('file', blob, ED.photo.name || 'edited.jpg');
   fd.append('galleryId', 'main');
