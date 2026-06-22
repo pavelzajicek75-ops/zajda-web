@@ -236,7 +236,6 @@
 
       const size = Math.floor(random(14, 26));
 
-      /* ZALOMENÍ TEXTU – max-width už je v CSS, tady word-break pro jistotu */
       el.innerHTML = `
         <div style="text-align:right; font-size:${size}px; word-break:break-word;">
           "<strong>${q.text}</strong>"<br>
@@ -288,7 +287,39 @@
       }, 4000);
     }
 
-    window.addEventListener("load", startSky);
+    /* ═══ NAČÍTÁNÍ COVER FOTEK SEKCÍ Z GALERIE ═══ */
+    async function loadSectionCovers() {
+      const sections = [
+        { id: 'travel', href: '/travel' },
+        { id: 'photo', href: '/photo' },
+        { id: 'projects', href: '/projects' },
+        { id: 'about', href: '/about' }
+      ];
+
+      for (const sec of sections) {
+        try {
+          const res = await fetch('/api/sections/cover?sectionId=' + sec.id);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const url = data.coverUrl || data.url;
+          if (!url) continue;
+
+          const link = document.querySelector(`.card a[href="${sec.href}"]`);
+          if (link) {
+            const img = link.querySelector('img');
+            if (img) img.src = url;
+          }
+        } catch (e) {
+          console.error('Chyba načítání coveru sekce', sec.id, e);
+        }
+      }
+    }
+
+    /* Spustit vše po načtení stránky */
+    window.addEventListener("load", () => {
+      startSky();
+      loadSectionCovers();
+    });
   </script>
 
 </body>
