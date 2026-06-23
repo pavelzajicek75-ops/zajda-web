@@ -1,5 +1,5 @@
 /* =========================================================
-   DASHBOARD EDITOR — kompletní soubor (opravený)
+   DASHBOARD EDITOR — kompletní soubor
    ========================================================= */
 
 function $(id) { return document.getElementById(id); }
@@ -329,10 +329,22 @@ function getExportDim(w, h) {
   return { w, h };
 }
 
+/* Oprava mobilního černého obdélníku - limit canvas rozměrů */
+function getSafeCanvasDim(w, h) {
+  const max = /iPhone|iPad|iPod|Android/.test(navigator.userAgent) ? 2048 : 4096;
+  if (w <= max && h <= max) return { w, h };
+  const ratio = Math.min(max / w, max / h);
+  return { w: Math.round(w * ratio), h: Math.round(h * ratio) };
+}
+
 async function saveEditor(mode) {
   if (!ED.img) return;
-  const img = ED.img, out = document.createElement('canvas');
-  const dim = getExportDim(img.naturalWidth, img.naturalHeight);
+  const img = ED.img;
+
+  let dim = getExportDim(img.naturalWidth, img.naturalHeight);
+  dim = getSafeCanvasDim(dim.w, dim.h);
+
+  const out = document.createElement('canvas');
   out.width = dim.w; out.height = dim.h;
   const ctx = out.getContext('2d');
 
@@ -378,15 +390,92 @@ async function saveEditor(mode) {
 
 /* === WYSIWYG pomocné funkce ============================ */
 function execCmd(c, v) { document.execCommand(c, false, v); }
-function getSelectedImg() {
-  const s = window.getSelection(); if (!s.rangeCount) return null;
-  let n = s.getRangeAt(0).commonAncestorContainer; if (n.nodeType === 3) n = n.parentElement;
-  return n.closest ? n.closest('img') : null;
-}
-function deleteSelectedImg() { const i = getSelectedImg(); if (!i) return; i.remove(); window.getSelection().removeAllRanges(); }
-function moveImageUp() { const i = getSelectedImg(); if (!i) return; const p = i.previousElementSibling; if (p) { i.parentNode.insertBefore(i, p); window.getSelection().removeAllRanges(); } }
-function moveImageDown() { const i = getSelectedImg(); if (!i) return; const n = i.nextElementSibling; if (n) { i.parentNode.insertBefore(n, i); window.getSelection().removeAllRanges(); } }
 
+/* --- Opravený toolbar obrázků v článcích --------------- */
+function setupArticleEditors() {
+  ['artEditor', 'aboutEditor'].forEach(id => {
+    const ed = $(id);
+    if (!ed) return;
+    ed.addEventListener('click', e => {
+      const img = e.target.closest('img');
+      if (!img) {
+        ed.querySelectorAll('img').forEach(i => { i.style.outline = ''; i.removeAttribute('data-active'); });
+        hideImgToolbar();
+        return;
+      }
+      e.preventDefault(); e.stopPropagation();
+      ed.querySelectorAll('img').forEach(i => { i.style.outline = ''; i.removeAttribute('data-active'); });
+      img.style.outline = '3px solid #3b82f6';
+      img.setAttribute('data-active', '1');
+      showImgToolbar(img);
+    });
+  });
+}
+
+function showImgToolbar(img) {
+  let bar = $('img-toolbar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'img-toolbar';
+    bar.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 12px;display:flex;gap:6px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.5);flex-wrap:wrap;justify-content:center;';
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = `
+    <button onclick="imgToolbarAction('smaller')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">- Menší</button>
+    <button onclick="imgToolbarAction('bigger')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">+ Větší</button>
+    <button onclick="imgToolbarAction('left')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">◀ Vlevo</button>
+    <button onclick="imgToolbarAction('center')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">Střed</button>
+    <button onclick="imgToolbarAction('right')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">Vpravo ▶</button>
+    <button onclick="imgToolbarAction('up')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">↑ Nahoru</button>
+    <button onclick="imgToolbarAction('down')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">↓ Dolů</button>
+    <button onclick="imgToolbarAction('delete')" class="btn btn-red btn-sm" style="padding:4px 10px;font-size:12px">🗑 Smazat</button>
+  `;
+  bar.style.display = 'flex';
+}
+
+function hideImgToolbar() {
+  const bar = $('img-toolbar');
+  if (bar) bar.style.display = 'none';
+}
+
+function imgToolbarAction(action) {
+  const ed = $('artEditor') || $('aboutEditor');
+  if (!ed) return;
+  const img = ed.querySelector('img[data-active]');
+  if (!img) return;
+
+  if (action === 'delete') {
+    img.remove(); hideImgToolbar(); return;
+  } else if (action === 'up') {
+    const p = img.previousElementSibling; if (p) img.parentNode.insertBefore(img, p);
+  } else if (action === 'down') {
+    const n = img.nextElementSibling; if (n) img.parentNode.insertBefore(n, img);
+  } else if (action === 'smaller') {
+    let w = parseInt(img.style.width) || 300;
+    img.style.width = Math.max(80, w - 40) + 'px';
+    img.style.maxWidth = img.style.width;
+  } else if (action === 'bigger') {
+    let w = parseInt(img.style.width) || 300;
+    img.style.width = Math.min(800, w + 40) + 'px';
+    img.style.maxWidth = img.style.width;
+  } else if (action === 'left') {
+    img.style.float = 'left'; img.style.margin = '0.5rem 1rem 0.5rem 0'; img.style.display = 'block';
+  } else if (action === 'right') {
+    img.style.float = 'right'; img.style.margin = '0.5rem 0 0.5rem 1rem'; img.style.display = 'block';
+  } else if (action === 'center') {
+    img.style.float = 'none'; img.style.margin = '0.5rem auto'; img.style.display = 'block';
+  }
+}
+
+/* Skrytí toolbaru kliknutím mimo */
+document.addEventListener('click', e => {
+  if (!e.target.closest('#img-toolbar') && !e.target.closest('img[data-active]')) {
+    hideImgToolbar();
+    document.querySelectorAll('img[data-active]').forEach(i => { i.style.outline = ''; i.removeAttribute('data-active'); });
+  }
+});
+
+/* --- Vkládání obrázků z galerie ------------------------ */
 function insertImgTo(e, a) {
   if (!G.photos.length) { alert('Nejdřív nahraj fotky do galerie.'); return; }
   const m = document.createElement('div'); m.className = 'modal';
@@ -406,18 +495,10 @@ function insertImgUrl(e, u, a) {
   const h = `<img src="${u}" style="${s}" onclick="openLightbox('${u}')" class="editor-img" draggable="false">`;
   ed.focus(); document.execCommand('insertHTML', false, h);
   const m = document.querySelector('.modal'); if (m) m.remove();
-  setTimeout(() => bindEditorImages(e), 50);
+  setTimeout(() => setupArticleEditors(), 50);
 }
 
-function bindEditorImages(e) {
-  const ed = $(e); if (!ed) return;
-  ed.querySelectorAll('img:not([data-bound])').forEach(i => {
-    i.dataset.bound = '1';
-    i.onclick = ev => { ev.preventDefault(); ev.stopPropagation(); ed.querySelectorAll('img').forEach(x => x.style.outline = 'none'); i.style.outline = '3px solid #3b82f6'; const s = window.getSelection(); const r = document.createRange(); r.selectNode(i); s.removeAllRanges(); s.addRange(r); };
-  });
-}
-
-/* === Články ============================================ */
+/* === Články — seznam, vytvoření, editace, mazání ====== */
 async function loadArtSubsections() {
   const sec = $('artSection')?.value, sel = $('artSubsection');
   if (!sel) return; if (!sec) { sel.innerHTML = '<option value="">— Podsekce —</option>'; return; }
@@ -428,20 +509,104 @@ async function loadArticles() {
   try {
     const r = await fetch('/api/articles/list'), data = await r.json(), box = $('articleList');
     if (!box) return;
-    box.innerHTML = data.map(a => `<div class="card"><h4>${escapeHtml(a.title)}</h4><p><small>${a.section || ''} ${a.subsection || ''} | ${a.place || ''} | ${new Date(a.date || a.created).toLocaleDateString('cs')}</small></p><div class="article-preview">${a.content}</div><div class="actions"><button onclick="deleteArticle('${a.id}')" class="btn btn-red">Smazat</button></div></div>`).join('');
-    box.querySelectorAll('.article-preview img').forEach(img => { img.style.cursor = 'pointer'; img.onclick = e => { e.stopPropagation(); openLightbox(img.src); }; });
+    box.innerHTML = data.map(a => `
+      <div class="card" style="margin-bottom:1rem">
+        <h4>${escapeHtml(a.title)}</h4>
+        <p><small>${a.section || ''} ${a.subsection || ''} | ${a.place || ''} | ${new Date(a.date || a.created).toLocaleDateString('cs')}</small></p>
+        <div class="article-preview">${a.content}</div>
+        <div class="actions" style="margin-top:0.5rem;display:flex;gap:0.5rem">
+          <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">Upravit</button>
+          <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">Smazat</button>
+        </div>
+      </div>`).join('');
+    box.querySelectorAll('.article-preview img').forEach(img => {
+      img.style.cursor = 'pointer';
+      img.onclick = e => { e.stopPropagation(); openLightbox(img.src); };
+    });
   } catch (e) { console.error(e); }
 }
 
+/* Zpětná editace článku */
+async function editArticle(id) {
+  try {
+    const r = await fetch('/api/articles/get?id=' + id);
+    if (!r.ok) throw new Error('Chyba načítání');
+    const a = await r.json();
+    $('artTitle').value = a.title || '';
+    $('artEditor').innerHTML = a.content || '';
+    $('artDate').value = a.date ? a.date.split('T')[0] : '';
+    $('artPlace').value = a.place || '';
+    $('artSection').value = a.sectionId || '';
+    await loadArtSubsections();
+    $('artSubsection').value = a.subsectionId || '';
+
+    // Přepni na záložku článků
+    showTab && showTab('articles');
+
+    // Označ že editujeme
+    $('artEditor').dataset.editId = id;
+    const btn = document.querySelector('button[onclick="createArticle()"]');
+    if (btn) { btn.textContent = '💾 Uložit změny'; btn.setAttribute('onclick', 'updateArticle()'); }
+  } catch (e) { alert('Nepodařilo se načíst článek'); console.error(e); }
+}
+
+/* Uložení nového článku */
 async function createArticle() {
   const title = $('artTitle')?.value.trim(), content = $('artEditor')?.innerHTML;
   if (!title || !content) return alert('Vyplň nadpis a obsah');
-  await fetch('/api/articles/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, content, sectionId: $('artSection')?.value, subsectionId: $('artSubsection')?.value, date: $('artDate')?.value, place: $('artPlace')?.value }) });
-  $('artTitle').value = ''; $('artEditor').innerHTML = ''; $('artDate').value = ''; $('artPlace').value = '';
+  await fetch('/api/articles/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      title, content,
+      sectionId: $('artSection')?.value,
+      subsectionId: $('artSubsection')?.value,
+      date: $('artDate')?.value,
+      place: $('artPlace')?.value
+    })
+  });
+  resetArticleForm();
   loadArticles();
 }
 
-async function deleteArticle(id) { if (!confirm('Smazat článek?')) return; await fetch(`/api/articles/delete?id=${id}`, { method: 'DELETE' }); loadArticles(); }
+/* Uložení editovaného článku */
+async function updateArticle() {
+  const id = $('artEditor')?.dataset?.editId;
+  if (!id) return createArticle();
+  const title = $('artTitle')?.value.trim(), content = $('artEditor')?.innerHTML;
+  if (!title || !content) return alert('Vyplň nadpis a obsah');
+  await fetch('/api/articles/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id, title, content,
+      sectionId: $('artSection')?.value,
+      subsectionId: $('artSubsection')?.value,
+      date: $('artDate')?.value,
+      place: $('artPlace')?.value
+    })
+  });
+  resetArticleForm();
+  loadArticles();
+}
+
+function resetArticleForm() {
+  $('artTitle').value = '';
+  $('artEditor').innerHTML = '';
+  $('artDate').value = '';
+  $('artPlace').value = '';
+  $('artSection').value = '';
+  $('artSubsection').innerHTML = '<option value="">— Podsekce —</option>';
+  delete $('artEditor').dataset.editId;
+  const btn = document.querySelector('button[onclick="updateArticle()"]');
+  if (btn) { btn.textContent = 'Vytvořit článek'; btn.setAttribute('onclick', 'createArticle()'); }
+}
+
+async function deleteArticle(id) {
+  if (!confirm('Smazat článek?')) return;
+  await fetch(`/api/articles/delete?id=${id}`, { method: 'DELETE' });
+  loadArticles();
+}
 
 /* === Citáty ============================================ */
 async function loadQuotes() {
@@ -533,7 +698,6 @@ function pickSectionCover(sectionId) {
   document.body.appendChild(m);
 }
 
-/* OPRAVA: Posíláme rovnou URL z galerie místo blob re-uploadu */
 async function saveSectionCover(sectionId, url) {
   try {
     const r = await fetch('/api/sections/cover', {
@@ -559,7 +723,7 @@ async function loadAbout() {
     $('aboutTitle').value = d.title || '';
     $('aboutEditor').innerHTML = d.text || '';
     $('aboutPreview').innerHTML = `<h4>${escapeHtml(d.title || 'O Zajdovi')}</h4><div>${d.text || ''}</div>`;
-    bindEditorImages('aboutEditor');
+    setupArticleEditors();
   } catch (e) {
     console.error('About chyba:', e);
     $('aboutTitle').value = ''; $('aboutEditor').innerHTML = ''; $('aboutPreview').innerHTML = '<h4>O Zajdovi</h4><div></div>';
