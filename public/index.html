@@ -58,6 +58,7 @@
     .latest-item:hover { color: #ff6600; padding-left: 6px; }
     .latest-item:last-child { border-bottom: none; }
     .latest-item small { color: #94a3b8; font-size: 12px; display: block; margin-top: 2px; }
+    .latest-empty { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
 
     /* Intro text */
     .intro-text {
@@ -116,6 +117,11 @@
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 100;
     }
+    /* Mobil: menu viditelné při aktivní třídě */
+    .section-card.active .hover-menu {
+      opacity: 1; pointer-events: auto;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
     .section-card:hover .hover-menu {
       opacity: 1; pointer-events: auto;
       transform: translateX(-50%) translateY(0) scale(1);
@@ -148,6 +154,7 @@
     }
     .articles-list a:hover { color: #fff; background: rgba(255,102,0,0.15); padding-left: 28px; }
     .articles-list a:last-child { border-bottom: none; }
+    .articles-list .loading { color: #64748b; font-size: 12px; padding: 8px 24px; }
 
     /* WhatsApp */
     .share-bar {
@@ -182,15 +189,15 @@
       to { transform: translate(var(--ex), var(--ey)); opacity: 0; }
     }
 
-    /* Loading */
-    .loading { color: #64748b; font-size: 13px; padding: 10px 16px; text-align: center; }
-
     @media (max-width: 900px) {
       .latest-panel { position: relative; top: auto; left: auto; margin: 20px auto; width: 90%; }
       .intro-text { position: relative; top: auto; right: auto; margin: 20px auto; width: 90%; text-align: center; }
       .sections-container { position: relative; bottom: auto; margin: 40px 0; flex-direction: column; align-items: center; }
       .section-card { width: 80%; max-width: 300px; }
       .hover-menu { bottom: auto; top: calc(100% + 10px); }
+      /* Na mobilu hover nefunguje, použijeme aktivní stav */
+      .section-card:hover .hover-menu { opacity: 0; pointer-events: none; }
+      .section-card.active .hover-menu { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
     }
   </style>
 </head>
@@ -205,7 +212,7 @@
 
   <div class="latest-panel" id="latestPanel">
     <h3>Poslední aktuality</h3>
-    <div class="loading">Načítání...</div>
+    <div style="color:#64748b;font-size:13px;padding:0.5rem 0">Načítání...</div>
   </div>
 
   <div class="intro-text">
@@ -217,7 +224,7 @@
   </div>
 
   <div class="share-bar">
-    <a class="share-btn wa" id="shareWhatsApp" href="#" target="_blank">
+    <a class="share-btn wa" id="shareWhatsApp" href="#" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
       Sdílet aktualizaci
     </a>
@@ -274,25 +281,29 @@
       }, 5000);
     }
 
-    /* === Aktuality (3 poslední články) === */
+    /* === Aktuality (3 nejnovější články) === */
     async function loadLatest() {
       const box = document.getElementById('latestPanel');
       try {
-        const r = await fetch('/api/articles/latest?limit=3');
+        const r = await fetch('/api/articles/list');
         if (!r.ok) throw new Error();
         const data = await r.json();
-        if (!data.length) { box.innerHTML = '<h3>Poslední aktuality</h3><div class="loading">Zatím žádné články</div>'; return; }
-        box.innerHTML = '<h3>Poslední aktuality</h3>' + data.map(a => `
+        const latest = Array.isArray(data) ? data.slice(0, 3) : [];
+        if (!latest.length) {
+          box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
+          return;
+        }
+        box.innerHTML = '<h3>Poslední aktuality</h3>' + latest.map(a => `
           <a class="latest-item" href="/article/${a.slug||a.id}">
             ${a.title}
             <small>${a.section||''} ${a.subsection||''} • ${new Date(a.date||a.created).toLocaleDateString('cs')}</small>
           </a>
         `).join('');
         // WhatsApp share text
-        const shareText = `Nové aktuality na Moje diagnóza, můj vesmír! ${data.map(a=>a.title).join(', ')} - ${window.location.origin}`;
+        const shareText = `Nové aktuality na Moje diagnóza, můj vesmír! ${latest.map(a=>a.title).join(', ')} - ${window.location.origin}`;
         document.getElementById('shareWhatsApp').href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
       } catch {
-        box.innerHTML = '<h3>Poslední aktuality</h3><div class="loading">Nepodařilo se načíst</div>';
+        box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Nepodařilo se načíst</div>';
       }
     }
 
@@ -321,12 +332,13 @@
       } catch { return []; }
     }
 
+    // Načte všechny články a filtruje na klientovi podle subsectionId
     async function loadArticlesForSub(subId) {
       try {
-        // Zkusíme různé endpointy podle toho, co máš na backendu
-        const r = await fetch('/api/articles/by-subsection?subsectionId=' + subId);
+        const r = await fetch('/api/articles/list');
         if (!r.ok) return [];
-        return await r.json();
+        const all = await r.json();
+        return all.filter(a => a.subsectionId === subId || a.subsection === subId).slice(0, 5);
       } catch { return []; }
     }
 
@@ -345,7 +357,7 @@
             <div class="card-label">${sec.name} / ${sec.nameEn}</div>
           </div>
           <div class="hover-menu" id="menu-${sec.id}">
-            <div class="loading">Načítání...</div>
+            <div class="loading" style="padding:10px 16px;text-align:center;color:#64748b">Načítání...</div>
           </div>
         `;
         
@@ -355,29 +367,50 @@
           window.location.href = sec.href;
         });
         
-        // Načtení podsekcí při hoveru (jednou)
-        let loaded = false;
-        const menu = card.querySelector('.hover-menu');
-        card.addEventListener('mouseenter', async () => {
-          if (loaded) return;
-          loaded = true;
-          const subs = await loadSubsections(sec.id);
-          if (!subs.length) {
-            menu.innerHTML = '<div class="loading">Žádné podsekce</div>';
-            return;
+        // Na mobilu: klik na kartu otevře menu místo přechodu
+        let menuLoaded = false;
+        card.addEventListener('click', (e) => {
+          if (window.innerWidth > 900) return;
+          if (e.target.closest('.hover-menu')) return;
+          e.preventDefault();
+          // Zavřít ostatní
+          document.querySelectorAll('.section-card.active').forEach(c => {
+            if (c !== card) c.classList.remove('active');
+          });
+          card.classList.toggle('active');
+          // Načíst data při prvním otevření
+          if (!menuLoaded && card.classList.contains('active')) {
+            loadMenuData(sec.id, card.querySelector('.hover-menu'));
+            menuLoaded = true;
           }
-          menu.innerHTML = subs.map((sub, idx) => `
-            <div class="sub-item" data-sub-id="${sub.id}">
-              <div class="sub-header" onclick="toggleSubArticles(this, '${sub.id}')">
-                ${sub.name}
-              </div>
-              <div class="articles-list" id="articles-${sub.id}"></div>
-            </div>
-          `).join('');
+        });
+        
+        // Na desktopu: načíst při hoveru
+        card.addEventListener('mouseenter', async () => {
+          if (window.innerWidth <= 900) return;
+          if (menuLoaded) return;
+          menuLoaded = true;
+          await loadMenuData(sec.id, card.querySelector('.hover-menu'));
         });
         
         container.appendChild(card);
       }
+    }
+
+    async function loadMenuData(secId, menuEl) {
+      const subs = await loadSubsections(secId);
+      if (!subs.length) {
+        menuEl.innerHTML = '<div class="loading">Žádné podsekce</div>';
+        return;
+      }
+      menuEl.innerHTML = subs.map(sub => `
+        <div class="sub-item" data-sub-id="${sub.id}">
+          <div class="sub-header" onclick="toggleSubArticles(this, '${sub.id}')">
+            ${sub.name}
+          </div>
+          <div class="articles-list" id="articles-${sub.id}"></div>
+        </div>
+      `).join('');
     }
 
     // Toggle článků v podsekci
@@ -399,12 +432,12 @@
       item.classList.add('expanded');
       if (list.dataset.loaded) return;
       
-      list.innerHTML = '<div class="loading" style="padding:8px 24px">Načítání článků...</div>';
+      list.innerHTML = '<div class="loading">Načítání článků...</div>';
       const articles = await loadArticlesForSub(subId);
       list.dataset.loaded = '1';
       
       if (!articles.length) {
-        list.innerHTML = '<div class="loading" style="padding:8px 24px">Žádné články</div>';
+        list.innerHTML = '<div class="loading">Žádné články</div>';
         return;
       }
       
