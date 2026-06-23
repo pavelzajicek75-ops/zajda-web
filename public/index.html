@@ -8,11 +8,8 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #000;
-      color: #fff;
-      overflow-x: hidden;
-      min-height: 100vh;
-      position: relative;
+      background: #000; color: #fff;
+      overflow-x: hidden; min-height: 100vh; position: relative;
     }
     .bg {
       position: fixed; inset: 0; z-index: 0;
@@ -34,7 +31,6 @@
       50% { opacity: 0.9; transform: scale(1); }
     }
 
-    /* Nadpis */
     .title-block {
       position: relative; z-index: 10; text-align: center; padding-top: 40px;
     }
@@ -68,7 +64,7 @@
       text-shadow: 0 0 12px rgba(255,150,50,0.3); text-align: left;
     }
 
-    /* Sekce */
+    /* Sekce - normální stav */
     .sections-container {
       position: absolute; bottom: 60px; left: 0; width: 100%; z-index: 10;
       display: flex; justify-content: center; gap: 24px; padding: 0 20px;
@@ -77,84 +73,102 @@
     .section-card {
       position: relative; width: 220px; height: 150px;
       border-radius: 14px; cursor: pointer; flex-shrink: 0;
-      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .section-card:hover { transform: translateY(-12px) scale(1.08); z-index: 50; }
-    .section-card .card-glow {
+    .section-card:hover:not(.expanded) { transform: translateY(-8px) scale(1.05); }
+    
+    /* Rozšířená karta (po kliknutí) */
+    .section-card.expanded {
+      width: 460px; height: 340px;
+      z-index: 100;
+      transform: translateY(-40px);
+    }
+    
+    .card-glow {
       position: absolute; inset: -2px; border-radius: 16px;
       background: linear-gradient(135deg, rgba(255,102,0,0.4), rgba(255,204,102,0.2));
       opacity: 0; transition: opacity 0.3s; filter: blur(8px); z-index: -1;
     }
-    .section-card:hover .card-glow { opacity: 1; }
+    .section-card:hover .card-glow, .section-card.expanded .card-glow { opacity: 1; }
+    
     .card-inner {
       position: relative; width: 100%; height: 100%; border-radius: 14px;
       overflow: hidden; border: 1px solid rgba(255,255,255,0.1);
       background: #0f172a; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-      transition: border-color 0.3s, box-shadow 0.3s;
+      transition: border-color 0.3s;
     }
-    .section-card:hover .card-inner { border-color: rgba(255,102,0,0.5); box-shadow: 0 0 40px rgba(255,102,0,0.25); }
-    .card-inner img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); transition: filter 0.4s, transform 0.6s; }
-    .section-card:hover .card-inner img { filter: brightness(1); transform: scale(1.1); }
+    .section-card.expanded .card-inner { border-color: rgba(255,102,0,0.6); }
+    
+    .card-inner img {
+      width: 100%; height: 100%; object-fit: cover;
+      filter: brightness(0.7); transition: filter 0.4s, transform 0.6s;
+    }
+    .section-card.expanded .card-inner img { filter: brightness(0.4) blur(1px); transform: scale(1.1); }
+    
     .card-label {
       position: absolute; bottom: 0; left: 0; width: 100%;
       padding: 24px 10px 10px;
       background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
       color: #ffcc66; font-size: 17px; font-weight: 600; text-align: center;
       text-shadow: 0 2px 8px rgba(0,0,0,0.9); pointer-events: none;
+      transition: opacity 0.3s;
     }
+    .section-card.expanded .card-label { opacity: 0; }
 
-    /* Hover menu */
-    .hover-menu {
-      position: absolute; bottom: calc(100% + 16px); left: 50%;
-      transform: translateX(-50%) translateY(10px) scale(0.95);
-      width: 280px; max-height: 380px; overflow-y: auto;
-      background: rgba(15, 23, 42, 0.95);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 102, 0, 0.4);
-      border-radius: 12px; padding: 8px 0;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    /* Obsah rozbalené karty */
+    .card-content {
+      position: absolute; inset: 0; z-index: 5;
+      padding: 16px;
       opacity: 0; pointer-events: none;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      z-index: 100;
+      transition: opacity 0.3s ease;
+      overflow-y: auto;
     }
-    /* Mobil: menu viditelné při aktivní třídě */
-    .section-card.active .hover-menu {
+    .section-card.expanded .card-content {
       opacity: 1; pointer-events: auto;
-      transform: translateX(-50%) translateY(0) scale(1);
     }
-    .section-card:hover .hover-menu {
-      opacity: 1; pointer-events: auto;
-      transform: translateX(-50%) translateY(0) scale(1);
+    .card-content::-webkit-scrollbar { width: 4px; }
+    .card-content::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    
+    .card-content h4 {
+      color: #ffcc66; font-size: 18px; margin-bottom: 12px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+      border-bottom: 1px solid rgba(255,102,0,0.3); padding-bottom: 8px;
     }
-    .hover-menu::-webkit-scrollbar { width: 6px; }
-    .hover-menu::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    
+    .close-btn {
+      position: absolute; top: 8px; right: 12px;
+      background: rgba(255,255,255,0.1); border: none;
+      color: #ffcc66; font-size: 20px; cursor: pointer;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s; z-index: 10;
+    }
+    .close-btn:hover { background: rgba(255,102,0,0.3); }
 
-    .sub-item { border-bottom: 1px solid rgba(51,65,85,0.4); }
-    .sub-item:last-child { border-bottom: none; }
-    .sub-header {
-      padding: 10px 16px; color: #ffcc66; font-size: 14px; font-weight: 600;
-      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-      transition: background 0.2s;
+    .sub-block { margin-bottom: 12px; }
+    .sub-title {
+      color: #ff6600; font-size: 14px; font-weight: 600;
+      padding: 6px 0; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .sub-header:hover { background: rgba(255,102,0,0.1); }
-    .sub-header::after { content: '▸'; color: #64748b; font-size: 12px; transition: transform 0.2s; }
-    .sub-item.expanded .sub-header::after { transform: rotate(90deg); color: #ff6600; }
-
-    .articles-list {
-      max-height: 0; overflow: hidden;
+    .sub-title::after { content: '▼'; font-size: 10px; color: #64748b; transition: transform 0.2s; }
+    .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
+    
+    .sub-articles {
+      max-height: 200px; overflow-y: auto;
       transition: max-height 0.3s ease;
-      background: rgba(0,0,0,0.2);
     }
-    .sub-item.expanded .articles-list { max-height: 200px; overflow-y: auto; }
-    .articles-list a {
-      display: block; padding: 8px 24px; color: #cbd5e1;
-      text-decoration: none; font-size: 13px;
-      border-bottom: 1px solid rgba(51,65,85,0.3);
+    .sub-block.collapsed .sub-articles { max-height: 0; overflow: hidden; }
+    
+    .sub-articles a {
+      display: block; padding: 5px 0 5px 12px;
+      color: #e2e8f0; text-decoration: none; font-size: 13px;
+      border-left: 2px solid #334155;
       transition: all 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .articles-list a:hover { color: #fff; background: rgba(255,102,0,0.15); padding-left: 28px; }
-    .articles-list a:last-child { border-bottom: none; }
-    .articles-list .loading { color: #64748b; font-size: 12px; padding: 8px 24px; }
+    .sub-articles a:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; }
+    
+    .no-articles { color: #64748b; font-size: 13px; padding: 8px 0; font-style: italic; }
 
     /* WhatsApp */
     .share-bar {
@@ -189,21 +203,28 @@
       to { transform: translate(var(--ex), var(--ey)); opacity: 0; }
     }
 
+    /* Overlay pro zavření kliknutím mimo */
+    .overlay-backdrop {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(0,0,0,0.3);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .overlay-backdrop.active { opacity: 1; pointer-events: auto; }
+
     @media (max-width: 900px) {
       .latest-panel { position: relative; top: auto; left: auto; margin: 20px auto; width: 90%; }
       .intro-text { position: relative; top: auto; right: auto; margin: 20px auto; width: 90%; text-align: center; }
       .sections-container { position: relative; bottom: auto; margin: 40px 0; flex-direction: column; align-items: center; }
-      .section-card { width: 80%; max-width: 300px; }
-      .hover-menu { bottom: auto; top: calc(100% + 10px); }
-      /* Na mobilu hover nefunguje, použijeme aktivní stav */
-      .section-card:hover .hover-menu { opacity: 0; pointer-events: none; }
-      .section-card.active .hover-menu { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0) scale(1); }
+      .section-card { width: 85%; max-width: 340px; }
+      .section-card.expanded { width: 95%; max-width: 500px; height: 380px; transform: translateY(-20px); }
     }
   </style>
 </head>
 <body>
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
+  <div class="overlay-backdrop" id="overlayBackdrop"></div>
 
   <div class="title-block">
     <div class="cz-title">Moje diagnóza, můj vesmír</div>
@@ -212,246 +233,4 @@
 
   <div class="latest-panel" id="latestPanel">
     <h3>Poslední aktuality</h3>
-    <div style="color:#64748b;font-size:13px;padding:0.5rem 0">Načítání...</div>
-  </div>
-
-  <div class="intro-text">
-    Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...
-  </div>
-
-  <div class="sections-container" id="sectionsContainer">
-    <!-- Sekce se načtou dynamicky -->
-  </div>
-
-  <div class="share-bar">
-    <a class="share-btn wa" id="shareWhatsApp" href="#" target="_blank" rel="noopener">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Sdílet aktualizaci
-    </a>
-  </div>
-
-  <script>
-    /* === Hvězdy na pozadí === */
-    (function makeStars() {
-      const box = document.getElementById('stars');
-      for (let i = 0; i < 200; i++) {
-        const s = document.createElement('div');
-        s.className = 'star';
-        s.style.left = Math.random() * 100 + '%';
-        s.style.top = Math.random() * 100 + '%';
-        s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
-        s.style.setProperty('--del', (Math.random() * 5) + 's');
-        box.appendChild(s);
-      }
-    })();
-
-    /* === Citáty === */
-    async function loadQuotes() {
-      try {
-        const r = await fetch('/api/quotes/list');
-        if (!r.ok) return [];
-        return await r.json();
-      } catch { return []; }
-    }
-    function spawnQuote(q) {
-      const el = document.createElement('div');
-      el.className = 'quote-star';
-      const size = 13 + Math.floor(Math.random() * 10);
-      el.innerHTML = `<div style="font-size:${size}px; line-height:1.4;">"${q.text}"<br><span style="color:#ffcc66; font-size:${size*0.6}px; opacity:0.8;">${q.author||''}</span></div>`;
-      const sx = Math.random() * window.innerWidth;
-      const sy = Math.random() * window.innerHeight;
-      el.style.left = sx + 'px'; el.style.top = sy + 'px';
-      const ex = sx + (Math.random() - 0.5) * 400;
-      const ey = sy + (Math.random() - 0.5) * 400;
-      el.style.setProperty('--sx', '0px'); el.style.setProperty('--sy', '0px');
-      el.style.setProperty('--ex', (ex-sx)+'px'); el.style.setProperty('--ey', (ey-sy)+'px');
-      el.style.animation = `drift ${14 + Math.random()*10}s linear infinite`;
-      document.body.appendChild(el);
-      setTimeout(() => el.classList.add('visible'), 100);
-      setTimeout(() => el.remove(), 25000);
-    }
-    async function startQuotes() {
-      const quotes = await loadQuotes();
-      if (!quotes.length) return;
-      for (let i=0; i<Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random()*quotes.length)]);
-      setInterval(() => {
-        if (document.querySelectorAll('.quote-star').length > 12) return;
-        const q = quotes[Math.floor(Math.random()*quotes.length)];
-        spawnQuote(q);
-      }, 5000);
-    }
-
-    /* === Aktuality (3 nejnovější články) === */
-    async function loadLatest() {
-      const box = document.getElementById('latestPanel');
-      try {
-        const r = await fetch('/api/articles/list');
-        if (!r.ok) throw new Error();
-        const data = await r.json();
-        const latest = Array.isArray(data) ? data.slice(0, 3) : [];
-        if (!latest.length) {
-          box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
-          return;
-        }
-        box.innerHTML = '<h3>Poslední aktuality</h3>' + latest.map(a => `
-          <a class="latest-item" href="/article/${a.slug||a.id}">
-            ${a.title}
-            <small>${a.section||''} ${a.subsection||''} • ${new Date(a.date||a.created).toLocaleDateString('cs')}</small>
-          </a>
-        `).join('');
-        // WhatsApp share text
-        const shareText = `Nové aktuality na Moje diagnóza, můj vesmír! ${latest.map(a=>a.title).join(', ')} - ${window.location.origin}`;
-        document.getElementById('shareWhatsApp').href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
-      } catch {
-        box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Nepodařilo se načíst</div>';
-      }
-    }
-
-    /* === Sekce s hover menu === */
-    const SECTIONS = [
-      { id: 'travel', name: 'Cestování', nameEn: 'Travel', href: '/travel' },
-      { id: 'photo', name: 'Fotografování', nameEn: 'Photo', href: '/photo' },
-      { id: 'projects', name: 'Projekty', nameEn: 'Projects', href: '/projects' },
-      { id: 'about', name: 'O Zajdovi', nameEn: 'About', href: '/about' }
-    ];
-
-    async function loadSectionCover(sec) {
-      try {
-        const r = await fetch('/api/sections/cover?sectionId=' + sec.id);
-        if (!r.ok) return '';
-        const d = await r.json();
-        return d.coverUrl || d.url || '';
-      } catch { return ''; }
-    }
-
-    async function loadSubsections(secId) {
-      try {
-        const r = await fetch('/api/subsections/by-section?sectionId=' + secId);
-        if (!r.ok) return [];
-        return await r.json();
-      } catch { return []; }
-    }
-
-    // Načte všechny články a filtruje na klientovi podle subsectionId
-    async function loadArticlesForSub(subId) {
-      try {
-        const r = await fetch('/api/articles/list');
-        if (!r.ok) return [];
-        const all = await r.json();
-        return all.filter(a => a.subsectionId === subId || a.subsection === subId).slice(0, 5);
-      } catch { return []; }
-    }
-
-    async function buildSections() {
-      const container = document.getElementById('sectionsContainer');
-      container.innerHTML = '';
-      
-      for (const sec of SECTIONS) {
-        const cover = await loadSectionCover(sec);
-        const card = document.createElement('div');
-        card.className = 'section-card';
-        card.innerHTML = `
-          <div class="card-glow"></div>
-          <div class="card-inner">
-            <img src="${cover || '/images/placeholder.jpg'}" alt="${sec.name}" onerror="this.src='/images/placeholder.jpg'">
-            <div class="card-label">${sec.name} / ${sec.nameEn}</div>
-          </div>
-          <div class="hover-menu" id="menu-${sec.id}">
-            <div class="loading" style="padding:10px 16px;text-align:center;color:#64748b">Načítání...</div>
-          </div>
-        `;
-        
-        // Klik na kartu = přejít na sekci (pokud neklikneme do menu)
-        card.addEventListener('click', (e) => {
-          if (e.target.closest('.hover-menu')) return;
-          window.location.href = sec.href;
-        });
-        
-        // Na mobilu: klik na kartu otevře menu místo přechodu
-        let menuLoaded = false;
-        card.addEventListener('click', (e) => {
-          if (window.innerWidth > 900) return;
-          if (e.target.closest('.hover-menu')) return;
-          e.preventDefault();
-          // Zavřít ostatní
-          document.querySelectorAll('.section-card.active').forEach(c => {
-            if (c !== card) c.classList.remove('active');
-          });
-          card.classList.toggle('active');
-          // Načíst data při prvním otevření
-          if (!menuLoaded && card.classList.contains('active')) {
-            loadMenuData(sec.id, card.querySelector('.hover-menu'));
-            menuLoaded = true;
-          }
-        });
-        
-        // Na desktopu: načíst při hoveru
-        card.addEventListener('mouseenter', async () => {
-          if (window.innerWidth <= 900) return;
-          if (menuLoaded) return;
-          menuLoaded = true;
-          await loadMenuData(sec.id, card.querySelector('.hover-menu'));
-        });
-        
-        container.appendChild(card);
-      }
-    }
-
-    async function loadMenuData(secId, menuEl) {
-      const subs = await loadSubsections(secId);
-      if (!subs.length) {
-        menuEl.innerHTML = '<div class="loading">Žádné podsekce</div>';
-        return;
-      }
-      menuEl.innerHTML = subs.map(sub => `
-        <div class="sub-item" data-sub-id="${sub.id}">
-          <div class="sub-header" onclick="toggleSubArticles(this, '${sub.id}')">
-            ${sub.name}
-          </div>
-          <div class="articles-list" id="articles-${sub.id}"></div>
-        </div>
-      `).join('');
-    }
-
-    // Toggle článků v podsekci
-    window.toggleSubArticles = async function(header, subId) {
-      const item = header.parentElement;
-      const list = document.getElementById('articles-' + subId);
-      const isExpanded = item.classList.contains('expanded');
-      
-      // Zavřít ostatní
-      document.querySelectorAll('.sub-item.expanded').forEach(el => {
-        if (el !== item) el.classList.remove('expanded');
-      });
-      
-      if (isExpanded) {
-        item.classList.remove('expanded');
-        return;
-      }
-      
-      item.classList.add('expanded');
-      if (list.dataset.loaded) return;
-      
-      list.innerHTML = '<div class="loading">Načítání článků...</div>';
-      const articles = await loadArticlesForSub(subId);
-      list.dataset.loaded = '1';
-      
-      if (!articles.length) {
-        list.innerHTML = '<div class="loading">Žádné články</div>';
-        return;
-      }
-      
-      list.innerHTML = articles.map(a => `
-        <a href="/article/${a.slug||a.id}">${a.title}</a>
-      `).join('');
-    };
-
-    /* === Start === */
-    window.addEventListener('DOMContentLoaded', () => {
-      startQuotes();
-      loadLatest();
-      buildSections();
-    });
-  </script>
-</body>
-</html>
+    <div style="color:#64748b;font
