@@ -2,6 +2,7 @@
     /* === Hvězdy === */
     (function makeStars() {
       const box = document.getElementById('stars');
+      if (!box) return;
       for (let i = 0; i < 200; i++) {
         const s = document.createElement('div');
         s.className = 'star';
@@ -74,10 +75,10 @@
 
     /* === Sekce === */
     const SECTIONS = [
-      { id: 'travel', name: 'Cestování', nameEn: 'Travel', href: '/travel' },
-      { id: 'photo', name: 'Fotografování', nameEn: 'Photo', href: '/photo' },
-      { id: 'projects', name: 'Projekty', nameEn: 'Projects', href: '/projects' },
-      { id: 'about', name: 'O Zajdovi', nameEn: 'About', href: '/about' }
+      { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
+      { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
+      { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
+      { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
     ];
 
     async function loadSectionCover(sec) {
@@ -95,35 +96,14 @@
         return await r.json();
       } catch { return []; }
     }
-    async function loadArticlesBySection(secId) {
+    async function loadAllArticles() {
+      /* Načte všechny články jednou a uloží do cache */
       try {
         const r = await fetch('/api/articles/list');
         if (!r.ok) return [];
         const data = await r.json();
-        const all = Array.isArray(data) ? data : (data.articles || []);
-        return all.filter(a => {
-          const sec = (a.sectionId || a.section || '').toString().toLowerCase();
-          return sec === secId.toString().toLowerCase();
-        }).slice(0, 10);
-      } catch (e) { console.error('Chyba sekce:', e); return []; }
-    }
-    async function loadArticlesBySubsection(subId, subName) {
-      try {
-        const r = await fetch('/api/articles/list');
-        if (!r.ok) return [];
-        const data = await r.json();
-        const all = Array.isArray(data) ? data : (data.articles || []);
-        const searchId = subId.toString().toLowerCase();
-        const searchName = (subName || '').toString().toLowerCase();
-        
-        return all.filter(a => {
-          const aSubId = (a.subsectionId || '').toString().toLowerCase();
-          const aSubName = (a.subsection || '').toString().toLowerCase();
-          // Hledáme podle ID NEBO názvu podsekce
-          return aSubId === searchId || aSubName === searchId || 
-                 aSubId === searchName || aSubName === searchName;
-        }).slice(0, 10);
-      } catch (e) { console.error('Chyba podsekce:', e); return []; }
+        return Array.isArray(data) ? data : (data.articles || []);
+      } catch { return []; }
     }
 
     let activeCard = null;
@@ -161,7 +141,11 @@
           if (contentEl.dataset.loaded) return;
           const subs = await loadSubsections(sec.id);
           if (sec.id === 'about' || !subs.length) {
-            const articles = await loadArticlesBySection(sec.id);
+            const all = await loadAllArticles();
+            const articles = all.filter(a => {
+              const s = (a.sectionId || a.section || '').toString().toLowerCase();
+              return s === sec.id.toLowerCase();
+            });
             renderArticles(contentEl, articles, sec.name);
           } else {
             renderSubsections(contentEl, subs, sec.id);
@@ -196,10 +180,9 @@
       html += `<h4>Podsekce</h4>`;
       if (!subs.length) { html += '<div class="no-articles">Žádné podsekce</div>'; container.innerHTML = html; return; }
       subs.forEach(sub => {
-        const safeName = escapeHtml(sub.name).replace(/'/g, "\\'");
         html += `
           <div class="sub-block collapsed" id="subblock-${sub.id}">
-            <div class="sub-title" onclick="toggleSub('${sub.id}', '${secId}', '${safeName}')">${escapeHtml(sub.name)}</div>
+            <div class="sub-title" onclick="toggleSub('${sub.id}', '${secId}')">${escapeHtml(sub.name)}</div>
             <div class="sub-articles" id="subarticles-${sub.id}">
               <div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div>
             </div>
@@ -208,26 +191,38 @@
       container.innerHTML = html;
     }
 
-    window.toggleSub = async function(subId, secId, subName) {
+    window.toggleSub = async function(subId, secId) {
       const block = document.getElementById('subblock-' + subId);
       const list = document.getElementById('subarticles-' + subId);
       if (!block || !list) return;
+
       const isCollapsed = block.classList.contains('collapsed');
       document.querySelectorAll('.sub-block').forEach(b => { if (b !== block) b.classList.add('collapsed'); });
+
       if (!isCollapsed) { block.classList.add('collapsed'); return; }
       block.classList.remove('collapsed');
+
       if (list.dataset.loaded) return;
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
 
-      let articles = await loadArticlesBySubsection(subId, subName);
-      
-      if (!articles.length) {
-        const all = await loadArticlesBySection(secId);
-        articles = all.filter(a => {
-          const aSub = (a.subsectionId || a.subsection || '').toString().toLowerCase();
-          return aSub === subId.toString().toLowerCase() || aSub === (subName || '').toString().toLowerCase();
-        });
-      }
+      /* KLÍČOVÁ OPRAVA: Načteme všechny články a porovnáme podle VIACERÝCH polí */
+      const all = await loadAllArticles();
+      const subNameEl = block.querySelector('.sub-title');
+      const subName = subNameEl ? subNameEl.textContent.trim() : '';
+
+      const articles = all.filter(a => {
+        const aSec = (a.sectionId || a.section || '').toString().toLowerCase();
+        if (aSec !== secId.toLowerCase()) return false;
+
+        const aSubId = (a.subsectionId || '').toString().toLowerCase();
+        const aSubName = (a.subsection || '').toString().toLowerCase();
+        const searchId = subId.toString().toLowerCase();
+        const searchName = subName.toLowerCase();
+
+        /* Hledáme shodu na cokoliv: ID podsekce NEBO název podsekce */
+        return aSubId === searchId || aSubName === searchId ||
+               aSubId === searchName || aSubName === searchName;
+      });
 
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
