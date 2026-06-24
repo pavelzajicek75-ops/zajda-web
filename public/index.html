@@ -246,7 +246,6 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
-
     /* Fotky sekcí — rozsvítí a zostří */
     (function fixSectionImages(){
       const s = document.createElement('style');
@@ -259,12 +258,18 @@
       document.head.appendChild(s);
     })();
 
-    document.getElementById('overlayBackdrop').addEventListener('click', closeAllCards);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllCards(); });
-
+    /* VŠECHNO co potřebuje DOM až PO načtení stránky */
     window.addEventListener('DOMContentLoaded', () => {
+      const backdrop = document.getElementById('overlayBackdrop');
+      if (backdrop) {
+        backdrop.addEventListener('click', closeAllCards);
+      }
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllCards();
+      });
       startQuotes();
       loadLatest();
       buildSections();
     });
-  </script>
+
+   
