@@ -58,6 +58,7 @@
     .share-btn:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; transform: translateY(-2px); }
     .share-btn.wa { color: #25d366; border-color: rgba(37,211,102,0.3); }
     .share-btn.wa:hover { background: rgba(37,211,102,0.15); border-color: #25d366; }
+    .quote-star { animation: drift var(--dur) linear infinite; }
     .quote-star { position: absolute; max-width: 300px; pointer-events: auto; color: rgba(255,255,255,0.7); font-weight: 300; font-size: 15px; text-shadow: 0 0 10px rgba(255,255,255,0.4); opacity: 0; transition: opacity 1.5s; z-index: 5; cursor: default; }
     .quote-star.visible { opacity: 0.8; }
     .quote-star:hover { opacity: 1; text-shadow: 0 0 25px #fff, 0 0 40px #ff6600; }
@@ -97,213 +98,271 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      /* === Hvězdy === */
-      const starsBox = document.getElementById('stars');
-      if (starsBox) {
-        for (let i = 0; i < 200; i++) {
-          const s = document.createElement('div');
-          s.className = 'star';
-          s.style.left = Math.random() * 100 + '%';
-          s.style.top = Math.random() * 100 + '%';
-          s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
-          s.style.setProperty('--del', (Math.random() * 5) + 's');
-          starsBox.appendChild(s);
-        }
-      }
+  /* === CSS pro zastavení citátů na hover === */
+  const qs = document.createElement('style');
+  qs.textContent = '.quote-star:hover { animation-play-state: paused !important; }';
+  document.head.appendChild(qs);
 
-      /* === Citáty === */
-      async function loadQuotes() {
-        try { const r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
-        catch { return []; }
-      }
-      function spawnQuote(q) {
-        const el = document.createElement('div');
-        el.className = 'quote-star';
-        const sz = 13 + Math.floor(Math.random() * 10);
-        el.innerHTML = '<div style="font-size:' + sz + 'px;line-height:1.4">"' + q.text + '"<br><span style="color:#ffcc66;font-size:' + (sz*0.6) + 'px;opacity:0.8">' + (q.author||'') + '</span></div>';
-        const sx = Math.random() * window.innerWidth;
-        const sy = Math.random() * window.innerHeight;
-        el.style.left = sx + 'px'; el.style.top = sy + 'px';
-        const ex = sx + (Math.random() - 0.5) * 400;
-        const ey = sy + (Math.random() - 0.5) * 400;
-        el.style.setProperty('--sx', '0px'); el.style.setProperty('--sy', '0px');
-        el.style.setProperty('--ex', (ex-sx)+'px'); el.style.setProperty('--ey', (ey-sy)+'px');
-        el.style.animation = 'drift ' + (14 + Math.random()*10) + 's linear infinite';
-        document.body.appendChild(el);
-        setTimeout(() => el.classList.add('visible'), 100);
-        setTimeout(() => el.remove(), 25000);
-      }
-      async function startQuotes() {
-        const quotes = await loadQuotes();
-        if (!quotes.length) return;
-        for (let i = 0; i < Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random()*quotes.length)]);
-        setInterval(() => {
-          if (document.querySelectorAll('.quote-star').length > 12) return;
-          const q = quotes[Math.floor(Math.random()*quotes.length)];
-          spawnQuote(q);
-        }, 5000);
-      }
+  /* === Hvězdy === */
+  const starsBox = document.getElementById('stars');
+  if (starsBox) {
+    for (let i = 0; i < 200; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.style.left = Math.random() * 100 + '%';
+      s.style.top = Math.random() * 100 + '%';
+      s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
+      s.style.setProperty('--del', (Math.random() * 5) + 's');
+      starsBox.appendChild(s);
+    }
+  }
 
-      /* === Aktuality === */
-      async function loadLatest() {
-        const box = document.getElementById('latestPanel');
-        if (!box) return;
-        try {
-          const r = await fetch('/api/articles/list');
-          if (!r.ok) throw new Error();
-          const data = await r.json();
-          const arr = Array.isArray(data) ? data : (data.articles || []);
-          const latest = arr.slice(0, 3);
-          if (!latest.length) {
-            box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
-            return;
-          }
-          let html = '<h3>Poslední aktuality</h3>';
-          for (const a of latest) {
-            html += '<a class="latest-item" href="/article/' + (a.slug||a.id) + '">' + escapeHtml(a.title) + '<small>' + (a.section||'') + ' ' + (a.subsection||'') + ' • ' + new Date(a.date||a.created).toLocaleDateString('cs') + '</small></a>';
-          }
-          box.innerHTML = html;
-          const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(a=>a.title).join(', ') + ' - ' + window.location.origin;
-          const waBtn = document.getElementById('shareWhatsApp');
-          if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
-        } catch {
-          box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Nepodařilo se načíst</div>';
-        }
-      }
+  /* === Citáty === */
+  async function loadQuotes() {
+    try { const r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
+    catch { return []; }
+  }
+  function spawnQuote(q) {
+    const el = document.createElement('div');
+    el.className = 'quote-star';
+    const sz = 13 + Math.floor(Math.random() * 10);
+    el.innerHTML = '<div style="font-size:' + sz + 'px;line-height:1.4">"' + (q.text || '') + '"<br><span style="color:#ffcc66;font-size:' + (sz*0.6) + 'px;opacity:0.8">' + (q.author || '') + '</span></div>';
+    const sx = Math.random() * window.innerWidth;
+    const sy = Math.random() * window.innerHeight;
+    el.style.left = sx + 'px';
+    el.style.top = sy + 'px';
+    const ex = sx + (Math.random() - 0.5) * 400;
+    const ey = sy + (Math.random() - 0.5) * 400;
+    el.style.setProperty('--sx', '0px');
+    el.style.setProperty('--sy', '0px');
+    el.style.setProperty('--ex', (ex - sx) + 'px');
+    el.style.setProperty('--ey', (ey - sy) + 'px');
+    el.style.animation = 'drift ' + (14 + Math.random() * 10) + 's linear infinite';
+    document.body.appendChild(el);
+    setTimeout(function() { el.classList.add('visible'); }, 100);
+    setTimeout(function() { el.remove(); }, 25000);
+  }
+  async function startQuotes() {
+    const quotes = await loadQuotes();
+    if (!quotes.length) return;
+    for (let i = 0; i < Math.min(8, quotes.length); i++) {
+      spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+    }
+    setInterval(function() {
+      if (document.querySelectorAll('.quote-star').length > 12) return;
+      const q = quotes[Math.floor(Math.random() * quotes.length)];
+      spawnQuote(q);
+    }, 5000);
+  }
 
-      /* === Sekce === */
-      const SECTIONS = [
-        { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
-        { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
-        { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
-        { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
-      ];
+  /* === Aktuality === */
+  async function loadLatest() {
+    const box = document.getElementById('latestPanel');
+    if (!box) return;
+    try {
+      const r = await fetch('/api/articles/list');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      let data = await r.json();
+      let arr = [];
+      if (Array.isArray(data)) arr = data;
+      else if (data && Array.isArray(data.articles)) arr = data.articles;
+      else if (data && typeof data === 'object') {
+        const vals = Object.values(data);
+        if (vals.length && vals[0] && vals[0].title) arr = vals;
+      }
+      const latest = arr.slice(0, 3);
+      if (!latest.length) {
+        box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
+        return;
+      }
+      let html = '<h3>Poslední aktuality</h3>';
+      for (let i = 0; i < latest.length; i++) {
+        const a = latest[i];
+        const slug = a.slug || a.id || '';
+        const title = a.title || 'Bez názvu';
+        const sec = a.section || a.sectionId || '';
+        const sub = a.subsection || a.subsectionId || '';
+        const date = a.date || a.created || '';
+        const dateStr = date ? new Date(date).toLocaleDateString('cs') : '';
+        html += '<a class="latest-item" href="/article/' + slug + '">' + escapeHtml(title) + '<small>' + escapeHtml(sec + ' ' + sub) + (dateStr ? ' • ' + dateStr : '') + '</small></a>';
+      }
+      box.innerHTML = html;
+      const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
+      const waBtn = document.getElementById('shareWhatsApp');
+      if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
+    } catch (e) {
+      console.error('Aktuality chyba:', e);
+      box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Nepodařilo se načíst</div>';
+    }
+  }
 
-      async function loadSectionCover(sec) {
-        try { const r = await fetch('/api/sections/cover?sectionId=' + sec.id); if (!r.ok) return ''; const d = await r.json(); return d.coverUrl || d.url || ''; }
-        catch { return ''; }
+  /* === Načítání dat === */
+  async function loadSectionCover(sec) {
+    try {
+      const r = await fetch('/api/sections/cover?sectionId=' + sec.id);
+      if (!r.ok) return '';
+      const d = await r.json();
+      return d.coverUrl || d.url || '';
+    } catch { return ''; }
+  }
+  async function loadSubsections(secId) {
+    try {
+      const r = await fetch('/api/subsections/by-section?sectionId=' + secId);
+      if (!r.ok) return [];
+      return await r.json();
+    } catch { return []; }
+  }
+  async function loadAllArticles() {
+    try {
+      const r = await fetch('/api/articles/list');
+      if (!r.ok) return [];
+      let data = await r.json();
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.articles)) return data.articles;
+      if (data && typeof data === 'object') {
+        const vals = Object.values(data);
+        if (vals.length && vals[0] && vals[0].title) return vals;
       }
-      async function loadSubsections(secId) {
-        try { const r = await fetch('/api/subsections/by-section?sectionId=' + secId); if (!r.ok) return []; return await r.json(); }
-        catch { return []; }
-      }
-      async function loadAllArticles() {
-        try { const r = await fetch('/api/articles/list'); if (!r.ok) return []; const data = await r.json(); return Array.isArray(data) ? data : (data.articles || []); }
-        catch { return []; }
-      }
+      return [];
+    } catch { return []; }
+  }
 
-      let activeCard = null;
-      function closeAllCards() {
-        document.querySelectorAll('.section-card.expanded').forEach(c => c.classList.remove('expanded'));
+  /* === Sekce === */
+  const SECTIONS = [
+    { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
+    { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
+    { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
+    { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
+  ];
+
+  let activeCard = null;
+  function closeAllCards() {
+    document.querySelectorAll('.section-card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
+    const backdrop = document.getElementById('overlayBackdrop');
+    if (backdrop) backdrop.classList.remove('active');
+    activeCard = null;
+  }
+
+  async function buildSections() {
+    const container = document.getElementById('sectionsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < SECTIONS.length; i++) {
+      const sec = SECTIONS[i];
+      const cover = await loadSectionCover(sec);
+      const card = document.createElement('div');
+      card.className = 'section-card';
+      card.dataset.sectionId = sec.id;
+      card.innerHTML = '<div class="card-glow"></div><div class="card-inner"><img src="' + (cover || '/images/placeholder.jpg') + '" alt="' + sec.name + '" onerror="this.src=\'/images/placeholder.jpg\'"><div class="card-label">' + sec.name + ' / ' + sec.nameEn + '</div></div><div class="card-content" id="content-' + sec.id + '"><button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + sec.name + '</h4><div id="loading-' + sec.id + '" style="color:#64748b;font-size:13px">Načítání...</div></div>';
+      card.addEventListener('click', async function(e) {
+        if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
+        if (card.classList.contains('expanded')) { closeAllCards(); return; }
+        closeAllCards();
+        card.classList.add('expanded');
         const backdrop = document.getElementById('overlayBackdrop');
-        if (backdrop) backdrop.classList.remove('active');
-        activeCard = null;
-      }
-
-      async function buildSections() {
-        const container = document.getElementById('sectionsContainer');
-        if (!container) return;
-        container.innerHTML = '';
-        for (const sec of SECTIONS) {
-          const cover = await loadSectionCover(sec);
-          const card = document.createElement('div');
-          card.className = 'section-card';
-          card.dataset.sectionId = sec.id;
-          card.innerHTML = '<div class="card-glow"></div><div class="card-inner"><img src="' + (cover || '/images/placeholder.jpg') + '" alt="' + sec.name + '" onerror="this.src=\'/images/placeholder.jpg\'"><div class="card-label">' + sec.name + ' / ' + sec.nameEn + '</div></div><div class="card-content" id="content-' + sec.id + '"><button class="close-btn" onclick="event.stopPropagation(); closeAllCards()">×</button><h4>' + sec.name + '</h4><div id="loading-' + sec.id + '" style="color:#64748b;font-size:13px">Načítání...</div></div>';
-          card.addEventListener('click', async (e) => {
-            if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
-            if (card.classList.contains('expanded')) { closeAllCards(); return; }
-            closeAllCards(); card.classList.add('expanded'); const backdrop = document.getElementById('overlayBackdrop'); if (backdrop) backdrop.classList.add('active'); activeCard = card;
-            const contentEl = document.getElementById('content-' + sec.id);
-            if (!contentEl || contentEl.dataset.loaded) return;
-            const subs = await loadSubsections(sec.id);
-            if (sec.id === 'about' || !subs.length) {
-              const all = await loadAllArticles();
-              const articles = all.filter(a => { const s = (a.sectionId || a.section || '').toString().toLowerCase(); return s === sec.id.toLowerCase(); });
-              renderArticles(contentEl, articles, sec.name);
-            } else {
-              renderSubsections(contentEl, subs, sec.id);
-            }
-            contentEl.dataset.loaded = '1';
+        if (backdrop) backdrop.classList.add('active');
+        activeCard = card;
+        const contentEl = document.getElementById('content-' + sec.id);
+        if (!contentEl || contentEl.dataset.loaded) return;
+        const subs = await loadSubsections(sec.id);
+        if (sec.id === 'about' || !subs.length) {
+          const all = await loadAllArticles();
+          const articles = all.filter(function(a) {
+            const s = (a.sectionId || a.section || '').toString().toLowerCase();
+            return s === sec.id.toLowerCase();
           });
-          container.appendChild(card);
-        }
-      }
-
-      function renderArticles(container, articles, fallbackTitle) {
-        let html = '<button class="close-btn" onclick="event.stopPropagation(); closeAllCards()">×</button><h4>' + escapeHtml(fallbackTitle) + '</h4>';
-        if (!articles.length) {
-          html += '<div class="no-articles">Zatím žádné články</div>';
+          renderArticles(contentEl, articles, sec.name);
         } else {
-          html += '<div class="sub-articles" style="max-height:240px">';
-          for (const a of articles) {
-            const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
-            html += '<a href="/article/' + (a.slug||a.id) + '"><div style="font-weight:600;">' + escapeHtml(a.title) + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
-          }
-          html += '</div>';
+          renderSubsections(contentEl, subs, sec.id);
         }
-        container.innerHTML = html;
+        contentEl.dataset.loaded = '1';
+      });
+      container.appendChild(card);
+    }
+  }
+
+  function renderArticles(container, articles, fallbackTitle) {
+    let html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(fallbackTitle) + '</h4>';
+    if (!articles.length) {
+      html += '<div class="no-articles">Zatím žádné články</div>';
+    } else {
+      html += '<div class="sub-articles" style="max-height:240px">';
+      for (let i = 0; i < articles.length; i++) {
+        const a = articles[i];
+        const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
+        html += '<a href="/article/' + (a.slug || a.id || '') + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
       }
+      html += '</div>';
+    }
+    container.innerHTML = html;
+  }
 
-      function renderSubsections(container, subs, secId) {
-        let html = '<button class="close-btn" onclick="event.stopPropagation(); closeAllCards()">×</button><h4>Podsekce</h4>';
-        if (!subs.length) { html += '<div class="no-articles">Žádné podsekce</div>'; container.innerHTML = html; return; }
-        for (const sub of subs) {
-          html += '<div class="sub-block collapsed" id="subblock-' + sub.id + '"><div class="sub-title" onclick="window.toggleSub(\'' + sub.id + '\', \'' + secId + '\')">' + escapeHtml(sub.name) + '</div><div class="sub-articles" id="subarticles-' + sub.id + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div></div>';
-        }
-        container.innerHTML = html;
-      }
+  function renderSubsections(container, subs, secId) {
+    let html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>Podsekce</h4>';
+    if (!subs.length) {
+      html += '<div class="no-articles">Žádné podsekce</div>';
+      container.innerHTML = html;
+      return;
+    }
+    for (let i = 0; i < subs.length; i++) {
+      const sub = subs[i];
+      html += '<div class="sub-block collapsed" id="subblock-' + sub.id + '"><div class="sub-title" onclick="window.toggleSub(\'' + sub.id + '\', \'' + secId + '\')">' + escapeHtml(sub.name || '') + '</div><div class="sub-articles" id="subarticles-' + sub.id + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div></div>';
+    }
+    container.innerHTML = html;
+  }
 
-      window.toggleSub = async function(subId, secId) {
-        const block = document.getElementById('subblock-' + subId);
-        const list = document.getElementById('subarticles-' + subId);
-        if (!block || !list) return;
-        const isCollapsed = block.classList.contains('collapsed');
-        document.querySelectorAll('.sub-block').forEach(b => { if (b !== block) b.classList.add('collapsed'); });
-        if (!isCollapsed) { block.classList.add('collapsed'); return; }
-        block.classList.remove('collapsed');
-        if (list.dataset.loaded) return;
-        list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
-        const all = await loadAllArticles();
-        const subNameEl = block.querySelector('.sub-title');
-        const subName = subNameEl ? subNameEl.textContent.trim() : '';
-        const articles = all.filter(a => {
-          const aSec = (a.sectionId || a.section || '').toString().toLowerCase();
-          if (aSec !== secId.toLowerCase()) return false;
-          const aSubId = (a.subsectionId || '').toString().toLowerCase();
-          const aSubName = (a.subsection || '').toString().toLowerCase();
-          const searchId = subId.toString().toLowerCase();
-          const searchName = subName.toLowerCase();
-          return aSubId === searchId || aSubName === searchId || aSubId === searchName || aSubName === searchName;
-        });
-        if (!articles.length) {
-          list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
-        } else {
-          let html = '';
-          for (const a of articles) {
-            const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
-            html += '<a href="/article/' + (a.slug||a.id) + '"><div style="font-weight:600;">' + escapeHtml(a.title) + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
-          }
-          list.innerHTML = html;
-        }
-        list.dataset.loaded = '1';
-      };
-
-      function escapeHtml(t) {
-        if (!t) return '';
-        return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      }
-
-      /* Eventy */
-      const backdrop = document.getElementById('overlayBackdrop');
-      if (backdrop) backdrop.addEventListener('click', closeAllCards);
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllCards(); });
-
-      /* Spustit */
-      startQuotes();
-      loadLatest();
-      buildSections();
+  window.toggleSub = async function(subId, secId) {
+    const block = document.getElementById('subblock-' + subId);
+    const list = document.getElementById('subarticles-' + subId);
+    if (!block || !list) return;
+    const isCollapsed = block.classList.contains('collapsed');
+    document.querySelectorAll('.sub-block').forEach(function(b) { if (b !== block) b.classList.add('collapsed'); });
+    if (!isCollapsed) { block.classList.add('collapsed'); return; }
+    block.classList.remove('collapsed');
+    if (list.dataset.loaded) return;
+    list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
+    const all = await loadAllArticles();
+    const subNameEl = block.querySelector('.sub-title');
+    const subName = subNameEl ? subNameEl.textContent.trim() : '';
+    const articles = all.filter(function(a) {
+      const aSec = (a.sectionId || a.section || '').toString().toLowerCase();
+      if (aSec !== secId.toLowerCase()) return false;
+      const aSubId = (a.subsectionId || '').toString().toLowerCase();
+      const aSubName = (a.subsection || '').toString().toLowerCase();
+      const searchId = subId.toString().toLowerCase();
+      const searchName = subName.toLowerCase();
+      return aSubId === searchId || aSubName === searchId || aSubId === searchName || aSubName === searchName;
     });
-  </script>
-</body>
-</html>
+    if (!articles.length) {
+      list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
+    } else {
+      let html = '';
+      for (let i = 0; i < articles.length; i++) {
+        const a = articles[i];
+        const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
+        html += '<a href="/article/' + (a.slug || a.id || '') + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+      }
+      list.innerHTML = html;
+    }
+    list.dataset.loaded = '1';
+  };
+
+  window.closeAllCardsWrapper = function() {
+    closeAllCards();
+  };
+
+  function escapeHtml(t) {
+    if (!t) return '';
+    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* Eventy */
+  const backdrop = document.getElementById('overlayBackdrop');
+  if (backdrop) backdrop.addEventListener('click', closeAllCards);
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAllCards(); });
+
+  /* Spustit */
+  startQuotes();
+  loadLatest();
+  buildSections();
+});
