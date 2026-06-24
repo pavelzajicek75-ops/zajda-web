@@ -27,12 +27,15 @@
     .section-card { position: relative; width: 220px; height: 150px; border-radius: 14px; cursor: pointer; flex-shrink: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
     .section-card:hover:not(.expanded) { transform: translateY(-8px) scale(1.05); }
     .section-card.expanded { width: 460px; height: 340px; z-index: 100; transform: translateY(-40px); }
-    .card-glow { position: absolute; inset: -2px; border-radius: 16px; background: linear-gradient(135deg, rgba(255,102,0,0.4), rgba(255,204,102,0.2)); opacity: 0; transition: opacity 0.3s; filter: blur(8px); z-index: -1; }
-    .section-card:hover .card-glow, .section-card.expanded .card-glow { opacity: 1; }
+    .card-glow { position: absolute; inset: -2px; border-radius: 16px; background: linear-gradient(135deg, rgba(255,102,0,0.4), rgba(255,204,102,0.2)); opacity: 0; transition: opacity 0.3s; filter: blur(12px); z-index: -1; }
+    .section-card:hover .card-glow, .section-card.expanded .card-glow { opacity: 1; filter: blur(16px); }
     .card-inner { position: relative; width: 100%; height: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; box-shadow: 0 4px 20px rgba(0,0,0,0.6); transition: border-color 0.3s; }
     .section-card.expanded .card-inner { border-color: rgba(255,102,0,0.6); }
     .card-inner img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); transition: filter 0.4s, transform 0.6s; }
-    .section-card.expanded .card-inner img { filter: brightness(0.4) blur(1px); transform: scale(1.1); }
+    /* OPRAVA: fotka se při rozbalení ROZSVÍTÍ a je OSTRÁ místo ztmavení/rozmazání */
+    .section-card.expanded .card-inner img { filter: brightness(1.15) contrast(1.2) saturate(1.15); transform: scale(1.08); }
+    .card-inner::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(255,102,0,0.12), transparent 70%); opacity: 0; pointer-events: none; mix-blend-mode: screen; transition: opacity 0.4s; z-index: 2; }
+    .section-card.expanded .card-inner::after { opacity: 1; }
     .card-label { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 10px 10px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color: #ffcc66; font-size: 17px; font-weight: 600; text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,0.9); pointer-events: none; transition: opacity 0.3s; }
     .section-card.expanded .card-label { opacity: 0; }
     .card-content { position: absolute; inset: 0; z-index: 5; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; overflow-y: auto; }
@@ -235,7 +238,12 @@
       if (!articles.length) { html += '<div class="no-articles">Zatím žádné články</div>'; }
       else {
         html += '<div class="sub-articles" style="max-height:240px">';
-        articles.forEach(a => { html += `<a href="/article/${a.slug||a.id}">${a.title}</a>`; });
+        articles.forEach(a => {
+          html += `<a href="/article/${a.slug||a.id}" title="${a.title}">
+            <strong>${a.title}</strong>
+            ${a.place ? `<small style="display:block;color:#94a3b8">${a.place}</small>` : ''}
+          </a>`;
+        });
         html += '</div>';
       }
       container.innerHTML = html;
