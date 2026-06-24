@@ -27,15 +27,12 @@
     .section-card { position: relative; width: 220px; height: 150px; border-radius: 14px; cursor: pointer; flex-shrink: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
     .section-card:hover:not(.expanded) { transform: translateY(-8px) scale(1.05); }
     .section-card.expanded { width: 460px; height: 340px; z-index: 100; transform: translateY(-40px); }
-    .card-glow { position: absolute; inset: -2px; border-radius: 16px; background: linear-gradient(135deg, rgba(255,102,0,0.4), rgba(255,204,102,0.2)); opacity: 0; transition: opacity 0.3s; filter: blur(12px); z-index: -1; }
-    .section-card:hover .card-glow, .section-card.expanded .card-glow { opacity: 1; filter: blur(16px); }
+    .card-glow { position: absolute; inset: -2px; border-radius: 16px; background: linear-gradient(135deg, rgba(255,102,0,0.4), rgba(255,204,102,0.2)); opacity: 0; transition: opacity 0.3s; filter: blur(8px); z-index: -1; }
+    .section-card:hover .card-glow, .section-card.expanded .card-glow { opacity: 1; }
     .card-inner { position: relative; width: 100%; height: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; box-shadow: 0 4px 20px rgba(0,0,0,0.6); transition: border-color 0.3s; }
     .section-card.expanded .card-inner { border-color: rgba(255,102,0,0.6); }
     .card-inner img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); transition: filter 0.4s, transform 0.6s; }
-    /* OPRAVA: fotka se při rozbalení ROZSVÍTÍ a je OSTRÁ místo ztmavení/rozmazání */
-    .section-card.expanded .card-inner img { filter: brightness(1.15) contrast(1.2) saturate(1.15); transform: scale(1.08); }
-    .card-inner::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(255,102,0,0.12), transparent 70%); opacity: 0; pointer-events: none; mix-blend-mode: screen; transition: opacity 0.4s; z-index: 2; }
-    .section-card.expanded .card-inner::after { opacity: 1; }
+    .section-card.expanded .card-inner img { filter: brightness(0.4) blur(1px); transform: scale(1.1); }
     .card-label { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 10px 10px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color: #ffcc66; font-size: 17px; font-weight: 600; text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,0.9); pointer-events: none; transition: opacity 0.3s; }
     .section-card.expanded .card-label { opacity: 0; }
     .card-content { position: absolute; inset: 0; z-index: 5; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; overflow-y: auto; }
@@ -95,7 +92,6 @@
       Sdílet aktualizaci
     </a>
   </div>
-
   <script>
     /* === Hvězdy === */
     (function makeStars() {
@@ -144,18 +140,22 @@
       }, 5000);
     }
 
-    /* === Aktuality === */
+    /* === Aktuality — odkazy na samostatné stránky === */
     async function loadLatest() {
       const box = document.getElementById('latestPanel');
       try {
         const r = await fetch('/api/articles/list');
         if (!r.ok) throw new Error();
         const data = await r.json();
-        const latest = Array.isArray(data) ? data.slice(0, 3) : [];
-        if (!latest.length) { box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>'; return; }
+        const arr = Array.isArray(data) ? data : (data.articles || []);
+        const latest = arr.slice(0, 3);
+        if (!latest.length) {
+          box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
+          return;
+        }
         box.innerHTML = '<h3>Poslední aktuality</h3>' + latest.map(a => `
           <a class="latest-item" href="/article/${a.slug||a.id}">
-            ${a.title}
+            ${escapeHtml(a.title)}
             <small>${a.section||''} ${a.subsection||''} • ${new Date(a.date||a.created).toLocaleDateString('cs')}</small>
           </a>
         `).join('');
@@ -175,20 +175,41 @@
     ];
 
     async function loadSectionCover(sec) {
-      try { const r = await fetch('/api/sections/cover?sectionId=' + sec.id); if (!r.ok) return ''; const d = await r.json(); return d.coverUrl || d.url || ''; }
-      catch { return ''; }
+      try {
+        const r = await fetch('/api/sections/cover?sectionId=' + sec.id);
+        if (!r.ok) return '';
+        const d = await r.json();
+        return d.coverUrl || d.url || '';
+      } catch { return ''; }
     }
     async function loadSubsections(secId) {
-      try { const r = await fetch('/api/subsections/by-section?sectionId=' + secId); if (!r.ok) return []; return await r.json(); }
-      catch { return []; }
+      try {
+        const r = await fetch('/api/subsections/by-section?sectionId=' + secId);
+        if (!r.ok) return [];
+        return await r.json();
+      } catch { return []; }
     }
     async function loadArticlesBySection(secId) {
-      try { const r = await fetch('/api/articles/list'); if (!r.ok) return []; const all = await r.json(); return all.filter(a => a.sectionId === secId || a.section === secId).slice(0, 10); }
-      catch { return []; }
+      try {
+        const r = await fetch('/api/articles/list');
+        if (!r.ok) return [];
+        const data = await r.json();
+        const all = Array.isArray(data) ? data : (data.articles || []);
+        return all.filter(a => a.sectionId === secId || a.section === secId).slice(0, 10);
+      } catch { return []; }
     }
     async function loadArticlesBySubsection(subId) {
-      try { const r = await fetch('/api/articles/list'); if (!r.ok) return []; const all = await r.json(); return all.filter(a => a.subsectionId === subId || a.subsection === subId).slice(0, 5); }
-      catch { return []; }
+      try {
+        const r = await fetch('/api/articles/list');
+        if (!r.ok) return [];
+        const data = await r.json();
+        const all = Array.isArray(data) ? data : (data.articles || []);
+        return all.filter(a =>
+          a.subsectionId === subId ||
+          a.subsection === subId ||
+          (a.subsectionId || '').toString() === subId.toString()
+        ).slice(0, 10);
+      } catch { return []; }
     }
 
     let activeCard = null;
@@ -225,23 +246,30 @@
           const contentEl = document.getElementById('content-' + sec.id);
           if (contentEl.dataset.loaded) return;
           const subs = await loadSubsections(sec.id);
-          if (sec.id === 'about' || !subs.length) { const articles = await loadArticlesBySection(sec.id); renderArticles(contentEl, articles, sec.name); }
-          else { renderSubsections(contentEl, subs, sec.id); }
+          if (sec.id === 'about' || !subs.length) {
+            const articles = await loadArticlesBySection(sec.id);
+            renderArticles(contentEl, articles, sec.name);
+          } else {
+            renderSubsections(contentEl, subs, sec.id);
+          }
           contentEl.dataset.loaded = '1';
         });
         container.appendChild(card);
       }
     }
+
     function renderArticles(container, articles, fallbackTitle) {
       let html = `<button class="close-btn" onclick="event.stopPropagation(); closeAllCards()">×</button>`;
-      html += `<h4>${fallbackTitle}</h4>`;
-      if (!articles.length) { html += '<div class="no-articles">Zatím žádné články</div>'; }
-      else {
+      html += `<h4>${escapeHtml(fallbackTitle)}</h4>`;
+      if (!articles.length) {
+        html += '<div class="no-articles">Zatím žádné články</div>';
+      } else {
         html += '<div class="sub-articles" style="max-height:240px">';
         articles.forEach(a => {
-          html += `<a href="/article/${a.slug||a.id}" title="${a.title}">
-            <strong>${a.title}</strong>
-            ${a.place ? `<small style="display:block;color:#94a3b8">${a.place}</small>` : ''}
+          const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
+          html += `<a href="/article/${a.slug||a.id}">
+            <div style="font-weight:600;">${escapeHtml(a.title)}</div>
+            ${excerpt ? `<span style="font-size:12px;color:#94a3b8;display:block;margin-top:2px">${escapeHtml(excerpt)}</span>` : ''}
           </a>`;
         });
         html += '</div>';
@@ -256,7 +284,7 @@
       subs.forEach(sub => {
         html += `
           <div class="sub-block collapsed" id="subblock-${sub.id}">
-            <div class="sub-title" onclick="toggleSub('${sub.id}', '${secId}')">${sub.name}</div>
+            <div class="sub-title" onclick="toggleSub('${sub.id}', '${secId}')">${escapeHtml(sub.name)}</div>
             <div class="sub-articles" id="subarticles-${sub.id}">
               <div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div>
             </div>
@@ -268,25 +296,67 @@
     window.toggleSub = async function(subId, secId) {
       const block = document.getElementById('subblock-' + subId);
       const list = document.getElementById('subarticles-' + subId);
+      if (!block || !list) return;
       const isCollapsed = block.classList.contains('collapsed');
       document.querySelectorAll('.sub-block').forEach(b => { if (b !== block) b.classList.add('collapsed'); });
       if (!isCollapsed) { block.classList.add('collapsed'); return; }
       block.classList.remove('collapsed');
       if (list.dataset.loaded) return;
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
-      const articles = await loadArticlesBySubsection(subId);
+
+      let articles = await loadArticlesBySubsection(subId);
       if (!articles.length) {
-        const fallback = await loadArticlesBySection(secId);
-        const filtered = fallback.filter(a => a.subsectionId === subId || a.subsection === subId);
-        list.innerHTML = filtered.length ? filtered.map(a => `<a href="/article/${a.slug||a.id}">${a.title}</a>`).join('') : '<div class="no-articles" style="padding:6px 0">Žádné články</div>';
+        const subNameEl = block.querySelector('.sub-title');
+        const subName = subNameEl ? subNameEl.childNodes[0]?.textContent?.trim() || '' : '';
+        const all = await loadArticlesBySection(secId);
+        articles = all.filter(a =>
+          a.subsectionId === subId ||
+          a.subsection === subId ||
+          a.subsection === subName ||
+          (a.subsectionId || '').toString() === subId.toString()
+        );
+      }
+
+      if (!articles.length) {
+        list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články</div>';
       } else {
-        list.innerHTML = articles.map(a => `<a href="/article/${a.slug||a.id}">${a.title}</a>`).join('');
+        list.innerHTML = articles.map(a => {
+          const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
+          return `<a href="/article/${a.slug||a.id}">
+            <div style="font-weight:600;">${escapeHtml(a.title)}</div>
+            ${excerpt ? `<span style="font-size:12px;color:#94a3b8;display:block;margin-top:2px">${escapeHtml(excerpt)}</span>` : ''}
+          </a>`;
+        }).join('');
       }
       list.dataset.loaded = '1';
     };
 
+    /* === Pomocné funkce === */
+    function escapeHtml(t) {
+      if (!t) return '';
+      return String(t)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    /* === Oprava CSS: fotky sekcí se rozsvítí a zostří === */
+    (function fixSectionImages(){
+      const s = document.createElement('style');
+      s.textContent = `
+        .section-card:hover:not(.expanded) .card-inner img { filter: brightness(1.25) contrast(1.15) saturate(1.1); }
+        .section-card.expanded .card-inner img { filter: brightness(1.1) contrast(1.2) saturate(1.1); transform: scale(1.05); }
+        .card-content { background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); border-radius: 14px; }
+        .sub-articles a { white-space: normal; overflow: visible; text-overflow: clip; padding: 7px 0 7px 12px; line-height: 1.4; }
+      `;
+      document.head.appendChild(s);
+    })();
+
     document.getElementById('overlayBackdrop').addEventListener('click', closeAllCards);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllCards(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAllCards();
+    });
 
     window.addEventListener('DOMContentLoaded', () => {
       startQuotes();
