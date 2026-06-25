@@ -1,3 +1,4 @@
+<!-- public/index.html -->
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -216,7 +217,7 @@
 
     function getSectionNames(secId) {
       const sec = SECTIONS.find(function(s) { return s.id === secId; });
-      if (!sec) return [secId.toLowerCase()];
+      if (!sec) return [norm(secId)];
       const names = [sec.id, sec.name, sec.nameEn].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
       return names;
     }
@@ -278,7 +279,7 @@
             const all = await loadAllArticles();
             const secNames = getSectionNames(sec.id);
             const articles = all.filter(function(a) {
-              const aSec = norm(a.sectionId || a.section || '');
+              const aSec = norm(a.sectionId || a.section || a.sectionName || a.category || '');
               return secNames.includes(aSec);
             });
             renderArticles(contentEl, articles, sec.name);
@@ -326,7 +327,7 @@
       document.querySelectorAll('.sub-block').forEach(function(b) { if (b !== block) b.classList.add('collapsed'); });
       if (!isCollapsed) { block.classList.add('collapsed'); return; }
       block.classList.remove('collapsed');
-      if (list.dataset.loaded) return;
+
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
 
       const all = await loadAllArticles();
@@ -335,12 +336,27 @@
       const secNames = getSectionNames(secId);
       const subNames = [subId, subName].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
 
-      const articles = all.filter(function(a) {
-        const aSec = norm(a.sectionId || a.section || '');
-        if (!secNames.includes(aSec)) return false;
-        const aSub = norm(a.subsectionId || a.subsection || '');
-        return subNames.includes(aSub);
+      console.log('Toggle sub:', {subId, subName, secId, secNames, subNames});
+      console.log('Articles:', all.map(function(a){ return {title: a.title, section: a.section, sectionId: a.sectionId, subsection: a.subsection, subsectionId: a.subsectionId}; }));
+
+      let articles = all.filter(function(a) {
+        const aSec = norm(a.sectionId || a.section || a.sectionName || a.category || '');
+        const aSub = norm(a.subsectionId || a.subsection || a.subsectionName || a.subCategory || '');
+        const secMatch = secNames.includes(aSec);
+        const subMatch = subNames.some(function(sn) { return aSub === sn || aSub.includes(sn) || sn.includes(aSub); });
+        return secMatch && subMatch;
       });
+
+      console.log('Found articles:', articles.length);
+
+      // Fallback: všechny články z této sekce
+      if (!articles.length) {
+        articles = all.filter(function(a) {
+          const aSec = norm(a.sectionId || a.section || a.sectionName || a.category || '');
+          return secNames.includes(aSec);
+        });
+        console.log('Fallback articles:', articles.length);
+      }
 
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
@@ -354,7 +370,6 @@
         }
         list.innerHTML = html;
       }
-      list.dataset.loaded = '1';
     };
 
     /* Eventy */
