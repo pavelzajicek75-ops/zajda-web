@@ -97,13 +97,13 @@
   </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-  /* === CSS pro zastavení citátů na hover === */
+  document.addEventListener('DOMContentLoaded', function() {
+  /* CSS pro citáty */
   const qs = document.createElement('style');
   qs.textContent = '.quote-star:hover { animation-play-state: paused !important; }';
   document.head.appendChild(qs);
 
-  /* === Hvězdy === */
+  /* Hvězdy */
   const starsBox = document.getElementById('stars');
   if (starsBox) {
     for (let i = 0; i < 200; i++) {
@@ -115,6 +115,11 @@
       s.style.setProperty('--del', (Math.random() * 5) + 's');
       starsBox.appendChild(s);
     }
+  }
+
+  function escapeHtml(t) {
+    if (!t) return '';
+    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   /* === Citáty === */
@@ -129,14 +134,11 @@
     el.innerHTML = '<div style="font-size:' + sz + 'px;line-height:1.4">"' + (q.text || '') + '"<br><span style="color:#ffcc66;font-size:' + (sz*0.6) + 'px;opacity:0.8">' + (q.author || '') + '</span></div>';
     const sx = Math.random() * window.innerWidth;
     const sy = Math.random() * window.innerHeight;
-    el.style.left = sx + 'px';
-    el.style.top = sy + 'px';
+    el.style.left = sx + 'px'; el.style.top = sy + 'px';
     const ex = sx + (Math.random() - 0.5) * 400;
     const ey = sy + (Math.random() - 0.5) * 400;
-    el.style.setProperty('--sx', '0px');
-    el.style.setProperty('--sy', '0px');
-    el.style.setProperty('--ex', (ex - sx) + 'px');
-    el.style.setProperty('--ey', (ey - sy) + 'px');
+    el.style.setProperty('--sx', '0px'); el.style.setProperty('--sy', '0px');
+    el.style.setProperty('--ex', (ex - sx) + 'px'); el.style.setProperty('--ey', (ey - sy) + 'px');
     el.style.animation = 'drift ' + (14 + Math.random() * 10) + 's linear infinite';
     document.body.appendChild(el);
     setTimeout(function() { el.classList.add('visible'); }, 100);
@@ -145,9 +147,7 @@
   async function startQuotes() {
     const quotes = await loadQuotes();
     if (!quotes.length) return;
-    for (let i = 0; i < Math.min(8, quotes.length); i++) {
-      spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-    }
+    for (let i = 0; i < Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setInterval(function() {
       if (document.querySelectorAll('.quote-star').length > 12) return;
       const q = quotes[Math.floor(Math.random() * quotes.length)];
@@ -155,14 +155,21 @@
     }, 5000);
   }
 
-  /* === Aktuality === */
+  /* === Aktuality s timeoutem === */
   async function loadLatest() {
     const box = document.getElementById('latestPanel');
     if (!box) return;
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(function() { controller.abort(); }, 5000);
+    
     try {
-      const r = await fetch('/api/articles/list');
+      const r = await fetch('/api/articles/list', { signal: controller.signal });
+      clearTimeout(timeout);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       let data = await r.json();
+      console.log('API articles:', data); /* <-- Zajdo, podívej se do konzole co toto vypíše! */
+      
       let arr = [];
       if (Array.isArray(data)) arr = data;
       else if (data && Array.isArray(data.articles)) arr = data.articles;
@@ -170,11 +177,13 @@
         const vals = Object.values(data);
         if (vals.length && vals[0] && vals[0].title) arr = vals;
       }
+      
       const latest = arr.slice(0, 3);
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
         return;
       }
+      
       let html = '<h3>Poslední aktuality</h3>';
       for (let i = 0; i < latest.length; i++) {
         const a = latest[i];
@@ -187,30 +196,31 @@
         html += '<a class="latest-item" href="/article/' + slug + '">' + escapeHtml(title) + '<small>' + escapeHtml(sec + ' ' + sub) + (dateStr ? ' • ' + dateStr : '') + '</small></a>';
       }
       box.innerHTML = html;
+      
       const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
       const waBtn = document.getElementById('shareWhatsApp');
       if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
     } catch (e) {
       console.error('Aktuality chyba:', e);
-      box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Nepodařilo se načíst</div>';
+      box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Chyba načítání</div>';
     }
   }
 
-  /* === Načítání dat === */
+  /* === Sekce === */
+  const SECTIONS = [
+    { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
+    { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
+    { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
+    { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
+  ];
+
   async function loadSectionCover(sec) {
-    try {
-      const r = await fetch('/api/sections/cover?sectionId=' + sec.id);
-      if (!r.ok) return '';
-      const d = await r.json();
-      return d.coverUrl || d.url || '';
-    } catch { return ''; }
+    try { const r = await fetch('/api/sections/cover?sectionId=' + sec.id); if (!r.ok) return ''; const d = await r.json(); return d.coverUrl || d.url || ''; }
+    catch { return ''; }
   }
   async function loadSubsections(secId) {
-    try {
-      const r = await fetch('/api/subsections/by-section?sectionId=' + secId);
-      if (!r.ok) return [];
-      return await r.json();
-    } catch { return []; }
+    try { const r = await fetch('/api/subsections/by-section?sectionId=' + secId); if (!r.ok) return []; return await r.json(); }
+    catch { return []; }
   }
   async function loadAllArticles() {
     try {
@@ -227,21 +237,13 @@
     } catch { return []; }
   }
 
-  /* === Sekce === */
-  const SECTIONS = [
-    { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
-    { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
-    { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
-    { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
-  ];
-
   let activeCard = null;
-  function closeAllCards() {
+  window.closeAllCardsWrapper = function() {
     document.querySelectorAll('.section-card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
     const backdrop = document.getElementById('overlayBackdrop');
     if (backdrop) backdrop.classList.remove('active');
     activeCard = null;
-  }
+  };
 
   async function buildSections() {
     const container = document.getElementById('sectionsContainer');
@@ -256,8 +258,8 @@
       card.innerHTML = '<div class="card-glow"></div><div class="card-inner"><img src="' + (cover || '/images/placeholder.jpg') + '" alt="' + sec.name + '" onerror="this.src=\'/images/placeholder.jpg\'"><div class="card-label">' + sec.name + ' / ' + sec.nameEn + '</div></div><div class="card-content" id="content-' + sec.id + '"><button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + sec.name + '</h4><div id="loading-' + sec.id + '" style="color:#64748b;font-size:13px">Načítání...</div></div>';
       card.addEventListener('click', async function(e) {
         if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
-        if (card.classList.contains('expanded')) { closeAllCards(); return; }
-        closeAllCards();
+        if (card.classList.contains('expanded')) { window.closeAllCardsWrapper(); return; }
+        window.closeAllCardsWrapper();
         card.classList.add('expanded');
         const backdrop = document.getElementById('overlayBackdrop');
         if (backdrop) backdrop.classList.add('active');
@@ -299,11 +301,7 @@
 
   function renderSubsections(container, subs, secId) {
     let html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>Podsekce</h4>';
-    if (!subs.length) {
-      html += '<div class="no-articles">Žádné podsekce</div>';
-      container.innerHTML = html;
-      return;
-    }
+    if (!subs.length) { html += '<div class="no-articles">Žádné podsekce</div>'; container.innerHTML = html; return; }
     for (let i = 0; i < subs.length; i++) {
       const sub = subs[i];
       html += '<div class="sub-block collapsed" id="subblock-' + sub.id + '"><div class="sub-title" onclick="window.toggleSub(\'' + sub.id + '\', \'' + secId + '\')">' + escapeHtml(sub.name || '') + '</div><div class="sub-articles" id="subarticles-' + sub.id + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div></div>';
@@ -347,21 +345,12 @@
     list.dataset.loaded = '1';
   };
 
-  window.closeAllCardsWrapper = function() {
-    closeAllCards();
-  };
-
-  function escapeHtml(t) {
-    if (!t) return '';
-    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
   /* Eventy */
   const backdrop = document.getElementById('overlayBackdrop');
-  if (backdrop) backdrop.addEventListener('click', closeAllCards);
-  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAllCards(); });
+  if (backdrop) backdrop.addEventListener('click', window.closeAllCardsWrapper);
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') window.closeAllCardsWrapper(); });
 
-  /* Spustit */
+  /* Spustit vše najednou, nečekáme na sebe */
   startQuotes();
   loadLatest();
   buildSections();
