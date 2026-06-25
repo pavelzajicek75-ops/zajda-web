@@ -16,9 +16,7 @@
       line-height: 1.7;
     }
     .bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
+      position: fixed; inset: 0; z-index: 0;
       background: 
         radial-gradient(circle at 50% 20%, #0a0a1a, #000 80%),
         radial-gradient(circle at 80% 80%, rgba(60,20,100,0.3), transparent 60%),
@@ -26,7 +24,7 @@
       background-blend-mode: screen;
     }
     .stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
-    .star { position: absolute; width: 2px; height: 2px; background: white; border-radius: 50%; opacity: 0; animation: twinkle 4s ease-in-out infinite; }
+    .star { position: absolute; width: 2px; height: 2px; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--dur) ease-in-out infinite; animation-delay: var(--del); }
     @keyframes twinkle { 0%,100% { opacity: 0.1; transform: scale(0.5); } 50% { opacity: 0.9; transform: scale(1); } }
     
     .wrap { position: relative; z-index: 10; max-width: 860px; margin: 0 auto; padding: 40px 20px 60px; }
@@ -75,7 +73,7 @@
     .lightbox { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.95); align-items: center; justify-content: center; cursor: zoom-out; padding: 20px; }
     .lightbox.active { display: flex; }
     .lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px; cursor: default; }
-    .lightbox-close { position: absolute; top: 20px; right: 30px; color: #ffcc66; font-size: 36px; cursor: pointer; background: none; border: none; }
+    .lightbox-close { position: absolute; top: 20px; right: 30px; color: #ffcc66; font-size: 36px; cursor: pointer; background: none; border: none; line-height: 1; }
     
     @media (max-width: 640px) {
       article { padding: 28px 20px; }
@@ -95,94 +93,134 @@
     </article>
   </div>
 
-  <div id="lightbox" class="lightbox" onclick="closeLightbox()">
-    <button class="lightbox-close" onclick="event.stopPropagation(); closeLightbox()">×</button>
-    <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation()">
+  <div id="lightbox" class="lightbox">
+    <button class="lightbox-close" id="lbClose">×</button>
+    <img id="lightboxImg" src="" alt="">
   </div>
 
   <script>
-    /* Hvězdy — až PO načtení DOM */
-    document.addEventListener('DOMContentLoaded', () => {
-      const box = document.getElementById('stars');
-      if (box) {
-        for (let i = 0; i < 150; i++) {
-          const s = document.createElement('div');
-          s.className = 'star';
-          s.style.left = Math.random() * 100 + '%';
-          s.style.top = Math.random() * 100 + '%';
-          s.style.animationDelay = (Math.random() * 5) + 's';
-          s.style.animationDuration = (3 + Math.random() * 4) + 's';
-          box.appendChild(s);
-        }
+  document.addEventListener('DOMContentLoaded', function() {
+    /* === Hvězdy === */
+    const box = document.getElementById('stars');
+    if (box) {
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < 150; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        s.style.left = Math.random() * 100 + '%';
+        s.style.top = Math.random() * 100 + '%';
+        s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
+        s.style.setProperty('--del', (Math.random() * 5) + 's');
+        frag.appendChild(s);
       }
-      loadArticle();
-    });
+      box.appendChild(frag);
+    }
 
     function escapeHtml(t) {
-      if (!t) return '';
-      return String(t)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+      if (t == null) return '';
+      return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* === Lightbox === */
+    const lb = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightboxImg');
+    const lbClose = document.getElementById('lbClose');
+
+    function openLightbox(src) {
+      lbImg.src = src;
+      lb.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      lb.classList.remove('active');
+      lbImg.src = '';
+      document.body.style.overflow = '';
+    }
+    if (lb) lb.addEventListener('click', closeLightbox);
+    if (lbClose) lbClose.addEventListener('click', function(e) { e.stopPropagation(); closeLightbox(); });
+    if (lbImg) lbImg.addEventListener('click', function(e) { e.stopPropagation(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
+
+    /* === Načtení článku === */
+    async function fetchWithTimeout(url, opts, ms) {
+      const ctrl = new AbortController();
+      const id = setTimeout(function() { ctrl.abort(); }, ms);
+      try {
+        const r = await fetch(url, Object.assign({ signal: ctrl.signal }, opts || {}));
+        clearTimeout(id);
+        return r;
+      } catch (e) {
+        clearTimeout(id);
+        throw e;
+      }
     }
 
     async function loadArticle() {
-      const path = window.location.pathname.replace('/article/', '').replace(/\/$/, '');
       const container = document.getElementById('articleContainer');
-      if (!path) { container.innerHTML = '<div class="error">Chybí článek.</div>'; return; }
+      const rawPath = window.location.pathname.replace('/article/', '').replace(/\/$/, '');
+      const slug = decodeURIComponent(rawPath);
+      if (!slug) {
+        container.innerHTML = '<div class="error">Chybí identifikátor článku.</div>';
+        return;
+      }
 
       try {
-        let r = await fetch('/api/articles/get?slug=' + encodeURIComponent(path));
-        if (!r.ok) r = await fetch('/api/articles/get?id=' + encodeURIComponent(path));
-        if (!r.ok) throw new Error('Nenalezeno');
-        const a = await r.json();
+        let r = await fetchWithTimeout('/api/articles/get?slug=' + encodeURIComponent(slug), {}, 5000);
+        if (!r.ok) {
+          r = await fetchWithTimeout('/api/articles/get?id=' + encodeURIComponent(slug), {}, 5000);
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+
+        let data = await r.json();
+        console.log('Article API response:', data); /* <-- Zajdo, koukni do konzole */
+
+        /* Normalizace odpovědi */
+        let a = null;
+        if (data && typeof data === 'object') {
+          if (data.article && typeof data.article === 'object') a = data.article;
+          else if (data.data && typeof data.data === 'object') a = data.data;
+          else if (data.title != null) a = data;
+        }
+        if (!a) throw new Error('Neznámý formát dat');
 
         document.title = (a.title ? a.title + ' | ' : '') + 'Moje diagnóza, můj vesmír';
 
         const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs', {day:'numeric', month:'long', year:'numeric'}) : '';
 
-        container.innerHTML = `
-          <div class="breadcrumb">
-            <a href="/">Domů</a>
-            <span>/</span>
-            <span style="color:#ffcc66">${escapeHtml(a.section || a.sectionId || '')}</span>
-            ${a.subsection ? `<span>/</span><span>${escapeHtml(a.subsection)}</span>` : ''}
-          </div>
-          <h1 class="article-title">${escapeHtml(a.title)}</h1>
-          <div class="article-meta">
-            ${dateStr ? `<span>📅 ${dateStr}</span>` : ''}
-            ${a.place ? `<span>📍 ${escapeHtml(a.place)}</span>` : ''}
-          </div>
-          <div class="article-content" id="articleContent">${a.content || '<p><em>Prázdný obsah</em></p>'}</div>
-          <div class="article-footer">
-            <a href="/" class="back-btn" style="margin:0">← Zpět</a>
-            <div class="share-row">
-              <span>Sdílet:</span>
-              <a class="share-btn-small wa" href="https://wa.me/?text=${encodeURIComponent(a.title + ' - ' + window.location.href)}" target="_blank" rel="noopener">WhatsApp</a>
-            </div>
-          </div>
-        `;
+        const secName = a.section || a.sectionId || '';
+        const subName = a.subsection || a.subsectionId || '';
 
-        document.querySelectorAll('.article-content img').forEach(img => {
-          img.addEventListener('click', () => openLightbox(img.src));
+        let breadcrumbHtml = '<a href="/">Domů</a><span>/</span>';
+        if (secName) breadcrumbHtml += '<span style="color:#ffcc66">' + escapeHtml(secName) + '</span>';
+        if (subName) breadcrumbHtml += '<span>/</span><span>' + escapeHtml(subName) + '</span>';
+
+        container.innerHTML =
+          '<div class="breadcrumb">' + breadcrumbHtml + '</div>' +
+          '<h1 class="article-title">' + escapeHtml(a.title || 'Bez názvu') + '</h1>' +
+          '<div class="article-meta">' +
+            (dateStr ? '<span>📅 ' + dateStr + '</span>' : '') +
+            (a.place ? '<span>📍 ' + escapeHtml(a.place) + '</span>' : '') +
+          '</div>' +
+          '<div class="article-content" id="articleContent">' + (a.content || '<p><em>Prázdný obsah</em></p>') + '</div>' +
+          '<div class="article-footer">' +
+            '<a href="/" class="back-btn" style="margin:0">← Zpět</a>' +
+            '<div class="share-row">' +
+              '<span>Sdílet:</span>' +
+              '<a class="share-btn-small wa" href="https://wa.me/?text=' + encodeURIComponent((a.title || '') + ' - ' + window.location.href) + '" target="_blank" rel="noopener">WhatsApp</a>' +
+            '</div>' +
+          '</div>';
+
+        document.querySelectorAll('.article-content img').forEach(function(img) {
+          img.addEventListener('click', function() { openLightbox(img.src); });
         });
       } catch (e) {
-        container.innerHTML = '<div class="error">Článek se nepodařilo načíst.<br><a href="/" class="back-btn" style="margin-top:16px">← Zpět na hlavní stránku</a></div>';
+        console.error('Chyba načítání článku:', e);
+        container.innerHTML = '<div class="error">Článek se nepodařilo načíst.<br><small>' + escapeHtml(e.message) + '</small><br><a href="/" class="back-btn" style="margin-top:16px">← Zpět na hlavní stránku</a></div>';
       }
     }
 
-    function openLightbox(src) {
-      const lb = document.getElementById('lightbox');
-      document.getElementById('lightboxImg').src = src;
-      lb.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-    function closeLightbox() {
-      document.getElementById('lightbox').classList.remove('active');
-      document.body.style.overflow = '';
-    }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+    loadArticle();
+  });
   </script>
 </body>
 </html>
