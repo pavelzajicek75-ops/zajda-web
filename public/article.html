@@ -1,3 +1,4 @@
+<!-- public/article.html -->
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -58,6 +59,7 @@
     const starsBox = document.getElementById('stars');
     if (starsBox) { const frag = document.createDocumentFragment(); for (let i = 0; i < 150; i++) { const s = document.createElement('div'); s.className = 'star'; s.style.left = Math.random() * 100 + '%'; s.style.top = Math.random() * 100 + '%'; s.style.setProperty('--dur', (3 + Math.random() * 4) + 's'); s.style.setProperty('--del', (Math.random() * 5) + 's'); frag.appendChild(s); } starsBox.appendChild(frag); }
     function escapeHtml(t) { if (t == null) return ''; return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function norm(v) { return String(v || '').toLowerCase().trim(); }
     const lb = document.getElementById('lightbox'), lbImg = document.getElementById('lightboxImg'), lbClose = document.getElementById('lbClose');
     function openLightbox(src) { lbImg.src = src; lb.classList.add('active'); document.body.style.overflow = 'hidden'; }
     function closeLightbox() { lb.classList.remove('active'); lbImg.src = ''; document.body.style.overflow = ''; }
@@ -66,15 +68,18 @@
     function normalizeArticles(data) { if (Array.isArray(data)) return data; if (data && Array.isArray(data.articles)) return data.articles; if (data && typeof data === 'object') { const vals = Object.values(data); if (vals.length && vals[0] && vals[0].title) return vals; } return []; }
     async function loadArticle() {
       const container = document.getElementById('articleContainer');
-      let slug = decodeURIComponent(window.location.pathname.replace('/article/', '').replace(/\/$/, ''));
+      const slug = decodeURIComponent(window.location.pathname.replace('/article/', '').replace(/\/$/, ''));
+      console.log('Article slug from URL:', slug);
       if (!slug) { container.innerHTML = '<div class="error">Chybí identifikátor článku.</div>'; return; }
       try {
         const r = await fetchWithTimeout('/api/articles/list', 5000);
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const data = await r.json();
         const all = normalizeArticles(data);
-        let a = all.find(function(x) { return (x.id || '').toString() === slug; });
-        if (!a) a = all.find(function(x) { return (x.slug || '').toString() === slug; });
+        console.log('All article IDs:', all.map(function(x){ return x.id; }));
+        let a = all.find(function(x) { return String(x.id || '') === slug; });
+        if (!a) a = all.find(function(x) { return String(x.slug || '') === slug; });
+        if (!a) a = all.find(function(x) { return norm(x.title || '') === norm(slug); });
         if (!a) throw new Error('Článek nenalezen');
         document.title = (a.title ? a.title + ' | ' : '') + 'Moje diagnóza, můj vesmír';
         const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs', {day:'numeric', month:'long', year:'numeric'}) : '';
@@ -86,6 +91,7 @@
         container.innerHTML = '<div class="breadcrumb">' + breadcrumb + '</div><h1 class="article-title">' + escapeHtml(a.title || 'Bez názvu') + '</h1><div class="article-meta">' + (dateStr ? '<span>📅 ' + dateStr + '</span>' : '') + (a.place ? '<span>📍 ' + escapeHtml(a.place) + '</span>' : '') + '</div><div class="article-content" id="articleContent">' + (a.content || '<p><em>Prázdný obsah</em></p>') + '</div><div class="article-footer"><a href="/" class="back-btn" style="margin:0">← Zpět</a><div class="share-row"><span>Sdílet:</span><a class="share-btn-small wa" href="https://wa.me/?text=' + encodeURIComponent((a.title || '') + ' - ' + window.location.href) + '" target="_blank" rel="noopener">WhatsApp</a></div></div>';
         document.querySelectorAll('.article-content img').forEach(function(img) { img.addEventListener('click', function() { openLightbox(img.src); }); });
       } catch (e) {
+        console.error('Chyba:', e);
         container.innerHTML = '<div class="error">' + escapeHtml(e.message) + '<br><a href="/" class="back-btn" style="margin-top:16px">← Zpět na hlavní stránku</a></div>';
       }
     }
