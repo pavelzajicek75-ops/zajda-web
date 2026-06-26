@@ -184,7 +184,7 @@
         let html = '<h3>Poslední aktuality</h3>';
         for (let i = 0; i < latest.length; i++) {
           const a = latest[i];
-          const artId = a.id || ''; // POUŽÍVÁME ID, NE SLUG
+          const artId = a.id || '';
           const title = a.title || 'Bez názvu';
           const sec = a.section || a.sectionId || '';
           const sub = a.subsection || a.subsectionId || '';
@@ -194,7 +194,8 @@
           if (sec) parts.push(sec);
           if (sub) parts.push(sub);
           const meta = parts.join(' > ') + (dateStr ? ' • ' + dateStr : '');
-          html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
+          // ODKAZ PŘES QUERY PARAMETR — spolehlivější než /article/ID
+          html += '<a class="latest-item" href="/article?id=' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
         }
         box.innerHTML = html;
         const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
@@ -299,9 +300,10 @@
         html += '<div class="sub-articles" style="max-height:240px">';
         for (let i = 0; i < articles.length; i++) {
           const a = articles[i];
-          const artId = a.id || ''; // POUŽÍVÁME ID, NE SLUG
+          const artId = a.id || '';
           const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
-          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          // ODKAZ PŘES QUERY PARAMETR
+          html += '<a href="/article?id=' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         html += '</div>';
       }
@@ -313,12 +315,12 @@
       if (!subs.length) { html += '<div class="no-articles">Žádné podsekce</div>'; container.innerHTML = html; return; }
       for (let i = 0; i < subs.length; i++) {
         const sub = subs[i];
-        html += '<div class="sub-block collapsed" id="subblock-' + sub.id + '"><div class="sub-title" onclick="window.toggleSub(\'' + sub.id + '\', \'' + secId + '\')">' + escapeHtml(sub.name || '') + '</div><div class="sub-articles" id="subarticles-' + sub.id + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div></div>';
+        html += '<div class="sub-block collapsed" id="subblock-' + sub.id + '"><div class="sub-title" onclick="window.toggleSub(\'' + sub.id + '\', \'' + secId + '\', \'' + escapeHtml(sub.name || '') + '\')">' + escapeHtml(sub.name || '') + '</div><div class="sub-articles" id="subarticles-' + sub.id + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div></div>';
       }
       container.innerHTML = html;
     }
 
-    window.toggleSub = async function(subId, secId) {
+    window.toggleSub = async function(subId, secId, subName) {
       const block = document.getElementById('subblock-' + subId);
       const list = document.getElementById('subarticles-' + subId);
       if (!block || !list) return;
@@ -330,17 +332,22 @@
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
 
       const all = await loadAllArticles();
-      const subNameEl = block.querySelector('.sub-title');
-      const subName = subNameEl ? subNameEl.textContent.trim() : '';
       const secNames = getSectionNames(secId);
-      const subNames = [subId, subName].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+      const targetSubNames = [subName, subId].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+
+      console.log('Hledám články pro sekci:', secNames, 'podsekce:', targetSubNames);
+      console.log('Všechny články:', all.map(function(a) { return { title: a.title, section: a.section, subsection: a.subsection }; }));
 
       const articles = all.filter(function(a) {
         const aSec = norm(a.sectionId || a.section || '');
         if (!secNames.includes(aSec)) return false;
         const aSub = norm(a.subsectionId || a.subsection || '');
-        return subNames.includes(aSub);
+        const match = targetSubNames.includes(aSub);
+        console.log('Kontroluji:', a.title, '| sec:', aSec, '| sub:', aSub, '| match:', match);
+        return match;
       });
+
+      console.log('Nalezeno článků:', articles.length);
 
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
@@ -348,9 +355,10 @@
         let html = '';
         for (let i = 0; i < articles.length; i++) {
           const a = articles[i];
-          const artId = a.id || ''; // POUŽÍVÁME ID, NE SLUG
+          const artId = a.id || '';
           const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
-          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          // ODKAZ PŘES QUERY PARAMETR
+          html += '<a href="/article?id=' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         list.innerHTML = html;
       }
