@@ -17,6 +17,11 @@
     article { background: rgba(15,23,42,0.9); backdrop-filter: blur(16px); border: 1px solid #334155; border-radius: 16px; padding: 48px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
     .loading, .error { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 16px; }
     .error { color: #ef4444; }
+    .article-list { margin-top: 20px; }
+    .article-list a { display: block; padding: 14px 0; border-bottom: 1px solid #334155; color: #e2e8f0; text-decoration: none; transition: all 0.2s; }
+    .article-list a:hover { color: #ff6600; padding-left: 8px; }
+    .article-list a div { font-weight: 600; font-size: 16px; }
+    .article-list a span { font-size: 13px; color: #94a3b8; }
     .breadcrumb { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; color: #64748b; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1px; }
     .breadcrumb a { color: #ffcc66; text-decoration: none; }
     .breadcrumb a:hover { color: #ff6600; }
@@ -50,7 +55,7 @@
   <div class="stars" id="stars"></div>
   <div class="wrap">
     <a href="/" class="back-btn">← Zpět na hlavní stránku</a>
-    <article id="articleContainer"><div class="loading">Načítání článku...</div></article>
+    <article id="articleContainer"><div class="loading">Načítání...</div></article>
   </div>
   <div id="lightbox" class="lightbox"><button class="lightbox-close" id="lbClose">×</button><img id="lightboxImg" src="" alt=""></div>
   <script>
@@ -65,27 +70,40 @@
     async function fetchWithTimeout(url, ms) { const ctrl = new AbortController(); const id = setTimeout(function() { ctrl.abort(); }, ms); try { const r = await fetch(url, { signal: ctrl.signal }); clearTimeout(id); return r; } catch (e) { clearTimeout(id); throw e; } }
     function normalizeArticles(data) { if (Array.isArray(data)) return data; if (data && Array.isArray(data.articles)) return data.articles; if (data && typeof data === 'object') { const vals = Object.values(data); if (vals.length && vals[0] && vals[0].title) return vals; } return []; }
     
-    // ROBUSTNÍ EXTRAKCE ID z URL — bere z href i pathname
+    // Extrakce UUID z URL — hledá /article/UUID
     function getArticleId() {
-      const href = window.location.href;
-      const path = window.location.pathname;
-      // Zkusíme najít /article/ID v pathname nebo href
-      const m1 = path.match(/\/article\/([^\/\?#]+)/);
-      if (m1) return decodeURIComponent(m1[1]);
-      const m2 = href.match(/\/article\/([^\/\?#]+)/);
+      const m = window.location.href.match(/\/article\/([a-f0-9\-]{36})/i);
+      if (m) return m[1];
+      const m2 = window.location.pathname.match(/\/article\/([^\/]+)/);
       if (m2) return decodeURIComponent(m2[1]);
-      // Fallback na query param
-      const qp = new URLSearchParams(window.location.search).get('id');
-      if (qp) return qp;
       return '';
     }
 
-    async function loadArticle() {
-      const container = document.getElementById('articleContainer');
-      const slug = getArticleId();
-      console.log('Extracted ID:', slug, '| pathname:', window.location.pathname, '| href:', window.location.href);
-      if (!slug) { container.innerHTML = '<div class="error">Chybí identifikátor článku v URL.</div>'; return; }
-      
+    async function renderArticleList(container) {
+      try {
+        const r = await fetchWithTimeout('/api/articles/list', 5000);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        const all = normalizeArticles(data);
+        let html = '<h1 class="article-title">Všechny články</h1>';
+        if (!all.length) { html += '<div class="error">Žádné články v databázi</div>'; }
+        else {
+          html += '<div class="article-list">';
+          for (let i = 0; i < all.length; i++) {
+            const a = all[i];
+            const artId = a.id || '';
+            const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs') : '';
+            html += '<a href="/article/' + escapeHtml(artId) + '"><div>' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (dateStr ? '<span>' + dateStr + '</span>' : '') + '</a>';
+          }
+          html += '</div>';
+        }
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = '<div class="error">Chyba načítání článků</div>';
+      }
+    }
+
+    async function renderSingleArticle(container, slug) {
       try {
         const r = await fetchWithTimeout('/api/articles/list', 5000);
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -93,8 +111,7 @@
         const all = normalizeArticles(data);
         let a = all.find(function(x) { return (x.id || '').toString() === slug; });
         if (!a) a = all.find(function(x) { return (x.slug || '').toString() === slug; });
-        if (!a) throw new Error('Článek nenalezen');
-        
+        if (!a) { container.innerHTML = '<div class="error">Článek nenalezen.<br><small>ID: ' + escapeHtml(slug) + '</small></div>'; return; }
         document.title = (a.title ? a.title + ' | ' : '') + 'Moje diagnóza, můj vesmír';
         const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs', {day:'numeric', month:'long', year:'numeric'}) : '';
         const secName = a.section || a.sectionId || '';
@@ -105,8 +122,15 @@
         container.innerHTML = '<div class="breadcrumb">' + breadcrumb + '</div><h1 class="article-title">' + escapeHtml(a.title || 'Bez názvu') + '</h1><div class="article-meta">' + (dateStr ? '<span>📅 ' + dateStr + '</span>' : '') + (a.place ? '<span>📍 ' + escapeHtml(a.place) + '</span>' : '') + '</div><div class="article-content" id="articleContent">' + (a.content || '<p><em>Prázdný obsah</em></p>') + '</div><div class="article-footer"><a href="/" class="back-btn" style="margin:0">← Zpět</a><div class="share-row"><span>Sdílet:</span><a class="share-btn-small wa" href="https://wa.me/?text=' + encodeURIComponent((a.title || '') + ' - ' + window.location.href) + '" target="_blank" rel="noopener">WhatsApp</a></div></div>';
         document.querySelectorAll('.article-content img').forEach(function(img) { img.addEventListener('click', function() { openLightbox(img.src); }); });
       } catch (e) {
-        container.innerHTML = '<div class="error">' + escapeHtml(e.message) + '<br><a href="/" class="back-btn" style="margin-top:16px">← Zpět na hlavní stránku</a></div>';
+        container.innerHTML = '<div class="error">' + escapeHtml(e.message) + '<br><a href="/" class="back-btn" style="margin-top:16px">← Zpět</a></div>';
       }
+    }
+
+    async function loadArticle() {
+      const container = document.getElementById('articleContainer');
+      const slug = getArticleId();
+      if (!slug) { await renderArticleList(container); }
+      else { await renderSingleArticle(container, slug); }
     }
     loadArticle();
   });
