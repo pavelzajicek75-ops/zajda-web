@@ -1,4 +1,3 @@
-<!-- public/article.html -->
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -16,8 +15,11 @@
     .back-btn { display: inline-flex; align-items: center; gap: 6px; color: #ffcc66; text-decoration: none; font-size: 14px; font-weight: 500; margin-bottom: 24px; padding: 10px 20px; background: rgba(15,23,42,0.7); border: 1px solid rgba(255,102,0,0.3); border-radius: 30px; backdrop-filter: blur(10px); transition: all 0.3s; }
     .back-btn:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; transform: translateX(-4px); }
     article { background: rgba(15,23,42,0.9); backdrop-filter: blur(16px); border: 1px solid #334155; border-radius: 16px; padding: 48px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
-    .loading, .error { text-align: center; padding: 80px 20px; color: #94a3b8; font-size: 16px; }
+    .loading, .error { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 16px; }
     .error { color: #ef4444; }
+    .article-list { margin-top: 20px; }
+    .article-list a { display: block; padding: 12px 16px; margin-bottom: 8px; background: rgba(255,102,0,0.08); border: 1px solid rgba(255,102,0,0.2); border-radius: 10px; color: #ffcc66; text-decoration: none; transition: all 0.2s; }
+    .article-list a:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; padding-left: 20px; }
     .breadcrumb { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; color: #64748b; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1px; }
     .breadcrumb a { color: #ffcc66; text-decoration: none; }
     .breadcrumb a:hover { color: #ff6600; }
@@ -59,28 +61,54 @@
     const starsBox = document.getElementById('stars');
     if (starsBox) { const frag = document.createDocumentFragment(); for (let i = 0; i < 150; i++) { const s = document.createElement('div'); s.className = 'star'; s.style.left = Math.random() * 100 + '%'; s.style.top = Math.random() * 100 + '%'; s.style.setProperty('--dur', (3 + Math.random() * 4) + 's'); s.style.setProperty('--del', (Math.random() * 5) + 's'); frag.appendChild(s); } starsBox.appendChild(frag); }
     function escapeHtml(t) { if (t == null) return ''; return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-    function norm(v) { return String(v || '').toLowerCase().trim(); }
     const lb = document.getElementById('lightbox'), lbImg = document.getElementById('lightboxImg'), lbClose = document.getElementById('lbClose');
     function openLightbox(src) { lbImg.src = src; lb.classList.add('active'); document.body.style.overflow = 'hidden'; }
     function closeLightbox() { lb.classList.remove('active'); lbImg.src = ''; document.body.style.overflow = ''; }
     if (lb) lb.addEventListener('click', closeLightbox); if (lbClose) lbClose.addEventListener('click', function(e) { e.stopPropagation(); closeLightbox(); }); document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
     async function fetchWithTimeout(url, ms) { const ctrl = new AbortController(); const id = setTimeout(function() { ctrl.abort(); }, ms); try { const r = await fetch(url, { signal: ctrl.signal }); clearTimeout(id); return r; } catch (e) { clearTimeout(id); throw e; } }
     function normalizeArticles(data) { if (Array.isArray(data)) return data; if (data && Array.isArray(data.articles)) return data.articles; if (data && typeof data === 'object') { const vals = Object.values(data); if (vals.length && vals[0] && vals[0].title) return vals; } return []; }
+    
     async function loadArticle() {
       const container = document.getElementById('articleContainer');
-      const slug = decodeURIComponent(window.location.pathname.replace('/article/', '').replace(/\/$/, ''));
-      console.log('Article slug from URL:', slug);
-      if (!slug) { container.innerHTML = '<div class="error">Chybí identifikátor článku.</div>'; return; }
+      
+      // Získání ID z URL — vyzkoušíme všechny varianty
+      let slug = decodeURIComponent(window.location.pathname.replace('/article/', '').replace(/\/$/, ''));
+      if (!slug || slug === '/article' || slug === 'article') {
+        const params = new URLSearchParams(window.location.search);
+        slug = params.get('id') || params.get('slug') || '';
+      }
+      
       try {
         const r = await fetchWithTimeout('/api/articles/list', 5000);
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const data = await r.json();
         const all = normalizeArticles(data);
-        console.log('All article IDs:', all.map(function(x){ return x.id; }));
-        let a = all.find(function(x) { return String(x.id || '') === slug; });
-        if (!a) a = all.find(function(x) { return String(x.slug || '') === slug; });
-        if (!a) a = all.find(function(x) { return norm(x.title || '') === norm(slug); });
+        
+        // Pokud nemáme slug, zobrazíme seznam všech článků
+        if (!slug) {
+          let html = '<h1 class="article-title">Všechny články</h1>';
+          if (!all.length) {
+            html += '<div class="no-articles">Zatím žádné články</div>';
+          } else {
+            html += '<div class="article-list">';
+            for (let i = 0; i < all.length; i++) {
+              const a = all[i];
+              const artId = a.id || '';
+              html += '<a href="/article/' + escapeHtml(artId) + '">' + escapeHtml(a.title || 'Bez názvu') + '</a>';
+            }
+            html += '</div>';
+          }
+          container.innerHTML = html;
+          return;
+        }
+        
+        // Hledání článku podle ID, slug nebo title
+        let a = all.find(function(x) { return (x.id || '').toString() === slug; });
+        if (!a) a = all.find(function(x) { return (x.slug || '').toString() === slug; });
+        if (!a) a = all.find(function(x) { return (x.title || '').toString().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '') === slug.toLowerCase(); });
+        
         if (!a) throw new Error('Článek nenalezen');
+        
         document.title = (a.title ? a.title + ' | ' : '') + 'Moje diagnóza, můj vesmír';
         const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs', {day:'numeric', month:'long', year:'numeric'}) : '';
         const secName = a.section || a.sectionId || '';
@@ -91,7 +119,6 @@
         container.innerHTML = '<div class="breadcrumb">' + breadcrumb + '</div><h1 class="article-title">' + escapeHtml(a.title || 'Bez názvu') + '</h1><div class="article-meta">' + (dateStr ? '<span>📅 ' + dateStr + '</span>' : '') + (a.place ? '<span>📍 ' + escapeHtml(a.place) + '</span>' : '') + '</div><div class="article-content" id="articleContent">' + (a.content || '<p><em>Prázdný obsah</em></p>') + '</div><div class="article-footer"><a href="/" class="back-btn" style="margin:0">← Zpět</a><div class="share-row"><span>Sdílet:</span><a class="share-btn-small wa" href="https://wa.me/?text=' + encodeURIComponent((a.title || '') + ' - ' + window.location.href) + '" target="_blank" rel="noopener">WhatsApp</a></div></div>';
         document.querySelectorAll('.article-content img').forEach(function(img) { img.addEventListener('click', function() { openLightbox(img.src); }); });
       } catch (e) {
-        console.error('Chyba:', e);
         container.innerHTML = '<div class="error">' + escapeHtml(e.message) + '<br><a href="/" class="back-btn" style="margin-top:16px">← Zpět na hlavní stránku</a></div>';
       }
     }
