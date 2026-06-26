@@ -176,6 +176,7 @@
           const vals = Object.values(data);
           if (vals.length && vals[0] && vals[0].title) arr = vals;
         }
+        console.log('[Aktuality] Články celkem:', arr.length, arr);
         const latest = arr.slice(0, 3);
         if (!latest.length) {
           box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
@@ -184,7 +185,7 @@
         let html = '<h3>Poslední aktuality</h3>';
         for (let i = 0; i < latest.length; i++) {
           const a = latest[i];
-          const artId = a.id || '';
+          const artId = a.id || a.slug || '';
           const title = a.title || 'Bez názvu';
           const sec = a.section || a.sectionId || '';
           const sub = a.subsection || a.subsectionId || '';
@@ -194,6 +195,7 @@
           if (sec) parts.push(sec);
           if (sub) parts.push(sub);
           const meta = parts.join(' > ') + (dateStr ? ' • ' + dateStr : '');
+          console.log('[Aktuality] Generuji odkaz: /article/' + artId, 'title:', title);
           html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
         }
         box.innerHTML = html;
@@ -216,27 +218,9 @@
 
     function getSectionNames(secId) {
       const sec = SECTIONS.find(function(s) { return s.id === secId; });
-      if (!sec) return [norm(secId)];
+      if (!sec) return [secId.toLowerCase()];
       const names = [sec.id, sec.name, sec.nameEn].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
       return names;
-    }
-
-    function articleMatchesSection(a, secId) {
-      const secNames = getSectionNames(secId);
-      const vals = [a.sectionId, a.section, a.section_id, a.sectionName, a.section_name].map(norm);
-      for (let i = 0; i < vals.length; i++) {
-        if (secNames.indexOf(vals[i]) !== -1) return true;
-      }
-      return false;
-    }
-
-    function articleMatchesSubsection(a, subId, subName) {
-      const subNames = [subId, subName].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
-      const vals = [a.subsectionId, a.subsection, a.subsection_id, a.subsectionName, a.subsection_name].map(norm);
-      for (let i = 0; i < vals.length; i++) {
-        if (subNames.indexOf(vals[i]) !== -1) return true;
-      }
-      return false;
     }
 
     async function loadSectionCover(sec) {
@@ -292,9 +276,18 @@
           const contentEl = document.getElementById('content-' + sec.id);
           if (!contentEl || contentEl.dataset.loaded) return;
           const subs = await loadSubsections(sec.id);
+          console.log('[Sekce', sec.id, '] Podsekce:', subs);
           if (sec.id === 'about' || !subs.length) {
             const all = await loadAllArticles();
-            const articles = all.filter(function(a) { return articleMatchesSection(a, sec.id); });
+            const secNames = getSectionNames(sec.id);
+            console.log('[Sekce', sec.id, '] Hledám sekce:', secNames, 'Všechny články:', all);
+            const articles = all.filter(function(a) {
+              const aSec = norm(a.sectionId || a.section || '');
+              const match = secNames.includes(aSec);
+              console.log('  Článek:', a.title, '| section:', a.section, '| sectionId:', a.sectionId, '| norm:', aSec, '| match:', match);
+              return match;
+            });
+            console.log('[Sekce', sec.id, '] Nalezeno článků:', articles.length);
             renderArticles(contentEl, articles, sec.name);
           } else {
             renderSubsections(contentEl, subs, sec.id);
@@ -313,7 +306,7 @@
         html += '<div class="sub-articles" style="max-height:240px">';
         for (let i = 0; i < articles.length; i++) {
           const a = articles[i];
-          const artId = a.id || '';
+          const artId = a.id || a.slug || '';
           const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
           html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
@@ -346,11 +339,23 @@
       const all = await loadAllArticles();
       const subNameEl = block.querySelector('.sub-title');
       const subName = subNameEl ? subNameEl.textContent.trim() : '';
+      const secNames = getSectionNames(secId);
+      const subNames = [subId, subName].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+
+      console.log('[toggleSub] secId:', secId, '| subId:', subId, '| subName:', subName);
+      console.log('[toggleSub] secNames:', secNames, '| subNames:', subNames);
+      console.log('[toggleSub] Všechny články:', all.length, all);
 
       const articles = all.filter(function(a) {
-        if (!articleMatchesSection(a, secId)) return false;
-        return articleMatchesSubsection(a, subId, subName);
+        const aSec = norm(a.sectionId || a.section || '');
+        const aSub = norm(a.subsectionId || a.subsection || '');
+        const secMatch = secNames.includes(aSec);
+        const subMatch = subNames.includes(aSub);
+        console.log('  Článek:', a.title, '| sec:', a.section, '(', aSec, ')', '| sub:', a.subsection, '(', aSub, ')', '| secMatch:', secMatch, '| subMatch:', subMatch);
+        return secMatch && subMatch;
       });
+
+      console.log('[toggleSub] Nalezeno:', articles.length, articles);
 
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
@@ -358,7 +363,7 @@
         let html = '';
         for (let i = 0; i < articles.length; i++) {
           const a = articles[i];
-          const artId = a.id || '';
+          const artId = a.id || a.slug || '';
           const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
           html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
