@@ -70,12 +70,20 @@
     async function fetchWithTimeout(url, ms) { const ctrl = new AbortController(); const id = setTimeout(function() { ctrl.abort(); }, ms); try { const r = await fetch(url, { signal: ctrl.signal }); clearTimeout(id); return r; } catch (e) { clearTimeout(id); throw e; } }
     function normalizeArticles(data) { if (Array.isArray(data)) return data; if (data && Array.isArray(data.articles)) return data.articles; if (data && typeof data === 'object') { const vals = Object.values(data); if (vals.length && vals[0] && vals[0].title) return vals; } return []; }
     
-    // Extrakce UUID z URL — hledá /article/UUID
+    // EXTRAKCE ID — zkusíme všechny možnosti
     function getArticleId() {
-      const m = window.location.href.match(/\/article\/([a-f0-9\-]{36})/i);
-      if (m) return m[1];
-      const m2 = window.location.pathname.match(/\/article\/([^\/]+)/);
-      if (m2) return decodeURIComponent(m2[1]);
+      // 1. Z pathname: /article/ID
+      let m = window.location.pathname.match(/\/article\/([^\/]+)/);
+      if (m && m[1] && m[1] !== 'article.html') return decodeURIComponent(m[1]);
+      // 2. Z href (celá URL)
+      m = window.location.href.match(/\/article\/([^\/\?#]+)/);
+      if (m && m[1] && m[1] !== 'article.html') return decodeURIComponent(m[1]);
+      // 3. Z query parametru ?id=
+      const qp = new URLSearchParams(window.location.search).get('id');
+      if (qp) return qp;
+      // 4. Z hashe #id
+      const hash = window.location.hash.replace('#', '');
+      if (hash) return hash;
       return '';
     }
 
@@ -111,7 +119,7 @@
         const all = normalizeArticles(data);
         let a = all.find(function(x) { return (x.id || '').toString() === slug; });
         if (!a) a = all.find(function(x) { return (x.slug || '').toString() === slug; });
-        if (!a) { container.innerHTML = '<div class="error">Článek nenalezen.<br><small>ID: ' + escapeHtml(slug) + '</small></div>'; return; }
+        if (!a) { container.innerHTML = '<div class="error">Článek nenalezen.<br><small>ID: ' + escapeHtml(slug) + '</small><br><a href="/" class="back-btn" style="margin-top:16px">← Zpět</a></div>'; return; }
         document.title = (a.title ? a.title + ' | ' : '') + 'Moje diagnóza, můj vesmír';
         const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs', {day:'numeric', month:'long', year:'numeric'}) : '';
         const secName = a.section || a.sectionId || '';
@@ -129,6 +137,7 @@
     async function loadArticle() {
       const container = document.getElementById('articleContainer');
       const slug = getArticleId();
+      console.log('[article.html] Extracted ID:', slug, '| pathname:', window.location.pathname, '| href:', window.location.href);
       if (!slug) { await renderArticleList(container); }
       else { await renderSingleArticle(container, slug); }
     }
