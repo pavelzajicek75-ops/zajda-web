@@ -44,7 +44,8 @@
     .close-btn { position: absolute; top: 8px; right: 12px; background: rgba(255,255,255,0.1); border: none; color: #ffcc66; font-size: 20px; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 10; }
     .close-btn:hover { background: rgba(255,102,0,0.3); }
     .sub-block { margin-bottom: 10px; }
-    .sub-title { color: #ff6600; font-size: 14px; font-weight: 600; padding: 6px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); }
+    .sub-title { color: #ff6600; font-size: 14px; font-weight: 600; padding: 6px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.2s; }
+    .sub-title:hover { color: #ffcc66; text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 4px; }
     .sub-title::after { content: '▼'; font-size: 10px; color: #64748b; transition: transform 0.2s; }
     .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
     .sub-articles { max-height: 200px; overflow-y: auto; transition: max-height 0.3s ease; padding-top: 4px; }
@@ -194,8 +195,7 @@
           if (sec) parts.push(sec);
           if (sub) parts.push(sub);
           const meta = parts.join(' > ') + (dateStr ? ' • ' + dateStr : '');
-          // ODKAZ PŘES QUERY PARAMETR — spolehlivější než /article/ID
-          html += '<a class="latest-item" href="/article?id=' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
+          html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
         }
         box.innerHTML = html;
         const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
@@ -302,8 +302,7 @@
           const a = articles[i];
           const artId = a.id || '';
           const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
-          // ODKAZ PŘES QUERY PARAMETR
-          html += '<a href="/article?id=' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         html += '</div>';
       }
@@ -315,9 +314,25 @@
       if (!subs.length) { html += '<div class="no-articles">Žádné podsekce</div>'; container.innerHTML = html; return; }
       for (let i = 0; i < subs.length; i++) {
         const sub = subs[i];
-        html += '<div class="sub-block collapsed" id="subblock-' + sub.id + '"><div class="sub-title" onclick="window.toggleSub(\'' + sub.id + '\', \'' + secId + '\', \'' + escapeHtml(sub.name || '') + '\')">' + escapeHtml(sub.name || '') + '</div><div class="sub-articles" id="subarticles-' + sub.id + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div></div>';
+        const subId = sub.id || '';
+        const subName = sub.name || '';
+        html += '<div class="sub-block collapsed" id="subblock-' + subId + '">' +
+          '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sub-name="' + escapeHtml(subName) + '" data-sec-id="' + escapeHtml(secId) + '">' + escapeHtml(subName) + '</div>' +
+          '<div class="sub-articles" id="subarticles-' + subId + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
+          '</div>';
       }
       container.innerHTML = html;
+
+      /* Event listenery na každý .sub-title */
+      container.querySelectorAll('.sub-title').forEach(function(titleEl) {
+        titleEl.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const sid = this.dataset.subId;
+          const sname = this.dataset.subName;
+          const scid = this.dataset.secId;
+          window.toggleSub(sid, scid, sname);
+        });
+      });
     }
 
     window.toggleSub = async function(subId, secId, subName) {
@@ -333,21 +348,32 @@
 
       const all = await loadAllArticles();
       const secNames = getSectionNames(secId);
-      const targetSubNames = [subName, subId].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
 
-      console.log('Hledám články pro sekci:', secNames, 'podsekce:', targetSubNames);
-      console.log('Všechny články:', all.map(function(a) { return { title: a.title, section: a.section, subsection: a.subsection }; }));
+      /* Všechna možná jména podsekce — ID, název, UUID */
+      const targetSubs = [subId, subName].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+
+      console.log('[toggleSub] Hledám:', { secNames: secNames, targetSubs: targetSubs });
+      console.log('[toggleSub] Všechny články:', all.map(function(a) {
+        return { id: a.id, title: a.title, section: a.section, sectionId: a.sectionId, subsection: a.subsection, subsectionId: a.subsectionId };
+      }));
 
       const articles = all.filter(function(a) {
-        const aSec = norm(a.sectionId || a.section || '');
-        if (!secNames.includes(aSec)) return false;
-        const aSub = norm(a.subsectionId || a.subsection || '');
-        const match = targetSubNames.includes(aSub);
-        console.log('Kontroluji:', a.title, '| sec:', aSec, '| sub:', aSub, '| match:', match);
-        return match;
+        /* Kontrola sekce — porovnáme všechny možné fieldy */
+        const aSecId = norm(a.sectionId);
+        const aSec = norm(a.section);
+        const secMatch = secNames.includes(aSecId) || secNames.includes(aSec);
+        if (!secMatch) return false;
+
+        /* Kontrola podsekce — porovnáme všechny možné fieldy */
+        const aSubId = norm(a.subsectionId);
+        const aSub = norm(a.subsection);
+        const subMatch = targetSubs.includes(aSubId) || targetSubs.includes(aSub);
+
+        console.log('[toggleSub] Článek "' + a.title + '": secMatch=' + secMatch + ' subMatch=' + subMatch, { aSecId: aSecId, aSec: aSec, aSubId: aSubId, aSub: aSub });
+        return subMatch;
       });
 
-      console.log('Nalezeno článků:', articles.length);
+      console.log('[toggleSub] Nalezeno:', articles.length);
 
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
@@ -357,8 +383,7 @@
           const a = articles[i];
           const artId = a.id || '';
           const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
-          // ODKAZ PŘES QUERY PARAMETR
-          html += '<a href="/article?id=' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         list.innerHTML = html;
       }
