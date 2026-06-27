@@ -155,41 +155,50 @@
       }, 5000);
     }
 
-    /* === Aktuality === */
-    async function loadLatest() {
-      const box = document.getElementById('latestPanel');
-      if (!box) return;
+    /* === Cache pro články (načteme jednou) === */
+    let cachedArticles = null;
+    async function getAllArticles() {
+      if (cachedArticles) return cachedArticles;
       const controller = new AbortController();
       const timeout = setTimeout(function() { controller.abort(); }, 5000);
       try {
         const r = await fetch('/api/articles/list', { signal: controller.signal });
         clearTimeout(timeout);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) return [];
         const data = await r.json();
-        const arr = Array.isArray(data) ? data : [];
-        const latest = arr.slice(0, 3);
-        if (!latest.length) {
-          box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
-          return;
-        }
-        let html = '<h3>Poslední aktuality</h3>';
-        for (let i = 0; i < latest.length; i++) {
-          const a = latest[i];
-          const artId = a.id || '';
-          const title = a.title || 'Bez názvu';
-          const date = a.created || a.date || '';
-          const dateStr = date ? new Date(date).toLocaleDateString('cs') : '';
-          const meta = dateStr ? '• ' + dateStr : '';
-          html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
-        }
-        box.innerHTML = html;
-        const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
-        const waBtn = document.getElementById('shareWhatsApp');
-        if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
+        cachedArticles = Array.isArray(data) ? data : [];
+        return cachedArticles;
       } catch (e) {
-        console.error('Aktuality chyba:', e);
-        box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Chyba načítání</div>';
+        clearTimeout(timeout);
+        console.error('Chyba načítání článků:', e);
+        return [];
       }
+    }
+
+    /* === Aktuality === */
+    async function loadLatest() {
+      const box = document.getElementById('latestPanel');
+      if (!box) return;
+      const articles = await getAllArticles();
+      const latest = articles.slice(0, 3);
+      if (!latest.length) {
+        box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
+        return;
+      }
+      let html = '<h3>Poslední aktuality</h3>';
+      for (let i = 0; i < latest.length; i++) {
+        const a = latest[i];
+        const artId = a.id || '';
+        const title = a.title || 'Bez názvu';
+        const date = a.created || a.date || '';
+        const dateStr = date ? new Date(date).toLocaleDateString('cs') : '';
+        const meta = dateStr ? '• ' + dateStr : '';
+        html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
+      }
+      box.innerHTML = html;
+      const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
+      const waBtn = document.getElementById('shareWhatsApp');
+      if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
     }
 
     /* === Sekce === */
@@ -214,15 +223,6 @@
         const r = await fetch('/api/subsections/by-section?sectionId=' + secId);
         if (!r.ok) return [];
         return await r.json();
-      } catch { return []; }
-    }
-
-    async function loadAllArticles() {
-      try {
-        const r = await fetch('/api/articles/list');
-        if (!r.ok) return [];
-        const data = await r.json();
-        return Array.isArray(data) ? data : [];
       } catch { return []; }
     }
 
@@ -257,7 +257,7 @@
           if (!contentEl || contentEl.dataset.loaded) return;
           const subs = await loadSubsections(sec.id);
           if (sec.id === 'about' || !subs.length) {
-            const all = await loadAllArticles();
+            const all = await getAllArticles();
             const articles = all.filter(function(a) { return a.sectionId === sec.id; });
             renderArticles(contentEl, articles, sec.name);
           } else {
@@ -294,7 +294,7 @@
         const subId = sub.id || '';
         const subName = sub.name || '';
         html += '<div class="sub-block collapsed" id="subblock-' + subId + '">' +
-          '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sub-name="' + escapeHtml(subName) + '" data-sec-id="' + escapeHtml(secId) + '">' + escapeHtml(subName) + '</div>' +
+          '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sec-id="' + escapeHtml(secId) + '">' + escapeHtml(subName) + '</div>' +
           '<div class="sub-articles" id="subarticles-' + subId + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
           '</div>';
       }
@@ -304,14 +304,13 @@
         titleEl.addEventListener('click', function(e) {
           e.stopPropagation();
           const sid = this.dataset.subId;
-          const sname = this.dataset.subName;
           const scid = this.dataset.secId;
-          window.toggleSub(sid, scid, sname);
+          window.toggleSub(sid, scid);
         });
       });
     }
 
-    window.toggleSub = async function(subId, secId, subName) {
+    window.toggleSub = async function(subId, secId) {
       const block = document.getElementById('subblock-' + subId);
       const list = document.getElementById('subarticles-' + subId);
       if (!block || !list) return;
@@ -322,7 +321,7 @@
       if (list.dataset.loaded) return;
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
 
-      const all = await loadAllArticles();
+      const all = await getAllArticles();
       const articles = all.filter(function(a) {
         return a.sectionId === secId && a.subsectionId === subId;
       });
