@@ -18,7 +18,7 @@
     .latest-panel h3 { color: #ffcc66; font-size: 16px; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; }
     .latest-panel h3::before { content: '◆'; color: #ff6600; }
     .latest-item { display: block; color: #e2e8f0; text-decoration: none; padding: 0.6rem 0; border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 14px; transition: all 0.2s; }
-    .latest-item:hover { color: #ff6600; padding-left: 6px; }
+    .latest-item:hover { color: #ff6600; padding-left: 6px; text-shadow: 0 0 12px rgba(255,102,0,0.4); }
     .latest-item:last-child { border-bottom: none; }
     .latest-item small { color: #94a3b8; font-size: 12px; display: block; margin-top: 2px; }
     .latest-empty { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
@@ -51,7 +51,7 @@
     .sub-articles { max-height: 200px; overflow-y: auto; transition: max-height 0.3s ease; padding-top: 4px; }
     .sub-block.collapsed .sub-articles { max-height: 0; overflow: hidden; padding-top: 0; }
     .sub-articles a { display: block; padding: 5px 0 5px 12px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; }
-    .sub-articles a:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; }
+    .sub-articles a:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; text-shadow: 0 0 10px rgba(255,102,0,0.3); }
     .sub-articles a span { font-size: 12px; color: #94a3b8; display: block; margin-top: 2px; }
     .no-articles { color: #64748b; font-size: 13px; padding: 8px 0; font-style: italic; }
     .share-bar { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; gap: 10px; }
@@ -121,10 +121,6 @@
       return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    function norm(v) {
-      return String(v || '').toLowerCase().trim();
-    }
-
     /* === Citáty === */
     async function loadQuotes() {
       try { const r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
@@ -169,14 +165,8 @@
         const r = await fetch('/api/articles/list', { signal: controller.signal });
         clearTimeout(timeout);
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        let data = await r.json();
-        let arr = [];
-        if (Array.isArray(data)) arr = data;
-        else if (data && Array.isArray(data.articles)) arr = data.articles;
-        else if (data && typeof data === 'object') {
-          const vals = Object.values(data);
-          if (vals.length && vals[0] && vals[0].title) arr = vals;
-        }
+        const data = await r.json();
+        const arr = Array.isArray(data) ? data : [];
         const latest = arr.slice(0, 3);
         if (!latest.length) {
           box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
@@ -187,14 +177,9 @@
           const a = latest[i];
           const artId = a.id || '';
           const title = a.title || 'Bez názvu';
-          const sec = a.section || a.sectionId || '';
-          const sub = a.subsection || a.subsectionId || '';
-          const date = a.date || a.created || '';
+          const date = a.created || a.date || '';
           const dateStr = date ? new Date(date).toLocaleDateString('cs') : '';
-          const parts = [];
-          if (sec) parts.push(sec);
-          if (sub) parts.push(sub);
-          const meta = parts.join(' > ') + (dateStr ? ' • ' + dateStr : '');
+          const meta = dateStr ? '• ' + dateStr : '';
           html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
         }
         box.innerHTML = html;
@@ -215,33 +200,29 @@
       { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
     ];
 
-    function getSectionNames(secId) {
-      const sec = SECTIONS.find(function(s) { return s.id === secId; });
-      if (!sec) return [secId.toLowerCase()];
-      const names = [sec.id, sec.name, sec.nameEn].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
-      return names;
+    async function loadSectionCover(sec) {
+      try {
+        const r = await fetch('/api/sections/cover?sectionId=' + sec.id);
+        if (!r.ok) return '';
+        const d = await r.json();
+        return d.url || '';
+      } catch { return ''; }
     }
 
-    async function loadSectionCover(sec) {
-      try { const r = await fetch('/api/sections/cover?sectionId=' + sec.id); if (!r.ok) return ''; const d = await r.json(); return d.coverUrl || d.url || ''; }
-      catch { return ''; }
-    }
     async function loadSubsections(secId) {
-      try { const r = await fetch('/api/subsections/by-section?sectionId=' + secId); if (!r.ok) return []; return await r.json(); }
-      catch { return []; }
+      try {
+        const r = await fetch('/api/subsections/by-section?sectionId=' + secId);
+        if (!r.ok) return [];
+        return await r.json();
+      } catch { return []; }
     }
+
     async function loadAllArticles() {
       try {
         const r = await fetch('/api/articles/list');
         if (!r.ok) return [];
-        let data = await r.json();
-        if (Array.isArray(data)) return data;
-        if (data && Array.isArray(data.articles)) return data.articles;
-        if (data && typeof data === 'object') {
-          const vals = Object.values(data);
-          if (vals.length && vals[0] && vals[0].title) return vals;
-        }
-        return [];
+        const data = await r.json();
+        return Array.isArray(data) ? data : [];
       } catch { return []; }
     }
 
@@ -277,11 +258,7 @@
           const subs = await loadSubsections(sec.id);
           if (sec.id === 'about' || !subs.length) {
             const all = await loadAllArticles();
-            const secNames = getSectionNames(sec.id);
-            const articles = all.filter(function(a) {
-              const aSec = norm(a.sectionId || a.section || '');
-              return secNames.includes(aSec);
-            });
+            const articles = all.filter(function(a) { return a.sectionId === sec.id; });
             renderArticles(contentEl, articles, sec.name);
           } else {
             renderSubsections(contentEl, subs, sec.id);
@@ -323,7 +300,6 @@
       }
       container.innerHTML = html;
 
-      /* Event listenery na každý .sub-title */
       container.querySelectorAll('.sub-title').forEach(function(titleEl) {
         titleEl.addEventListener('click', function(e) {
           e.stopPropagation();
@@ -347,33 +323,9 @@
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
 
       const all = await loadAllArticles();
-      const secNames = getSectionNames(secId);
-
-      /* Všechna možná jména podsekce — ID, název, UUID */
-      const targetSubs = [subId, subName].map(norm).filter(function(v, i, a) { return v && a.indexOf(v) === i; });
-
-      console.log('[toggleSub] Hledám:', { secNames: secNames, targetSubs: targetSubs });
-      console.log('[toggleSub] Všechny články:', all.map(function(a) {
-        return { id: a.id, title: a.title, section: a.section, sectionId: a.sectionId, subsection: a.subsection, subsectionId: a.subsectionId };
-      }));
-
       const articles = all.filter(function(a) {
-        /* Kontrola sekce — porovnáme všechny možné fieldy */
-        const aSecId = norm(a.sectionId);
-        const aSec = norm(a.section);
-        const secMatch = secNames.includes(aSecId) || secNames.includes(aSec);
-        if (!secMatch) return false;
-
-        /* Kontrola podsekce — porovnáme všechny možné fieldy */
-        const aSubId = norm(a.subsectionId);
-        const aSub = norm(a.subsection);
-        const subMatch = targetSubs.includes(aSubId) || targetSubs.includes(aSub);
-
-        console.log('[toggleSub] Článek "' + a.title + '": secMatch=' + secMatch + ' subMatch=' + subMatch, { aSecId: aSecId, aSec: aSec, aSubId: aSubId, aSub: aSub });
-        return subMatch;
+        return a.sectionId === secId && a.subsectionId === subId;
       });
-
-      console.log('[toggleSub] Nalezeno:', articles.length);
 
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
@@ -395,7 +347,7 @@
     if (backdrop) backdrop.addEventListener('click', window.closeAllCardsWrapper);
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') window.closeAllCardsWrapper(); });
 
-    /* Spustit vše najednou */
+    /* Spustit */
     startQuotes();
     loadLatest();
     buildSections();
