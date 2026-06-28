@@ -2,147 +2,213 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
+  <title>Článek — Moje diagnóza, můj vesmír</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Článek | Moje diagnóza, můj vesmír</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #000; color: #e2e8f0; min-height: 100vh; position: relative; overflow-x: hidden; line-height: 1.7; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #000; color: #fff; overflow-x: hidden; min-height: 100vh; position: relative; }
     .bg { position: fixed; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 20%, #0a0a1a, #000 80%), radial-gradient(circle at 80% 80%, rgba(60,20,100,0.3), transparent 60%), radial-gradient(circle at 20% 70%, rgba(0,60,120,0.25), transparent 60%); background-blend-mode: screen; }
     .stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
     .star { position: absolute; width: 2px; height: 2px; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--dur) ease-in-out infinite; animation-delay: var(--del); }
     @keyframes twinkle { 0%,100% { opacity: 0.1; transform: scale(0.5); } 50% { opacity: 0.9; transform: scale(1); } }
-    .wrap { position: relative; z-index: 10; max-width: 860px; margin: 0 auto; padding: 40px 20px 60px; }
-    .back-btn { display: inline-flex; align-items: center; gap: 6px; color: #ffcc66; text-decoration: none; font-size: 14px; font-weight: 500; margin-bottom: 24px; padding: 10px 20px; background: rgba(15,23,42,0.7); border: 1px solid rgba(255,102,0,0.3); border-radius: 30px; backdrop-filter: blur(10px); transition: all 0.3s; }
-    .back-btn:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; transform: translateX(-4px); }
-    article { background: rgba(15,23,42,0.9); backdrop-filter: blur(16px); border: 1px solid #334155; border-radius: 16px; padding: 48px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
-    .loading, .error { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 16px; }
-    .error { color: #ef4444; }
-    .article-list { margin-top: 20px; }
-    .article-list a { display: block; padding: 14px 0; border-bottom: 1px solid #334155; color: #e2e8f0; text-decoration: none; transition: all 0.2s; }
-    .article-list a:hover { color: #ff6600; padding-left: 8px; }
-    .article-list a div { font-weight: 600; font-size: 16px; }
-    .article-list a span { font-size: 13px; color: #94a3b8; }
-    .breadcrumb { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12px; color: #64748b; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 1px; }
-    .breadcrumb a { color: #ffcc66; text-decoration: none; }
-    .breadcrumb a:hover { color: #ff6600; }
-    .breadcrumb span { color: #475569; }
-    .article-title { font-size: clamp(28px, 5vw, 44px); font-weight: 800; color: #ffcc66; line-height: 1.15; margin-bottom: 20px; text-shadow: 0 2px 16px rgba(0,0,0,0.8); }
-    .article-meta { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; color: #94a3b8; font-size: 14px; margin-bottom: 40px; padding-bottom: 28px; border-bottom: 1px solid #334155; }
-    .article-content { font-size: 17px; line-height: 1.9; color: #e2e8f0; }
-    .article-content p { margin-bottom: 1.3em; }
-    .article-content h2, .article-content h3 { color: #ffcc66; margin: 1.8em 0 0.6em; line-height: 1.3; }
-    .article-content h2 { font-size: 26px; border-bottom: 1px solid rgba(255,102,0,0.25); padding-bottom: 10px; }
-    .article-content h3 { font-size: 21px; color: #ffb366; }
-    .article-content a { color: #60a5fa; text-decoration: underline; }
-    .article-content blockquote { border-left: 4px solid #ff6600; margin: 1.6em 0; padding: 1.2em 1.6em; background: rgba(255,102,0,0.06); border-radius: 0 10px 10px 0; font-style: italic; color: #cbd5e1; }
-    .article-content img { max-width: 100%; height: auto; border-radius: 12px; margin: 1.8em auto; display: block; cursor: zoom-in; border: 1px solid #334155; transition: transform 0.3s, box-shadow 0.3s; }
-    .article-content img:hover { transform: scale(1.015); box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
-    .article-footer { margin-top: 50px; padding-top: 30px; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-    .share-row { display: flex; gap: 10px; align-items: center; }
-    .share-row span { color: #64748b; font-size: 13px; }
-    .share-btn-small { padding: 6px 14px; border-radius: 20px; font-size: 13px; text-decoration: none; color: #ffcc66; background: rgba(255,102,0,0.1); border: 1px solid rgba(255,102,0,0.3); }
-    .share-btn-small:hover { background: rgba(255,102,0,0.25); }
-    .share-btn-small.wa { color: #25d366; border-color: rgba(37,211,102,0.3); }
-    .lightbox { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.95); align-items: center; justify-content: center; cursor: zoom-out; padding: 20px; }
-    .lightbox.active { display: flex; }
-    .lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px; cursor: default; }
-    .lightbox-close { position: absolute; top: 20px; right: 30px; color: #ffcc66; font-size: 36px; cursor: pointer; background: none; border: none; line-height: 1; }
-    @media (max-width: 640px) { article { padding: 28px 20px; } .article-content { font-size: 16px; } .article-footer { flex-direction: column; align-items: flex-start; } }
+
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn { display: inline-flex; align-items: center; gap: 8px; background: rgba(15,23,42,0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,102,0,0.3); color: #ffcc66; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none; transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .back-btn:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; transform: translateX(-3px); }
+    .nav-title { font-size: 18px; font-weight: 700; color: #ff6600; text-shadow: 0 0 20px rgba(255,102,0,0.5); letter-spacing: 1px; text-decoration: none; }
+    .nav-title:hover { color: #ffcc66; text-shadow: 0 0 25px rgba(255,204,102,0.7); }
+
+    .article-container { position: relative; z-index: 10; max-width: 800px; margin: 0 auto; padding: 20px 24px 80px; }
+
+    .article-loading { text-align: center; padding: 80px 20px; color: #64748b; font-size: 18px; }
+    .article-loading .spinner { display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(255,102,0,0.2); border-top-color: #ff6600; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .article-notfound { text-align: center; padding: 80px 20px; }
+    .article-notfound h2 { font-size: 28px; color: #ff6600; margin-bottom: 12px; }
+    .article-notfound p { color: #94a3b8; font-size: 16px; }
+
+    .article-header { text-align: center; margin-bottom: 32px; }
+    .article-title { font-size: clamp(26px, 4vw, 42px); font-weight: 700; color: #ffcc66; text-shadow: 0 0 30px rgba(255,204,102,0.4); line-height: 1.3; margin-bottom: 12px; }
+    .article-meta { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+    .article-meta .meta-item { display: inline-flex; align-items: center; gap: 6px; color: #94a3b8; font-size: 14px; }
+    .article-meta .meta-item::before { content: '◆'; color: #ff6600; font-size: 10px; }
+    .article-meta .meta-item:first-child::before { display: none; }
+    .article-meta .meta-badge { background: rgba(255,102,0,0.15); border: 1px solid rgba(255,102,0,0.3); color: #ffcc66; padding: 3px 12px; border-radius: 20px; font-size: 13px; }
+
+    .article-divider { width: 60%; max-width: 300px; height: 1px; margin: 0 auto 32px; background: linear-gradient(to right, transparent, rgba(255,102,0,0.5), transparent); }
+
+    .article-body { color: #e2e8f0; font-size: 17px; line-height: 1.8; }
+    .article-body p { margin-bottom: 18px; }
+    .article-body h2 { color: #ffcc66; font-size: 24px; margin: 28px 0 14px; text-shadow: 0 0 15px rgba(255,204,102,0.3); }
+    .article-body h3 { color: #ffb366; font-size: 20px; margin: 24px 0 12px; }
+    .article-body img { max-width: 100%; height: auto; border-radius: 12px; margin: 20px 0; cursor: zoom-in; box-shadow: 0 4px 20px rgba(0,0,0,0.6); transition: transform 0.3s, box-shadow 0.3s; }
+    .article-body img:hover { transform: scale(1.02); box-shadow: 0 6px 30px rgba(255,102,0,0.3); }
+    .article-body a { color: #ff6600; text-decoration: none; border-bottom: 1px solid rgba(255,102,0,0.3); transition: all 0.2s; }
+    .article-body a:hover { color: #ffcc66; border-bottom-color: #ffcc66; text-shadow: 0 0 10px rgba(255,204,102,0.4); }
+    .article-body ul, .article-body ol { margin: 14px 0 18px 24px; }
+    .article-body li { margin-bottom: 8px; }
+    .article-body blockquote { border-left: 3px solid #ff6600; padding: 12px 20px; margin: 20px 0; background: rgba(255,102,0,0.05); border-radius: 0 8px 8px 0; color: #ffb366; font-style: italic; }
+    .article-body code { background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 4px; font-size: 15px; color: #ffcc66; }
+    .article-body pre { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,102,0,0.2); border-radius: 8px; padding: 16px; overflow-x: auto; margin: 16px 0; }
+    .article-body pre code { background: none; padding: 0; }
+    .article-body hr { border: none; height: 1px; background: linear-gradient(to right, transparent, rgba(255,102,0,0.3), transparent); margin: 28px 0; }
+    .article-body table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+    .article-body th, .article-body td { border: 1px solid rgba(255,102,0,0.2); padding: 10px 14px; text-align: left; }
+    .article-body th { background: rgba(255,102,0,0.1); color: #ffcc66; }
+
+    .article-footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,102,0,0.2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .share-bar-inline { display: flex; gap: 10px; flex-wrap: wrap; }
+    .share-btn { background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,102,0,0.3); color: #ffcc66; padding: 8px 16px; border-radius: 30px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .share-btn:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; transform: translateY(-2px); }
+    .share-btn.wa { color: #25d366; border-color: rgba(37,211,102,0.3); }
+    .share-btn.wa:hover { background: rgba(37,211,102,0.15); border-color: #25d366; }
+
+    .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+    .lightbox-overlay.open { display: flex; }
+    .lightbox-overlay img { max-width: 92vw; max-height: 92vh; border-radius: 8px; box-shadow: 0 0 50px rgba(255,102,0,0.3); }
+
+    @media (max-width: 700px) {
+      .nav-bar { padding: 16px 20px; }
+      .article-container { padding: 16px 16px 60px; }
+      .article-body { font-size: 16px; }
+      .article-footer { flex-direction: column; align-items: stretch; }
+      .share-bar-inline { justify-content: center; }
+    }
   </style>
 </head>
 <body>
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
-  <div class="wrap">
-    <a href="/" class="back-btn">← Zpět na hlavní stránku</a>
-    <article id="articleContainer"><div class="loading">Načítání...</div></article>
+  <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
+
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
   </div>
-  <div id="lightbox" class="lightbox"><button class="lightbox-close" id="lbClose">×</button><img id="lightboxImg" src="" alt=""></div>
+
+  <div class="article-container" id="articleContainer">
+    <div class="article-loading" id="articleLoading">
+      <div class="spinner"></div>
+      <div>Načítání článku…</div>
+    </div>
+  </div>
+
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const starsBox = document.getElementById('stars');
-    if (starsBox) { const frag = document.createDocumentFragment(); for (let i = 0; i < 150; i++) { const s = document.createElement('div'); s.className = 'star'; s.style.left = Math.random() * 100 + '%'; s.style.top = Math.random() * 100 + '%'; s.style.setProperty('--dur', (3 + Math.random() * 4) + 's'); s.style.setProperty('--del', (Math.random() * 5) + 's'); frag.appendChild(s); } starsBox.appendChild(frag); }
-    function escapeHtml(t) { if (t == null) return ''; return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-    const lb = document.getElementById('lightbox'), lbImg = document.getElementById('lightboxImg'), lbClose = document.getElementById('lbClose');
-    function openLightbox(src) { lbImg.src = src; lb.classList.add('active'); document.body.style.overflow = 'hidden'; }
-    function closeLightbox() { lb.classList.remove('active'); lbImg.src = ''; document.body.style.overflow = ''; }
-    if (lb) lb.addEventListener('click', closeLightbox); if (lbClose) lbClose.addEventListener('click', function(e) { e.stopPropagation(); closeLightbox(); }); document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
-    async function fetchWithTimeout(url, ms) { const ctrl = new AbortController(); const id = setTimeout(function() { ctrl.abort(); }, ms); try { const r = await fetch(url, { signal: ctrl.signal }); clearTimeout(id); return r; } catch (e) { clearTimeout(id); throw e; } }
-    function normalizeArticles(data) { if (Array.isArray(data)) return data; if (data && Array.isArray(data.articles)) return data.articles; if (data && typeof data === 'object') { const vals = Object.values(data); if (vals.length && vals[0] && vals[0].title) return vals; } return []; }
-    
-    // EXTRAKCE ID — zkusíme všechny možnosti
-    function getArticleId() {
-      // 1. Z pathname: /article/ID
-      let m = window.location.pathname.match(/\/article\/([^\/]+)/);
-      if (m && m[1] && m[1] !== 'article.html') return decodeURIComponent(m[1]);
-      // 2. Z href (celá URL)
-      m = window.location.href.match(/\/article\/([^\/\?#]+)/);
-      if (m && m[1] && m[1] !== 'article.html') return decodeURIComponent(m[1]);
-      // 3. Z query parametru ?id=
-      const qp = new URLSearchParams(window.location.search).get('id');
-      if (qp) return qp;
-      // 4. Z hashe #id
-      const hash = window.location.hash.replace('#', '');
-      if (hash) return hash;
-      return '';
-    }
+  function openLightbox(src) {
+    var overlay = document.getElementById('lightboxOverlay');
+    if (!overlay) return;
+    overlay.innerHTML = '<img src="' + src + '" alt="">';
+    overlay.classList.add('open');
+  }
 
-    async function renderArticleList(container) {
-      try {
-        const r = await fetchWithTimeout('/api/articles/list', 5000);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        const all = normalizeArticles(data);
-        let html = '<h1 class="article-title">Všechny články</h1>';
-        if (!all.length) { html += '<div class="error">Žádné články v databázi</div>'; }
-        else {
-          html += '<div class="article-list">';
-          for (let i = 0; i < all.length; i++) {
-            const a = all[i];
-            const artId = a.id || '';
-            const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs') : '';
-            html += '<a href="/article/' + escapeHtml(artId) + '"><div>' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (dateStr ? '<span>' + dateStr + '</span>' : '') + '</a>';
-          }
-          html += '</div>';
-        }
-        container.innerHTML = html;
-      } catch (e) {
-        container.innerHTML = '<div class="error">Chyba načítání článků</div>';
+  function escapeHtml(t) {
+    if (t == null) return '';
+    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* Parsování UUID z URL: /article/UUID */
+  function getArticleId() {
+    var parts = window.location.pathname.split('/').filter(Boolean);
+    /* parts = ["article", "UUID"] nebo ["article"] */
+    if (parts.length >= 2 && parts[0] === 'article') return decodeURIComponent(parts[1]);
+    return null;
+  }
+
+  var SECTION_NAMES = {
+    'travel': 'Cestování',
+    'photo': 'Fotografování',
+    'projects': 'Projekty',
+    'about': 'O Zajdovi'
+  };
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    /* === Hvězdy === */
+    var starsBox = document.getElementById('stars');
+    if (starsBox) {
+      var frag = document.createDocumentFragment();
+      for (var i = 0; i < 150; i++) {
+        var s = document.createElement('div');
+        s.className = 'star';
+        s.style.left = Math.random() * 100 + '%';
+        s.style.top = Math.random() * 100 + '%';
+        s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
+        s.style.setProperty('--del', (Math.random() * 5) + 's');
+        frag.appendChild(s);
       }
+      starsBox.appendChild(frag);
     }
 
-    async function renderSingleArticle(container, slug) {
-      try {
-        const r = await fetchWithTimeout('/api/articles/list', 5000);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        const all = normalizeArticles(data);
-        let a = all.find(function(x) { return (x.id || '').toString() === slug; });
-        if (!a) a = all.find(function(x) { return (x.slug || '').toString() === slug; });
-        if (!a) { container.innerHTML = '<div class="error">Článek nenalezen.<br><small>ID: ' + escapeHtml(slug) + '</small><br><a href="/" class="back-btn" style="margin-top:16px">← Zpět</a></div>'; return; }
-        document.title = (a.title ? a.title + ' | ' : '') + 'Moje diagnóza, můj vesmír';
-        const dateStr = a.date ? new Date(a.date).toLocaleDateString('cs', {day:'numeric', month:'long', year:'numeric'}) : '';
-        const secName = a.section || a.sectionId || '';
-        const subName = a.subsection || a.subsectionId || '';
-        let breadcrumb = '<a href="/">Domů</a><span>/</span>';
-        if (secName) breadcrumb += '<span style="color:#ffcc66">' + escapeHtml(secName) + '</span>';
-        if (subName) breadcrumb += '<span>/</span><span>' + escapeHtml(subName) + '</span>';
-        container.innerHTML = '<div class="breadcrumb">' + breadcrumb + '</div><h1 class="article-title">' + escapeHtml(a.title || 'Bez názvu') + '</h1><div class="article-meta">' + (dateStr ? '<span>📅 ' + dateStr + '</span>' : '') + (a.place ? '<span>📍 ' + escapeHtml(a.place) + '</span>' : '') + '</div><div class="article-content" id="articleContent">' + (a.content || '<p><em>Prázdný obsah</em></p>') + '</div><div class="article-footer"><a href="/" class="back-btn" style="margin:0">← Zpět</a><div class="share-row"><span>Sdílet:</span><a class="share-btn-small wa" href="https://wa.me/?text=' + encodeURIComponent((a.title || '') + ' - ' + window.location.href) + '" target="_blank" rel="noopener">WhatsApp</a></div></div>';
-        document.querySelectorAll('.article-content img').forEach(function(img) { img.addEventListener('click', function() { openLightbox(img.src); }); });
-      } catch (e) {
-        container.innerHTML = '<div class="error">' + escapeHtml(e.message) + '<br><a href="/" class="back-btn" style="margin-top:16px">← Zpět</a></div>';
+    var container = document.getElementById('articleContainer');
+    var articleId = getArticleId();
+
+    if (!articleId) {
+      container.innerHTML = '<div class="article-notfound"><h2>Chybí ID článku</h2><p>Zkus se vrátit na <a href="/" style="color:#ff6600">hlavní stránku</a>.</p></div>';
+      return;
+    }
+
+    try {
+      var r = await fetch('/api/articles/list');
+      if (!r.ok) throw new Error('API chyba');
+      var allArticles = await r.json();
+      if (!Array.isArray(allArticles)) throw new Error('Neplatná data');
+
+      /* Najít článek podle ID (type-safe porovnání) */
+      var article = allArticles.find(function(a) {
+        return a.id != null && String(a.id) === String(articleId);
+      });
+
+      if (!article) {
+        container.innerHTML = '<div class="article-notfound"><h2>Článek nenalezen</h2><p>Tento článek neexistuje nebo byl smazán.</p></div>';
+        return;
       }
-    }
 
-    async function loadArticle() {
-      const container = document.getElementById('articleContainer');
-      const slug = getArticleId();
-      console.log('[article.html] Extracted ID:', slug, '| pathname:', window.location.pathname, '| href:', window.location.href);
-      if (!slug) { await renderArticleList(container); }
-      else { await renderSingleArticle(container, slug); }
+      renderArticle(article);
+    } catch(e) {
+      container.innerHTML = '<div class="article-notfound"><h2>Chyba načítání</h2><p>Nepodařilo se načíst článek. Zkus to prosím později.</p></div>';
     }
-    loadArticle();
   });
+
+  function renderArticle(article) {
+    var container = document.getElementById('articleContainer');
+    var title = article.title || 'Bez názvu';
+    var content = article.content || '';
+    var date = article.created || article.date || '';
+    var dateStr = '';
+    if (date) { try { dateStr = new Date(date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) {} }
+    var sectionName = SECTION_NAMES[article.sectionId] || article.sectionId || '';
+
+    var html = '';
+    html += '<div class="article-header">';
+    html += '<h1 class="article-title">' + escapeHtml(title) + '</h1>';
+    html += '<div class="article-meta">';
+    if (sectionName) html += '<span class="meta-badge">' + escapeHtml(sectionName) + '</span>';
+    if (dateStr) html += '<span class="meta-item">' + escapeHtml(dateStr) + '</span>';
+    html += '</div></div>';
+    html += '<div class="article-divider"></div>';
+    html += '<div class="article-body" id="articleBody">' + content + '</div>';
+
+    /* Footer se sdílecími tlačítky */
+    var shareUrl = window.location.href;
+    var shareText = title + ' — Moje diagnóza, můj vesmír';
+    html += '<div class="article-footer">';
+    html += '<div class="share-bar-inline">';
+    html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>';
+    html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">Facebook</a>';
+    html += '<a class="share-btn" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X / Twitter</a>';
+    html += '</div>';
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    /* Lightbox na všechny obrázky v článku */
+    var body = document.getElementById('articleBody');
+    if (body) {
+      body.querySelectorAll('img').forEach(function(img) {
+        img.addEventListener('click', function() { openLightbox(this.src); });
+      });
+    }
+  }
   </script>
 </body>
 </html>
