@@ -14,13 +14,19 @@
     .title-block { position: relative; z-index: 10; text-align: center; padding-top: 40px; }
     .cz-title { font-size: clamp(28px, 5vw, 52px); font-weight: 700; color: #ff6600; text-shadow: 0 0 30px rgba(255,102,0,0.6); letter-spacing: 2px; }
     .en-title { font-size: clamp(18px, 3vw, 30px); font-weight: 300; color: #ffcc66; text-shadow: 0 0 20px rgba(255,204,102,0.5); margin-top: 6px; }
-    .latest-panel { position: absolute; top: 140px; left: 40px; z-index: 10; width: 320px; max-width: 90vw; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; padding: 1.2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    .latest-panel { position: absolute; top: 140px; left: 40px; z-index: 10; width: 320px; max-width: 90vw; max-height: 60vh; overflow-y: auto; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; padding: 1.2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    .latest-panel::-webkit-scrollbar { width: 4px; }
+    .latest-panel::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
     .latest-panel h3 { color: #ffcc66; font-size: 16px; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; }
     .latest-panel h3::before { content: '◆'; color: #ff6600; }
-    .latest-item { display: block; color: #e2e8f0; text-decoration: none; padding: 0.6rem 0; border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 14px; transition: all 0.2s; }
+    .latest-item { display: block; color: #e2e8f0; text-decoration: none; padding: 0.6rem 0; border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 14px; transition: all 0.2s; cursor: pointer; }
     .latest-item:hover { color: #ff6600; padding-left: 6px; text-shadow: 0 0 12px rgba(255,102,0,0.4); }
     .latest-item:last-child { border-bottom: none; }
     .latest-item small { color: #94a3b8; font-size: 12px; display: block; margin-top: 2px; }
+    .latest-expanded { display: none; padding: 10px 0 6px 0; border-bottom: 1px solid rgba(51,65,85,0.3); margin-bottom: 4px; }
+    .latest-expanded.open { display: block; }
+    .latest-expanded .content { color: #e2e8f0; font-size: 13px; line-height: 1.5; }
+    .latest-expanded .content img { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; }
     .latest-empty { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
     .intro-text { position: absolute; top: 200px; right: 60px; z-index: 10; width: 360px; max-width: 90vw; color: #ffb366; font-size: 16px; line-height: 1.6; text-shadow: 0 0 12px rgba(255,150,50,0.3); text-align: left; }
     .sections-container { position: absolute; bottom: 60px; left: 0; width: 100%; z-index: 10; display: flex; justify-content: center; gap: 24px; padding: 0 20px; flex-wrap: wrap; }
@@ -48,11 +54,15 @@
     .sub-title:hover { color: #ffcc66; text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 4px; }
     .sub-title::after { content: '▼'; font-size: 10px; color: #64748b; transition: transform 0.2s; }
     .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
-    .sub-articles { max-height: 200px; overflow-y: auto; transition: max-height 0.3s ease; padding-top: 4px; }
+    .sub-articles { max-height: 500px; overflow-y: auto; transition: max-height 0.3s ease; padding-top: 4px; }
     .sub-block.collapsed .sub-articles { max-height: 0; overflow: hidden; padding-top: 0; }
-    .sub-articles a { display: block; padding: 5px 0 5px 12px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; }
-    .sub-articles a:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; text-shadow: 0 0 10px rgba(255,102,0,0.3); }
-    .sub-articles a span { font-size: 12px; color: #94a3b8; display: block; margin-top: 2px; }
+    .sub-article-item { display: block; padding: 5px 0 5px 12px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; cursor: pointer; }
+    .sub-article-item:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; text-shadow: 0 0 10px rgba(255,102,0,0.3); }
+    .sub-article-item span { font-size: 12px; color: #94a3b8; display: block; margin-top: 2px; }
+    .sub-articles-expanded { display: none; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; margin: 4px 0 8px 12px; border-left: 2px solid #ff6600; }
+    .sub-articles-expanded.open { display: block; }
+    .sub-articles-expanded .content { color: #e2e8f0; font-size: 13px; line-height: 1.5; }
+    .sub-articles-expanded .content img { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; }
     .no-articles { color: #64748b; font-size: 13px; padding: 8px 0; font-style: italic; }
     .share-bar { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; gap: 10px; }
     .share-btn { background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,102,0,0.3); color: #ffcc66; padding: 10px 18px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
@@ -74,30 +84,22 @@
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
   <div class="overlay-backdrop" id="overlayBackdrop"></div>
-
   <div class="title-block">
     <div class="cz-title">Moje diagnóza, můj vesmír</div>
     <div class="en-title">My diagnosis, my universe</div>
   </div>
-
   <div class="latest-panel" id="latestPanel">
     <h3>Poslední aktuality</h3>
     <div style="color:#64748b;font-size:13px;padding:0.5rem 0">Načítání...</div>
   </div>
-
-  <div class="intro-text">
-    Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...
-  </div>
-
+  <div class="intro-text">Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...</div>
   <div class="sections-container" id="sectionsContainer"></div>
-
   <div class="share-bar">
     <a class="share-btn wa" id="shareWhatsApp" href="#" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
       Sdílet aktualizaci
     </a>
   </div>
-
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     /* === Hvězdy === */
@@ -161,18 +163,11 @@
       if (cachedArticles) return cachedArticles;
       try {
         var r = await fetch('/api/articles/list');
-        if (!r.ok) { console.error('[getAllArticles] HTTP chyba:', r.status); return []; }
+        if (!r.ok) return [];
         var data = await r.json();
         cachedArticles = Array.isArray(data) ? data : [];
-        console.log('[getAllArticles] Načteno článků:', cachedArticles.length);
-        if (cachedArticles.length) {
-          console.log('[getAllArticles] První článek:', JSON.stringify(cachedArticles[0]));
-        }
         return cachedArticles;
-      } catch(e) {
-        console.error('[getAllArticles] Chyba:', e);
-        return [];
-      }
+      } catch(e) { return []; }
     }
 
     /* === Aktuality === */
@@ -180,7 +175,7 @@
       var box = document.getElementById('latestPanel');
       if (!box) return;
       var articles = await getAllArticles();
-      var latest = articles.slice(0, 5);
+      var latest = articles.slice(0, 3);
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
         return;
@@ -192,13 +187,28 @@
         var title = a.title || 'Bez názvu';
         var date = a.created || a.date || '';
         var dateStr = '';
-        if (date) {
-          try { dateStr = new Date(date).toLocaleDateString('cs'); } catch(e) {}
-        }
+        if (date) { try { dateStr = new Date(date).toLocaleDateString('cs'); } catch(e) {} }
         var meta = dateStr ? '• ' + dateStr : '';
-        html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
+        html += '<div class="latest-item" data-art-idx="' + i + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></div>';
+        html += '<div class="latest-expanded" id="latest-exp-' + i + '"><div class="content">' + (a.content || '') + '</div></div>';
       }
       box.innerHTML = html;
+      box.querySelectorAll('.latest-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var idx = this.getAttribute('data-art-idx');
+          var exp = document.getElementById('latest-exp-' + idx);
+          if (!exp) return;
+          box.querySelectorAll('.latest-expanded').forEach(function(e) { if (e !== exp) e.classList.remove('open'); });
+          box.querySelectorAll('.latest-item').forEach(function(it) { if (it !== item) it.style.color = ''; });
+          if (exp.classList.contains('open')) {
+            exp.classList.remove('open');
+            this.style.color = '';
+          } else {
+            exp.classList.add('open');
+            this.style.color = '#ff6600';
+          }
+        });
+      });
       var shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
       var waBtn = document.getElementById('shareWhatsApp');
       if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
@@ -224,15 +234,9 @@
     async function loadSubsections(secId) {
       try {
         var r = await fetch('/api/subsections/by-section?sectionId=' + secId);
-        if (!r.ok) { console.error('[loadSubsections] HTTP chyba:', r.status); return []; }
-        var subs = await r.json();
-        console.log('[loadSubsections] sekce=' + secId + ' nalezeno=' + subs.length);
-        if (subs.length) console.log('[loadSubsections] první podsekce:', JSON.stringify(subs[0]));
-        return subs;
-      } catch(e) {
-        console.error('[loadSubsections] Chyba:', e);
-        return [];
-      }
+        if (!r.ok) return [];
+        return await r.json();
+      } catch(e) { return []; }
     }
 
     window.closeAllCardsWrapper = function() {
@@ -264,10 +268,7 @@
           var subs = await loadSubsections(sec.id);
           if (sec.id === 'about' || !subs.length) {
             var all = await getAllArticles();
-            var articles = all.filter(function(a) {
-              return a.sectionId === sec.id;
-            });
-            console.log('[buildSections] sekce=' + sec.id + ' článků=' + articles.length);
+            var articles = all.filter(function(a) { return a.sectionId === sec.id; });
             renderArticles(contentEl, articles, sec.name);
           } else {
             renderSubsections(contentEl, subs, sec.id);
@@ -283,16 +284,17 @@
       if (!articles.length) {
         html += '<div class="no-articles">Zatím žádné články</div>';
       } else {
-        html += '<div class="sub-articles" style="max-height:240px">';
+        html += '<div class="sub-articles" style="max-height:500px">';
         for (var i = 0; i < articles.length; i++) {
           var a = articles[i];
-          var artId = a.id || '';
           var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
-          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          html += '<div class="sub-article-item" data-art-idx="' + i + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</div>';
+          html += '<div class="sub-articles-expanded" id="art-exp-' + i + '"><div class="content">' + (a.content || '') + '</div></div>';
         }
         html += '</div>';
       }
       container.innerHTML = html;
+      bindArticleClicks(container);
     }
 
     function renderSubsections(container, subs, secId) {
@@ -312,64 +314,83 @@
           '</div>';
       }
       container.innerHTML = html;
-
-      /* Event listenery na každý .sub-title */
       container.querySelectorAll('.sub-title').forEach(function(titleEl) {
         titleEl.addEventListener('click', function(e) {
           e.stopPropagation();
           var sid = this.getAttribute('data-sub-id');
           var scid = this.getAttribute('data-sec-id');
-          console.log('[sub-title click] subId=' + sid + ' secId=' + scid);
           window.toggleSub(sid, scid);
         });
       });
     }
 
     window.toggleSub = async function(subId, secId) {
-      console.log('[toggleSub] START subId=' + subId + ' secId=' + secId);
       var block = document.getElementById('subblock-' + subId);
       var list = document.getElementById('subarticles-' + subId);
-      if (!block || !list) {
-        console.error('[toggleSub] Element nenalezen! block=' + !!block + ' list=' + !!list);
-        return;
-      }
+      if (!block || !list) return;
       var isCollapsed = block.classList.contains('collapsed');
       document.querySelectorAll('.sub-block').forEach(function(b) { if (b !== block) b.classList.add('collapsed'); });
       if (!isCollapsed) { block.classList.add('collapsed'); return; }
       block.classList.remove('collapsed');
-      if (list.dataset.loaded) {
-        console.log('[toggleSub] Už načteno, jen zobrazuji');
-        return;
-      }
+      if (list.dataset.loaded) return;
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
-
       var all = await getAllArticles();
-      console.log('[toggleSub] Všechny články:', all.length);
-
       var articles = all.filter(function(a) {
-        var aSec = a.sectionId || '';
-        var aSub = a.subsectionId || '';
-        var match = (aSec === secId && aSub === subId);
-        if (match) console.log('[toggleSub] MATCH:', a.title, 'sec=' + aSec, 'sub=' + aSub);
-        return match;
+        return a.sectionId === secId && a.subsectionId === subId;
       });
-
-      console.log('[toggleSub] Nalezeno článků:', articles.length);
-
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
       } else {
         var html = '';
         for (var i = 0; i < articles.length; i++) {
           var a = articles[i];
-          var artId = a.id || '';
           var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
-          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          html += '<div class="sub-article-item" data-art-idx="' + i + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</div>';
+          html += '<div class="sub-articles-expanded" id="subart-exp-' + subId + '-' + i + '"><div class="content">' + (a.content || '') + '</div></div>';
         }
         list.innerHTML = html;
+        bindSubArticleClicks(list, subId);
       }
       list.dataset.loaded = '1';
     };
+
+    function bindArticleClicks(container) {
+      container.querySelectorAll('.sub-article-item').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var idx = this.getAttribute('data-art-idx');
+          var exp = document.getElementById('art-exp-' + idx);
+          if (!exp) return;
+          container.querySelectorAll('.sub-articles-expanded').forEach(function(e2) { if (e2 !== exp) e2.classList.remove('open'); });
+          if (exp.classList.contains('open')) {
+            exp.classList.remove('open');
+            this.style.color = '';
+          } else {
+            exp.classList.add('open');
+            this.style.color = '#ff6600';
+          }
+        });
+      });
+    }
+
+    function bindSubArticleClicks(list, subId) {
+      list.querySelectorAll('.sub-article-item').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var idx = this.getAttribute('data-art-idx');
+          var exp = document.getElementById('subart-exp-' + subId + '-' + idx);
+          if (!exp) return;
+          list.querySelectorAll('.sub-articles-expanded').forEach(function(e2) { if (e2 !== exp) e2.classList.remove('open'); });
+          if (exp.classList.contains('open')) {
+            exp.classList.remove('open');
+            this.style.color = '';
+          } else {
+            exp.classList.add('open');
+            this.style.color = '#ff6600';
+          }
+        });
+      });
+    }
 
     /* Eventy */
     var backdrop = document.getElementById('overlayBackdrop');
