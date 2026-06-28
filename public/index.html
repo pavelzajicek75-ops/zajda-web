@@ -104,7 +104,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    /* === Hvězdy === */
     var starsBox = document.getElementById('stars');
     if (starsBox) {
       var frag = document.createDocumentFragment();
@@ -125,7 +124,6 @@
       return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    /* === Citáty === */
     async function loadQuotes() {
       try { var r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
       catch(e) { return []; }
@@ -159,7 +157,6 @@
       }, 5000);
     }
 
-    /* === Cache pro články === */
     var cachedArticles = null;
     async function getAllArticles() {
       if (cachedArticles) return cachedArticles;
@@ -172,12 +169,10 @@
       } catch(e) { return []; }
     }
 
-    /* === Aktuality === */
     async function loadLatest() {
       var box = document.getElementById('latestPanel');
       if (!box) return;
       var articles = await getAllArticles();
-      /* Seřadit sestupně podle created */
       var sorted = articles.slice().sort(function(a, b) {
         var da = a.created || a.date || '';
         var db = b.created || b.date || '';
@@ -199,7 +194,7 @@
         var dateStr = '';
         if (date) { try { dateStr = new Date(date).toLocaleDateString('cs'); } catch(e) {} }
         var meta = dateStr ? '• ' + dateStr : '';
-        html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
+        html += '<a class="latest-item" href="/article.html?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       box.innerHTML = html;
       var shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
@@ -207,7 +202,6 @@
       if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
     }
 
-    /* === Sekce === */
     var SECTIONS = [
       { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
       { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
@@ -242,43 +236,34 @@
       var container = document.getElementById('sectionsContainer');
       if (!container) return;
       container.innerHTML = '';
-
       for (var s = 0; s < SECTIONS.length; s++) {
         (function(sec) {
           var card = document.createElement('div');
           card.className = 'section-card';
           card.dataset.sectionId = sec.id;
-
           var imgEl = document.createElement('img');
           imgEl.alt = sec.name;
           imgEl.src = '/images/placeholder.jpg';
           imgEl.onerror = function() { this.src = '/images/placeholder.jpg'; };
-
           loadSectionCover(sec.id).then(function(coverUrl) {
             if (coverUrl) imgEl.src = coverUrl;
           });
-
           var cardInner = document.createElement('div');
           cardInner.className = 'card-inner';
           cardInner.appendChild(imgEl);
-
           var label = document.createElement('div');
           label.className = 'card-label';
           label.textContent = sec.name + ' / ' + sec.nameEn;
           cardInner.appendChild(label);
-
           var glow = document.createElement('div');
           glow.className = 'card-glow';
-
           var content = document.createElement('div');
           content.className = 'card-content';
           content.id = 'content-' + sec.id;
           content.innerHTML = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4><div style="color:#64748b;font-size:13px">Načítání...</div>';
-
           card.appendChild(glow);
           card.appendChild(cardInner);
           card.appendChild(content);
-
           card.addEventListener('click', async function(e) {
             if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
             if (card.classList.contains('expanded')) { window.closeAllCardsWrapper(); return; }
@@ -302,7 +287,6 @@
             }
             contentEl.dataset.loaded = '1';
           });
-
           container.appendChild(card);
         })(SECTIONS[s]);
       }
@@ -318,7 +302,7 @@
           var a = articles[i];
           var artId = a.id || '';
           var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
-          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          html += '<a href="/article.html?id=' + encodeURIComponent(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         html += '</div>';
       }
@@ -336,9 +320,9 @@
         var sub = subs[i];
         var subId = sub.id || '';
         var subName = sub.name || '';
-        html += '<div class="sub-block collapsed" id="subblock-' + subId + '">' +
+        html += '<div class="sub-block collapsed" id="subblock-' + escapeHtml(subId) + '">' +
           '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sec-id="' + escapeHtml(secId) + '">' + escapeHtml(subName) + '</div>' +
-          '<div class="sub-articles" id="subarticles-' + subId + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
+          '<div class="sub-articles" id="subarticles-' + escapeHtml(subId) + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
           '</div>';
       }
       container.innerHTML = html;
@@ -351,6 +335,7 @@
         });
       });
     }
+
     window.toggleSub = async function(subId, secId) {
       var block = document.getElementById('subblock-' + subId);
       var list = document.getElementById('subarticles-' + subId);
@@ -376,19 +361,17 @@
           var a = articles[i];
           var artId = a.id || '';
           var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
-          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
+          html += '<a href="/article.html?id=' + encodeURIComponent(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         list.innerHTML = html;
       }
       list.dataset.loaded = '1';
     };
 
-    /* Eventy */
     var backdrop = document.getElementById('overlayBackdrop');
     if (backdrop) backdrop.addEventListener('click', window.closeAllCardsWrapper);
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') window.closeAllCardsWrapper(); });
 
-    /* Spustit */
     startQuotes();
     loadLatest();
     buildSections();
