@@ -177,7 +177,15 @@
       var box = document.getElementById('latestPanel');
       if (!box) return;
       var articles = await getAllArticles();
-      var latest = articles.slice(0, 3);
+      /* Seřadit sestupně podle created */
+      var sorted = articles.slice().sort(function(a, b) {
+        var da = a.created || a.date || '';
+        var db = b.created || b.date || '';
+        if (da < db) return 1;
+        if (da > db) return -1;
+        return 0;
+      });
+      var latest = sorted.slice(0, 3);
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
         return;
@@ -283,7 +291,11 @@
             var subs = await loadSubsections(sec.id);
             if (sec.id === 'about' || !subs.length) {
               var all = await getAllArticles();
-              var articles = all.filter(function(a) { return a.sectionId === sec.id; });
+              var articles = all.filter(function(a) {
+                var secId = a.sectionId;
+                if (secId == null) return false;
+                return String(secId) === sec.id;
+              });
               renderArticles(contentEl, articles, sec.name);
             } else {
               renderSubsections(contentEl, subs, sec.id);
@@ -339,7 +351,6 @@
         });
       });
     }
-
     window.toggleSub = async function(subId, secId) {
       var block = document.getElementById('subblock-' + subId);
       var list = document.getElementById('subarticles-' + subId);
@@ -352,7 +363,10 @@
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
       var all = await getAllArticles();
       var articles = all.filter(function(a) {
-        return a.sectionId === secId && a.subsectionId === subId;
+        var aSec = a.sectionId;
+        var aSub = a.subsectionId;
+        if (aSec == null || aSub == null) return false;
+        return String(aSec) === String(secId) && String(aSub) === String(subId);
       });
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
