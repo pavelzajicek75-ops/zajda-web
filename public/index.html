@@ -14,19 +14,13 @@
     .title-block { position: relative; z-index: 10; text-align: center; padding-top: 40px; }
     .cz-title { font-size: clamp(28px, 5vw, 52px); font-weight: 700; color: #ff6600; text-shadow: 0 0 30px rgba(255,102,0,0.6); letter-spacing: 2px; }
     .en-title { font-size: clamp(18px, 3vw, 30px); font-weight: 300; color: #ffcc66; text-shadow: 0 0 20px rgba(255,204,102,0.5); margin-top: 6px; }
-    .latest-panel { position: absolute; top: 140px; left: 40px; z-index: 10; width: 320px; max-width: 90vw; max-height: 60vh; overflow-y: auto; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; padding: 1.2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
-    .latest-panel::-webkit-scrollbar { width: 4px; }
-    .latest-panel::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    .latest-panel { position: absolute; top: 140px; left: 40px; z-index: 10; width: 320px; max-width: 90vw; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; padding: 1.2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
     .latest-panel h3 { color: #ffcc66; font-size: 16px; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; }
     .latest-panel h3::before { content: '◆'; color: #ff6600; }
-    .latest-item { display: block; color: #e2e8f0; text-decoration: none; padding: 0.6rem 0; border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 14px; transition: all 0.2s; cursor: pointer; }
+    .latest-item { display: block; color: #e2e8f0; text-decoration: none; padding: 0.6rem 0; border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 14px; transition: all 0.2s; }
     .latest-item:hover { color: #ff6600; padding-left: 6px; text-shadow: 0 0 12px rgba(255,102,0,0.4); }
     .latest-item:last-child { border-bottom: none; }
     .latest-item small { color: #94a3b8; font-size: 12px; display: block; margin-top: 2px; }
-    .latest-expanded { display: none; padding: 10px 0 6px 0; border-bottom: 1px solid rgba(51,65,85,0.3); margin-bottom: 4px; }
-    .latest-expanded.open { display: block; }
-    .latest-expanded .content { color: #e2e8f0; font-size: 13px; line-height: 1.5; }
-    .latest-expanded .content img { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; }
     .latest-empty { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
     .intro-text { position: absolute; top: 200px; right: 60px; z-index: 10; width: 360px; max-width: 90vw; color: #ffb366; font-size: 16px; line-height: 1.6; text-shadow: 0 0 12px rgba(255,150,50,0.3); text-align: left; }
     .sections-container { position: absolute; bottom: 60px; left: 0; width: 100%; z-index: 10; display: flex; justify-content: center; gap: 24px; padding: 0 20px; flex-wrap: wrap; }
@@ -56,13 +50,9 @@
     .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
     .sub-articles { max-height: 500px; overflow-y: auto; transition: max-height 0.3s ease; padding-top: 4px; }
     .sub-block.collapsed .sub-articles { max-height: 0; overflow: hidden; padding-top: 0; }
-    .sub-article-item { display: block; padding: 5px 0 5px 12px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; cursor: pointer; }
-    .sub-article-item:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; text-shadow: 0 0 10px rgba(255,102,0,0.3); }
-    .sub-article-item span { font-size: 12px; color: #94a3b8; display: block; margin-top: 2px; }
-    .sub-articles-expanded { display: none; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 6px; margin: 4px 0 8px 12px; border-left: 2px solid #ff6600; }
-    .sub-articles-expanded.open { display: block; }
-    .sub-articles-expanded .content { color: #e2e8f0; font-size: 13px; line-height: 1.5; }
-    .sub-articles-expanded .content img { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; }
+    .sub-articles a { display: block; padding: 5px 0 5px 12px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; }
+    .sub-articles a:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; text-shadow: 0 0 10px rgba(255,102,0,0.3); }
+    .sub-articles a span { font-size: 12px; color: #94a3b8; display: block; margin-top: 2px; }
     .no-articles { color: #64748b; font-size: 13px; padding: 8px 0; font-style: italic; }
     .share-bar { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; gap: 10px; }
     .share-btn { background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,102,0,0.3); color: #ffcc66; padding: 10px 18px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
@@ -77,6 +67,9 @@
     @keyframes drift { from { transform: translate(var(--sx), var(--sy)); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } to { transform: translate(var(--ex), var(--ey)); opacity: 0; } }
     .overlay-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.3); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
     .overlay-backdrop.active { opacity: 1; pointer-events: auto; }
+    .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+    .lightbox-overlay.open { display: flex; }
+    .lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px rgba(255,102,0,0.3); }
     @media (max-width: 900px) { .latest-panel { position: relative; top: auto; left: auto; margin: 20px auto; width: 90%; } .intro-text { position: relative; top: auto; right: auto; margin: 20px auto; width: 90%; text-align: center; } .sections-container { position: relative; bottom: auto; margin: 40px 0; flex-direction: column; align-items: center; } .section-card { width: 85%; max-width: 340px; } .section-card.expanded { width: 95%; max-width: 500px; height: 380px; transform: translateY(-20px); } }
   </style>
 </head>
@@ -84,6 +77,7 @@
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
   <div class="overlay-backdrop" id="overlayBackdrop"></div>
+  <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
   <div class="title-block">
     <div class="cz-title">Moje diagnóza, můj vesmír</div>
     <div class="en-title">My diagnosis, my universe</div>
@@ -101,6 +95,13 @@
     </a>
   </div>
   <script>
+  function openLightbox(src) {
+    var overlay = document.getElementById('lightboxOverlay');
+    if (!overlay) return;
+    overlay.innerHTML = '<img src="' + escapeHtml(src) + '" alt="">';
+    overlay.classList.add('open');
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     /* === Hvězdy === */
     var starsBox = document.getElementById('stars');
@@ -189,26 +190,9 @@
         var dateStr = '';
         if (date) { try { dateStr = new Date(date).toLocaleDateString('cs'); } catch(e) {} }
         var meta = dateStr ? '• ' + dateStr : '';
-        html += '<div class="latest-item" data-art-idx="' + i + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></div>';
-        html += '<div class="latest-expanded" id="latest-exp-' + i + '"><div class="content">' + (a.content || '') + '</div></div>';
+        html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       box.innerHTML = html;
-      box.querySelectorAll('.latest-item').forEach(function(item) {
-        item.addEventListener('click', function() {
-          var idx = this.getAttribute('data-art-idx');
-          var exp = document.getElementById('latest-exp-' + idx);
-          if (!exp) return;
-          box.querySelectorAll('.latest-expanded').forEach(function(e) { if (e !== exp) e.classList.remove('open'); });
-          box.querySelectorAll('.latest-item').forEach(function(it) { if (it !== item) it.style.color = ''; });
-          if (exp.classList.contains('open')) {
-            exp.classList.remove('open');
-            this.style.color = '';
-          } else {
-            exp.classList.add('open');
-            this.style.color = '#ff6600';
-          }
-        });
-      });
       var shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
       var waBtn = document.getElementById('shareWhatsApp');
       if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
@@ -249,33 +233,35 @@
       var container = document.getElementById('sectionsContainer');
       if (!container) return;
       container.innerHTML = '';
-      for (var i = 0; i < SECTIONS.length; i++) {
-        var sec = SECTIONS[i];
-        var cover = await loadSectionCover(sec);
-        var card = document.createElement('div');
-        card.className = 'section-card';
-        card.dataset.sectionId = sec.id;
-        card.innerHTML = '<div class="card-glow"></div><div class="card-inner"><img src="' + (cover || '/images/placeholder.jpg') + '" alt="' + escapeHtml(sec.name) + '" onerror="this.src=\'/images/placeholder.jpg\'"><div class="card-label">' + escapeHtml(sec.name) + ' / ' + escapeHtml(sec.nameEn) + '</div></div><div class="card-content" id="content-' + sec.id + '"><button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4><div style="color:#64748b;font-size:13px">Načítání...</div></div>';
-        card.addEventListener('click', async function(e) {
-          if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
-          if (card.classList.contains('expanded')) { window.closeAllCardsWrapper(); return; }
-          window.closeAllCardsWrapper();
-          card.classList.add('expanded');
-          var backdrop = document.getElementById('overlayBackdrop');
-          if (backdrop) backdrop.classList.add('active');
-          var contentEl = document.getElementById('content-' + sec.id);
-          if (!contentEl || contentEl.dataset.loaded) return;
-          var subs = await loadSubsections(sec.id);
-          if (sec.id === 'about' || !subs.length) {
-            var all = await getAllArticles();
-            var articles = all.filter(function(a) { return a.sectionId === sec.id; });
-            renderArticles(contentEl, articles, sec.name);
-          } else {
-            renderSubsections(contentEl, subs, sec.id);
-          }
-          contentEl.dataset.loaded = '1';
-        });
-        container.appendChild(card);
+      for (var s = 0; s < SECTIONS.length; s++) {
+        (function(sec) {
+          var cover = '';
+          loadSectionCover(sec).then(function(c) { cover = c; });
+          var card = document.createElement('div');
+          card.className = 'section-card';
+          card.dataset.sectionId = sec.id;
+          card.innerHTML = '<div class="card-glow"></div><div class="card-inner"><img src="' + (cover || '/images/placeholder.jpg') + '" alt="' + escapeHtml(sec.name) + '" onerror="this.src=\'/images/placeholder.jpg\'"><div class="card-label">' + escapeHtml(sec.name) + ' / ' + escapeHtml(sec.nameEn) + '</div></div><div class="card-content" id="content-' + sec.id + '"><button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4><div style="color:#64748b;font-size:13px">Načítání...</div></div>';
+          card.addEventListener('click', async function(e) {
+            if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
+            if (card.classList.contains('expanded')) { window.closeAllCardsWrapper(); return; }
+            window.closeAllCardsWrapper();
+            card.classList.add('expanded');
+            var backdrop = document.getElementById('overlayBackdrop');
+            if (backdrop) backdrop.classList.add('active');
+            var contentEl = document.getElementById('content-' + sec.id);
+            if (!contentEl || contentEl.dataset.loaded) return;
+            var subs = await loadSubsections(sec.id);
+            if (sec.id === 'about' || !subs.length) {
+              var all = await getAllArticles();
+              var articles = all.filter(function(a) { return a.sectionId === sec.id; });
+              renderArticles(contentEl, articles, sec.name);
+            } else {
+              renderSubsections(contentEl, subs, sec.id);
+            }
+            contentEl.dataset.loaded = '1';
+          });
+          container.appendChild(card);
+        })(SECTIONS[s]);
       }
     }
 
@@ -287,14 +273,13 @@
         html += '<div class="sub-articles" style="max-height:500px">';
         for (var i = 0; i < articles.length; i++) {
           var a = articles[i];
+          var artId = a.id || '';
           var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
-          html += '<div class="sub-article-item" data-art-idx="' + i + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</div>';
-          html += '<div class="sub-articles-expanded" id="art-exp-' + i + '"><div class="content">' + (a.content || '') + '</div></div>';
+          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         html += '</div>';
       }
       container.innerHTML = html;
-      bindArticleClicks(container);
     }
 
     function renderSubsections(container, subs, secId) {
@@ -344,53 +329,14 @@
         var html = '';
         for (var i = 0; i < articles.length; i++) {
           var a = articles[i];
+          var artId = a.id || '';
           var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
-          html += '<div class="sub-article-item" data-art-idx="' + i + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</div>';
-          html += '<div class="sub-articles-expanded" id="subart-exp-' + subId + '-' + i + '"><div class="content">' + (a.content || '') + '</div></div>';
+          html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         list.innerHTML = html;
-        bindSubArticleClicks(list, subId);
       }
       list.dataset.loaded = '1';
     };
-
-    function bindArticleClicks(container) {
-      container.querySelectorAll('.sub-article-item').forEach(function(item) {
-        item.addEventListener('click', function(e) {
-          e.stopPropagation();
-          var idx = this.getAttribute('data-art-idx');
-          var exp = document.getElementById('art-exp-' + idx);
-          if (!exp) return;
-          container.querySelectorAll('.sub-articles-expanded').forEach(function(e2) { if (e2 !== exp) e2.classList.remove('open'); });
-          if (exp.classList.contains('open')) {
-            exp.classList.remove('open');
-            this.style.color = '';
-          } else {
-            exp.classList.add('open');
-            this.style.color = '#ff6600';
-          }
-        });
-      });
-    }
-
-    function bindSubArticleClicks(list, subId) {
-      list.querySelectorAll('.sub-article-item').forEach(function(item) {
-        item.addEventListener('click', function(e) {
-          e.stopPropagation();
-          var idx = this.getAttribute('data-art-idx');
-          var exp = document.getElementById('subart-exp-' + subId + '-' + idx);
-          if (!exp) return;
-          list.querySelectorAll('.sub-articles-expanded').forEach(function(e2) { if (e2 !== exp) e2.classList.remove('open'); });
-          if (exp.classList.contains('open')) {
-            exp.classList.remove('open');
-            this.style.color = '';
-          } else {
-            exp.classList.add('open');
-            this.style.color = '#ff6600';
-          }
-        });
-      });
-    }
 
     /* Eventy */
     var backdrop = document.getElementById('overlayBackdrop');
