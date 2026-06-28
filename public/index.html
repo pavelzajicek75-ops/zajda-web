@@ -101,11 +101,11 @@
   <script>
   document.addEventListener('DOMContentLoaded', function() {
     /* === Hvězdy === */
-    const starsBox = document.getElementById('stars');
+    var starsBox = document.getElementById('stars');
     if (starsBox) {
-      const frag = document.createDocumentFragment();
-      for (let i = 0; i < 200; i++) {
-        const s = document.createElement('div');
+      var frag = document.createDocumentFragment();
+      for (var i = 0; i < 200; i++) {
+        var s = document.createElement('div');
         s.className = 'star';
         s.style.left = Math.random() * 100 + '%';
         s.style.top = Math.random() * 100 + '%';
@@ -123,20 +123,20 @@
 
     /* === Citáty === */
     async function loadQuotes() {
-      try { const r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
-      catch { return []; }
+      try { var r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
+      catch(e) { return []; }
     }
     function spawnQuote(q) {
-      const el = document.createElement('div');
+      var el = document.createElement('div');
       el.className = 'quote-star';
-      const sz = 13 + Math.floor(Math.random() * 10);
+      var sz = 13 + Math.floor(Math.random() * 10);
       el.innerHTML = '<div class="quote-inner" style="font-size:' + sz + 'px">"' + escapeHtml(q.text || '') + '"<span class="quote-author">' + escapeHtml(q.author || '') + '</span></div>';
-      const sx = Math.random() * (window.innerWidth - 100);
-      const sy = Math.random() * (window.innerHeight - 80);
+      var sx = Math.random() * (window.innerWidth - 100);
+      var sy = Math.random() * (window.innerHeight - 80);
       el.style.left = sx + 'px';
       el.style.top = sy + 'px';
-      const ex = (Math.random() - 0.5) * 400;
-      const ey = (Math.random() - 0.5) * 400;
+      var ex = (Math.random() - 0.5) * 400;
+      var ey = (Math.random() - 0.5) * 400;
       el.style.setProperty('--sx', '0px');
       el.style.setProperty('--sy', '0px');
       el.style.setProperty('--ex', ex + 'px');
@@ -146,63 +146,66 @@
       setTimeout(function() { el.remove(); }, 25000);
     }
     async function startQuotes() {
-      const quotes = await loadQuotes();
+      var quotes = await loadQuotes();
       if (!quotes.length) return;
-      for (let i = 0; i < Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+      for (var i = 0; i < Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
       setInterval(function() {
         if (document.querySelectorAll('.quote-star').length > 12) return;
         spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
       }, 5000);
     }
 
-    /* === Cache pro články (načteme jednou) === */
-    let cachedArticles = null;
+    /* === Cache pro články === */
+    var cachedArticles = null;
     async function getAllArticles() {
       if (cachedArticles) return cachedArticles;
-      const controller = new AbortController();
-      const timeout = setTimeout(function() { controller.abort(); }, 5000);
       try {
-        const r = await fetch('/api/articles/list', { signal: controller.signal });
-        clearTimeout(timeout);
-        if (!r.ok) return [];
-        const data = await r.json();
+        var r = await fetch('/api/articles/list');
+        if (!r.ok) { console.error('[getAllArticles] HTTP chyba:', r.status); return []; }
+        var data = await r.json();
         cachedArticles = Array.isArray(data) ? data : [];
+        console.log('[getAllArticles] Načteno článků:', cachedArticles.length);
+        if (cachedArticles.length) {
+          console.log('[getAllArticles] První článek:', JSON.stringify(cachedArticles[0]));
+        }
         return cachedArticles;
-      } catch (e) {
-        clearTimeout(timeout);
-        console.error('Chyba načítání článků:', e);
+      } catch(e) {
+        console.error('[getAllArticles] Chyba:', e);
         return [];
       }
     }
 
     /* === Aktuality === */
     async function loadLatest() {
-      const box = document.getElementById('latestPanel');
+      var box = document.getElementById('latestPanel');
       if (!box) return;
-      const articles = await getAllArticles();
-      const latest = articles.slice(0, 3);
+      var articles = await getAllArticles();
+      var latest = articles.slice(0, 5);
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
         return;
       }
-      let html = '<h3>Poslední aktuality</h3>';
-      for (let i = 0; i < latest.length; i++) {
-        const a = latest[i];
-        const artId = a.id || '';
-        const title = a.title || 'Bez názvu';
-        const date = a.created || a.date || '';
-        const dateStr = date ? new Date(date).toLocaleDateString('cs') : '';
-        const meta = dateStr ? '• ' + dateStr : '';
+      var html = '<h3>Poslední aktuality</h3>';
+      for (var i = 0; i < latest.length; i++) {
+        var a = latest[i];
+        var artId = a.id || '';
+        var title = a.title || 'Bez názvu';
+        var date = a.created || a.date || '';
+        var dateStr = '';
+        if (date) {
+          try { dateStr = new Date(date).toLocaleDateString('cs'); } catch(e) {}
+        }
+        var meta = dateStr ? '• ' + dateStr : '';
         html += '<a class="latest-item" href="/article/' + escapeHtml(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       box.innerHTML = html;
-      const shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
-      const waBtn = document.getElementById('shareWhatsApp');
+      var shareText = 'Nové aktuality na Moje diagnóza, můj vesmír! ' + latest.map(function(a){ return a.title; }).join(', ') + ' - ' + window.location.origin;
+      var waBtn = document.getElementById('shareWhatsApp');
       if (waBtn) waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
     }
 
     /* === Sekce === */
-    const SECTIONS = [
+    var SECTIONS = [
       { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
       { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
       { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
@@ -211,54 +214,60 @@
 
     async function loadSectionCover(sec) {
       try {
-        const r = await fetch('/api/sections/cover?sectionId=' + sec.id);
+        var r = await fetch('/api/sections/cover?sectionId=' + sec.id);
         if (!r.ok) return '';
-        const d = await r.json();
+        var d = await r.json();
         return d.url || '';
-      } catch { return ''; }
+      } catch(e) { return ''; }
     }
 
     async function loadSubsections(secId) {
       try {
-        const r = await fetch('/api/subsections/by-section?sectionId=' + secId);
-        if (!r.ok) return [];
-        return await r.json();
-      } catch { return []; }
+        var r = await fetch('/api/subsections/by-section?sectionId=' + secId);
+        if (!r.ok) { console.error('[loadSubsections] HTTP chyba:', r.status); return []; }
+        var subs = await r.json();
+        console.log('[loadSubsections] sekce=' + secId + ' nalezeno=' + subs.length);
+        if (subs.length) console.log('[loadSubsections] první podsekce:', JSON.stringify(subs[0]));
+        return subs;
+      } catch(e) {
+        console.error('[loadSubsections] Chyba:', e);
+        return [];
+      }
     }
 
-    let activeCard = null;
     window.closeAllCardsWrapper = function() {
       document.querySelectorAll('.section-card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
-      const backdrop = document.getElementById('overlayBackdrop');
+      var backdrop = document.getElementById('overlayBackdrop');
       if (backdrop) backdrop.classList.remove('active');
-      activeCard = null;
     };
 
     async function buildSections() {
-      const container = document.getElementById('sectionsContainer');
+      var container = document.getElementById('sectionsContainer');
       if (!container) return;
       container.innerHTML = '';
-      for (let i = 0; i < SECTIONS.length; i++) {
-        const sec = SECTIONS[i];
-        const cover = await loadSectionCover(sec);
-        const card = document.createElement('div');
+      for (var i = 0; i < SECTIONS.length; i++) {
+        var sec = SECTIONS[i];
+        var cover = await loadSectionCover(sec);
+        var card = document.createElement('div');
         card.className = 'section-card';
         card.dataset.sectionId = sec.id;
-        card.innerHTML = '<div class="card-glow"></div><div class="card-inner"><img src="' + (cover || '/images/placeholder.jpg') + '" alt="' + escapeHtml(sec.name) + '" onerror="this.src=\'/images/placeholder.jpg\'"><div class="card-label">' + escapeHtml(sec.name) + ' / ' + escapeHtml(sec.nameEn) + '</div></div><div class="card-content" id="content-' + sec.id + '"><button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4><div id="loading-' + sec.id + '" style="color:#64748b;font-size:13px">Načítání...</div></div>';
+        card.innerHTML = '<div class="card-glow"></div><div class="card-inner"><img src="' + (cover || '/images/placeholder.jpg') + '" alt="' + escapeHtml(sec.name) + '" onerror="this.src=\'/images/placeholder.jpg\'"><div class="card-label">' + escapeHtml(sec.name) + ' / ' + escapeHtml(sec.nameEn) + '</div></div><div class="card-content" id="content-' + sec.id + '"><button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4><div style="color:#64748b;font-size:13px">Načítání...</div></div>';
         card.addEventListener('click', async function(e) {
           if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
           if (card.classList.contains('expanded')) { window.closeAllCardsWrapper(); return; }
           window.closeAllCardsWrapper();
           card.classList.add('expanded');
-          const backdrop = document.getElementById('overlayBackdrop');
+          var backdrop = document.getElementById('overlayBackdrop');
           if (backdrop) backdrop.classList.add('active');
-          activeCard = card;
-          const contentEl = document.getElementById('content-' + sec.id);
+          var contentEl = document.getElementById('content-' + sec.id);
           if (!contentEl || contentEl.dataset.loaded) return;
-          const subs = await loadSubsections(sec.id);
+          var subs = await loadSubsections(sec.id);
           if (sec.id === 'about' || !subs.length) {
-            const all = await getAllArticles();
-            const articles = all.filter(function(a) { return a.sectionId === sec.id; });
+            var all = await getAllArticles();
+            var articles = all.filter(function(a) {
+              return a.sectionId === sec.id;
+            });
+            console.log('[buildSections] sekce=' + sec.id + ' článků=' + articles.length);
             renderArticles(contentEl, articles, sec.name);
           } else {
             renderSubsections(contentEl, subs, sec.id);
@@ -270,15 +279,15 @@
     }
 
     function renderArticles(container, articles, fallbackTitle) {
-      let html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(fallbackTitle) + '</h4>';
+      var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(fallbackTitle) + '</h4>';
       if (!articles.length) {
         html += '<div class="no-articles">Zatím žádné články</div>';
       } else {
         html += '<div class="sub-articles" style="max-height:240px">';
-        for (let i = 0; i < articles.length; i++) {
-          const a = articles[i];
-          const artId = a.id || '';
-          const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
+        for (var i = 0; i < articles.length; i++) {
+          var a = articles[i];
+          var artId = a.id || '';
+          var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
           html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         html += '</div>';
@@ -287,12 +296,16 @@
     }
 
     function renderSubsections(container, subs, secId) {
-      let html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>Podsekce</h4>';
-      if (!subs.length) { html += '<div class="no-articles">Žádné podsekce</div>'; container.innerHTML = html; return; }
-      for (let i = 0; i < subs.length; i++) {
-        const sub = subs[i];
-        const subId = sub.id || '';
-        const subName = sub.name || '';
+      var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>Podsekce</h4>';
+      if (!subs.length) {
+        html += '<div class="no-articles">Žádné podsekce</div>';
+        container.innerHTML = html;
+        return;
+      }
+      for (var i = 0; i < subs.length; i++) {
+        var sub = subs[i];
+        var subId = sub.id || '';
+        var subName = sub.name || '';
         html += '<div class="sub-block collapsed" id="subblock-' + subId + '">' +
           '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sec-id="' + escapeHtml(secId) + '">' + escapeHtml(subName) + '</div>' +
           '<div class="sub-articles" id="subarticles-' + subId + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
@@ -300,40 +313,57 @@
       }
       container.innerHTML = html;
 
+      /* Event listenery na každý .sub-title */
       container.querySelectorAll('.sub-title').forEach(function(titleEl) {
         titleEl.addEventListener('click', function(e) {
           e.stopPropagation();
-          const sid = this.dataset.subId;
-          const scid = this.dataset.secId;
+          var sid = this.getAttribute('data-sub-id');
+          var scid = this.getAttribute('data-sec-id');
+          console.log('[sub-title click] subId=' + sid + ' secId=' + scid);
           window.toggleSub(sid, scid);
         });
       });
     }
 
     window.toggleSub = async function(subId, secId) {
-      const block = document.getElementById('subblock-' + subId);
-      const list = document.getElementById('subarticles-' + subId);
-      if (!block || !list) return;
-      const isCollapsed = block.classList.contains('collapsed');
+      console.log('[toggleSub] START subId=' + subId + ' secId=' + secId);
+      var block = document.getElementById('subblock-' + subId);
+      var list = document.getElementById('subarticles-' + subId);
+      if (!block || !list) {
+        console.error('[toggleSub] Element nenalezen! block=' + !!block + ' list=' + !!list);
+        return;
+      }
+      var isCollapsed = block.classList.contains('collapsed');
       document.querySelectorAll('.sub-block').forEach(function(b) { if (b !== block) b.classList.add('collapsed'); });
       if (!isCollapsed) { block.classList.add('collapsed'); return; }
       block.classList.remove('collapsed');
-      if (list.dataset.loaded) return;
+      if (list.dataset.loaded) {
+        console.log('[toggleSub] Už načteno, jen zobrazuji');
+        return;
+      }
       list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
 
-      const all = await getAllArticles();
-      const articles = all.filter(function(a) {
-        return a.sectionId === secId && a.subsectionId === subId;
+      var all = await getAllArticles();
+      console.log('[toggleSub] Všechny články:', all.length);
+
+      var articles = all.filter(function(a) {
+        var aSec = a.sectionId || '';
+        var aSub = a.subsectionId || '';
+        var match = (aSec === secId && aSub === subId);
+        if (match) console.log('[toggleSub] MATCH:', a.title, 'sec=' + aSec, 'sub=' + aSub);
+        return match;
       });
+
+      console.log('[toggleSub] Nalezeno článků:', articles.length);
 
       if (!articles.length) {
         list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
       } else {
-        let html = '';
-        for (let i = 0; i < articles.length; i++) {
-          const a = articles[i];
-          const artId = a.id || '';
-          const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
+        var html = '';
+        for (var i = 0; i < articles.length; i++) {
+          var a = articles[i];
+          var artId = a.id || '';
+          var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
           html += '<a href="/article/' + escapeHtml(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
         }
         list.innerHTML = html;
@@ -342,7 +372,7 @@
     };
 
     /* Eventy */
-    const backdrop = document.getElementById('overlayBackdrop');
+    var backdrop = document.getElementById('overlayBackdrop');
     if (backdrop) backdrop.addEventListener('click', window.closeAllCardsWrapper);
     document.addEventListener('keydown', function(e) { if (e.key === 'Escape') window.closeAllCardsWrapper(); });
 
