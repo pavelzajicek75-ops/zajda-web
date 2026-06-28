@@ -1,6 +1,6 @@
-# Cloudflare Pages _redirects
-# Routuje /article/UUID na article.html (rewrite, URL zůstává stejná)
+# Routování článků — rewrite, URL zůstává /article/UUID
 /article/*  /article.html  200
 
-# Fallback pro neexistující cesty → index.html
+# Fallback pro všechny ostatní cesty
 /*  /index.html  200
+
