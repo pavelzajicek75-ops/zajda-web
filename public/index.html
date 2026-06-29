@@ -37,22 +37,17 @@
     .section-card.expanded .card-inner img { filter: brightness(0.35) blur(1px); transform: scale(1.1); }
     .card-label { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 10px 10px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color: #ffcc66; font-size: 17px; font-weight: 600; text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,0.9); pointer-events: none; transition: opacity 0.3s, text-shadow 0.3s; }
     .section-card.expanded .card-label { opacity: 0; }
-    .card-content { position: absolute; inset: 0; z-index: 5; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; overflow-y: auto; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); border-radius: 14px; }
+    .card-content { position: absolute; inset: 0; z-index: 5; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; overflow-y: auto; background: rgba(15,23,42,0.88); backdrop-filter: blur(6px); border-radius: 14px; }
     .section-card.expanded .card-content { opacity: 1; pointer-events: auto; }
     .card-content::-webkit-scrollbar { width: 4px; }
     .card-content::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
     .card-content h4 { color: #ffcc66; font-size: 18px; margin-bottom: 12px; text-shadow: 0 2px 8px rgba(0,0,0,0.9); border-bottom: 1px solid rgba(255,102,0,0.3); padding-bottom: 8px; }
     .close-btn { position: absolute; top: 8px; right: 12px; background: rgba(255,255,255,0.1); border: none; color: #ffcc66; font-size: 20px; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 10; }
     .close-btn:hover { background: rgba(255,102,0,0.3); }
-    .sub-block { margin-bottom: 8px; }
-    .sub-title { color: #ff6600; font-size: 14px; font-weight: 600; padding: 6px 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.2s; border-radius: 4px; }
-    .sub-title:hover { color: #ffcc66; background: rgba(255,102,0,0.1); text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 12px; }
-    .sub-title::after { content: '▼'; font-size: 10px; color: #64748b; transition: transform 0.2s; }
-    .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
-    .sub-articles { max-height: 400px; overflow-y: auto; transition: max-height 0.4s ease; }
-    .sub-block.collapsed .sub-articles { max-height: 0; overflow: hidden; }
+    .sub-header { color: #ff6600; font-size: 14px; font-weight: 700; padding: 8px 0 4px; margin-top: 6px; border-bottom: 1px solid rgba(255,102,0,0.2); text-shadow: 0 0 8px rgba(255,102,0,0.3); }
+    .sub-header:first-of-type { margin-top: 0; }
     .article-link { display: block; padding: 6px 8px 6px 16px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; margin: 2px 0; border-radius: 0 4px 4px 0; }
-    .article-link:hover { color: #fff; border-left-color: #ff6600; padding-left: 20px; background: rgba(255,102,0,0.08); text-shadow: 0 0 10px rgba(255,102,0,0.3); }
+    .article-link:hover { color: #fff; border-left-color: #ff6600; padding-left: 20px; background: rgba(255,102,0,0.1); text-shadow: 0 0 8px rgba(255,102,0,0.6), 0 0 16px rgba(255,204,102,0.4); }
     .article-link .art-title { font-weight: 600; }
     .article-link .art-date { font-size: 11px; color: #94a3b8; display: block; margin-top: 1px; }
     .article-link .art-excerpt { font-size: 11px; color: #64748b; display: block; margin-top: 1px; }
@@ -185,11 +180,7 @@
       if (!box) return;
       var articles = await getAllArticles();
       var sorted = articles.slice().sort(function(a, b) {
-        var da = a.created || a.date || '';
-        var db = b.created || b.date || '';
-        if (da < db) return 1;
-        if (da > db) return -1;
-        return 0;
+        return (b.created || 0) - (a.created || 0);
       });
       var latest = sorted.slice(0, 3);
       if (!latest.length) {
@@ -201,8 +192,7 @@
         var a = latest[i];
         var artId = a.id || '';
         var title = a.title || 'Bez názvu';
-        var date = a.created || a.date || '';
-        var dateStr = formatDate(date);
+        var dateStr = formatDate(a.date || a.created);
         var meta = dateStr ? '• ' + dateStr : '';
         html += '<a class="latest-item" href="/article.html?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
@@ -242,22 +232,17 @@
       if (backdrop) backdrop.classList.remove('active');
     };
 
-    function renderArticleList(articles) {
+    function renderArticleLinks(articles) {
       if (!articles.length) return '<div class="no-articles">Žádné články</div>';
       var sorted = articles.slice().sort(function(a, b) {
-        var da = a.created || a.date || '';
-        var db = b.created || b.date || '';
-        if (da < db) return 1;
-        if (da > db) return -1;
-        return 0;
+        return (b.created || 0) - (a.created || 0);
       });
       var html = '';
       for (var i = 0; i < sorted.length; i++) {
         var a = sorted[i];
         var artId = a.id || '';
         var title = a.title || 'Bez názvu';
-        var date = a.created || a.date || '';
-        var dateStr = formatDate(date);
+        var dateStr = formatDate(a.date || a.created);
         var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '';
         html += '<a class="article-link" href="/article.html?id=' + encodeURIComponent(artId) + '">' +
           '<span class="art-title">' + escapeHtml(title) + '</span>' +
@@ -277,6 +262,7 @@
           var card = document.createElement('div');
           card.className = 'section-card';
           card.dataset.sectionId = sec.id;
+
           var imgEl = document.createElement('img');
           imgEl.alt = sec.name;
           imgEl.src = '/images/placeholder.jpg';
@@ -284,90 +270,82 @@
           loadSectionCover(sec.id).then(function(coverUrl) {
             if (coverUrl) imgEl.src = coverUrl;
           });
+
           var cardInner = document.createElement('div');
           cardInner.className = 'card-inner';
           cardInner.appendChild(imgEl);
+
           var label = document.createElement('div');
           label.className = 'card-label';
           label.textContent = sec.name + ' / ' + sec.nameEn;
           cardInner.appendChild(label);
+
           var glow = document.createElement('div');
           glow.className = 'card-glow';
+
           var content = document.createElement('div');
           content.className = 'card-content';
           content.id = 'content-' + sec.id;
-          content.innerHTML = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4><div style="color:#64748b;font-size:13px">Načítání...</div>';
+          content.innerHTML = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper(); return false;">×</button><h4>' + escapeHtml(sec.name) + '</h4><div style="color:#64748b;font-size:13px">Načítání...</div>';
+
           card.appendChild(glow);
           card.appendChild(cardInner);
           card.appendChild(content);
+
           card.addEventListener('click', async function(e) {
-            if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
-            if (card.classList.contains('expanded')) { window.closeAllCardsWrapper(); return; }
+            /* Pokud je klik uvnitř card-content, ignoruj — o vše se starají inline onclick a <a href> */
+            if (e.target.closest('.card-content')) return;
+
+            /* Klik mimo content — buď rozbal nebo zavři */
+            if (card.classList.contains('expanded')) {
+              window.closeAllCardsWrapper();
+              return;
+            }
+
             window.closeAllCardsWrapper();
             card.classList.add('expanded');
             var backdrop = document.getElementById('overlayBackdrop');
             if (backdrop) backdrop.classList.add('active');
+
             var contentEl = document.getElementById('content-' + sec.id);
             if (!contentEl || contentEl.dataset.loaded) return;
+
             var subs = await loadSubsections(sec.id);
-            var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4>';
+            var allArticles = await getAllArticles();
+
+            var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper(); return false;">×</button>';
+            html += '<h4>' + escapeHtml(sec.name) + '</h4>';
+
             if (sec.id === 'about' || !subs.length) {
-              var all = await getAllArticles();
-              var articles = all.filter(function(a) {
-                var secId = a.sectionId;
-                if (secId == null) return false;
-                return String(secId) === sec.id;
+              /* Sekce bez podsekcí — zobraz všechny články rovnou */
+              var articles = allArticles.filter(function(a) {
+                return a.sectionId != null && String(a.sectionId) === sec.id;
               });
-              html += renderArticleList(articles);
+              html += renderArticleLinks(articles);
             } else {
+              /* Sekce s podsekcemi — pro každu podsekci zobraz název + články */
               for (var i = 0; i < subs.length; i++) {
                 var sub = subs[i];
+                var subName = sub.name || 'Bez názvu';
                 var subId = sub.id || '';
-                var subName = sub.name || '';
-                html += '<div class="sub-block collapsed" id="subblock-' + escapeHtml(subId) + '">' +
-                  '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sec-id="' + escapeHtml(sec.id) + '">' + escapeHtml(subName) + '</div>' +
-                  '<div class="sub-articles" id="subarticles-' + escapeHtml(subId) + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
-                  '</div>';
+                var subArticles = allArticles.filter(function(a) {
+                  return a.sectionId != null && a.subsectionId != null &&
+                         String(a.sectionId) === sec.id &&
+                         String(a.subsectionId) === String(subId);
+                });
+                html += '<div class="sub-header">' + escapeHtml(subName) + '</div>';
+                html += renderArticleLinks(subArticles);
               }
             }
+
             contentEl.innerHTML = html;
-            contentEl.querySelectorAll('.sub-title').forEach(function(titleEl) {
-              titleEl.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var sid = this.getAttribute('data-sub-id');
-                var scid = this.getAttribute('data-sec-id');
-                window.toggleSub(sid, scid);
-              });
-            });
             contentEl.dataset.loaded = '1';
           });
+
           container.appendChild(card);
         })(SECTIONS[s]);
       }
     }
-
-    window.toggleSub = async function(subId, secId) {
-      var block = document.getElementById('subblock-' + subId);
-      var list = document.getElementById('subarticles-' + subId);
-      if (!block || !list) return;
-      var isCollapsed = block.classList.contains('collapsed');
-      document.querySelectorAll('.sub-block').forEach(function(b) {
-        if (b !== block) b.classList.add('collapsed');
-      });
-      if (!isCollapsed) { block.classList.add('collapsed'); return; }
-      block.classList.remove('collapsed');
-      if (list.dataset.loaded) return;
-      list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
-      var all = await getAllArticles();
-      var articles = all.filter(function(a) {
-        var aSec = a.sectionId;
-        var aSub = a.subsectionId;
-        if (aSec == null || aSub == null) return false;
-        return String(aSec) === String(secId) && String(aSub) === String(subId);
-      });
-      list.innerHTML = renderArticleList(articles);
-      list.dataset.loaded = '1';
-    };
 
     var backdrop = document.getElementById('overlayBackdrop');
     if (backdrop) backdrop.addEventListener('click', window.closeAllCardsWrapper);
