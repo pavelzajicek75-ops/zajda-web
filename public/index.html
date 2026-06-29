@@ -33,11 +33,7 @@
     .card-inner { position: relative; width: 100%; height: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; box-shadow: 0 4px 20px rgba(0,0,0,0.6); transition: border-color 0.3s; }
     .section-card.expanded .card-inner { border-color: rgba(255,102,0,0.6); }
     .card-inner img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); transition: filter 0.4s, transform 0.6s; }
-    .section-card:hover:not(.expanded) .card-inner img { filter: brightness(1.25) contrast(1.15) saturate(1.1); }
-    .section-card.expanded .card-inner img { filter: brightness(0.4) blur(1px); transform: scale(1.1); }
-    .card-label { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 10px 10px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color: #ffcc66; font-size: 17px; font-weight: 600; text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,0.9); pointer-events: none; transition: opacity 0.3s, text-shadow 0.3s; }
-    .section-card.expanded .card-label { opacity: 0; }
-    .card-content { position: absolute; inset: 0; z-index: 5; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; overflow-y: auto; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); border-radius: 14px; }
+    .section-card:hover:not(.expanded) .card-inner img { filter z-index: 5; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; overflow-y: auto; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); border-radius: 14px; }
     .section-card.expanded .card-content { opacity: 1; pointer-events: auto; }
     .card-content::-webkit-scrollbar { width: 4px; }
     .card-content::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
@@ -48,9 +44,10 @@
     .sub-title { color: #ff6600; font-size: 14px; font-weight: 600; padding: 6px 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.2s; }
     .sub-title:hover { color: #ffcc66; text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 4px; }
     .sub-title::after { content: '▼'; font-size: 10px; color: #64748b; transition: transform 0.2s; }
+    .sub-block.expanded .sub-title::after { transform: rotate(0deg); }
     .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
-    .sub-articles { max-height: 500px; overflow-y: auto; transition: max-height 0.3s ease; padding-top: 4px; }
-    .sub-block.collapsed .sub-articles { max-height: 0; overflow: hidden; padding-top: 0; }
+    .sub-articles { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.3s ease; padding-top: 0; }
+    .sub-block.expanded .sub-articles { max-height: 600px; padding-top: 4px; overflow-y: auto; }
     .sub-articles a { display: block; padding: 5px 0 5px 12px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; }
     .sub-articles a:hover { color: #fff; border-left-color: #ff6600; padding-left: 16px; text-shadow: 0 0 10px rgba(255,102,0,0.3); }
     .sub-articles a span { font-size: 12px; color: #94a3b8; display: block; margin-top: 2px; }
@@ -124,6 +121,15 @@
       return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('cs', { year: 'numeric', month: 'numeric', day: 'numeric' });
+      } catch(e) { return ''; }
+    }
+
     async function loadQuotes() {
       try { var r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
       catch(e) { return []; }
@@ -191,8 +197,7 @@
         var artId = a.id || '';
         var title = a.title || 'Bez názvu';
         var date = a.created || a.date || '';
-        var dateStr = '';
-        if (date) { try { dateStr = new Date(date).toLocaleDateString('cs'); } catch(e) {} }
+        var dateStr = formatDate(date);
         var meta = dateStr ? '• ' + dateStr : '';
         html += '<a class="latest-item" href="/article.html?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
@@ -231,6 +236,32 @@
       var backdrop = document.getElementById('overlayBackdrop');
       if (backdrop) backdrop.classList.remove('active');
     };
+
+    function renderArticleList(articles) {
+      if (!articles.length) return '<div class="no-articles">Žádné články</div>';
+      var sorted = articles.slice().sort(function(a, b) {
+        var da = a.created || a.date || '';
+        var db = b.created || b.date || '';
+        if (da < db) return 1;
+        if (da > db) return -1;
+        return 0;
+      });
+      var html = '';
+      for (var i = 0; i < sorted.length; i++) {
+        var a = sorted[i];
+        var artId = a.id || '';
+        var title = a.title || 'Bez názvu';
+        var date = a.created || a.date || '';
+        var dateStr = formatDate(date);
+        var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
+        html += '<a href="/article.html?id=' + encodeURIComponent(artId) + '">' +
+          '<div style="font-weight:600;">' + escapeHtml(title) + '</div>' +
+          (dateStr ? '<span>' + escapeHtml(dateStr) + '</span>' : '') +
+          (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') +
+          '</a>';
+      }
+      return html;
+    }
 
     async function buildSections() {
       var container = document.getElementById('sectionsContainer');
@@ -281,9 +312,29 @@
                 if (secId == null) return false;
                 return String(secId) === sec.id;
               });
-              renderArticles(contentEl, articles, sec.name);
+              var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4>';
+              html += renderArticleList(articles);
+              contentEl.innerHTML = html;
             } else {
-              renderSubsections(contentEl, subs, sec.id);
+              var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4>';
+              for (var i = 0; i < subs.length; i++) {
+                var sub = subs[i];
+                var subId = sub.id || '';
+                var subName = sub.name || '';
+                html += '<div class="sub-block collapsed" id="subblock-' + escapeHtml(subId) + '">' +
+                  '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sec-id="' + escapeHtml(sec.id) + '">' + escapeHtml(subName) + '</div>' +
+                  '<div class="sub-articles" id="subarticles-' + escapeHtml(subId) + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
+                  '</div>';
+              }
+              contentEl.innerHTML = html;
+              contentEl.querySelectorAll('.sub-title').forEach(function(titleEl) {
+                titleEl.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  var sid = this.getAttribute('data-sub-id');
+                  var scid = this.getAttribute('data-sec-id');
+                  window.toggleSub(sid, scid);
+                });
+              });
             }
             contentEl.dataset.loaded = '1';
           });
@@ -292,49 +343,15 @@
       }
     }
 
-    function renderArticles(container, articles, fallbackTitle) {
-      var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(fallbackTitle) + '</h4>';
-      if (!articles.length) {
-        html += '<div class="no-articles">Zatím žádné články</div>';
-      } else {
-        html += '<div class="sub-articles" style="max-height:500px">';
-        for (var i = 0; i < articles.length; i++) {
-          var a = articles[i];
-          var artId = a.id || '';
-          var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 80) + '...' : '';
-          html += '<a href="/article.html?id=' + encodeURIComponent(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || 'Bez názvu') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
-        }
-        html += '</div>';
-      }
-      container.innerHTML = html;
-    }
-
-    function renderSubsections(container, subs, secId) {
-      var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>Podsekce</h4>';
-      if (!subs.length) {
-        html += '<div class="no-articles">Žádné podsekce</div>';
-        container.innerHTML = html;
-        return;
-      }
-      for (var i = 0; i < subs.length; i++) {
-        var sub = subs[i];
-        var subId = sub.id || '';
-        var subName = sub.name || '';
-        html += '<div class="sub-block" id="subblock-' + escapeHtml(subId) + '">' +
-          '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sec-id="' + escapeHtml(secId) + '">' + escapeHtml(subName) + '</div>' +
-          '<div class="sub-articles" id="subarticles-' + escapeHtml(subId) + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div></div>' +
-          '</div>';
-      }
-      container.innerHTML = html;
-      // Automaticky načíst články pro všechny podsekce
-      subs.forEach(function(sub) {
-        loadArticlesForSub(sub.id, secId);
-      });
-    }
-
-    async function loadArticlesForSub(subId, secId) {
+    window.toggleSub = async function(subId, secId) {
+      var block = document.getElementById('subblock-' + subId);
       var list = document.getElementById('subarticles-' + subId);
-      if (!list) return;
+      if (!block || !list) return;
+      var isCollapsed = block.classList.contains('collapsed');
+      if (!isCollapsed) { block.classList.add('collapsed'); return; }
+      block.classList.remove('collapsed');
+      if (list.dataset.loaded) return;
+      list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
       var all = await getAllArticles();
       var articles = all.filter(function(a) {
         var aSec = a.sectionId;
@@ -342,19 +359,9 @@
         if (aSec == null || aSub == null) return false;
         return String(aSec) === String(secId) && String(aSub) === String(subId);
       });
-      if (!articles.length) {
-        list.innerHTML = '<div class="no-articles" style="padding:6px 0">Žádné články v této podsekci</div>';
-      } else {
-        var html = '';
-        for (var i = 0; i < articles.length; i++) {
-          var a = articles[i];
-          var artId = a.id || '';
-          var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 70) + '...' : '';
-          html += '<a href="/article.html?id=' + encodeURIComponent(artId) + '"><div style="font-weight:600;">' + escapeHtml(a.title || '') + '</div>' + (excerpt ? '<span>' + escapeHtml(excerpt) + '</span>' : '') + '</a>';
-        }
-        list.innerHTML = html;
-      }
-    }
+      list.innerHTML = renderArticleList(articles);
+      list.dataset.loaded = '1';
+    };
 
     var backdrop = document.getElementById('overlayBackdrop');
     if (backdrop) backdrop.addEventListener('click', window.closeAllCardsWrapper);
