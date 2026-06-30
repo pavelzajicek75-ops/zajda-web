@@ -23,45 +23,30 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#000;color:#fff;over
 .latest-item small{color:#94a3b8;font-size:12px;display:block;margin-top:2px}
 .latest-empty{color:#64748b;font-size:13px;padding:0.5rem 0}
 .intro-text{position:absolute;top:200px;right:60px;z-index:10;width:360px;max-width:90vw;color:#ffb366;font-size:16px;line-height:1.6;text-shadow:0 0 12px rgba(255,150,50,0.3);text-align:left}
-.sections-container{position:absolute;bottom:60px;left:0;width:100%;z-index:10;display:flex;justify-content:center;gap:24px;padding:0 20px;flex-wrap:wrap}
-.section-card{position:relative;width:220px;height:150px;border-radius:14px;cursor:pointer;flex-shrink:0;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1)}
-.section-card:hover:not(.expanded){transform:translateY(-8px) scale(1.05)}
-.section-card:hover:not(.expanded) .card-label{text-shadow:0 0 20px rgba(255,204,102,0.8)}
-.section-card.expanded{width:460px;height:380px;z-index:100;transform:translateY(-40px)}
-.card-glow{position:absolute;inset:-2px;border-radius:16px;background:linear-gradient(135deg,rgba(255,102,0,0.4),rgba(255,204,102,0.2));opacity:0;transition:opacity 0.3s;filter:blur(8px);z-index:-1}
-.section-card:hover .card-glow,.section-card.expanded .card-glow{opacity:1}
-.card-inner{position:relative;width:100%;height:100%;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background:#0f172a;box-shadow:0 4px 20px rgba(0,0,0,0.6);transition:border-color 0.3s}
-.section-card.expanded .card-inner{border-color:rgba(255,102,0,0.6);pointer-events:none}
-.card-inner img{width:100%;height:100%;object-fit:cover;filter:brightness(0.7);transition:filter 0.4s,transform 0.6s}
-.section-card:hover:not(.expanded) .card-inner img{filter:brightness(1.25) contrast(1.15) saturate(1.1)}
-.section-card.expanded .card-inner img{filter:brightness(0.35) blur(1px);transform:scale(1.1);pointer-events:none}
-.card-label{position:absolute;bottom:0;left:0;width:100%;padding:24px 10px 10px;background:linear-gradient(to top,rgba(0,0,0,0.9),transparent);color:#ffcc66;font-size:17px;font-weight:600;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,0.9);pointer-events:none;transition:opacity 0.3s,text-shadow 0.3s}
-.section-card.expanded .card-label{opacity:0}
-.card-content{position:absolute;inset:0;z-index:5;padding:16px;opacity:0;pointer-events:none;transition:opacity 0.3s ease;overflow-y:auto;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);border-radius:14px;scrollbar-width:thin;scrollbar-color:#ff6600 rgba(15,23,42,0.5)}
-.section-card.expanded .card-content{opacity:1;pointer-events:auto}
-.card-content::-webkit-scrollbar{width:6px}
-.card-content::-webkit-scrollbar-track{background:rgba(15,23,42,0.5);border-radius:3px}
-.card-content::-webkit-scrollbar-thumb{background:#ff6600;border-radius:3px}
-.card-content::-webkit-scrollbar-thumb:hover{background:#ff8533}
-.card-content h4{color:#ffcc66;font-size:18px;margin-bottom:12px;text-shadow:0 2px 8px rgba(0,0,0,0.9);border-bottom:1px solid rgba(255,102,0,0.3);padding-bottom:8px;position:sticky;top:0;background:rgba(15,23,42,0.95);z-index:3;padding-top:4px}
-.close-btn{position:absolute;top:8px;right:12px;background:rgba(255,255,255,0.1);border:none;color:#ffcc66;font-size:20px;cursor:pointer;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background 0.2s;z-index:10}
-.close-btn:hover{background:rgba(255,102,0,0.3)}
-.sub-block{margin-bottom:6px}
-.sub-header{color:#ff6600;font-size:14px;font-weight:700;padding:8px 10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,102,0,0.2);transition:all 0.2s;border-radius:4px;user-select:none;position:sticky;top:38px;background:rgba(15,23,42,0.95);z-index:2}
-.sub-header:hover{color:#ffcc66;background:rgba(255,102,0,0.1);text-shadow:0 0 10px rgba(255,204,102,0.7),0 0 20px rgba(255,102,0,0.4);padding-left:14px}
+/* --- Sekce: jednoduché panely jako aktuality --- */
+.sections-container{position:relative;z-index:10;display:flex;flex-wrap:wrap;justify-content:center;gap:20px;padding:40px 20px 100px;max-width:1200px;margin:0 auto}
+.section-panel{width:280px;max-width:90vw;background:rgba(15,23,42,0.7);backdrop-filter:blur(12px);border:1px solid rgba(255,102,0,0.3);border-radius:14px;padding:1.2rem;box-shadow:0 8px 32px rgba(0,0,0,0.5);transition:border-color 0.3s,box-shadow 0.3s}
+.section-panel:hover{border-color:rgba(255,102,0,0.6);box-shadow:0 8px 40px rgba(255,102,0,0.15)}
+.section-panel h3{color:#ffcc66;font-size:16px;margin-bottom:0.8rem;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,102,0,0.2);padding-bottom:0.6rem}
+.section-panel h3::before{content:'◆';color:#ff6600}
+.section-panel h3 .en{color:#64748b;font-size:12px;font-weight:400;margin-left:auto}
+.sub-block{margin-bottom:4px}
+.sub-header{color:#ff6600;font-size:14px;font-weight:700;padding:8px 10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,102,0,0.15);transition:all 0.2s;border-radius:4px;user-select:none}
+.sub-header:hover{color:#ffcc66;background:rgba(255,102,0,0.1);text-shadow:0 0 10px rgba(255,204,102,0.7)}
 .sub-header .arrow{font-size:10px;color:#64748b;transition:transform 0.2s}
 .sub-block.collapsed .arrow{transform:rotate(-90deg)}
-.sub-articles{max-height:220px;overflow-y:auto;transition:max-height 0.4s ease,opacity 0.3s;opacity:1;scrollbar-width:thin;scrollbar-color:#ff6600 rgba(15,23,42,0.3)}
+.sub-articles{max-height:300px;overflow-y:auto;transition:max-height 0.4s ease,opacity 0.3s;opacity:1;scrollbar-width:thin;scrollbar-color:#ff6600 rgba(15,23,42,0.3)}
 .sub-articles::-webkit-scrollbar{width:5px}
 .sub-articles::-webkit-scrollbar-track{background:rgba(15,23,42,0.3);border-radius:3px}
 .sub-articles::-webkit-scrollbar-thumb{background:#ff6600;border-radius:3px}
 .sub-block.collapsed .sub-articles{max-height:0;opacity:0;overflow:hidden}
 .article-link{display:block;color:#e2e8f0;text-decoration:none;padding:6px 8px 6px 16px;font-size:13px;border-left:2px solid #334155;transition:all 0.2s;white-space:normal;line-height:1.4;margin:2px 0;border-radius:0 4px 4px 0;cursor:pointer}
-.article-link:hover{color:#fff;border-left-color:#ff6600;padding-left:20px;background:rgba(255,102,0,0.1);text-shadow:0 0 8px rgba(255,102,0,0.6),0 0 16px rgba(255,204,102,0.4)}
+.article-link:hover{color:#fff;border-left-color:#ff6600;padding-left:20px;background:rgba(255,102,0,0.1);text-shadow:0 0 8px rgba(255,102,0,0.6)}
 .article-link .art-title{font-weight:600}
 .article-link .art-date{font-size:11px;color:#94a3b8;display:block;margin-top:1px}
 .article-link .art-excerpt{font-size:11px;color:#64748b;display:block;margin-top:1px}
 .no-articles{color:#64748b;font-size:13px;padding:8px 0;font-style:italic}
+.loading-text{color:#64748b;font-size:13px;padding:0.5rem 0}
 .share-bar{position:fixed;bottom:20px;right:20px;z-index:100;display:flex;gap:10px}
 .share-btn{background:rgba(15,23,42,0.8);backdrop-filter:blur(10px);border:1px solid rgba(255,102,0,0.3);color:#ffcc66;padding:10px 18px;border-radius:30px;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.3s;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 15px rgba(0,0,0,0.4)}
 .share-btn:hover{background:rgba(255,102,0,0.2);border-color:#ff6600;transform:translateY(-2px)}
@@ -73,21 +58,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#000;color:#fff;over
 .quote-star:hover .quote-inner{transform:scale(1.1);opacity:1;text-shadow:0 0 25px #fff,0 0 40px #ff6600}
 .quote-author{color:#ffcc66;font-size:0.65em;opacity:0.85;display:block;margin-top:4px}
 @keyframes drift{from{transform:translate(var(--sx),var(--sy));opacity:0}10%{opacity:0.8}90%{opacity:0.8}to{transform:translate(var(--ex),var(--ey));opacity:0}}
-.overlay-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.3);opacity:0;pointer-events:none;transition:opacity 0.3s}
-.overlay-backdrop.active{opacity:1;pointer-events:auto}
 .lightbox-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;cursor:zoom-out}
 .lightbox-overlay.open{display:flex}
 .lightbox-overlay img{max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(255,102,0,0.3)}
-@media(max-width:900px){.latest-panel{position:relative;top:auto;left:auto;margin:20px auto;width:90%}.intro-text{position:relative;top:auto;right:auto;margin:20px auto;width:90%;text-align:center}.sections-container{position:relative;bottom:auto;margin:40px 0;flex-direction:column;align-items:center}.section-card{width:85%;max-width:340px}.section-card.expanded{width:95%;max-width:500px;height:420px;transform:translateY(-20px)}}
+@media(max-width:900px){.latest-panel{position:relative;top:auto;left:auto;margin:20px auto;width:90%}.intro-text{position:relative;top:auto;right:auto;margin:20px auto;width:90%;text-align:center}.sections-container{flex-direction:column;align-items:center}.section-panel{width:90%;max-width:400px}}
 </style>
 </head>
 <body>
 <div class="bg"></div>
 <div class="stars" id="stars"></div>
-<div class="overlay-backdrop" id="overlayBackdrop"></div>
 <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
 <div class="title-block"><div class="cz-title">Moje diagnóza, můj vesmír</div><div class="en-title">My diagnosis, my universe</div></div>
-<div class="latest-panel" id="latestPanel"><h3>Poslední aktuality</h3><div style="color:#64748b;font-size:13px;padding:0.5rem 0">Načítání...</div></div>
+<div class="latest-panel" id="latestPanel"><h3>Poslední aktuality</h3><div class="loading-text">Načítání...</div></div>
 <div class="intro-text">Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...</div>
 <div class="sections-container" id="sectionsContainer"></div>
 <div class="share-bar"><a class="share-btn wa" id="shareWhatsApp" href="#" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Sdílet aktualizaci</a></div>
@@ -104,13 +86,12 @@ var ca=null;
 async function ga(){if(ca)return ca;try{var r=await fetch('/api/articles/list');if(!r.ok)return[];var d=await r.json();ca=Array.isArray(d)?d:[];return ca}catch(e){return[]}}
 async function ll(){var b=document.getElementById('latestPanel');if(!b)return;var a=await ga();var s=a.slice().sort(function(x,y){return(y.created||0)-(x.created||0)});var l=s.slice(0,3);if(!l.length){b.innerHTML='<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';return}var h='<h3>Poslední aktuality</h3>';for(var i=0;i<l.length;i++){var a2=l[i];var id=a2.id||'';var t=a2.title||'Bez názvu';var ds=fd(a2.date||a2.created);var m=ds?'• '+ds:'';h+='<a class="latest-item" href="/article.html?id='+encodeURIComponent(id)+'">'+eh(t)+'<small>'+eh(m)+'</small></a>'}b.innerHTML=h;var st='Nové aktuality na Moje diagnóza, můj vesmír! '+l.map(function(x){return x.title}).join(', ')+' - '+window.location.origin;var wb=document.getElementById('shareWhatsApp');if(wb)wb.href='https://wa.me/?text='+encodeURIComponent(st)}
 var SEC=[{id:'travel',name:'Cestování',nameEn:'Travel'},{id:'photo',name:'Fotografování',nameEn:'Photo'},{id:'projects',name:'Projekty',nameEn:'Projects'},{id:'about',name:'O Zajdovi',nameEn:'About'}];
-async function lsc(sid){try{var r=await fetch('/api/sections/cover?sectionId='+sid);if(!r.ok)return'';var d=await r.json();return d.url||''}catch(e){return''}}
 async function ls(sid){try{var r=await fetch('/api/subsections/by-section?sectionId='+sid);if(!r.ok)return[];return await r.json()}catch(e){return[]}}
-window.cac=function(){document.querySelectorAll('.section-card.expanded').forEach(function(c){c.classList.remove('expanded')});var b=document.getElementById('overlayBackdrop');if(b)b.classList.remove('active')};
 function ra(a){if(!a.length)return'<div class="no-articles">Žádné články</div>';var s=a.slice().sort(function(x,y){return(y.created||0)-(x.created||0)});var h='';for(var i=0;i<s.length;i++){var a2=s[i];var id=a2.id||'';var t=a2.title||'Bez názvu';var ds=fd(a2.date||a2.created);var ex=a2.content?a2.content.replace(/<[^>]+>/g,'').substring(0,60)+'...':'';h+='<a class="article-link" href="/article.html?id='+encodeURIComponent(id)+'"><span class="art-title">'+eh(t)+'</span>'+(ds?'<span class="art-date">'+eh(ds)+'</span>':'')+(ex?'<span class="art-excerpt">'+eh(ex)+'</span>':'')+'</a>'}return h}
-async function bs(){var c=document.getElementById('sectionsContainer');if(!c)return;c.innerHTML='';for(var s=0;s<SEC.length;s++){(function(sec){var card=document.createElement('div');card.className='section-card';card.dataset.sectionId=sec.id;var ie=document.createElement('img');ie.alt=sec.name;ie.src='/images/placeholder.jpg';ie.onerror=function(){this.src='/images/placeholder.jpg'};lsc(sec.id).then(function(u){if(u)ie.src=u});var ci=document.createElement('div');ci.className='card-inner';ci.appendChild(ie);var lb=document.createElement('div');lb.className='card-label';lb.textContent=sec.name+' / '+sec.nameEn;ci.appendChild(lb);var gl=document.createElement('div');gl.className='card-glow';var co=document.createElement('div');co.className='card-content';co.id='content-'+sec.id;co.innerHTML='<button class="close-btn">×</button><h4>'+eh(sec.name)+'</h4><div style="color:#64748b;font-size:13px">Načítání...</div>';card.appendChild(gl);card.appendChild(ci);card.appendChild(co);card.addEventListener('click',async function(e){var t=e.target;if(t.closest('.close-btn')){e.stopPropagation();e.preventDefault();window.cac();return}var sh=t.closest('.sub-header');if(sh){e.stopPropagation();e.preventDefault();var bl=sh.parentElement;if(bl)bl.classList.toggle('collapsed');return}var al=t.closest('a.article-link');if(al){e.preventDefault();e.stopPropagation();var hr=al.getAttribute('href');if(hr)window.location.href=hr;return}if(t.closest('.card-content'))return;if(card.classList.contains('expanded')){window.cac();return}window.cac();card.classList.add('expanded');var bd=document.getElementById('overlayBackdrop');if(bd)bd.classList.add('active');var ce=document.getElementById('content-'+sec.id);if(!ce||ce.dataset.loaded)return;var subs=await ls(sec.id);var arts=await ga();var h='<button class="close-btn">×</button><h4>'+eh(sec.name)+'</h4>';if(sec.id==='about'||!subs.length){var fa=arts.filter(function(a){return a.sectionId!=null&&String(a.sectionId)===sec.id});h+=ra(fa)}else{for(var i=0;i<subs.length;i++){var su=subs[i];var sn=su.name||'Bez názvu';var si=su.id||'';var sa=arts.filter(function(a){return a.sectionId!=null&&a.subsectionId!=null&&String(a.sectionId)===sec.id&&String(a.subsectionId)===String(si)});h+='<div class="sub-block"><div class="sub-header">'+eh(sn)+'<span class="arrow">▼</span></div><div class="sub-articles">'+ra(sa)+'</div></div>'}}ce.innerHTML=h;ce.dataset.loaded='1'});c.appendChild(card)})(SEC[s])}}
-var bd=document.getElementById('overlayBackdrop');if(bd)bd.addEventListener('click',window.cac);
-document.addEventListener('keydown',function(e){if(e.key==='Escape')window.cac()});
+async function bs(){var c=document.getElementById('sectionsContainer');if(!c)return;c.innerHTML='';var arts=await ga();for(var s=0;s<SEC.length;s++){(function(sec){var panel=document.createElement('div');panel.className='section-panel';panel.innerHTML='<h3>'+eh(sec.name)+'<span class="en">'+eh(sec.nameEn)+'</span></h3><div class="loading-text">Načítání...</div>';c.appendChild(panel);(async function(){var subs=await ls(sec.id);var h='<h3>'+eh(sec.name)+'<span class="en">'+eh(sec.nameEn)+'</span></h3>';if(sec.id==='about'||!subs.length){var fa=arts.filter(function(a){return a.sectionId!=null&&String(a.sectionId)===sec.id});h+=ra(fa)}else{for(var i=0;i<subs.length;i++){var su=subs[i];var sn=su.name||'Bez názvu';var si=su.id||'';var sa=arts.filter(function(a){return a.sectionId!=null&&a.subsectionId!=null&&String(a.sectionId)===sec.id&&String(a.subsectionId)===String(si)});h+='<div class="sub-block"><div class="sub-header">'+eh(sn)+'<span class="arrow">▼</span></div><div class="sub-articles">'+ra(sa)+'</div></div>'}}panel.innerHTML=h;panel.addEventListener('click',function(e){var sh=e.target.closest('.sub-header');if(sh){e.stopPropagation();e.preventDefault();var bl=sh.parentElement;if(bl)bl.classList.toggle('collapsed');return}var al=e.target.closest('a.article-link');if(al){e.preventDefault();e.stopPropagation();var hr=al.getAttribute('href');if(hr)window.location.href=hr;return}})})})(SEC[s])}}
+function openLightbox(src){var o=document.getElementById('lightboxOverlay');if(!o)return;o.innerHTML='<img src="'+src+'" alt="">';o.classList.add('open')}
+document.addEventListener('DOMContentLoaded',function(){
+var sb=document.getElementById('stars');if(sb){var f=document.createDocumentFragment();for(var i=0;i<200;i++){var s=document.createElement('div');s.className='star';s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';s.style.setProperty('--dur',(3+Math.random()*4)+'s');s.style.setProperty('--del',(Math.random()*5)+'s');f.appendChild(s)}sb.appendChild(f)}
 startQ();ll();bs();
 });
 </script>
