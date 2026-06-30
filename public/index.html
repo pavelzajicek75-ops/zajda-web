@@ -23,13 +23,15 @@
     .latest-item small { color: #94a3b8; font-size: 12px; display: block; margin-top: 2px; }
     .latest-empty { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
     .intro-text { position: absolute; top: 200px; right: 60px; z-index: 10; width: 360px; max-width: 90vw; color: #ffb366; font-size: 16px; line-height: 1.6; text-shadow: 0 0 12px rgba(255,150,50,0.3); text-align: left; }
-    /* --- Sekce: jednoduché panely jako Aktuality --- */
+    /* --- Sekce: panely s cover fotkou --- */
     .sections-container { position: relative; z-index: 10; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 40px 20px 100px; max-width: 1200px; margin: 0 auto; }
-    .section-panel { width: 280px; max-width: 90vw; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; padding: 1.2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); transition: border-color 0.3s, box-shadow 0.3s; }
+    .section-panel { width: 280px; max-width: 90vw; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); transition: border-color 0.3s, box-shadow 0.3s; }
     .section-panel:hover { border-color: rgba(255,102,0,0.6); box-shadow: 0 8px 40px rgba(255,102,0,0.15); }
-    .section-panel h3 { color: #ffcc66; font-size: 16px; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,102,0,0.2); padding-bottom: 0.6rem; }
-    .section-panel h3::before { content: '◆'; color: #ff6600; }
-    .section-panel h3 .en { color: #64748b; font-size: 12px; font-weight: 400; margin-left: auto; }
+    .panel-cover { width: 100%; height: 120px; object-fit: cover; display: block; border-bottom: 1px solid rgba(255,102,0,0.2); }
+    .panel-body { padding: 1rem 1.2rem 1.2rem; }
+    .panel-body h3 { color: #ffcc66; font-size: 16px; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,102,0,0.2); padding-bottom: 0.6rem; }
+    .panel-body h3::before { content: '◆'; color: #ff6600; }
+    .panel-body h3 .en { color: #64748b; font-size: 12px; font-weight: 400; margin-left: auto; }
     .sub-block { margin-bottom: 4px; }
     .sub-title { color: #ff6600; font-size: 14px; font-weight: 600; padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.2s; border-radius: 4px; user-select: none; }
     .sub-title:hover { color: #ffcc66; background: rgba(255,102,0,0.1); text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 14px; }
@@ -211,6 +213,15 @@
       { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
     ];
 
+    async function loadSectionCover(secId) {
+      try {
+        var r = await fetch('/api/sections/cover?sectionId=' + secId);
+        if (!r.ok) return '';
+        var d = await r.json();
+        return d.url || '';
+      } catch(e) { return ''; }
+    }
+
     async function loadSubsections(secId) {
       try {
         var r = await fetch('/api/subsections/by-section?sectionId=' + secId);
@@ -254,7 +265,22 @@
         (function(sec) {
           var panel = document.createElement('div');
           panel.className = 'section-panel';
-          panel.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3><div class="loading-text">Načítání...</div>';
+
+          var img = document.createElement('img');
+          img.className = 'panel-cover';
+          img.alt = sec.name;
+          img.src = '/images/placeholder.jpg';
+          img.onerror = function() { this.src = '/images/placeholder.jpg'; };
+          loadSectionCover(sec.id).then(function(url) {
+            if (url) img.src = url;
+          });
+
+          var body = document.createElement('div');
+          body.className = 'panel-body';
+          body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3><div class="loading-text">Načítání...</div>';
+
+          panel.appendChild(img);
+          panel.appendChild(body);
           container.appendChild(panel);
 
           (async function() {
@@ -286,9 +312,9 @@
               }
             }
 
-            panel.innerHTML = html;
+            body.innerHTML = html;
 
-            panel.querySelectorAll('.sub-title').forEach(function(titleEl) {
+            body.querySelectorAll('.sub-title').forEach(function(titleEl) {
               titleEl.addEventListener('click', function(e) {
                 e.stopPropagation();
                 e.preventDefault();
