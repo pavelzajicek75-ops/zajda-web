@@ -23,41 +23,30 @@
     .latest-item small { color: #94a3b8; font-size: 12px; display: block; margin-top: 2px; }
     .latest-empty { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
     .intro-text { position: absolute; top: 200px; right: 60px; z-index: 10; width: 360px; max-width: 90vw; color: #ffb366; font-size: 16px; line-height: 1.6; text-shadow: 0 0 12px rgba(255,150,50,0.3); text-align: left; }
-    .sections-container { position: absolute; bottom: 60px; left: 0; width: 100%; z-index: 10; display: flex; justify-content: center; gap: 24px; padding: 0 20px; flex-wrap: wrap; }
-    .section-card { position: relative; width: 220px; height: 150px; border-radius: 14px; cursor: pointer; flex-shrink: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    .section-card:hover:not(.expanded) { transform: translateY(-8px) scale(1.05); }
-    .section-card:hover:not(.expanded) .card-label { text-shadow: 0 0 20px rgba(255,204,102,0.8); }
-    .section-card.expanded { width: 460px; height: 340px; z-index: 100; transform: translateY(-40px); }
-    .card-glow { position: absolute; inset: -2px; border-radius: 16px; background: linear-gradient(135deg, rgba(255,102,0,0.4), rgba(255,204,102,0.2)); opacity: 0; transition: opacity 0.3s; filter: blur(8px); z-index: -1; }
-    .section-card:hover .card-glow, .section-card.expanded .card-glow { opacity: 1; }
-    .card-inner { position: relative; width: 100%; height: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; box-shadow: 0 4px 20px rgba(0,0,0,0.6); transition: border-color 0.3s; }
-    .section-card.expanded .card-inner { border-color: rgba(255,102,0,0.6); }
-    .card-inner img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7); transition: filter 0.4s, transform 0.6s; }
-    .section-card:hover:not(.expanded) .card-inner img { filter: brightness(1.25) contrast(1.15) saturate(1.1); }
-    .section-card.expanded .card-inner img { filter: brightness(0.35) blur(1px); transform: scale(1.1); }
-    .card-label { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 10px 10px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); color: #ffcc66; font-size: 17px; font-weight: 600; text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,0.9); pointer-events: none; transition: opacity 0.3s, text-shadow 0.3s; }
-    .section-card.expanded .card-label { opacity: 0; }
-    .card-content { position: absolute; inset: 0; z-index: 5; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; overflow-y: auto; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); border-radius: 14px; }
-    .section-card.expanded .card-content { opacity: 1; pointer-events: auto; }
-    .card-content::-webkit-scrollbar { width: 4px; }
-    .card-content::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
-    .card-content h4 { color: #ffcc66; font-size: 18px; margin-bottom: 12px; text-shadow: 0 2px 8px rgba(0,0,0,0.9); border-bottom: 1px solid rgba(255,102,0,0.3); padding-bottom: 8px; }
-    .close-btn { position: absolute; top: 8px; right: 12px; background: rgba(255,255,255,0.1); border: none; color: #ffcc66; font-size: 20px; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 10; }
-    .close-btn:hover { background: rgba(255,102,0,0.3); }
-    .sub-block { margin-bottom: 8px; }
-    .sub-title { color: #ff6600; font-size: 14px; font-weight: 600; padding: 6px 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.2s; border-radius: 4px; }
-    .sub-title:hover { color: #ffcc66; background: rgba(255,102,0,0.1); text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 12px; }
+    /* --- Sekce: jednoduché panely jako Aktuality --- */
+    .sections-container { position: relative; z-index: 10; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 40px 20px 100px; max-width: 1200px; margin: 0 auto; }
+    .section-panel { width: 280px; max-width: 90vw; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; padding: 1.2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); transition: border-color 0.3s, box-shadow 0.3s; }
+    .section-panel:hover { border-color: rgba(255,102,0,0.6); box-shadow: 0 8px 40px rgba(255,102,0,0.15); }
+    .section-panel h3 { color: #ffcc66; font-size: 16px; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,102,0,0.2); padding-bottom: 0.6rem; }
+    .section-panel h3::before { content: '◆'; color: #ff6600; }
+    .section-panel h3 .en { color: #64748b; font-size: 12px; font-weight: 400; margin-left: auto; }
+    .sub-block { margin-bottom: 4px; }
+    .sub-title { color: #ff6600; font-size: 14px; font-weight: 600; padding: 8px 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.2s; border-radius: 4px; user-select: none; }
+    .sub-title:hover { color: #ffcc66; background: rgba(255,102,0,0.1); text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 14px; }
     .sub-title::after { content: '▼'; font-size: 10px; color: #64748b; transition: transform 0.2s; }
-    .sub-block.expanded .sub-title::after { transform: rotate(0deg); }
     .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
-    .sub-articles { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
-    .sub-block.expanded .sub-articles { max-height: 400px; overflow-y: auto; }
-    .article-link { display: block; padding: 6px 8px 6px 16px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; margin: 2px 0; border-radius: 0 4px 4px 0; }
-    .article-link:hover { color: #fff; border-left-color: #ff6600; padding-left: 20px; background: rgba(255,102,0,0.08); text-shadow: 0 0 10px rgba(255,102,0,0.3); }
+    .sub-articles { max-height: 300px; overflow-y: auto; transition: max-height 0.4s ease, opacity 0.3s; opacity: 1; scrollbar-width: thin; scrollbar-color: #ff6600 rgba(15,23,42,0.3); }
+    .sub-articles::-webkit-scrollbar { width: 5px; }
+    .sub-articles::-webkit-scrollbar-track { background: rgba(15,23,42,0.3); border-radius: 3px; }
+    .sub-articles::-webkit-scrollbar-thumb { background: #ff6600; border-radius: 3px; }
+    .sub-block.collapsed .sub-articles { max-height: 0; opacity: 0; overflow: hidden; }
+    .article-link { display: block; padding: 6px 8px 6px 16px; color: #e2e8f0; text-decoration: none; font-size: 13px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; margin: 2px 0; border-radius: 0 4px 4px 0; cursor: pointer; }
+    .article-link:hover { color: #fff; border-left-color: #ff6600; padding-left: 20px; background: rgba(255,102,0,0.1); text-shadow: 0 0 8px rgba(255,102,0,0.6); }
     .article-link .art-title { font-weight: 600; }
     .article-link .art-date { font-size: 11px; color: #94a3b8; display: block; margin-top: 1px; }
     .article-link .art-excerpt { font-size: 11px; color: #64748b; display: block; margin-top: 1px; }
     .no-articles { color: #64748b; font-size: 13px; padding: 8px 0; font-style: italic; }
+    .loading-text { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
     .share-bar { position: fixed; bottom: 20px; right: 20px; z-index: 100; display: flex; gap: 10px; }
     .share-btn { background: rgba(15,23,42,0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,102,0,0.3); color: #ffcc66; padding: 10px 18px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
     .share-btn:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; transform: translateY(-2px); }
@@ -69,18 +58,20 @@
     .quote-star:hover .quote-inner { transform: scale(1.1); opacity: 1; text-shadow: 0 0 25px #fff, 0 0 40px #ff6600; }
     .quote-author { color: #ffcc66; font-size: 0.65em; opacity: 0.85; display: block; margin-top: 4px; }
     @keyframes drift { from { transform: translate(var(--sx), var(--sy)); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } to { transform: translate(var(--ex), var(--ey)); opacity: 0; } }
-    .overlay-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.3); opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-    .overlay-backdrop.active { opacity: 1; pointer-events: auto; }
     .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
     .lightbox-overlay.open { display: flex; }
     .lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px rgba(255,102,0,0.3); }
-    @media (max-width: 900px) { .latest-panel { position: relative; top: auto; left: auto; margin: 20px auto; width: 90%; } .intro-text { position: relative; top: auto; right: auto; margin: 20px auto; width: 90%; text-align: center; } .sections-container { position: relative; bottom: auto; margin: 40px 0; flex-direction: column; align-items: center; } .section-card { width: 85%; max-width: 340px; } .section-card.expanded { width: 95%; max-width: 500px; height: 380px; transform: translateY(-20px); } }
+    @media (max-width: 900px) {
+      .latest-panel { position: relative; top: auto; left: auto; margin: 20px auto; width: 90%; }
+      .intro-text { position: relative; top: auto; right: auto; margin: 20px auto; width: 90%; text-align: center; }
+      .sections-container { flex-direction: column; align-items: center; }
+      .section-panel { width: 90%; max-width: 400px; }
+    }
   </style>
 </head>
 <body>
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
-  <div class="overlay-backdrop" id="overlayBackdrop"></div>
   <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
   <div class="title-block">
     <div class="cz-title">Moje diagnóza, můj vesmír</div>
@@ -88,7 +79,7 @@
   </div>
   <div class="latest-panel" id="latestPanel">
     <h3>Poslední aktuality</h3>
-    <div style="color:#64748b;font-size:13px;padding:0.5rem 0">Načítání...</div>
+    <div class="loading-text">Načítání...</div>
   </div>
   <div class="intro-text">Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...</div>
   <div class="sections-container" id="sectionsContainer"></div>
@@ -220,15 +211,6 @@
       { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
     ];
 
-    async function loadSectionCover(secId) {
-      try {
-        var r = await fetch('/api/sections/cover?sectionId=' + secId);
-        if (!r.ok) return '';
-        var d = await r.json();
-        return d.url || '';
-      } catch(e) { return ''; }
-    }
-
     async function loadSubsections(secId) {
       try {
         var r = await fetch('/api/subsections/by-section?sectionId=' + secId);
@@ -236,12 +218,6 @@
         return await r.json();
       } catch(e) { return []; }
     }
-
-    window.closeAllCardsWrapper = function() {
-      document.querySelectorAll('.section-card.expanded').forEach(function(c) { c.classList.remove('expanded'); });
-      var backdrop = document.getElementById('overlayBackdrop');
-      if (backdrop) backdrop.classList.remove('active');
-    };
 
     function renderArticleList(articles) {
       if (!articles.length) return '<div class="no-articles">Žádné články</div>';
@@ -273,48 +249,20 @@
       var container = document.getElementById('sectionsContainer');
       if (!container) return;
       container.innerHTML = '';
+      var allArticles = await getAllArticles();
       for (var s = 0; s < SECTIONS.length; s++) {
         (function(sec) {
-          var card = document.createElement('div');
-          card.className = 'section-card';
-          card.dataset.sectionId = sec.id;
-          var imgEl = document.createElement('img');
-          imgEl.alt = sec.name;
-          imgEl.src = '/images/placeholder.jpg';
-          imgEl.onerror = function() { this.src = '/images/placeholder.jpg'; };
-          loadSectionCover(sec.id).then(function(coverUrl) {
-            if (coverUrl) imgEl.src = coverUrl;
-          });
-          var cardInner = document.createElement('div');
-          cardInner.className = 'card-inner';
-          cardInner.appendChild(imgEl);
-          var label = document.createElement('div');
-          label.className = 'card-label';
-          label.textContent = sec.name + ' / ' + sec.nameEn;
-          cardInner.appendChild(label);
-          var glow = document.createElement('div');
-          glow.className = 'card-glow';
-          var content = document.createElement('div');
-          content.className = 'card-content';
-          content.id = 'content-' + sec.id;
-          content.innerHTML = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4><div style="color:#64748b;font-size:13px">Načítání...</div>';
-          card.appendChild(glow);
-          card.appendChild(cardInner);
-          card.appendChild(content);
-          card.addEventListener('click', async function(e) {
-            if (e.target.closest('.close-btn') || e.target.closest('.card-content')) return;
-            if (card.classList.contains('expanded')) { window.closeAllCardsWrapper(); return; }
-            window.closeAllCardsWrapper();
-            card.classList.add('expanded');
-            var backdrop = document.getElementById('overlayBackdrop');
-            if (backdrop) backdrop.classList.add('active');
-            var contentEl = document.getElementById('content-' + sec.id);
-            if (!contentEl || contentEl.dataset.loaded) return;
+          var panel = document.createElement('div');
+          panel.className = 'section-panel';
+          panel.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3><div class="loading-text">Načítání...</div>';
+          container.appendChild(panel);
+
+          (async function() {
             var subs = await loadSubsections(sec.id);
-            var html = '<button class="close-btn" onclick="event.stopPropagation(); window.closeAllCardsWrapper()">×</button><h4>' + escapeHtml(sec.name) + '</h4>';
+            var html = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>';
+
             if (sec.id === 'about' || !subs.length) {
-              var all = await getAllArticles();
-              var articles = all.filter(function(a) {
+              var articles = allArticles.filter(function(a) {
                 var secId = a.sectionId;
                 if (secId == null) return false;
                 return String(secId) === sec.id;
@@ -325,54 +273,33 @@
                 var sub = subs[i];
                 var subId = sub.id || '';
                 var subName = sub.name || '';
-                html += '<div class="sub-block collapsed" id="subblock-' + escapeHtml(subId) + '">' +
-                  '<div class="sub-title" data-sub-id="' + escapeHtml(subId) + '" data-sec-id="' + escapeHtml(sec.id) + '">' + escapeHtml(subName) + '</div>' +
-                  '<div class="sub-articles" id="subarticles-' + escapeHtml(subId) + '"><div style="color:#64748b;font-size:12px;padding:6px 0">Klikni pro načtení článků</div></div>' +
+                var subArticles = allArticles.filter(function(a) {
+                  var aSec = a.sectionId;
+                  var aSub = a.subsectionId;
+                  if (aSec == null || aSub == null) return false;
+                  return String(aSec) === String(sec.id) && String(aSub) === String(subId);
+                });
+                html += '<div class="sub-block">' +
+                  '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
+                  '<div class="sub-articles">' + renderArticleList(subArticles) + '</div>' +
                   '</div>';
               }
             }
-            contentEl.innerHTML = html;
-            contentEl.querySelectorAll('.sub-title').forEach(function(titleEl) {
+
+            panel.innerHTML = html;
+
+            panel.querySelectorAll('.sub-title').forEach(function(titleEl) {
               titleEl.addEventListener('click', function(e) {
                 e.stopPropagation();
-                var sid = this.getAttribute('data-sub-id');
-                var scid = this.getAttribute('data-sec-id');
-                window.toggleSub(sid, scid);
+                e.preventDefault();
+                var block = this.parentElement;
+                if (block) block.classList.toggle('collapsed');
               });
             });
-            contentEl.dataset.loaded = '1';
-          });
-          container.appendChild(card);
+          })();
         })(SECTIONS[s]);
       }
     }
-
-    window.toggleSub = async function(subId, secId) {
-      var block = document.getElementById('subblock-' + subId);
-      var list = document.getElementById('subarticles-' + subId);
-      if (!block || !list) return;
-      var isCollapsed = block.classList.contains('collapsed');
-      document.querySelectorAll('.sub-block').forEach(function(b) {
-        if (b !== block) b.classList.add('collapsed');
-      });
-      if (!isCollapsed) { block.classList.add('collapsed'); return; }
-      block.classList.remove('collapsed');
-      if (list.dataset.loaded) return;
-      list.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px 0">Načítání...</div>';
-      var all = await getAllArticles();
-      var articles = all.filter(function(a) {
-        var aSec = a.sectionId;
-        var aSub = a.subsectionId;
-        if (aSec == null || aSub == null) return false;
-        return String(aSec) === String(secId) && String(aSub) === String(subId);
-      });
-      list.innerHTML = renderArticleList(articles);
-      list.dataset.loaded = '1';
-    };
-
-    var backdrop = document.getElementById('overlayBackdrop');
-    if (backdrop) backdrop.addEventListener('click', window.closeAllCardsWrapper);
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') window.closeAllCardsWrapper(); });
 
     startQuotes();
     loadLatest();
