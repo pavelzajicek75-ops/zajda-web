@@ -47,7 +47,7 @@ let ED = {
   crop: 'free',
   export: 'max',
   blobUrl: null,
-  filters: { exposure: 0, contrast: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
+  filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
   cropRect: null,
   isDraggingImage: false,
   isDraggingCrop: false,
@@ -167,7 +167,6 @@ function setFilter(key, val) {
   if (el) el.textContent = val;
   applyFilters();
 }
-
 /* --- Crop systém --------------------------------------- */
 function setCrop(mode) {
   ED.crop = mode;
@@ -458,124 +457,7 @@ async function saveEditor(mode) {
   closeEditor();
   loadGallery();
 }
-
-/* === ROBUSTNÍ UPLOAD FOTEK (bez komprese) =============== */
-
-const UPLOAD_CONFIG = {
-  maxRetries: 3,
-  retryDelay: 1500,
-  timeoutMs: 60000,
-};
-
-/* Upload jedné fotky s retry logikou */
-async function uploadSinglePhoto(file, galleryId, attempt) {
-  attempt = attempt || 1;
-  const fd = new FormData();
-  fd.append('file', file, file.name || ('photo_' + Date.now() + '.jpg'));
-  fd.append('galleryId', galleryId || 'main');
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(function() { controller.abort(); }, UPLOAD_CONFIG.timeoutMs);
-
-    const r = await fetch('/api/photos/upload', {
-      method: 'POST',
-      body: fd,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!r.ok) throw new Error('Server ' + r.status);
-    return { success: true };
-  } catch (err) {
-    if (attempt < UPLOAD_CONFIG.maxRetries) {
-      await new Promise(function(r) { setTimeout(r, UPLOAD_CONFIG.retryDelay * attempt); });
-      return uploadSinglePhoto(file, galleryId, attempt + 1);
-    }
-    return { success: false, error: err.message, name: file.name };
-  }
-}
-
-/* Hlavní funkce — zavolat z <input type="file" onchange="handlePhotoUpload(this)" multiple> */
-async function handlePhotoUpload(input) {
-  const files = Array.from(input.files || []);
-  if (!files.length) return;
-
-  const valid = files.filter(function(f) { return f.type.startsWith('image/'); });
-  if (!valid.length) {
-    alert('Vyber platné obrázky.');
-    input.value = '';
-    return;
-  }
-
-  /* Progress modal */
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:420px;width:90vw;border:1px solid #334155">
-      <h3 style="color:#ffcc66;margin-bottom:1rem">Nahrávání fotek</h3>
-      <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:13px;margin-bottom:0.5rem">
-        <span id="uploadStatus">Připravuji…</span>
-        <span id="uploadCounter">0 / ${valid.length}</span>
-      </div>
-      <div style="background:#0f172a;border-radius:6px;height:8px;overflow:hidden;border:1px solid #334155">
-        <div id="uploadBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ff6600,#ffcc66);transition:width 0.3s"></div>
-      </div>
-      <div id="uploadLog" style="max-height:180px;overflow-y:auto;font-size:13px;color:#94a3b8;line-height:1.8;margin-top:0.75rem"></div>
-      <div style="text-align:center;margin-top:1rem">
-        <button id="uploadCloseBtn" class="btn" style="display:none">Zavřít</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  const bar = modal.querySelector('#uploadBar');
-  const counter = modal.querySelector('#uploadCounter');
-  const status = modal.querySelector('#uploadStatus');
-  const log = modal.querySelector('#uploadLog');
-  const closeBtn = modal.querySelector('#uploadCloseBtn');
-
-  let done = 0;
-  const failed = [];
-
-  for (const file of valid) {
-    status.textContent = 'Nahrávám: ' + file.name;
-    const result = await uploadSinglePhoto(file, 'main');
-    done++;
-    counter.textContent = done + ' / ' + valid.length;
-    bar.style.width = ((done / valid.length) * 100) + '%';
-
-    if (result.success) {
-      log.innerHTML += '<div style="color:#4ade80">✓ ' + escapeHtml(file.name) + '</div>';
-    } else {
-      failed.push(file.name);
-      log.innerHTML += '<div style="color:#ef4444">✗ ' + escapeHtml(file.name) + ' — ' + escapeHtml(result.error) + '</div>';
-    }
-    log.scrollTop = log.scrollHeight;
-  }
-
-  /* Hotovo */
-  status.textContent = 'Hotovo!';
-  closeBtn.style.display = 'inline-block';
-  closeBtn.onclick = function() {
-    modal.remove();
-    input.value = '';
-    loadGallery();
-  };
-
-  if (failed.length) {
-    log.innerHTML += '<div style="color:#fbbf24;margin-top:0.5rem;font-weight:bold">Nepodařilo se nahrát ' + failed.length + ' z ' + valid.length + ' fotek.</div>';
-  } else {
-    log.innerHTML += '<div style="color:#4ade80;margin-top:0.5rem;font-weight:bold">Všechny fotky nahrány! (' + valid.length + ')</div>';
-  }
-
-  /* Auto-refresh galerie i bez zavření */
-  loadGallery();
-}
-
 /* === WYSIWYG Editor — rozšířený toolbar ================= */
-
-let editingArticleId = null; /* Globální stav editace místo dataset */
 
 function execCmd(c, v) {
   document.execCommand(c, false, v);
@@ -585,6 +467,7 @@ function execCmd(c, v) {
   }
 }
 
+/* Formátovací příkazy pro toolbar */
 function setFontName(name) { execCmd('fontName', name); }
 function setFontSize(size) { execCmd('fontSize', size); }
 function setForeColor(color) { execCmd('foreColor', color); }
@@ -618,12 +501,13 @@ let currentActiveImg = null;
 function setupArticleEditors() {
   ['artEditor', 'aboutEditor'].forEach(id => {
     const ed = $(id);
-    if (!ed || ed.dataset.editorReady) return;
-    ed.dataset.editorReady = '1';
+    if (!ed) return;
 
+    /* Klik na obrázek = aktivace toolbaru */
     ed.addEventListener('click', e => {
       const img = e.target.closest('img.editor-img');
       if (!img) {
+        /* Klik mimo = deaktivace */
         ed.querySelectorAll('img.editor-img').forEach(i => {
           i.style.outline = '';
           i.removeAttribute('data-active');
@@ -636,17 +520,20 @@ function setupArticleEditors() {
       e.preventDefault();
       e.stopPropagation();
 
+      /* Deaktivovat ostatní */
       ed.querySelectorAll('img.editor-img').forEach(i => {
         i.style.outline = '';
         i.removeAttribute('data-active');
       });
 
+      /* Aktivovat tento */
       img.style.outline = '3px solid #3b82f6';
       img.setAttribute('data-active', '1');
       currentActiveImg = img;
       showImgToolbar(img);
     });
 
+    /* Zabránit nechtěnému tahání obrázků */
     ed.addEventListener('dragstart', e => {
       if (e.target.tagName === 'IMG') e.preventDefault();
     });
@@ -685,10 +572,12 @@ function imgToolbarAction(action) {
   const ed = $('artEditor') || $('aboutEditor');
   if (!ed) return;
 
+  /* Najdi aktivní obrázek v editoru */
   const img = ed.querySelector('img[data-active]') || currentActiveImg;
   if (!img) { hideImgToolbar(); return; }
 
   if (action === 'delete') {
+    /* Odstranit obrázek z článku */
     img.remove();
     hideImgToolbar();
     return;
@@ -745,6 +634,7 @@ function imgToolbarAction(action) {
   }
 }
 
+/* Skrytí toolbaru kliknutím mimo */
 document.addEventListener('click', e => {
   if (!e.target.closest('#img-toolbar') && !e.target.closest('img[data-active]')) {
     hideImgToolbar();
@@ -791,6 +681,7 @@ function insertImgUrl(editorId, url, align) {
   const html = `<img src="${url}" style="${style}" class="editor-img" draggable="false">`;
 
   ed.focus();
+  /* Moderní vložení na pozici kurzoru */
   const sel = window.getSelection();
   if (sel.rangeCount > 0) {
     const range = sel.getRangeAt(0);
@@ -802,15 +693,18 @@ function insertImgUrl(editorId, url, align) {
       sel.removeAllRanges();
       sel.addRange(range);
     } else {
+      /* Kurzor není v editoru — vložit na konec */
       ed.insertAdjacentHTML('beforeend', html);
     }
   } else {
     ed.insertAdjacentHTML('beforeend', html);
   }
 
+  /* Zavřít modal */
   const modal = document.querySelector('.modal');
   if (modal) modal.remove();
 
+  /* Znovu inicializovat obrázky */
   setTimeout(() => setupArticleEditors(), 50);
 }
 
@@ -829,7 +723,6 @@ async function loadArtSubsections() {
     sel.innerHTML = '<option value="">— Podsekce —</option>';
   }
 }
-
 /* === Články — seznam, vytvoření, editace, mazání ====== */
 
 function generateSlug(title) {
@@ -888,49 +781,38 @@ async function editArticle(id) {
     if (typeof showTab === 'function') showTab('articles');
 
     /* Vyplnit formulář */
-    if ($('artTitle')) $('artTitle').value = a.title || '';
-    if ($('artEditor')) $('artEditor').innerHTML = a.content || '';
-    if ($('artDate')) $('artDate').value = a.date ? a.date.split('T')[0] : '';
-    if ($('artPlace')) $('artPlace').value = a.place || '';
+    const titleEl = $('artTitle');
+    const editorEl = $('artEditor');
+    const dateEl = $('artDate');
+    const placeEl = $('artPlace');
+    const sectionEl = $('artSection');
 
-    /* Sekce + podsekce — načíst a pak vybrat */
-    if ($('artSection')) {
-      $('artSection').value = a.sectionId || a.section || '';
+    if (titleEl) titleEl.value = a.title || '';
+    if (editorEl) {
+      editorEl.innerHTML = a.content || '';
+      editorEl.dataset.editId = id; /* Uložit ID pro update */
+    }
+    if (dateEl) dateEl.value = a.date ? a.date.split('T')[0] : '';
+    if (placeEl) placeEl.value = a.place || '';
+    if (sectionEl) {
+      sectionEl.value = a.sectionId || a.section || '';
+      /* Načíst podsekce pro vybranou sekci */
       await loadArtSubsections();
     }
 
-    /* Vybrat podsekci po načtení options */
-    if ($('artSubsection')) {
-      $('artSubsection').value = a.subsectionId || a.subsection || '';
-    }
+    /* Vybrat podsekci */
+    const subEl = $('artSubsection');
+    if (subEl) subEl.value = a.subsectionId || a.subsection || '';
 
-    /* Uložit editovaný ID do globální proměnné */
-    editingArticleId = id;
-
-    /* Změnit tlačítko na "Uložit změny" + přidat tlačítko Zrušit */
-    const btn = $('artSubmitBtn');
+    /* Změnit tlačítko na "Uložit změny" */
+    const btn = $('artSubmitBtn') || document.querySelector('#articles button[onclick*="createArticle"], #articles button[onclick*="updateArticle"]');
     if (btn) {
       btn.textContent = '💾 Uložit změny';
       btn.onclick = updateArticle;
     }
 
-    /* Přidat tlačítko Zrušit editaci */
-    let cancelBtn = $('artCancelBtn');
-    if (!cancelBtn) {
-      cancelBtn = document.createElement('button');
-      cancelBtn.id = 'artCancelBtn';
-      cancelBtn.className = 'btn btn-sm';
-      cancelBtn.style.marginLeft = '0.5rem';
-      btn?.parentNode?.insertBefore(cancelBtn, btn.nextSibling);
-    }
-    cancelBtn.textContent = '✖ Zrušit editaci';
-    cancelBtn.onclick = resetArticleForm;
-
     /* Inicializovat toolbar obrázků v načteném obsahu */
     setTimeout(() => setupArticleEditors(), 100);
-
-    /* Scroll nahoru k formuláři */
-    $('artTitle')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   } catch (e) {
     alert('Nepodařilo se načíst článek pro úpravu');
@@ -944,14 +826,19 @@ async function createArticle() {
   const content = $('artEditor')?.innerHTML;
   if (!title || !content) return alert('Vyplň nadpis a obsah');
 
+  const sectionId = $('artSection')?.value;
+  const subsectionId = $('artSubsection')?.value;
+  const date = $('artDate')?.value;
+  const place = $('artPlace')?.value;
+
   const payload = {
     title,
     content,
     slug: generateSlug(title),
-    sectionId: $('artSection')?.value || null,
-    subsectionId: $('artSubsection')?.value || null,
-    date: $('artDate')?.value || new Date().toISOString().split('T')[0],
-    place: $('artPlace')?.value || ''
+    sectionId: sectionId || null,
+    subsectionId: subsectionId || null,
+    date: date || new Date().toISOString().split('T')[0],
+    place: place || ''
   };
 
   try {
@@ -973,23 +860,31 @@ async function createArticle() {
 
 /* --- Uložení editovaného článku (OPRAVENO) ------------ */
 async function updateArticle() {
-  if (!editingArticleId) {
+  const editorEl = $('artEditor');
+  const id = editorEl?.dataset?.editId;
+  if (!id) {
+    /* Pokud není editId, vytvořit nový */
     return createArticle();
   }
 
   const title = $('artTitle')?.value.trim();
-  const content = $('artEditor')?.innerHTML;
+  const content = editorEl?.innerHTML;
   if (!title || !content) return alert('Vyplň nadpis a obsah');
 
+  const sectionId = $('artSection')?.value;
+  const subsectionId = $('artSubsection')?.value;
+  const date = $('artDate')?.value;
+  const place = $('artPlace')?.value;
+
   const payload = {
-    id: editingArticleId,
+    id,
     title,
     content,
     slug: generateSlug(title),
-    sectionId: $('artSection')?.value || null,
-    subsectionId: $('artSubsection')?.value || null,
-    date: $('artDate')?.value || new Date().toISOString().split('T')[0],
-    place: $('artPlace')?.value || ''
+    sectionId: sectionId || null,
+    subsectionId: subsectionId || null,
+    date: date || new Date().toISOString().split('T')[0],
+    place: place || ''
   };
 
   try {
@@ -1009,25 +904,31 @@ async function updateArticle() {
   loadArticles();
 }
 
-/* --- Reset formuláře článku (OPRAVENO) --------------- */
+/* --- Reset formuláře článku --------------------------- */
 function resetArticleForm() {
-  if ($('artTitle')) $('artTitle').value = '';
-  if ($('artEditor')) $('artEditor').innerHTML = '';
-  if ($('artDate')) $('artDate').value = '';
-  if ($('artPlace')) $('artPlace').value = '';
-  if ($('artSection')) $('artSection').value = '';
-  if ($('artSubsection')) $('artSubsection').innerHTML = '<option value="">— Podsekce —</option>';
+  const titleEl = $('artTitle');
+  const editorEl = $('artEditor');
+  const dateEl = $('artDate');
+  const placeEl = $('artPlace');
+  const sectionEl = $('artSection');
+  const subEl = $('artSubsection');
 
-  editingArticleId = null;
+  if (titleEl) titleEl.value = '';
+  if (editorEl) {
+    editorEl.innerHTML = '';
+    delete editorEl.dataset.editId;
+  }
+  if (dateEl) dateEl.value = '';
+  if (placeEl) placeEl.value = '';
+  if (sectionEl) sectionEl.value = '';
+  if (subEl) subEl.innerHTML = '<option value="">— Podsekce —</option>';
 
-  const btn = $('artSubmitBtn');
+  /* Vrátit tlačítko na "Vytvořit článek" */
+  const btn = $('artSubmitBtn') || document.querySelector('#articles button[onclick*="updateArticle"], #articles button[onclick*="createArticle"]');
   if (btn) {
     btn.textContent = 'Vytvořit článek';
     btn.onclick = createArticle;
   }
-
-  const cancelBtn = $('artCancelBtn');
-  if (cancelBtn) cancelBtn.remove();
 
   hideImgToolbar();
 }
@@ -1038,8 +939,6 @@ async function deleteArticle(id) {
   try {
     const r = await fetch(`/api/articles/delete?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     if (!r.ok) throw new Error('Chyba mazání');
-    /* Pokud se maže právě editovaný článek, resetovat formulář */
-    if (editingArticleId === id) resetArticleForm();
     loadArticles();
   } catch (e) {
     alert('Nepodařilo se smazat článek');
@@ -1216,7 +1115,7 @@ async function saveSubsectionCover(id, url) {
   }
 }
 
-/* === Sekce (Cover fotky) — VYLEPŠENO =================== */
+/* === Sekce (Cover fotky) — OPRAVA ====================== */
 
 async function loadSectionCovers() {
   const box = $('sectionCovers');
@@ -1228,31 +1127,26 @@ async function loadSectionCovers() {
     { id: 'about', n: 'O Zajdovi' }
   ];
 
-  box.innerHTML = '<div style="color:#64748b;padding:1rem">Načítání coverů…</div>';
-
-  const results = await Promise.allSettled(
-    secs.map(async s => {
+  let html = '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">';
+  for (const s of secs) {
+    let url = '';
+    try {
       const r = await fetch('/api/sections/cover?sectionId=' + s.id);
-      if (!r.ok) return { ...s, url: '' };
-      const d = await r.json();
-      return { ...s, url: d.coverUrl || d.url || '' };
-    })
-  );
+      if (r.ok) {
+        const d = await r.json();
+        url = d.coverUrl || d.url || '';
+      }
+    } catch (e) { console.error('Chyba načítání coveru sekce:', e); }
 
-  box.innerHTML = '<div style="display:flex;gap:1rem;flex-wrap:wrap">';
-  results.forEach((res, i) => {
-    const s = res.status === 'fulfilled' ? res.value : { ...secs[i], url: '' };
-    box.innerHTML += `
+    html += `
       <div style="background:#1e293b;padding:0.75rem;border-radius:8px;border:1px solid #334155;text-align:center;min-width:140px">
         <div style="font-size:0.875rem;margin-bottom:0.5rem;color:#ffcc66">${escapeHtml(s.n)}</div>
-        ${s.url
-          ? `<img src="${s.url}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #334155">`
-          : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #334155;display:flex;align-items:center;justify-content:center;color:#475569;font-size:11px">Bez coveru</div>'}
+        ${url ? `<img src="${url}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #334155">` : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #334155"></div>'}
         <button onclick="pickSectionCover('${s.id}')" class="btn btn-blue btn-sm">Změnit cover</button>
-        ${s.url ? `<button onclick="removeSectionCover('${s.id}')" class="btn btn-sm" style="margin-top:0.25rem;display:block;width:100%">Odstranit</button>` : ''}
       </div>`;
-  });
-  box.innerHTML += '</div>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
 }
 
 function pickSectionCover(sectionId) {
@@ -1277,10 +1171,6 @@ function pickSectionCover(sectionId) {
 }
 
 async function saveSectionCover(sectionId, url) {
-  /* Zavřít modal okamžitě pro lepší UX */
-  const m = document.querySelector('.modal');
-  if (m) m.remove();
-
   try {
     const r = await fetch('/api/sections/cover', {
       method: 'POST',
@@ -1288,40 +1178,26 @@ async function saveSectionCover(sectionId, url) {
       body: JSON.stringify({ sectionId, coverUrl: url })
     });
     if (!r.ok) throw new Error('Server ' + r.status);
-    loadSectionCovers();
   } catch (e) {
     console.error('Chyba uložení coveru:', e);
     alert('Nepodařilo se uložit cover. Zkus to znovu.');
+  } finally {
+    const m = document.querySelector('.modal');
+    if (m) m.remove();
     loadSectionCovers();
   }
 }
 
-async function removeSectionCover(sectionId) {
-  if (!confirm('Opravdu odstranit cover této sekce?')) return;
-  try {
-    const r = await fetch('/api/sections/cover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sectionId, coverUrl: '' })
-    });
-    if (!r.ok) throw new Error('Server ' + r.status);
-    loadSectionCovers();
-  } catch (e) {
-       alert('Nepodařilo se odstranit cover.');
-  }
-}
-
-/* === O mně — VYLEPŠENO ================================= */
+/* === O mně ============================================= */
 
 async function loadAbout() {
   try {
     const r = await fetch('/api/about/get');
-    if (!r.ok) throw new Error('Server ' + r.status);
     const d = await r.json() || {};
     if ($('aboutTitle')) $('aboutTitle').value = d.title || '';
     if ($('aboutEditor')) {
       $('aboutEditor').innerHTML = d.text || '';
-      setupArticleEditors();
+      setupArticleEditors(); /* Inicializovat mazání fotek i zde */
     }
     const prev = $('aboutPreview');
     if (prev) prev.innerHTML = `<h4 style="color:#ffcc66;margin-bottom:0.5rem">${escapeHtml(d.title || 'O Zajdovi')}</h4><div style="line-height:1.6">${d.text || ''}</div>`;
@@ -1334,25 +1210,19 @@ async function loadAbout() {
 }
 
 async function saveAbout() {
-  const title = $('aboutTitle')?.value?.trim() || '';
-  const text = $('aboutEditor')?.innerHTML || '';
-
-  const btn = $('aboutSaveBtn') || document.querySelector('#about button[onclick*="saveAbout"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Ukládám…'; }
-
+  const about = {
+    title: $('aboutTitle')?.value || '',
+    text: $('aboutEditor')?.innerHTML || ''
+  };
   try {
-    const r = await fetch('/api/about/update', {
+    await fetch('/api/about/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, text }),
+      body: JSON.stringify(about)
     });
-    if (!r.ok) throw new Error('Server ' + r.status);
-    await loadAbout();
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Uložit'; }
-  } catch (e) {
-    console.error('About save chyba:', e);
-    alert('Nepodařilo se uložit. Zkus to znovu.');
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Uložit'; }
+    loadAbout();
+  } catch {
+    alert('Chyba uložení');
   }
 }
 
@@ -1369,119 +1239,13 @@ async function loadGallery() {
     G.photos = [];
   }
 }
-
-/* === ROBUSTNÍ UPLOAD FOTEK (bez komprese) =============== */
-
-const UPLOAD_CONFIG = {
-  maxRetries: 3,
-  retryDelay: 1500,
-  timeoutMs: 60000,
-};
-
-async function uploadSinglePhoto(file, galleryId, attempt = 1) {
-  const fd = new FormData();
-  fd.append('file', file, file.name || `photo_${Date.now()}.jpg`);
-  fd.append('galleryId', galleryId || 'main');
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), UPLOAD_CONFIG.timeoutMs);
-
-    const r = await fetch('/api/photos/upload', {
-      method: 'POST',
-      body: fd,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!r.ok) throw new Error('Server ' + r.status);
-    return { success: true };
-  } catch (err) {
-    if (attempt < UPLOAD_CONFIG.maxRetries) {
-      await new Promise(r => setTimeout(r, UPLOAD_CONFIG.retryDelay * attempt));
-      return uploadSinglePhoto(file, galleryId, attempt + 1);
-    }
-    return { success: false, error: err.name === 'AbortError' ? 'Timeout' : err.message, name: file.name };
-  }
-}
-
-async function handlePhotoUpload(input) {
-  const files = Array.from(input.files || []);
-  if (!files.length) return;
-
-  const valid = files.filter(f => f.type.startsWith('image/'));
-  if (!valid.length) {
-    alert('Vyber platné obrázky.');
-    input.value = '';
-    return;
-  }
-
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:420px;width:90vw;border:1px solid #334155">
-      <h3 style="color:#ffcc66;margin-bottom:1rem">Nahrávání fotek</h3>
-      <div style="display:flex;justify-content:space-between;color:#94a3b8;font-size:13px;margin-bottom:0.5rem">
-        <span id="uploadStatus">Připravuji…</span>
-        <span id="uploadCounter">0 / ${valid.length}</span>
-      </div>
-      <div style="background:#0f172a;border-radius:6px;height:8px;overflow:hidden;border:1px solid #334155">
-        <div id="uploadBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ff6600,#ffcc66);transition:width 0.3s"></div>
-      </div>
-      <div id="uploadLog" style="max-height:180px;overflow-y:auto;font-size:13px;color:#94a3b8;line-height:1.8;margin-top:0.75rem"></div>
-      <div style="text-align:center;margin-top:1rem">
-        <button id="uploadCloseBtn" class="btn" style="display:none">Zavřít</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-
-  const bar = modal.querySelector('#uploadBar');
-  const counter = modal.querySelector('#uploadCounter');
-  const status = modal.querySelector('#uploadStatus');
-  const log = modal.querySelector('#uploadLog');
-  const closeBtn = modal.querySelector('#uploadCloseBtn');
-
-  let done = 0;
-  const failed = [];
-
-  for (const file of valid) {
-    status.textContent = `Nahrávám: ${file.name}`;
-    const result = await uploadSinglePhoto(file, 'main');
-    done++;
-    counter.textContent = `${done} / ${valid.length}`;
-    bar.style.width = `${(done / valid.length) * 100}%`;
-
-    if (result.success) {
-      log.innerHTML += `<div style="color:#4ade80">✓ ${escapeHtml(file.name)}</div>`;
-    } else {
-      failed.push(file.name);
-      log.innerHTML += `<div style="color:#ef4444">✗ ${escapeHtml(file.name)} — ${escapeHtml(result.error)}</div>`;
-    }
-    log.scrollTop = log.scrollHeight;
-  }
-
-  status.textContent = 'Hotovo!';
-  closeBtn.style.display = 'inline-block';
-  closeBtn.onclick = () => {
-    modal.remove();
-    input.value = '';
-    loadGallery();
-  };
-
-  if (failed.length) {
-    log.innerHTML += `<div style="color:#fbbf24;margin-top:0.5rem;font-weight:bold">Nepodařilo se nahrát ${failed.length} z ${valid.length} fotek.</div>`;
-  } else {
-    log.innerHTML += `<div style="color:#4ade80;margin-top:0.5rem;font-weight:bold">Všechny fotky nahrány! 🎉</div>`;
-  }
-}
-
 /* === Dynamické CSS pro editor ========================== */
 (function injectEditorStyles() {
   if (document.getElementById('dashboard-editor-styles')) return;
   const style = document.createElement('style');
   style.id = 'dashboard-editor-styles';
   style.textContent = `
+    /* WYSIWYG editor plocha */
     #artEditor, #aboutEditor {
       min-height: 300px;
       max-height: 600px;
@@ -1533,31 +1297,79 @@ async function handlePhotoUpload(input) {
     #artEditor img.editor-img[data-active], #aboutEditor img.editor-img[data-active] {
       outline: 3px solid #3b82f6;
     }
-    #img-toolbar { animation: toolbarIn 0.2s ease; }
+    
+    /* Toolbar nad obrázkem */
+    #img-toolbar {
+      animation: toolbarIn 0.2s ease;
+    }
     @keyframes toolbarIn {
       from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
       to { opacity: 1; transform: translateX(-50%) translateY(0); }
     }
-    #img-toolbar button { white-space: nowrap; transition: all 0.15s; }
-    #img-toolbar button:hover { transform: translateY(-1px); }
-    .modal {
-      position: fixed; inset: 0; z-index: 1000;
-      background: rgba(0,0,0,0.85);
-      display: flex; align-items: center; justify-content: center;
-      padding: 20px; animation: modalIn 0.2s ease;
+    #img-toolbar button {
+      white-space: nowrap;
+      transition: all 0.15s;
     }
-    @keyframes modalIn { from { opacity: 0; } to { opacity: 1; } }
-    .modal > div { animation: modalContentIn 0.25s ease; }
+    #img-toolbar button:hover {
+      transform: translateY(-1px);
+    }
+    
+    /* Modály */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: modalIn 0.2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal > div {
+      animation: modalContentIn 0.25s ease;
+    }
     @keyframes modalContentIn {
       from { opacity: 0; transform: scale(0.95); }
       to { opacity: 1; transform: scale(1); }
     }
+    
+    /* Scrollbary v editoru */
     #artEditor::-webkit-scrollbar,
     #aboutEditor::-webkit-scrollbar,
+    .sub-articles::-webkit-scrollbar,
     .modal > div::-webkit-scrollbar { width: 6px; }
     #artEditor::-webkit-scrollbar-thumb,
     #aboutEditor::-webkit-scrollbar-thumb,
+    .sub-articles::-webkit-scrollbar-thumb,
     .modal > div::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    
+    /* Náhled článku v seznamu */
+    .article-preview {
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.5;
+      max-height: 120px;
+      overflow: hidden;
+      position: relative;
+    }
+    .article-preview::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 40px;
+      background: linear-gradient(to bottom, transparent, #1e293b);
+      pointer-events: none;
+    }
+    .article-preview img { display: none; }
+    
+    /* Galerie v modálu */
     .modal img[style*="cursor:pointer"] {
       transition: transform 0.15s, box-shadow 0.15s;
     }
@@ -1565,46 +1377,84 @@ async function handlePhotoUpload(input) {
       transform: scale(1.03);
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
+    
+    /* Lightbox */
     .lightbox-modal {
-      position: fixed; inset: 0; z-index: 3000;
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
       background: rgba(0,0,0,0.92);
-      display: flex; align-items: center; justify-content: center;
-      cursor: zoom-out; animation: lightboxIn 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+      animation: lightboxIn 0.2s ease;
     }
-    @keyframes lightboxIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes lightboxIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
     .lightbox-modal img {
-      max-width: 90vw; max-height: 90vh;
-      border-radius: 8px; box-shadow: 0 0 40px rgba(0,0,0,0.8);
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 8px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
       cursor: default;
     }
+    
+    /* Responzivita toolbaru */
     @media (max-width: 640px) {
       #img-toolbar {
-        top: auto !important; bottom: 10px !important;
-        left: 10px !important; right: 10px !important;
+        top: auto !important;
+        bottom: 10px !important;
+        left: 10px !important;
+        right: 10px !important;
         transform: none !important;
-        justify-content: center; padding: 8px;
+        justify-content: center;
+        padding: 8px;
       }
-      #artEditor, #aboutEditor { min-height: 200px; font-size: 16px; }
+      #artEditor, #aboutEditor {
+        min-height: 200px;
+        font-size: 16px; /* prevence zoomu na iOS */
+      }
     }
+    
+    /* Tlačítka toolbaru editoru */
     .editor-toolbar {
-      display: flex; flex-wrap: wrap; gap: 4px;
-      margin-bottom: 8px; padding: 8px;
-      background: #1e293b; border: 1px solid #334155;
-      border-radius: 8px 8px 0 0; border-bottom: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+      padding: 8px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px 8px 0 0;
+      border-bottom: none;
     }
     .editor-toolbar button,
     .editor-toolbar select {
-      background: #334155; color: #e2e8f0;
-      border: 1px solid #475569; border-radius: 4px;
-      padding: 4px 8px; font-size: 13px;
-      cursor: pointer; transition: all 0.15s;
+      background: #334155;
+      color: #e2e8f0;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
     }
     .editor-toolbar button:hover,
     .editor-toolbar select:hover {
-      background: #475569; border-color: #ff6600;
+      background: #475569;
+      border-color: #ff6600;
     }
-    .editor-toolbar select { padding: 3px 6px; }
-    .editor-toolbar .sep { width: 1px; background: #475569; margin: 0 4px; }
+    .editor-toolbar select {
+      padding: 3px 6px;
+    }
+    .editor-toolbar .sep {
+      width: 1px;
+      background: #475569;
+      margin: 0 4px;
+    }
   `;
   document.head.appendChild(style);
 })();
@@ -1616,10 +1466,11 @@ async function handlePhotoUpload(input) {
   } else {
     onReady();
   }
-
+  
   function onReady() {
     injectEditorStyles();
     loadGallery().then(() => {
+      /* Po načtení galerie inicializovat závislé komponenty */
       if ($('articleList')) loadArticles();
       if ($('quoteTableBody')) loadQuotes();
       if ($('subsectionTableBody')) loadSubsections();
@@ -1627,9 +1478,11 @@ async function handlePhotoUpload(input) {
       if ($('aboutPreview') || $('aboutEditor')) loadAbout();
       if ($('artSection')) loadArtSubsections();
     });
-
+    
+    /* Globální zkratky */
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        /* Zavřít modály */
         document.querySelectorAll('.modal').forEach(m => m.remove());
         hideImgToolbar();
       }
