@@ -682,56 +682,32 @@ async function loadArtSubsections() {
     sel.innerHTML = '<option value="">— Podsekce —</option>';
   }
 }
-/* =========================================================
-   DASHBOARD — ČÁST 4/5: Články (OPRAVENO — editace funguje)
-   ========================================================= */
+/* DASHBOARD — ČÁST 4/5: Články (OPRAVENO) */
 
 function generateSlug(title) {
   if (!title) return 'clanek-' + Date.now();
-  return title.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .substring(0, 60) || 'clanek-' + Date.now();
+  return title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 60) || 'clanek-' + Date.now();
 }
 
-/* --- Načtení seznamu článků --- */
 async function loadArticles() {
   try {
     const r = await fetch('/api/articles/list');
-    if (!r.ok) throw new Error('Chyba načítání');
+    if (!r.ok) throw new Error('Chyba');
     const data = await r.json();
     const arr = Array.isArray(data) ? data : (data.articles || []);
     const box = $('articleList');
     if (!box) return;
-
-    if (!arr.length) {
-      box.innerHTML = '<div style="color:#64748b;padding:1rem;text-align:center">Zatím žádné články</div>';
-      return;
-    }
-
+    if (!arr.length) { box.innerHTML = '<div style="color:#64748b;padding:1rem;text-align:center">Zatím žádné články</div>'; return; }
     box.innerHTML = arr.map(a => {
-      const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '';
-      const pubStatus = a.published
-        ? '<span style="color:#22c55e;font-size:12px">✅ Publikováno</span>'
-        : '<span style="color:#ef4444;font-size:12px">⏸ Není publikováno</span>';
-      return `
-      <div class="card" style="margin-bottom:1rem;padding:1rem;background:#1e293b;border:1px solid #334155;border-radius:10px">
-        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem">
-          <h4 style="color:#ffcc66;margin:0">${escapeHtml(a.title)}</h4>
-          ${pubStatus}
-        </div>
-        <p style="color:#94a3b8;font-size:13px;margin-bottom:0.5rem">
-          ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
-        </p>
-        ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5">${escapeHtml(excerpt)}</p>` : ''}
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+      const ex = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '';
+      return `<div class="card" style="margin-bottom:1rem;padding:1rem;background:#1e293b;border:1px solid #334155;border-radius:10px">
+        <h4 style="color:#ffcc66;margin-bottom:0.3rem">${escapeHtml(a.title)}</h4>
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:0.5rem">${a.section||''} ${a.subsection||''} • ${a.place||''} • ${new Date(a.date||a.created).toLocaleDateString('cs')}</p>
+        ${ex ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem">${escapeHtml(ex)}</p>` : ''}
+        <div style="display:flex;gap:0.5rem">
           <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
-          <button onclick="publishArticle('${a.id}')" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">📢 Publikovat</button>
-          <button onclick="unpublishArticle('${a.id}')" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">⏸ Skrýt</button>
           <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">🗑 Smazat</button>
-        </div>
-      </div>`;
+        </div></div>`;
     }).join('');
   } catch (e) {
     console.error('Chyba článků:', e);
@@ -740,205 +716,69 @@ async function loadArticles() {
   }
 }
 
-/* --- Editace článku (OPRAVENO — tlačítko se správně napojí) --- */
 async function editArticle(id) {
   try {
     const r = await fetch('/api/articles/get?id=' + encodeURIComponent(id));
-    if (!r.ok) throw new Error('Server vrátil ' + r.status);
+    if (!r.ok) throw new Error('Server ' + r.status);
     const a = await r.json();
-
     if (typeof showTab === 'function') showTab('articles');
-
     if ($('artTitle')) $('artTitle').value = a.title || '';
-    if ($('artEditor')) {
-      $('artEditor').innerHTML = a.content || '';
-      $('artEditor').dataset.editId = id;
-    }
+    if ($('artEditor')) { $('artEditor').innerHTML = a.content || ''; $('artEditor').dataset.editId = id; }
     if ($('artDate')) $('artDate').value = a.date ? a.date.split('T')[0] : '';
     if ($('artPlace')) $('artPlace').value = a.place || '';
-
-    if ($('artSection')) {
-      $('artSection').value = a.sectionId || a.section || '';
-      await loadArtSubsections();
-    }
+    if ($('artSection')) { $('artSection').value = a.sectionId || a.section || ''; await loadArtSubsections(); }
     if ($('artSubsection')) $('artSubsection').value = a.subsectionId || a.subsection || '';
-
-    /* Tlačítko — najít jakkoliv a správně napojit */
-    const btn = $('artSubmitBtn')
-      || document.querySelector('#articles button[onclick*="createArticle"]')
-      || document.querySelector('#articles button[onclick*="updateArticle"]')
-      || document.querySelector('#articles .btn-blue');
-    if (btn) {
-      btn.textContent = '💾 Uložit změny a publikovat';
-      btn.removeAttribute('onclick');
-      btn.onclick = function() { updateArticle(id); };
-    }
-
+    var btn = document.querySelector('#articles button[onclick*="createArticle"], #articles button[onclick*="updateArticle"]');
+    if (btn) { btn.textContent = '💾 Uložit změny'; btn.onclick = updateArticle; }
     setTimeout(() => setupArticleEditors(), 100);
-  } catch (e) {
-    alert('Nepodařilo se načíst článek pro úpravu');
-    console.error(e);
-  }
+  } catch (e) { alert('Nepodařilo se načíst článek'); console.error(e); }
 }
 
-/* --- Vytvoření nového článku --- */
 async function createArticle() {
   const title = $('artTitle')?.value.trim();
   const content = $('artEditor')?.innerHTML;
   if (!title || !content) return alert('Vyplň nadpis a obsah');
-
-  const payload = {
-    title,
-    content,
-    slug: generateSlug(title),
-    sectionId: $('artSection')?.value || null,
-    subsectionId: $('artSubsection')?.value || null,
-    date: $('artDate')?.value || new Date().toISOString().split('T')[0],
-    place: $('artPlace')?.value || '',
-    published: true
-  };
-
+  const payload = { title, content, slug: generateSlug(title), sectionId: $('artSection')?.value||null, subsectionId: $('artSubsection')?.value||null, date: $('artDate')?.value||new Date().toISOString().split('T')[0], place: $('artPlace')?.value||'', published: true };
   try {
-    const r = await fetch('/api/articles/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) throw new Error('Chyba ukládání');
-  } catch (e) {
-    alert('Nepodařilo se vytvořit článek');
-    console.error(e);
-    return;
-  }
-
-  resetArticleForm();
-  loadArticles();
+    const r = await fetch('/api/articles/create', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error('Chyba');
+  } catch (e) { alert('Nepodařilo se vytvořit článek'); return; }
+  resetArticleForm(); loadArticles();
 }
 
-/* --- Uložení editovaného článku (OPRAVENO — ID se předává přímo) --- */
-async function updateArticle(id) {
-  /* Pokud ID není předáno, zkus ho vzít z datasetu */
-  if (!id) {
-    id = $('artEditor')?.dataset?.editId;
-  }
-  if (!id) {
-    /* Žádné ID → vytvoř nový */
-    return createArticle();
-  }
-
+async function updateArticle() {
+  const id = $('artEditor')?.dataset?.editId;
+  if (!id) return createArticle();
   const title = $('artTitle')?.value.trim();
   const content = $('artEditor')?.innerHTML;
   if (!title || !content) return alert('Vyplň nadpis a obsah');
-
-  const payload = {
-    id,
-    title,
-    content,
-    slug: generateSlug(title),
-    sectionId: $('artSection')?.value || null,
-    subsectionId: $('artSubsection')?.value || null,
-    date: $('artDate')?.value || new Date().toISOString().split('T')[0],
-    place: $('artPlace')?.value || '',
-    published: true
-  };
-
+  const payload = { id, title, content, slug: generateSlug(title), sectionId: $('artSection')?.value||null, subsectionId: $('artSubsection')?.value||null, date: $('artDate')?.value||new Date().toISOString().split('T')[0], place: $('artPlace')?.value||'', published: true };
   try {
-    const r = await fetch('/api/articles/update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!r.ok) throw new Error('Chyba ukládání');
-
-    /* Po uložení znovu publikovat */
-    try {
-      await fetch('/api/articles/publish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      });
-    } catch (pubErr) {
-      console.warn('Publikování selhalo, ale článek je uložen:', pubErr);
-    }
-
-  } catch (e) {
-    alert('Nepodařilo se uložit změny');
-    console.error(e);
-    return;
-  }
-
-  resetArticleForm();
-  loadArticles();
+    const r = await fetch('/api/articles/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error('Chyba');
+  } catch (e) { alert('Nepodařilo se uložit změny'); return; }
+  resetArticleForm(); loadArticles();
 }
 
-/* --- Publikovat článek --- */
-async function publishArticle(id) {
-  try {
-    const r = await fetch('/api/articles/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    if (!r.ok) throw new Error('Chyba publikování');
-    loadArticles();
-  } catch (e) {
-    alert('Nepodařilo se publikovat článek');
-    console.error(e);
-  }
-}
-
-/* --- Skrýt článek --- */
-async function unpublishArticle(id) {
-  try {
-    const r = await fetch('/api/articles/unpublish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    if (!r.ok) throw new Error('Chyba skrývání');
-    loadArticles();
-  } catch (e) {
-    alert('Nepodařilo se skrýt článek');
-    console.error(e);
-  }
-}
-
-/* --- Reset formuláře --- */
 function resetArticleForm() {
   if ($('artTitle')) $('artTitle').value = '';
-  if ($('artEditor')) {
-    $('artEditor').innerHTML = '';
-    delete $('artEditor').dataset.editId;
-  }
+  if ($('artEditor')) { $('artEditor').innerHTML = ''; delete $('artEditor').dataset.editId; }
   if ($('artDate')) $('artDate').value = '';
   if ($('artPlace')) $('artPlace').value = '';
   if ($('artSection')) $('artSection').value = '';
   if ($('artSubsection')) $('artSubsection').innerHTML = '<option value="">— Podsekce —</option>';
-
-  const btn = $('artSubmitBtn')
-    || document.querySelector('#articles button[onclick*="updateArticle"]')
-    || document.querySelector('#articles button[onclick*="createArticle"]')
-    || document.querySelector('#articles .btn-blue');
-  if (btn) {
-    btn.textContent = 'Vytvořit článek';
-    btn.removeAttribute('onclick');
-    btn.onclick = createArticle;
-  }
-
+  var btn = document.querySelector('#articles button[onclick*="updateArticle"], #articles button[onclick*="createArticle"]');
+  if (btn) { btn.textContent = 'Vytvořit článek'; btn.onclick = createArticle; }
   hideImgToolbar();
 }
 
-/* --- Smazání článku --- */
 async function deleteArticle(id) {
-  if (!confirm('Opravdu smazat tento článek?')) return;
+  if (!confirm('Opravdu smazat?')) return;
   try {
-    const r = await fetch('/api/articles/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
-    if (!r.ok) throw new Error('Chyba mazání');
+    const r = await fetch('/api/articles/delete?id='+encodeURIComponent(id), { method: 'DELETE' });
+    if (!r.ok) throw new Error('Chyba');
     loadArticles();
-  } catch (e) {
-    alert('Nepodařilo se smazat článek');
-    console.error(e);
-  }
+  } catch (e) { alert('Nepodařilo se smazat'); }
 }
 /* =========================================================
    DASHBOARD — ČÁST 5/5: Citáty, podsekce, cover, O Zajdovi, CSS, inicializace
