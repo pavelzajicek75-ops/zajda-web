@@ -1110,7 +1110,7 @@ async function saveAbout() {
 }
 
 /* === CSS STYLY === */
-(function injectEditorStyles() {
+function injectEditorStyles() {
   if (document.getElementById('dashboard-editor-styles')) return;
   const style = document.createElement('style');
   style.id = 'dashboard-editor-styles';
@@ -1162,7 +1162,7 @@ async function saveAbout() {
     .editor-toolbar .sep { width: 1px; background: #475569; margin: 0 4px; }
   `;
   document.head.appendChild(style);
-})();
+}
 
 /* === INICIALIZACE === */
 (function initDashboard() {
