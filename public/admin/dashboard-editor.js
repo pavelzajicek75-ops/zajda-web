@@ -762,11 +762,6 @@ async function updateArticle() {
       body: JSON.stringify(payload)
     });
     if (!r.ok) throw new Error('Chyba ukládání');
-    await fetch('/api/articles/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
   } catch (e) {
     alert('Nepodařilo se uložit změny');
     console.error(e);
