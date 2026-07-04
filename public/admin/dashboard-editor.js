@@ -757,7 +757,7 @@ async function updateArticle() {
   };
   try {
     const r = await fetch('/api/articles/update', {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
@@ -774,10 +774,10 @@ async function updateArticle() {
 /* === ČLÁNKY: skrýt/zobrazit === */
 async function publishArticle(id) {
   try {
-    const r = await fetch('/api/articles/publish', {
-      method: 'POST',
+    const r = await fetch('/api/articles/update', {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
+      body: JSON.stringify({ id, published: true })
     });
     if (!r.ok) throw new Error('Chyba publikování');
     loadArticles();
@@ -789,10 +789,10 @@ async function publishArticle(id) {
 
 async function unpublishArticle(id) {
   try {
-    const r = await fetch('/api/articles/unpublish', {
-      method: 'POST',
+    const r = await fetch('/api/articles/update', {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
+      body: JSON.stringify({ id, published: false })
     });
     if (!r.ok) throw new Error('Chyba skrývání');
     loadArticles();
