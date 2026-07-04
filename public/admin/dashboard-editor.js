@@ -1165,7 +1165,8 @@ function injectEditorStyles() {
 }
 
 /* === INICIALIZACE === */
-(function initDashboard() {
+function injectEditorStyles() {
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', onReady);
   } else {
@@ -1190,4 +1191,4 @@ function injectEditorStyles() {
       }
     });
   }
-})();
+}
