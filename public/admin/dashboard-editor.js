@@ -133,7 +133,7 @@ function fitImageToPreview() {
 }
 
 function closeEditor() {
-  $('editorModal')?.classList.remove('hidden');
+  $('editorModal')?.classList.add('hidden');
   if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
   ED.img = null; ED.photo = null; ED.cropRect = null;
   const vig = document.querySelector('.vignette-overlay');
@@ -572,7 +572,6 @@ function insertImgUrl(editorId, url, align) {
   const ed = $(editorId);
   if (!ed) return;
   let style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:pointer;';
-  if (align === 'left') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:pointer;';
   if (align === 'left') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 1rem 0.5rem 0;float:left;display:block;cursor:pointer;';
   else if (align === 'right') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 0 0.5rem 1rem;float:right;display:block;cursor:pointer;';
   const html = `<img src="${url}" style="${style}" class="editor-img" draggable="false">`;
@@ -689,13 +688,16 @@ async function editArticle(id) {
       await loadArtSubsections();
     }
     if ($('artSubsection')) $('artSubsection').value = a.subsectionId || a.subsection || '';
-    const btn = $('artSubmitBtn')
-      || document.querySelector('#articles button[onclick*="createArticle"]')
-      || document.querySelector('#articles button[onclick*="updateArticle"]')
-      || document.querySelector('#articles .btn-blue');
+
+    var btn = document.getElementById('artSubmitBtn');
+    if (!btn) btn = document.querySelector('#articles button[onclick*="createArticle"]');
+    if (!btn) btn = document.querySelector('#articles button[onclick*="updateArticle"]');
+    if (!btn) btn = document.querySelector('#articles .btn-blue');
+    if (!btn) btn = document.querySelector('#articles button[type="submit"]');
+    if (!btn) btn = document.querySelector('#articles button');
     if (btn) {
       btn.textContent = '💾 Uložit změny a publikovat';
-      btn.removeAttribute('onclick');
+      btn.setAttribute('onclick', 'updateArticle()');
       btn.onclick = updateArticle;
     }
     setTimeout(() => setupArticleEditors(), 100);
@@ -704,6 +706,7 @@ async function editArticle(id) {
     console.error(e);
   }
 }
+
 
 /* === ČLÁNKY: vytvoření === */
 async function createArticle() {
