@@ -183,7 +183,7 @@
           const cover = a.coverUrl
             ? '<img src="' + a.coverUrl + '" alt="">'
             : '<div class="card-placeholder">📷</div>';
-          return '<a class="news-card" href="/article.html?slug=' + encodeURIComponent(slug) + '">' +
+          return '<a class="news-card" href="/article.html?id=' + encodeURIComponent(a.id) + '">' +
             cover +
             '<div class="card-body">' +
             '<h3>' + escapeHtml(a.title) + '</h3>' +
