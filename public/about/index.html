@@ -18,14 +18,43 @@
       min-height: 100vh;
       line-height: 1.7;
     }
-    .container { max-width: 800px; margin: 0 auto; padding: 3rem 1.5rem; }
-    h1 {
-      font-size: 2.5rem;
-      color: #ff6600;
-      text-shadow: 0 0 25px #ff6600;
-      margin-bottom: 2rem;
-      text-align: center;
+
+    /* === HERO COVER === */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 50vh;
+      min-height: 320px;
+      max-height: 500px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+    .hero img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.55);
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.85) 100%);
+    }
+    .hero h1 {
+      position: absolute;
+      z-index: 2;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      color: #ff6600;
+      text-shadow: 0 0 30px rgba(255,102,0,0.6), 0 4px 20px rgba(0,0,0,0.8);
+      text-align: center;
+      padding: 0 1.5rem;
+    }
+
+    /* === OBSAH === */
+    .container { max-width: 800px; margin: 0 auto; padding: 3rem 1.5rem; }
     .content {
       background: rgba(30, 41, 59, 0.6);
       border: 1px solid #334155;
@@ -33,11 +62,9 @@
       padding: 2.5rem;
       backdrop-filter: blur(10px);
     }
-    .content p {
-      color: #cbd5e1;
-      margin-bottom: 1.25rem;
-      font-size: 1.125rem;
-    }
+    .content p { color: #cbd5e1; margin-bottom: 1.25rem; font-size: 1.125rem; }
+    .content h2 { color: #ffcc66; margin: 1.5rem 0 0.75rem; font-size: 1.5rem; }
+    .content h3 { color: #ffb366; margin: 1.25rem 0 0.5rem; font-size: 1.25rem; }
     .content img {
       max-width: 100%;
       border-radius: 12px;
@@ -45,6 +72,70 @@
       box-shadow: 0 0 30px rgba(255, 150, 50, 0.2);
       display: block;
     }
+    .content a { color: #60a5fa; text-decoration: underline; }
+    .content ul, .content ol { margin: 0.5rem 0 1.25rem 1.5rem; color: #cbd5e1; }
+    .content li { margin-bottom: 0.5rem; }
+    .content blockquote {
+      border-left: 3px solid #ff6600;
+      margin: 1rem 0;
+      padding: 0.75rem 1.25rem;
+      background: rgba(255,102,0,0.08);
+      border-radius: 0 8px 8px 0;
+      font-style: italic;
+      color: #cbd5e1;
+    }
+    .content hr { border: none; border-top: 1px solid #334155; margin: 1.5rem 0; }
+
+    /* === AKTUALITY === */
+    .news-section { max-width: 1000px; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
+    .news-section h2 {
+      font-size: 1.75rem;
+      color: #ffcc66;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    .news-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+    }
+    .news-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(255,102,0,0.15);
+      border-color: #ff6600;
+    }
+    .news-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .news-card .card-body { padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
+    .news-card h3 { color: #ffcc66; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .news-card .card-excerpt { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; flex: 1; }
+    .news-card .card-meta { color: #64748b; font-size: 0.8rem; margin-top: 0.75rem; }
+    .news-card .card-placeholder {
+      width: 100%;
+      height: 180px;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+
+    /* === BACK === */
     .back {
       display: inline-block;
       margin-top: 2rem;
@@ -54,50 +145,117 @@
     }
     .back:hover { text-shadow: 0 0 15px #ffcc66; }
     .loading { color: #64748b; text-align: center; padding: 4rem; }
+
+    @media (max-width: 640px) {
+      .content { padding: 1.5rem; }
+      .news-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
+
+  <!-- HERO COVER -->
+  <div class="hero" id="hero">
+    <h1 id="heroTitle">O Zajdovi</h1>
+  </div>
+
+  <!-- OBSAH -->
   <div class="container">
-    <div id="content" class="loading">Načítání...</div>
+    <div id="content" class="content loading">Načítání...</div>
     <a href="/" class="back">← Zpět na hlavní stránku</a>
+  </div>
+
+  <!-- AKTUALITY -->
+  <div class="news-section" id="newsSection" style="display:none">
+    <h2> Aktuality</h2>
+    <div class="news-grid" id="newsGrid"></div>
   </div>
 
   <script>
     async function loadAbout() {
       try {
-        const res = await fetch('/api/about/get');
-        const data = await res.json();
-        
-        let html = `<h1>${escapeHtml(data.title || 'O Zajdovi')}</h1><div class="content">`;
-        
-        if (!data.text) {
-          html += '<p>Zatím žádný obsah.</p>';
-        } else {
-          const parts = data.text.split(/(\[img:[^\]]+\])/);
-          parts.forEach(part => {
-            if (part.startsWith('[img:')) {
-              const url = part.slice(5, -1);
-              html += `<img src="${escapeHtml(url)}" alt="Foto">`;
-            } else {
-              html += `<p>${escapeHtml(part).replace(/\n/g, '<br>')}</p>`;
-            }
-          });
+        /* Načíst cover pro about sekci + about obsah současně */
+        const [coverRes, aboutRes] = await Promise.all([
+          fetch('/api/sections/cover?sectionId=about'),
+          fetch('/api/about/get')
+        ]);
+
+        const coverData = await coverRes.json();
+        const data = await aboutRes.json();
+
+        /* --- HERO COVER --- */
+        if (coverData.url) {
+          const hero = document.getElementById('hero');
+          const img = document.createElement('img');
+          img.src = coverData.url;
+          img.alt = 'Cover';
+          hero.insertBefore(img, hero.firstChild);
         }
-        
-        html += '</div>';
-        document.getElementById('content').innerHTML = html;
+        document.getElementById('heroTitle').textContent = data.title || 'O Zajdovi';
+
+        /* --- OBSAH (HTML z editoru) --- */
+        const content = document.getElementById('content');
+        content.classList.remove('loading');
+        if (!data.text) {
+          content.innerHTML = '<p>Zatím žádný obsah.</p>';
+        } else {
+          /* Obsah je HTML z WYSIWYG editoru — vložíme přímo */
+          content.innerHTML = data.text;
+        }
       } catch {
-        document.getElementById('content').innerHTML = '<p style="color:#ef4444;text-align:center;">Chyba při načítání obsahu.</p>';
+        document.getElementById('content').innerHTML =
+          '<p style="color:#ef4444;text-align:center;">Chyba při načítání obsahu.</p>';
+      }
+    }
+
+    async function loadNews() {
+      try {
+        const res = await fetch('/api/articles/list');
+        const data = await res.json();
+        const articles = Array.isArray(data) ? data : (data.articles || []);
+
+        /* Jen publikované, maximálně 4 nejnovější */
+        const published = articles
+          .filter(a => a.published)
+          .sort((a, b) => new Date(b.date || b.created) - new Date(a.date || a.created))
+          .slice(0, 4);
+
+        if (!published.length) return;
+
+        document.getElementById('newsSection').style.display = 'block';
+        document.getElementById('newsGrid').innerHTML = published.map(a => {
+          const excerpt = a.content
+            ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...'
+            : '';
+          const date = new Date(a.date || a.created).toLocaleDateString('cs');
+          const slug = a.slug || a.id;
+          const cover = a.coverUrl
+            ? `<img src="${a.coverUrl}" alt="">`
+            : `<div class="card-placeholder">📷</div>`;
+          return `
+            <a class="news-card" href="/article.html?slug=${encodeURIComponent(slug)}">
+              ${cover}
+              <div class="card-body">
+                <h3>${escapeHtml(a.title)}</h3>
+                <p class="card-excerpt">${escapeHtml(excerpt)}</p>
+                <div class="card-meta">${a.place || ''} • ${date}</div>
+              </div>
+            </a>`;
+        }).join('');
+      } catch (e) {
+        /* Pokud se aktuality nenačtou, prostě je nezobrazíme */
+        console.error('Aktuality:', e);
       }
     }
 
     function escapeHtml(text) {
       const div = document.createElement('div');
-      div.textContent = text;
+      div.textContent = text || '';
       return div.innerHTML;
     }
 
     loadAbout();
+    loadNews();
   </script>
 </body>
 </html>
