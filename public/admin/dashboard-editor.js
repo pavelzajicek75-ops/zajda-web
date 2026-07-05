@@ -1048,14 +1048,27 @@ function pickSectionCover(sectionId) {
 
 async function saveSectionCover(sectionId, url) {
   try {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('Nelze stáhnout obrázek');
-    const blob = await r.blob();
+    /* Stáhnout obrázek přes proxy API, abychom se vyhnuli CORS problémům */
+    const resp = await fetch('/api/sections/cover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sectionId, photoUrl: url })
+    });
+    if (resp.ok) {
+      const m = document.querySelector('.modal');
+      if (m) m.remove();
+      loadSectionCovers();
+      return;
+    }
+    /* Pokud JSON nefunguje, zkusit FormData */
+    const imgResp = await fetch(url);
+    if (!imgResp.ok) throw new Error('Nelze stáhnout obrázek');
+    const blob = await imgResp.blob();
     const fd = new FormData();
     fd.append('file', blob, 'cover.jpg');
     fd.append('sectionId', sectionId);
-    const resp = await fetch('/api/sections/cover', { method: 'POST', body: fd });
-    if (!resp.ok) throw new Error('Server ' + resp.status);
+    const r2 = await fetch('/api/sections/cover', { method: 'POST', body: fd });
+    if (!r2.ok) throw new Error('Server ' + r2.status);
   } catch (e) {
     console.error('Chyba uložení coveru:', e);
     alert('Nepodařilo se uložit cover: ' + e.message);
@@ -1065,7 +1078,6 @@ async function saveSectionCover(sectionId, url) {
     loadSectionCovers();
   }
 }
-
 /* === O ZAJDOVI === */
 async function loadAbout() {
   try {
