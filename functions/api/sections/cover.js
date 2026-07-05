@@ -18,7 +18,15 @@ export async function onRequestPost(context) {
       const json = await request.json();
       const { sectionId, photoUrl } = json;
       if (!sectionId || !photoUrl) return Response.json({ error: 'Missing sectionId or photoUrl' }, { status: 400 });
-      const imgResp = await fetch(photoUrl);
+
+      /* Převod relativní URL na absolutní — Workers fetch nepodporuje relativní URL */
+      let fetchUrl = photoUrl;
+      if (!fetchUrl.startsWith('http')) {
+        const reqUrl = new URL(request.url);
+        fetchUrl = `${reqUrl.origin}${fetchUrl.startsWith('/') ? '' : '/'}${fetchUrl}`;
+      }
+
+      const imgResp = await fetch(fetchUrl);
       if (!imgResp.ok) throw new Error('Failed to fetch image');
       const blob = await imgResp.blob();
       const key = `section-covers/${sectionId}.jpg`;
