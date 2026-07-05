@@ -18,16 +18,34 @@ export async function onRequestPost(context) {
       const { sectionId, photoUrl } = json;
       if (!sectionId || !photoUrl) return Response.json({ error: 'Missing sectionId or photoUrl' }, { status: 400 });
 
-      /* Převod relativní URL na absolutní — Workers fetch nepodporuje relativní URL */
-      let fetchUrl = photoUrl;
-      if (!fetchUrl.startsWith('http')) {
-        const reqUrl = new URL(request.url);
-        fetchUrl = `${reqUrl.origin}${fetchUrl.startsWith('/') ? '' : '/'}${fetchUrl}`;
+      let blob;
+
+      /* Pokus o extrakci R2 klíče z URL a přímé čtení z R2 — vyhneme se fetch() */
+      try {
+        const urlObj = new URL(photoUrl, request.url);
+        const r2key = urlObj.searchParams.get('key');
+        if (r2key) {
+          const obj = await env.PHOTOS_R2.get(r2key);
+          if (obj) {
+            blob = await obj.blob();
+          }
+        }
+      } catch (parseErr) {
+        /* Pokud parsování selže, zkusíme fetch jako fallback */
       }
 
-      const imgResp = await fetch(fetchUrl);
-      if (!imgResp.ok) throw new Error('Failed to fetch image');
-      const blob = await imgResp.blob();
+      /* Fallback: fetch s absolutní URL */
+      if (!blob) {
+        let fetchUrl = photoUrl;
+        if (!fetchUrl.startsWith('http')) {
+          const reqUrl = new URL(request.url);
+          fetchUrl = `${reqUrl.origin}${fetchUrl.startsWith('/') ? '' : '/'}${fetchUrl}`;
+        }
+        const imgResp = await fetch(fetchUrl);
+        if (!imgResp.ok) throw new Error('Failed to fetch image');
+        blob = await imgResp.blob();
+      }
+
       const key = `section-covers/${sectionId}.jpg`;
       await env.PHOTOS_R2.put(key, blob.stream(), { httpMetadata: { contentType: blob.type } });
       const url = `/api/photos/file?key=${encodeURIComponent(key)}`;
@@ -37,6 +55,7 @@ export async function onRequestPost(context) {
     }
   }
 
+  /* Fallback: FormData */
   const formData = await request.formData();
   const file = formData.get('file');
   const sectionId = formData.get('sectionId');
