@@ -1034,6 +1034,7 @@ function pickSectionCover(sectionId) {
 
 async function saveSectionCover(sectionId, url) {
   try {
+    /* Vždy poslat absolutní URL — server si s ní poradí i když je relativní */
     const absUrl = url.startsWith('http') ? url : window.location.origin + url;
     const resp = await fetch('/api/sections/cover', {
       method: 'POST',
@@ -1053,6 +1054,7 @@ async function saveSectionCover(sectionId, url) {
     loadSectionCovers();
   }
 }
+
 /* === O ZAJDOVI === */
 async function loadAbout() {
   try {
