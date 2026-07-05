@@ -1048,15 +1048,17 @@ function pickSectionCover(sectionId) {
 
 async function saveSectionCover(sectionId, url) {
   try {
-    const r = await fetch('/api/sections/cover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sectionId, coverUrl: url })
-    });
-    if (!r.ok) throw new Error('Server ' + r.status);
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('Nelze stáhnout obrázek');
+    const blob = await r.blob();
+    const fd = new FormData();
+    fd.append('file', blob, 'cover.jpg');
+    fd.append('sectionId', sectionId);
+    const resp = await fetch('/api/sections/cover', { method: 'POST', body: fd });
+    if (!resp.ok) throw new Error('Server ' + resp.status);
   } catch (e) {
     console.error('Chyba uložení coveru:', e);
-    alert('Nepodařilo se uložit cover. Zkus to znovu.');
+    alert('Nepodařilo se uložit cover: ' + e.message);
   } finally {
     const m = document.querySelector('.modal');
     if (m) m.remove();
