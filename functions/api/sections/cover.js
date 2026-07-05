@@ -12,7 +12,6 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  /* Zkusit parsovat jako JSON */
   if (request.headers.get('content-type')?.includes('application/json')) {
     try {
       const json = await request.json();
@@ -38,7 +37,6 @@ export async function onRequestPost(context) {
     }
   }
 
-  /* Fallback: FormData */
   const formData = await request.formData();
   const file = formData.get('file');
   const sectionId = formData.get('sectionId');
