@@ -258,7 +258,7 @@
       return html;
     }
 
-    async function buildSections() {
+        async function buildSections() {
       var container = document.getElementById('sectionsContainer');
       if (!container) return;
       container.innerHTML = '';
@@ -268,6 +268,39 @@
           var panel = document.createElement('div');
           panel.className = 'section-panel';
 
+          /* Pro about sekci — celý panel je odkaz na /about/ */
+          if (sec.id === 'about') {
+            panel.style.cursor = 'pointer';
+            panel.addEventListener('click', function() {
+              window.location.href = '/about/';
+            });
+
+            var img = document.createElement('img');
+            img.className = 'panel-cover';
+            img.alt = sec.name;
+            img.src = '/images/placeholder.jpg';
+            img.onerror = function() { this.src = '/images/placeholder.jpg'; };
+            loadSectionCover(sec.id).then(function(url) {
+              if (url) img.src = url;
+            });
+
+            var body = document.createElement('div');
+            body.className = 'panel-body';
+            body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>';
+
+            var scroll = document.createElement('div');
+            scroll.className = 'panel-scroll';
+            scroll.innerHTML = '<div style="color:#cbd5e1;font-size:13px;line-height:1.6;padding:8px 0">Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života...</div>' +
+              '<div style="text-align:center;margin-top:1rem"><span style="color:#ff6600;font-size:13px;font-weight:600;text-shadow:0 0 12px rgba(255,102,0,0.4)">Číst více →</span></div>';
+
+            body.appendChild(scroll);
+            panel.appendChild(img);
+            panel.appendChild(body);
+            container.appendChild(panel);
+            return;
+          }
+
+          /* Ostatní sekce — normálně */
           var img = document.createElement('img');
           img.className = 'panel-cover';
           img.alt = sec.name;
@@ -294,7 +327,7 @@
             var subs = await loadSubsections(sec.id);
             var html = '';
 
-            if (sec.id === 'about' || !subs.length) {
+            if (!subs.length) {
               var articles = allArticles.filter(function(a) {
                 var secId = a.sectionId;
                 if (secId == null) return false;
