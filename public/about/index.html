@@ -18,38 +18,28 @@
       min-height: 100vh;
       line-height: 1.7;
     }
+
+    /* HERO */
     .hero {
-      position: relative;
-      width: 100%;
-      height: 50vh;
-      min-height: 320px;
-      max-height: 500px;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: relative; width: 100%; height: 50vh; min-height: 320px; max-height: 500px;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
     }
-    .hero img {
-      width: 100%; height: 100%; object-fit: cover; filter: brightness(0.55);
-    }
+    .hero img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.55); }
     .hero::after {
       content: ''; position: absolute; inset: 0;
       background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.85) 100%);
     }
     .hero h1 {
-      position: absolute; z-index: 2;
-      font-size: clamp(2rem, 6vw, 3.5rem);
-      color: #ff6600;
-      text-shadow: 0 0 30px rgba(255,102,0,0.6), 0 4px 20px rgba(0,0,0,0.8);
+      position: absolute; z-index: 2; font-size: clamp(2rem, 6vw, 3.5rem);
+      color: #ff6600; text-shadow: 0 0 30px rgba(255,102,0,0.6), 0 4px 20px rgba(0,0,0,0.8);
       text-align: center; padding: 0 1.5rem;
     }
+
+    /* OBSAH */
     .container { max-width: 800px; margin: 0 auto; padding: 3rem 1.5rem; }
     .content {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid #334155;
-      border-radius: 16px;
-      padding: 2.5rem;
-      backdrop-filter: blur(10px);
+      background: rgba(30, 41, 59, 0.6); border: 1px solid #334155;
+      border-radius: 16px; padding: 2.5rem; backdrop-filter: blur(10px);
     }
     .content p { color: #cbd5e1; margin-bottom: 1.25rem; font-size: 1.125rem; }
     .content h2 { color: #ffcc66; margin: 1.5rem 0 0.75rem; font-size: 1.5rem; }
@@ -67,6 +57,47 @@
       font-style: italic; color: #cbd5e1;
     }
     .content hr { border: none; border-top: 1px solid #334155; margin: 1.5rem 0; }
+
+    /* PODSEKCE */
+    .subsections { max-width: 1000px; margin: 0 auto; padding: 0 1.5rem 2rem; }
+    .subsections h2 {
+      font-size: 1.75rem; color: #ffcc66; margin-bottom: 1.5rem; text-align: center;
+    }
+    .sub-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;
+    }
+    .sub-panel {
+      background: rgba(15,23,42,0.7); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .sub-panel:hover {
+      border-color: rgba(255,102,0,0.6); box-shadow: 0 8px 40px rgba(255,102,0,0.15);
+    }
+    .sub-cover {
+      width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+      border-bottom: 1px solid rgba(255,102,0,0.2);
+    }
+    .sub-body { padding: 0.8rem 1rem 1rem; }
+    .sub-body h3 {
+      color: #ffcc66; font-size: 15px; margin-bottom: 0.6rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255,102,0,0.2);
+    }
+    .article-link {
+      display: block; padding: 5px 8px 5px 14px; color: #e2e8f0; text-decoration: none;
+      font-size: 12px; border-left: 2px solid #334155; transition: all 0.2s;
+      line-height: 1.4; margin: 2px 0; border-radius: 0 4px 4px 0;
+    }
+    .article-link:hover {
+      color: #fff; border-left-color: #ff6600; padding-left: 18px;
+      background: rgba(255,102,0,0.1); text-shadow: 0 0 8px rgba(255,102,0,0.6);
+    }
+    .article-link .art-title { font-weight: 600; }
+    .article-link .art-date { font-size: 10px; color: #94a3b8; display: block; margin-top: 1px; }
+    .no-articles { color: #64748b; font-size: 12px; padding: 8px 0; font-style: italic; }
+
+    /* AKTUALITY */
     .news-section { max-width: 1000px; margin: 0 auto; padding: 1rem 1.5rem 4rem; }
     .news-section h2 {
       font-size: 1.75rem; color: #ffcc66; margin-bottom: 1.5rem; text-align: center;
@@ -93,15 +124,17 @@
       width: 100%; height: 180px; background: linear-gradient(135deg, #1e293b, #0f172a);
       display: flex; align-items: center; justify-content: center; font-size: 2.5rem;
     }
+
     .back {
       display: inline-block; margin-top: 2rem; color: #ffcc66;
       text-decoration: none; font-size: 1rem;
     }
     .back:hover { text-shadow: 0 0 15px #ffcc66; }
     .loading { color: #64748b; text-align: center; padding: 4rem; }
+
     @media (max-width: 640px) {
       .content { padding: 1.5rem; }
-      .news-grid { grid-template-columns: 1fr; }
+      .news-grid, .sub-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -116,6 +149,11 @@
     <a href="/" class="back">← Zpět na hlavní stránku</a>
   </div>
 
+  <div class="subsections" id="subsections" style="display:none">
+    <h2>Podsekce</h2>
+    <div class="sub-grid" id="subGrid"></div>
+  </div>
+
   <div class="news-section" id="newsSection" style="display:none">
     <h2>Aktuality</h2>
     <div class="news-grid" id="newsGrid"></div>
@@ -128,26 +166,33 @@
       return div.innerHTML;
     }
 
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      try {
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('cs', { year: 'numeric', month: 'numeric', day: 'numeric' });
+      } catch(e) { return ''; }
+    }
+
     async function loadAbout() {
       try {
-        const [coverRes, aboutRes] = await Promise.all([
-          fetch('/api/sections/cover?sectionId=about'),
-          fetch('/api/about/get')
-        ]);
+        var coverRes = await fetch('/api/sections/cover?sectionId=about');
+        var aboutRes = await fetch('/api/about/get');
 
-        const coverData = await coverRes.json();
-        const data = await aboutRes.json();
+        var coverData = await coverRes.json();
+        var data = await aboutRes.json();
 
         if (coverData.url) {
-          const hero = document.getElementById('hero');
-          const img = document.createElement('img');
+          var hero = document.getElementById('hero');
+          var img = document.createElement('img');
           img.src = coverData.url;
           img.alt = 'Cover';
           hero.insertBefore(img, hero.firstChild);
         }
         document.getElementById('heroTitle').textContent = data.title || 'O Zajdovi';
 
-        const content = document.getElementById('content');
+        var content = document.getElementById('content');
         content.classList.remove('loading');
         if (!data.text) {
           content.innerHTML = '<p>Zatím žádný obsah.</p>';
@@ -160,27 +205,98 @@
       }
     }
 
+    async function loadSubsections() {
+      try {
+        var r = await fetch('/api/subsections/by-section?sectionId=about');
+        if (!r.ok) return;
+        var subs = await r.json();
+        if (!subs.length) return;
+
+        document.getElementById('subsections').style.display = 'block';
+
+        var allArticles = await getAllArticles();
+        var html = '';
+
+        for (var i = 0; i < subs.length; i++) {
+          var sub = subs[i];
+          var subArticles = allArticles.filter(function(a) {
+            return String(a.sectionId) === 'about' && String(a.subsectionId) === String(sub.id);
+          });
+
+          var coverHtml = sub.coverUrl
+            ? '<img class="sub-cover" src="' + sub.coverUrl + '" alt="">'
+            : '';
+
+          html += '<div class="sub-panel">' + coverHtml +
+            '<div class="sub-body"><h3>' + escapeHtml(sub.name) + '</h3>' +
+            renderArticleList(subArticles) +
+            '</div></div>';
+        }
+
+        document.getElementById('subGrid').innerHTML = html;
+      } catch (e) {
+        console.error('Podsekce:', e);
+      }
+    }
+
+    function renderArticleList(articles) {
+      if (!articles.length) return '<div class="no-articles">Žádné články</div>';
+      var sorted = articles.slice().sort(function(a, b) {
+        var da = a.created || a.date || '';
+        var db = b.created || b.date || '';
+        if (da < db) return 1;
+        if (da > db) return -1;
+        return 0;
+      });
+      var html = '';
+      for (var i = 0; i < sorted.length; i++) {
+        var a = sorted[i];
+        var title = a.title || 'Bez názvu';
+        var dateStr = formatDate(a.created || a.date);
+        html += '<a class="article-link" href="/article.html?id=' + encodeURIComponent(a.id) + '">' +
+          '<span class="art-title">' + escapeHtml(title) + '</span>' +
+          (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
+          '</a>';
+      }
+      return html;
+    }
+
+    var cachedArticles = null;
+    async function getAllArticles() {
+      if (cachedArticles) return cachedArticles;
+      try {
+        var r = await fetch('/api/articles/list');
+        if (!r.ok) return [];
+        var data = await r.json();
+        cachedArticles = Array.isArray(data) ? data : (data.articles || []);
+        return cachedArticles;
+      } catch (e) { return []; }
+    }
+
     async function loadNews() {
       try {
-        const res = await fetch('/api/articles/list');
-        const data = await res.json();
-        const articles = Array.isArray(data) ? data : (data.articles || []);
+        var articles = await getAllArticles();
+        var aboutArticles = articles.filter(function(a) {
+          return String(a.sectionId) === 'about' && a.published;
+        });
 
-        const published = articles
-          .filter(a => a.published)
-          .sort((a, b) => new Date(b.date || b.created) - new Date(a.date || a.created))
-          .slice(0, 4);
+        var sorted = aboutArticles.sort(function(a, b) {
+          var da = a.created || a.date || '';
+          var db = b.created || b.date || '';
+          if (da < db) return 1;
+          if (da > db) return -1;
+          return 0;
+        }).slice(0, 4);
 
-        if (!published.length) return;
+        if (!sorted.length) return;
 
         document.getElementById('newsSection').style.display = 'block';
-        document.getElementById('newsGrid').innerHTML = published.map(a => {
-          const excerpt = a.content
+        document.getElementById('newsGrid').innerHTML = sorted.map(function(a) {
+          var excerpt = a.content
             ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...'
             : '';
-          const date = new Date(a.date || a.created).toLocaleDateString('cs');
-          const slug = a.slug || a.id;
-          const cover = a.coverUrl
+          var date = formatDate(a.date || a.created);
+          var cover = a.coverUrl
             ? '<img src="' + a.coverUrl + '" alt="">'
             : '<div class="card-placeholder">📷</div>';
           return '<a class="news-card" href="/article.html?id=' + encodeURIComponent(a.id) + '">' +
@@ -188,7 +304,7 @@
             '<div class="card-body">' +
             '<h3>' + escapeHtml(a.title) + '</h3>' +
             '<p class="card-excerpt">' + escapeHtml(excerpt) + '</p>' +
-            '<div class="card-meta">' + escapeHtml(a.place) + ' • ' + date + '</div>' +
+            '<div class="card-meta">' + escapeHtml(a.place || '') + (a.place && date ? ' • ' : '') + date + '</div>' +
             '</div></a>';
         }).join('');
       } catch (e) {
@@ -197,6 +313,7 @@
     }
 
     loadAbout();
+    loadSubsections();
     loadNews();
   </script>
 </body>
