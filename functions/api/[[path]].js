@@ -5,7 +5,6 @@ export async function onRequest(context) {
   const path = url.pathname.replace('/api/', '');
   const method = request.method;
 
-  // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -17,6 +16,7 @@ export async function onRequest(context) {
   }
 
   try {
+
     // =========================================
     // ARTICLES
     // =========================================
@@ -47,7 +47,7 @@ export async function onRequest(context) {
       return jsonResponse(article, corsHeaders);
     }
 
-    if (path === 'articles/update' && method === 'POST') {
+    if (path === 'articles/update' && (method === 'POST' || method === 'PUT')) {
       const body = await request.json();
       const { id, ...data } = body;
       if (!id) return jsonResponse({ error: 'Missing id' }, corsHeaders, 400);
@@ -77,7 +77,7 @@ export async function onRequest(context) {
           id: o.key,
           key: o.key,
           name: o.key.split('/').pop(),
-          url: `${env.CDN_BASE_URL || ''}/${o.key}`,
+          url: '/api/photos/file?key=' + encodeURIComponent(o.key),
           size: o.size,
           uploaded: o.uploaded
         }));
@@ -88,16 +88,14 @@ export async function onRequest(context) {
       const formData = await request.formData();
       const file = formData.get('file');
       if (!file) return jsonResponse({ error: 'No file' }, corsHeaders, 400);
-
-      const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const filename = 'gallery-' + (galleryId || 'main') + '/' + crypto.randomUUID() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       await env.PHOTOS_R2.put(filename, file.stream(), {
         httpMetadata: { contentType: file.type }
       });
-
       return jsonResponse({
         success: true,
         key: filename,
-        url: `${env.CDN_BASE_URL || ''}/${filename}`
+        url: '/api/photos/file?key=' + encodeURIComponent(filename)
       }, corsHeaders);
     }
 
@@ -106,19 +104,50 @@ export async function onRequest(context) {
       const file = formData.get('file');
       const oldKey = formData.get('oldKey');
       const mode = formData.get('mode') || 'replace';
-
       if (!file) return jsonResponse({ error: 'No file' }, corsHeaders, 400);
-
-      const filename = oldKey || `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const filename = oldKey || 'gallery-main/' + crypto.randomUUID() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
       await env.PHOTOS_R2.put(filename, file.stream(), {
         httpMetadata: { contentType: file.type }
       });
-
       return jsonResponse({
         success: true,
         key: filename,
-        url: `${env.CDN_BASE_URL || ''}/${filename}`
+        url: '/api/photos/file?key=' + encodeURIComponent(filename)
       }, corsHeaders);
+    }
+
+    if (path === 'photos/delete' && method === 'DELETE') {
+      const keys = url.searchParams.get('keys');
+      if (!keys) return jsonResponse({ error: 'Missing keys' }, corsHeaders, 400);
+      const keyArr = keys.split(',').filter(Boolean);
+      for (const k of keyArr) {
+        await env.PHOTOS_R2.delete(k);
+      }
+      return jsonResponse({ success: true, deleted: keyArr.length }, corsHeaders);
+    }
+
+    if (path === 'photos/stats' && method === 'GET') {
+      const list = await env.PHOTOS_R2.list();
+      let galCount = 0, galSize = 0, totalSize = 0;
+      for (const o of list.objects) {
+        totalSize += o.size;
+        if (o.key.startsWith('gallery-')) {
+          galCount++;
+          galSize += o.size;
+        }
+      }
+      return jsonResponse({ galCount, galSize, totalSize }, corsHeaders);
+    }
+
+    if (path === 'photos/file' && method === 'GET') {
+      const key = url.searchParams.get('key');
+      if (!key) return jsonResponse({ error: 'Missing key' }, corsHeaders, 400);
+      const obj = await env.PHOTOS_R2.get(key);
+      if (!obj) return jsonResponse({ error: 'Not found' }, corsHeaders, 404);
+      const headers = new Headers();
+      obj.writeHttpMetadata(headers);
+      headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return new Response(obj.body, { headers });
     }
 
     // =========================================
@@ -155,7 +184,7 @@ export async function onRequest(context) {
     if (path === 'subsections/by-section' && method === 'GET') {
       const sectionId = url.searchParams.get('sectionId');
       if (!sectionId) return jsonResponse([], corsHeaders);
-      const list = await env.SUBSECTIONS.list({ prefix: `${sectionId}/` });
+      const list = await env.SUBSECTIONS.list({ prefix: sectionId + '/' });
       const subs = [];
       for (const key of list.keys) {
         const val = await env.SUBSECTIONS.get(key.name);
@@ -169,17 +198,16 @@ export async function onRequest(context) {
       const body = await request.json();
       const id = crypto.randomUUID();
       const sub = { id, ...body, created: new Date().toISOString() };
-      await env.SUBSECTIONS.put(`${body.sectionId}/${id}`, JSON.stringify(sub));
+      await env.SUBSECTIONS.put(body.sectionId + '/' + id, JSON.stringify(sub));
       return jsonResponse(sub, corsHeaders);
     }
 
     if (path === 'subsections/delete' && method === 'DELETE') {
       const id = url.searchParams.get('id');
       if (!id) return jsonResponse({ error: 'Missing id' }, corsHeaders, 400);
-      // Hledáme klíč napříč sekcemi
       const list = await env.SUBSECTIONS.list();
       for (const key of list.keys) {
-        if (key.name.endsWith(`/${id}`)) {
+        if (key.name.endsWith('/' + id)) {
           await env.SUBSECTIONS.delete(key.name);
           break;
         }
@@ -192,7 +220,7 @@ export async function onRequest(context) {
       const { id, ...data } = body;
       const list = await env.SUBSECTIONS.list();
       for (const key of list.keys) {
-        if (key.name.endsWith(`/${id}`)) {
+        if (key.name.endsWith('/' + id)) {
           const existing = JSON.parse(await env.SUBSECTIONS.get(key.name));
           const updated = { ...existing, ...data };
           await env.SUBSECTIONS.put(key.name, JSON.stringify(updated));
@@ -207,17 +235,24 @@ export async function onRequest(context) {
     // =========================================
     if (path === 'sections/cover' && method === 'GET') {
       const sectionId = url.searchParams.get('sectionId');
-      if (!sectionId) return jsonResponse({ error: 'Missing sectionId' }, corsHeaders, 400);
-      const val = await env.SUBSECTIONS.get(`_cover_${sectionId}`);
-      return jsonResponse(val ? JSON.parse(val) : { coverUrl: '' }, corsHeaders);
+      if (!sectionId) return jsonResponse({ url: null }, corsHeaders);
+      const val = await env.SUBSECTIONS.get('_cover_' + sectionId);
+      if (!val) return jsonResponse({ url: null }, corsHeaders);
+      const data = JSON.parse(val);
+      var ts = Date.now();
+      var coverUrl = data.photoUrl || '';
+      if (coverUrl) coverUrl = coverUrl + (coverUrl.includes('?') ? '&' : '?') + '_t=' + ts;
+      return jsonResponse({ url: coverUrl }, corsHeaders);
     }
 
     if (path === 'sections/cover' && method === 'POST') {
       const body = await request.json();
-      const { sectionId, coverUrl } = body;
-      if (!sectionId) return jsonResponse({ error: 'Missing sectionId' }, corsHeaders, 400);
-      await env.SUBSECTIONS.put(`_cover_${sectionId}`, JSON.stringify({ sectionId, coverUrl }));
-      return jsonResponse({ success: true }, corsHeaders);
+      const { sectionId, photoUrl } = body;
+      if (!sectionId || !photoUrl) return jsonResponse({ error: 'Missing sectionId or photoUrl' }, corsHeaders, 400);
+      await env.SUBSECTIONS.put('_cover_' + sectionId, JSON.stringify({ sectionId, photoUrl }));
+      var ts = Date.now();
+      var coverUrl = photoUrl + (photoUrl.includes('?') ? '&' : '?') + '_t=' + ts;
+      return jsonResponse({ url: coverUrl, key: sectionId }, corsHeaders);
     }
 
     // =========================================
@@ -252,9 +287,9 @@ export async function onRequest(context) {
   }
 }
 
-function jsonResponse(data, headers, status = 200) {
+function jsonResponse(data, headers, status) {
   return new Response(JSON.stringify(data), {
-    status,
+    status: status || 200,
     headers: {
       'Content-Type': 'application/json',
       ...headers
