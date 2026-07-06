@@ -20,18 +20,18 @@ export async function onRequestPost(context) {
 
       let blob;
 
-      /* Pokus o extrakci R2 klíče z URL a přímé čtení z R2 — vyhneme se fetch() */
+      /* Zkusit extrahovat R2 key z URL a číst přímo z R2 */
       try {
         const urlObj = new URL(photoUrl, request.url);
         const r2key = urlObj.searchParams.get('key');
         if (r2key) {
-          const obj = await env.PHOTOS_R2.get(r2key);
+          const obj = await env.PHOTOS_R2.get(decodeURIComponent(r2key));
           if (obj) {
             blob = await obj.blob();
           }
         }
       } catch (parseErr) {
-        /* Pokud parsování selže, zkusíme fetch jako fallback */
+        /* Ignorovat, použít fallback */
       }
 
       /* Fallback: fetch s absolutní URL */
@@ -39,7 +39,7 @@ export async function onRequestPost(context) {
         let fetchUrl = photoUrl;
         if (!fetchUrl.startsWith('http')) {
           const reqUrl = new URL(request.url);
-          fetchUrl = `${reqUrl.origin}${fetchUrl.startsWith('/') ? '' : '/'}${fetchUrl}`;
+          fetchUrl = reqUrl.origin + (fetchUrl.startsWith('/') ? '' : '/') + fetchUrl;
         }
         const imgResp = await fetch(fetchUrl);
         if (!imgResp.ok) throw new Error('Failed to fetch image');
