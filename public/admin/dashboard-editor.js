@@ -1007,16 +1007,18 @@ async function loadSectionCovers() {
     { id: 'projects', n: 'Projekty' },
     { id: 'about', n: 'O Zajdovi' }
   ];
-  let html = '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">';
+  var ts = Date.now();
+  var html = '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">';
   for (const s of secs) {
-    let url = '';
+    var url = '';
     try {
-      const r = await fetch('/api/sections/cover?sectionId=' + s.id);
+      const r = await fetch('/api/sections/cover?sectionId=' + s.id + '&_t=' + ts);
       if (r.ok) {
         const d = await r.json();
         url = d.coverUrl || d.url || '';
       }
     } catch (e) { console.error('Chyba načítání coveru sekce:', e); }
+    if (url) url = url + (url.includes('?') ? '&' : '?') + '_t=' + ts;
     html += '<div style="background:#1e293b;padding:0.75rem;border-radius:8px;border:1px solid #334155;text-align:center;min-width:140px"><div style="font-size:0.875rem;margin-bottom:0.5rem;color:#ffcc66">' + escapeHtml(s.n) + '</div>' + (url ? '<img src="' + url + '" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #334155">' : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #334155"></div>') + '<button onclick="pickSectionCover(\'' + s.id + '\')" class="btn btn-blue btn-sm">Změnit cover</button></div>';
   }
   html += '</div>';
