@@ -1017,7 +1017,7 @@ async function loadSectionCovers() {
         url = d.coverUrl || d.url || '';
       }
     } catch (e) { console.error('Chyba načítání coveru sekce:', e); }
-    html += `<div style="background:#1e293b;padding:0.75rem;border-radius:8px;border:1px solid #334155;text-align:center;min-width:140px"><div style="font-size:0.875rem;margin-bottom:0.5rem;color:#ffcc66">${escapeHtml(s.n)}</div>${url ? `<img src="${url}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #334155">` : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #334155"></div>'}<button onclick="pickSectionCover('${s.id}')" class="btn btn-blue btn-sm">Změnit cover</button></div>`;
+    html += '<div style="background:#1e293b;padding:0.75rem;border-radius:8px;border:1px solid #334155;text-align:center;min-width:140px"><div style="font-size:0.875rem;margin-bottom:0.5rem;color:#ffcc66">' + escapeHtml(s.n) + '</div>' + (url ? '<img src="' + url + '" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #334155">' : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #334155"></div>') + '<button onclick="pickSectionCover(\'' + s.id + '\')" class="btn btn-blue btn-sm">Změnit cover</button></div>';
   }
   html += '</div>';
   box.innerHTML = html;
@@ -1027,29 +1027,28 @@ function pickSectionCover(sectionId) {
   if (!G.photos || !G.photos.length) { alert('Galerie je prázdná.'); return; }
   const m = document.createElement('div');
   m.className = 'modal';
-  m.innerHTML = `<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover sekce: ${escapeHtml(sectionId)}</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover('${sectionId}','${p.url}')">`).join('')}</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button></div></div>`;
-  m.onclick = e => { if (e.target === m) m.remove(); };
+  m.innerHTML = '<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover sekce: ' + escapeHtml(sectionId) + '</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' + G.photos.map(function(p) { return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover(\'' + sectionId + '\',\'' + p.url + '\')">'; }).join('') + '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
+  m.onclick = function(e) { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
 }
 
 async function saveSectionCover(sectionId, url) {
   try {
-    /* Vždy poslat absolutní URL — server si s ní poradí i když je relativní */
-    const absUrl = url.startsWith('http') ? url : window.location.origin + url;
-    const resp = await fetch('/api/sections/cover', {
+    var absUrl = url.startsWith('http') ? url : window.location.origin + url;
+    var resp = await fetch('/api/sections/cover', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sectionId, photoUrl: absUrl })
+      body: JSON.stringify({ sectionId: sectionId, photoUrl: absUrl })
     });
     if (!resp.ok) {
-      const err = await resp.text();
+      var err = await resp.text();
       throw new Error(err);
     }
   } catch (e) {
     console.error('Chyba uložení coveru:', e);
     alert('Nepodařilo se uložit cover: ' + e.message);
   } finally {
-    const m = document.querySelector('.modal');
+    var m = document.querySelector('.modal');
     if (m) m.remove();
     loadSectionCovers();
   }
