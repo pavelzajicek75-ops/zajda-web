@@ -4,11 +4,11 @@ export async function onRequestGet(context) {
   const sectionId = searchParams.get('sectionId');
   if (!sectionId) return Response.json({ url: null });
 
-  /* Číst uložený klíč fotky — stejný princip jako podsekce */
   const obj = await env.PHOTOS_R2.get('section-covers/' + sectionId + '.txt');
   if (!obj) return Response.json({ url: null });
   const sourceKey = await obj.text();
-  const url = '/api/photos/file?key=' + encodeURIComponent(sourceKey);
+  const ts = Date.now();
+  const url = '/api/photos/file?key=' + encodeURIComponent(sourceKey) + '&_t=' + ts;
   return Response.json({ url });
 }
 
@@ -21,7 +21,6 @@ export async function onRequestPost(context) {
       const { sectionId, photoUrl } = json;
       if (!sectionId || !photoUrl) return Response.json({ error: 'Missing sectionId or photoUrl' }, { status: 400 });
 
-      /* Extrahovat R2 key z URL — žádný fetch, žádné kopírování */
       var sourceKey = null;
       try {
         var urlObj = new URL(photoUrl, request.url);
@@ -33,16 +32,15 @@ export async function onRequestPost(context) {
 
       if (!sourceKey) return Response.json({ error: 'No key found in photoUrl' }, { status: 400 });
 
-      /* Uložit klíč fotky jako text — stejně jako podsekce ukládá URL */
       await env.PHOTOS_R2.put('section-covers/' + sectionId + '.txt', sourceKey);
-      var url = '/api/photos/file?key=' + encodeURIComponent(sourceKey);
+      var ts = Date.now();
+      var url = '/api/photos/file?key=' + encodeURIComponent(sourceKey) + '&_t=' + ts;
       return Response.json({ url: url, key: sourceKey });
     } catch (e) {
       return Response.json({ error: e.message }, { status: 500 });
     }
   }
 
-  /* Fallback: FormData */
   const formData = await request.formData();
   const file = formData.get('file');
   const sectionId = formData.get('sectionId');
