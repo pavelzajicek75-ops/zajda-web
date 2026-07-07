@@ -89,8 +89,105 @@ async function bulkDelete() {
 
 async function uploadFiles(input) {
   if (!input?.files?.length) return;
-  for (const f of input.files) { const fd = new FormData(); fd.append('file', f); fd.append('galleryId', 'main'); try { await fetch('/api/photos/upload', { method: 'POST', body: fd }); } catch (e) {} }
-  input.value = ''; loadGallery();
+  var files = Array.from(input.files);
+  var total = files.length;
+  var completed = 0;
+
+  var modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'uploadModal';
+  modal.innerHTML = '\
+    <div style="background:#1e293b;padding:2rem;border-radius:16px;max-width:480px;width:90vw;border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,0.6)">\
+      <h3 style="color:#ffcc66;margin-bottom:1.5rem;text-align:center">⬆ Nahrávání fotek</h3>\
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">\
+        <span style="color:#94a3b8;font-size:13px" id="upFileName">Příprava...</span>\
+        <span style="color:#ff6600;font-size:13px;font-weight:600" id="upCounter">0 / ' + total + '</span>\
+      </div>\
+      <div style="background:#0f172a;border-radius:8px;height:24px;overflow:hidden;border:1px solid #334155;margin-bottom:1rem">\
+        <div id="upProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ff6600,#ffcc66);border-radius:7px;transition:width 0.3s ease"></div>\
+      </div>\
+      <div style="display:flex;justify-content:space-between;align-items:center">\
+        <span style="color:#64748b;font-size:12px" id="upSpeed">—</span>\
+        <span style="color:#64748b;font-size:12px" id="upPercent">0%</span>\
+      </div>\
+      <div style="margin-top:1rem;text-align:center">\
+        <span style="color:#475569;font-size:11px" id="upStatus">Nahrávám...</span>\
+      </div>\
+    </div>';
+  document.body.appendChild(modal);
+
+  var fileNameEl = document.getElementById('upFileName');
+  var counterEl = document.getElementById('upCounter');
+  var progressBarEl = document.getElementById('upProgressBar');
+  var speedEl = document.getElementById('upSpeed');
+  var percentEl = document.getElementById('upPercent');
+  var statusEl = document.getElementById('upStatus');
+
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    fileNameEl.textContent = file.name;
+    counterEl.textContent = (i + 1) + ' / ' + total;
+    statusEl.textContent = 'Nahrávám...';
+
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('galleryId', 'main');
+
+    await new Promise(function(resolve) {
+      var xhr = new XMLHttpRequest();
+      var startTime = Date.now();
+
+      xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+          var percent = Math.round((e.loaded / e.total) * 100);
+          var overallPercent = Math.round(((completed + e.loaded / e.total) / total) * 100);
+          progressBarEl.style.width = overallPercent + '%';
+          percentEl.textContent = overallPercent + '%';
+
+          var elapsed = (Date.now() - startTime) / 1000;
+          if (elapsed > 0.1) {
+            var speed = e.loaded / elapsed;
+            if (speed > 1048576) speedEl.textContent = (speed / 1048576).toFixed(1) + ' MB/s';
+            else if (speed > 1024) speedEl.textContent = (speed / 1024).toFixed(0) + ' KB/s';
+            else speedEl.textContent = speed.toFixed(0) + ' B/s';
+          }
+        }
+      });
+
+      xhr.addEventListener('load', function() {
+        completed++;
+        progressBarEl.style.width = Math.round((completed / total) * 100) + '%';
+        percentEl.textContent = Math.round((completed / total) * 100) + '%';
+        resolve();
+      });
+
+      xhr.addEventListener('error', function() {
+        completed++;
+        resolve();
+      });
+
+      xhr.addEventListener('abort', function() {
+        resolve();
+      });
+
+      xhr.open('POST', '/api/photos/upload');
+      xhr.send(fd);
+    });
+  }
+
+  statusEl.textContent = '✅ Hotovo!';
+  statusEl.style.color = '#22c55e';
+  progressBarEl.style.width = '100%';
+  percentEl.textContent = '100%';
+  speedEl.textContent = '';
+
+  await new Promise(function(r) { setTimeout(r, 800); });
+
+  var m = document.getElementById('uploadModal');
+  if (m) m.remove();
+  input.value = '';
+  loadGallery();
 }
+
 
 loadGallery();
