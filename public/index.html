@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
@@ -17,17 +17,17 @@
     .latest-panel { position: absolute; top: 140px; left: 40px; z-index: 10; width: 320px; max-width: 90vw; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; padding: 1.2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
     .latest-panel h3 { color: #ffcc66; font-size: 16px; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; }
     .latest-panel h3::before { content: '◆'; color: #ff6600; }
-    .latest-item { display: block; color: #e2e8f0; text-decoration: none; padding: 0.6rem 0; border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 14px; transition: all 0.2s; }
-    .latest-item:hover { color: #ff6600; padding-left: 6px; text-shadow: 0 0 12px rgba(255,102,0,0.4); }
+    .latest-item { display: block; color: #e2e8f0; text-decoration: none; padding: 0.6rem; border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 14px; transition: all 0.25s; border-radius: 4px; }
+    .latest-item:hover { color: #ff6600; padding-left: 10px; text-shadow: 0 0 15px rgba(255,102,0,0.7); background: rgba(255,102,0,0.05); }
     .latest-item:last-child { border-bottom: none; }
     .latest-item small { color: #94a3b8; font-size: 12px; display: block; margin-top: 2px; }
     .latest-empty { color: #64748b; font-size: 13px; padding: 0.5rem 0; }
     .intro-text { position: absolute; top: 200px; right: 60px; z-index: 10; width: 360px; max-width: 90vw; color: #ffb366; font-size: 16px; line-height: 1.6; text-shadow: 0 0 12px rgba(255,150,50,0.3); text-align: left; }
-    /* --- Sekce: panely s cover fotkou, posouvatelný obsah --- */
-    .sections-container { position: relative; z-index: 10; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 440px 20px 100px; max-width: 1200px; margin: 0 auto; }
+    .sections-container { position: relative; z-index: 10; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; padding: 300px 20px 100px; max-width: 1200px; margin: 0 auto; }
     .section-panel { flex: 1 1 180px; min-width: 160px; max-width: 280px; background: rgba(15,23,42,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,102,0,0.3); border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); transition: border-color 0.3s, box-shadow 0.3s; display: flex; flex-direction: column; }
-    .section-panel:hover { border-color: rgba(255,102,0,0.6); box-shadow: 0 8px 40px rgba(255,102,0,0.15); }
-    .panel-cover { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; border-bottom: 1px solid rgba(255,102,0,0.2); flex-shrink: 0; }
+    .section-panel:hover { border-color: rgba(255,102,0,0.6); box-shadow: 0 8px 40px rgba(255,102,0,0.2), 0 0 20px rgba(255,102,0,0.1); }
+    .panel-cover { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; border-bottom: 1px solid rgba(255,102,0,0.2); flex-shrink: 0; transition: filter 0.3s, box-shadow 0.3s; }
+    .section-panel:hover .panel-cover { filter: brightness(1.15) saturate(1.2); box-shadow: 0 0 25px rgba(255,102,0,0.3) inset; }
     .panel-body { padding: 0.8rem 1rem 1rem; display: flex; flex-direction: column; flex: 1; min-height: 0; }
     .panel-body h3 { color: #ffcc66; font-size: 15px; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,102,0,0.2); padding-bottom: 0.5rem; flex-shrink: 0; }
     .panel-body h3::before { content: '◆'; color: #ff6600; font-size: 12px; }
@@ -37,14 +37,14 @@
     .panel-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,0.3); border-radius: 3px; }
     .panel-scroll::-webkit-scrollbar-thumb { background: #ff6600; border-radius: 3px; }
     .sub-block { margin-bottom: 4px; }
-    .sub-title { color: #ff6600; font-size: 13px; font-weight: 600; padding: 7px 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.2s; border-radius: 4px; user-select: none; }
-    .sub-title:hover { color: #ffcc66; background: rgba(255,102,0,0.1); text-shadow: 0 0 12px rgba(255,204,102,0.6); padding-left: 12px; }
+    .sub-title { color: #ff6600; font-size: 13px; font-weight: 600; padding: 7px 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(51,65,85,0.4); transition: all 0.25s; border-radius: 4px; user-select: none; }
+    .sub-title:hover { color: #ffcc66; background: rgba(255,102,0,0.1); text-shadow: 0 0 15px rgba(255,204,102,0.8); padding-left: 12px; box-shadow: 0 0 12px rgba(255,102,0,0.15); }
     .sub-title::after { content: '▼'; font-size: 9px; color: #64748b; transition: transform 0.2s; }
     .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
     .sub-articles { max-height: 200px; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s; opacity: 1; }
     .sub-block.collapsed .sub-articles { max-height: 0; opacity: 0; overflow: hidden; }
-    .article-link { display: block; padding: 5px 8px 5px 14px; color: #e2e8f0; text-decoration: none; font-size: 12px; border-left: 2px solid #334155; transition: all 0.2s; white-space: normal; line-height: 1.4; margin: 2px 0; border-radius: 0 4px 4px 0; cursor: pointer; }
-    .article-link:hover { color: #fff; border-left-color: #ff6600; padding-left: 18px; background: rgba(255,102,0,0.1); text-shadow: 0 0 8px rgba(255,102,0,0.6); }
+    .article-link { display: block; padding: 5px 8px 5px 14px; color: #e2e8f0; text-decoration: none; font-size: 12px; border-left: 2px solid #334155; transition: all 0.25s; white-space: normal; line-height: 1.4; margin: 2px 0; border-radius: 0 4px 4px 0; cursor: pointer; }
+    .article-link:hover { color: #fff; border-left-color: #ff6600; padding-left: 18px; background: rgba(255,102,0,0.1); text-shadow: 0 0 12px rgba(255,102,0,0.8); box-shadow: 0 0 15px rgba(255,102,0,0.2); }
     .article-link .art-title { font-weight: 600; }
     .article-link .art-date { font-size: 10px; color: #94a3b8; display: block; margin-top: 1px; }
     .article-link .art-excerpt { font-size: 10px; color: #64748b; display: block; margin-top: 1px; }
@@ -258,7 +258,7 @@
       return html;
     }
 
-        async function buildSections() {
+    async function buildSections() {
       var container = document.getElementById('sectionsContainer');
       if (!container) return;
       container.innerHTML = '';
@@ -268,7 +268,6 @@
           var panel = document.createElement('div');
           panel.className = 'section-panel';
 
-          /* Pro about sekci — celý panel je odkaz na /about/ */
           if (sec.id === 'about') {
             panel.style.cursor = 'pointer';
             panel.addEventListener('click', function() {
@@ -300,7 +299,6 @@
             return;
           }
 
-          /* Ostatní sekce — normálně */
           var img = document.createElement('img');
           img.className = 'panel-cover';
           img.alt = sec.name;
