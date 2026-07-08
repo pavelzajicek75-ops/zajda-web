@@ -62,6 +62,7 @@ function showRibbonGroup(name) {
 
 function loadSection(name) {
   if (name === 'galleries') {
+    syncUploadQuickControls();
     loadGallery().then(() => { renderGallery(); loadStats(); });
   } else if (name === 'articles') {
     if (typeof loadArticles === 'function') loadArticles();
@@ -211,6 +212,24 @@ function saveUploadSettings() {
   };
   localStorage.setItem('uploadSettings', JSON.stringify(settings));
   $('uploadSettingsModal')?.classList.add('hidden');
+  syncUploadQuickControls();
+}
+
+/* Rychlý výběr velikosti/kvality přímo v ribbon toolbaru (vedle tlačítka Nahrát) */
+function syncUploadQuickControls() {
+  const s = getUploadSettings();
+  if ($('upResSelect')) $('upResSelect').value = String(s.maxRes);
+  if ($('upQualitySelect')) $('upQualitySelect').value = String(s.quality);
+}
+
+function quickSaveUploadSetting() {
+  const current = getUploadSettings();
+  const settings = {
+    maxRes: parseInt($('upResSelect')?.value) ?? current.maxRes,
+    quality: parseFloat($('upQualitySelect')?.value) ?? current.quality,
+    autoRotate: current.autoRotate
+  };
+  localStorage.setItem('uploadSettings', JSON.stringify(settings));
 }
 
 /* === KOMPRESE OBRÁZKŮ PŘED NAHRÁNÍM === */
