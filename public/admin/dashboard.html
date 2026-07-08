@@ -2,207 +2,409 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>Admin Dashboard</title>
-<link rel="stylesheet" href="/admin/style.css?v=20260706">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Admin · Zajda</title>
+<link rel="stylesheet" href="style.css?v=20260708">
 </head>
 <body>
-<nav class="sidebar">
-<h2>📊 Admin</h2>
-<a href="#" class="nav-link active" data-section="galleries">🖼️ Galerie</a>
-<a href="#" class="nav-link" data-section="articles">📝 Články</a>
-<a href="#" class="nav-link" data-section="quotes">💬 Citáty</a>
-<a href="#" class="nav-link" data-section="subsections">📂 Podsekce</a>
-<a href="#" class="nav-link" data-section="about">👤 O Zajdovi</a>
-<button onclick="logout()" class="btn btn-red" style="margin-top:auto">Odhlásit</button>
-</nav>
-<main class="content">
-<section id="galleries" class="section active">
-<h2>Galerie</h2>
-<div class="toolbar">
-<div class="toolbar-info">
-<span class="pill" id="galCount">0 fotek</span>
-<span class="pill" id="galSize">0 MB</span>
-<span class="pill" id="totalSize">R2: 0 MB</span>
-</div>
-<div class="toolbar-controls">
-<select id="viewMode" onchange="renderGallery()"><option value="grid">Velké miniatury</option><option value="small">Malé miniatury</option><option value="list">Seznam</option></select>
-<select id="sortMode" onchange="renderGallery()"><option value="new">Nejnovější</option><option value="old">Nejstarší</option><option value="name">Název</option><option value="big">Největší</option><option value="small">Nejmenší</option></select>
-<button class="btn btn-blue" onclick="document.getElementById('upInput').click()">⬆ Nahrát</button>
-<button class="btn btn-red" id="delBtn" style="display:none" onclick="bulkDelete()">🗑 Smazat</button>
-</div>
-</div>
-<input type="file" id="upInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
-<div id="galleryView" class="gallery-view grid-view"></div>
-</section>
-<section id="articles" class="section">
-<h2>Články</h2>
-<div class="form-card">
-<input type="text" id="artTitle" placeholder="Nadpis článku">
-<div class="form-row">
-<select id="artSection" onchange="loadArtSubsections()"><option value="">— Sekce —</option><option value="travel">Cestování / Travel</option><option value="photo">Fotografování / Photo</option><option value="projects">Projekty / Projects</option><option value="about">O Zajdovi / About</option></select>
-<select id="artSubsection"><option value="">— Podsekce —</option></select>
-</div>
-<div class="form-row">
-<input type="date" id="artDate">
-<input type="text" id="artPlace" placeholder="Místo">
-</div>
-<div class="wysiwyg-toolbar">
-<button onclick="execCmd('bold')" class="btn btn-sm">𝐁</button>
-<button onclick="execCmd('italic')" class="btn btn-sm">𝐼</button>
-<button onclick="execCmd('formatBlock','H2')" class="btn btn-sm">H2</button>
-<button onclick="execCmd('formatBlock','P')" class="btn btn-sm">P</button>
-<button onclick="execCmd('justifyLeft')" class="btn btn-sm">⬅️</button>
-<button onclick="execCmd('justifyCenter')" class="btn btn-sm">⏺</button>
-<button onclick="execCmd('justifyRight')" class="btn btn-sm">➡️</button>
-<button onclick="execCmd('fontSize','3')" class="btn btn-sm">S</button>
-<button onclick="execCmd('fontSize','5')" class="btn btn-sm">M</button>
-<button onclick="execCmd('fontSize','7')" class="btn btn-sm">L</button>
-<button onclick="insertImgTo('artEditor','left')" class="btn btn-sm">🖼️⬅️</button>
-<button onclick="insertImgTo('artEditor','center')" class="btn btn-sm">⏺</button>
-<button onclick="insertImgTo('artEditor','right')" class="btn btn-sm">➡️🖼️</button>
-<button onclick="deleteSelectedImg()" class="btn btn-sm btn-red" title="Smazat fotku">🗑️</button>
-<button onclick="moveImageUp()" class="btn btn-sm" title="Nahoru">⬆️</button>
-<button onclick="moveImageDown()" class="btn btn-sm" title="Dolů">⬇️</button>
-</div>
-<div id="artEditor" class="wysiwyg-editor" contenteditable="true" placeholder="Obsah článku..."></div>
-<button onclick="createArticle()" class="btn btn-green">Publikovat</button>
-</div>
-<div id="articleList" class="list"></div>
-</section>
-<section id="quotes" class="section">
-<h2>Citáty</h2>
-<div class="form-card">
-<textarea id="qText" placeholder="Text..." rows="3"></textarea>
-<input type="text" id="qAuthor" placeholder="Autor">
-<button onclick="createQuote()" class="btn btn-green">Přidat</button>
-</div>
-<div class="table-wrap">
-<table class="data-table">
-<thead><tr><th style="width:60%">Citát</th><th style="width:25%">Autor</th><th style="width:15%">Akce</th></tr></thead>
-<tbody id="quoteTableBody"><tr><td colspan="3" style="text-align:center;color:#64748b">Načítání...</td></tr></tbody>
-</table>
-</div>
-</section>
 
-<section id="subsections" class="section">
-<h2>Podsekce</h2>
-<div id="sectionCovers" style="margin-bottom:1rem"></div>
-<div class="form-card">
-<select id="ssSection"><option value="">— Vyber sekci —</option><option value="travel">Cestování / Travel</option><option value="photo">Fotografování / Photo</option><option value="projects">Projekty / Projects</option><option value="about">O Zajdovi / About</option></select>
-<input type="text" id="ssName" placeholder="Název podsekce">
-<input type="number" id="ssOrder" placeholder="Pořadí" value="0">
-<button onclick="createSubsection()" class="btn btn-green">Vytvořit</button>
+<!-- ============ HEADER ============ -->
+<header class="dash-header">
+  <div class="brand">📊 Admin</div>
+  <button class="btn btn-red btn-sm" onclick="logout()">🚪 Odhlásit</button>
+</header>
+
+<!-- ============ RIBBON TABS ============ -->
+<nav class="ribbon-tabs" id="ribbonTabs">
+  <button class="ribbon-tab" data-tab="galleries" onclick="showTab('galleries')">🖼️ Galerie</button>
+  <button class="ribbon-tab" data-tab="articles" onclick="showTab('articles')">📝 Články</button>
+  <button class="ribbon-tab" data-tab="quotes" onclick="showTab('quotes')">💬 Citáty</button>
+  <button class="ribbon-tab" data-tab="subsections" onclick="showTab('subsections')">📂 Podsekce</button>
+  <button class="ribbon-tab" data-tab="about" onclick="showTab('about')">👤 O Zajdovi</button>
+</nav>
+
+<!-- ============ RIBBON TOOLBAR ============ -->
+<div class="ribbon-toolbar">
+
+  <!-- Galerie -->
+  <div class="ribbon-group" data-for="galleries">
+    <span class="pill" id="galleryCountPill">0 fotek</span>
+    <div class="ribbon-sep"></div>
+    <select id="viewMode" class="ribbon-select" onchange="renderGallery()">
+      <option value="grid">Mřížka</option>
+      <option value="small">Malé náhledy</option>
+      <option value="list">Seznam</option>
+    </select>
+    <select id="sortMode" class="ribbon-select" onchange="renderGallery()">
+      <option value="newest">Nejnovější</option>
+      <option value="oldest">Nejstarší</option>
+      <option value="name">Podle názvu</option>
+      <option value="size">Podle velikosti</option>
+    </select>
+    <div class="ribbon-sep"></div>
+    <button class="btn btn-blue btn-sm" onclick="$('fileInput').click()">⬆️ Nahrát</button>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
+    <button class="btn btn-sm" onclick="openUploadSettings()">⚙️ Nastavení</button>
+    <button class="btn btn-red btn-sm" onclick="bulkDelete()">🗑 Smazat</button>
+  </div>
+
+  <!-- Články -->
+  <div class="ribbon-group" data-for="articles">
+    <button class="btn btn-blue btn-sm" onclick="resetArticleForm()">➕ Nový článek</button>
+  </div>
+
+  <!-- Citáty -->
+  <div class="ribbon-group" data-for="quotes">
+    <span class="ribbon-label">Správa citátů</span>
+  </div>
+
+  <!-- Podsekce -->
+  <div class="ribbon-group" data-for="subsections">
+    <span class="ribbon-label">Správa podsekcí a coverů</span>
+  </div>
+
+  <!-- O Zajdovi -->
+  <div class="ribbon-group" data-for="about">
+    <button class="btn btn-green btn-sm" onclick="saveAbout()">💾 Uložit</button>
+  </div>
+
 </div>
-<div class="table-wrap">
-<table class="data-table">
-<thead><tr><th>Sekce</th><th>Název</th><th>Slug</th><th>Pořadí</th><th>Akce</th></tr></thead>
-<tbody id="subsectionTableBody"></tbody>
-</table>
-</div>
-</section>
-<section id="about" class="section">
-<h2>O Zajdovi</h2>
-<div class="form-card">
-<input type="text" id="aboutTitle" placeholder="Nadpis">
-<div class="wysiwyg-toolbar">
-<button onclick="execCmd('bold')" class="btn btn-sm">𝐁</button>
-<button onclick="execCmd('italic')" class="btn btn-sm">𝐼</button>
-<button onclick="execCmd('formatBlock','H2')" class="btn btn-sm">H2</button>
-<button onclick="execCmd('formatBlock','P')" class="btn btn-sm">P</button>
-<button onclick="execCmd('justifyLeft')" class="btn btn-sm">⬅️</button>
-<button onclick="execCmd('justifyCenter')" class="btn btn-sm">⏺</button>
-<button onclick="execCmd('justifyRight')" class="btn btn-sm">➡️</button>
-<button onclick="execCmd('fontSize','3')" class="btn btn-sm">S</button>
-<button onclick="execCmd('fontSize','5')" class="btn btn-sm">M</button>
-<button onclick="execCmd('fontSize','7')" class="btn btn-sm">L</button>
-<button onclick="insertImgTo('aboutEditor','center')" class="btn btn-sm">🖼️ Vložit</button>
-<button onclick="deleteSelectedImg()" class="btn btn-sm btn-red">🗑️</button>
-<button onclick="moveImageUp()" class="btn btn-sm">⬆️</button>
-<button onclick="moveImageDown()" class="btn btn-sm">⬇️</button>
-</div>
-<div id="aboutEditor" class="wysiwyg-editor" contenteditable="true" placeholder="Text o Zajdovi..."></div>
-<button onclick="saveAbout()" class="btn btn-green">💾 Uložit</button>
-</div>
-<div id="aboutPreview" class="card" style="margin-top:1.5rem"></div>
-</section>
+
+<!-- ============ CONTENT ============ -->
+<main class="dash-content">
+
+  <!-- ---------- GALERIE ---------- -->
+  <section id="galleries" class="section">
+    <div id="galleryGrid" class="gallery-grid"></div>
+  </section>
+
+  <!-- ---------- ČLÁNKY ---------- -->
+  <section id="articles" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <input type="text" id="artTitle" class="form-input" placeholder="Nadpis článku">
+      </div>
+      <div class="form-row">
+        <select id="artSection" class="form-select" onchange="loadArtSubsections()">
+          <option value="">— Sekce —</option>
+          <option value="travel">Cestování</option>
+          <option value="photo">Fotografování</option>
+          <option value="projects">Projekty</option>
+          <option value="about">O Zajdovi</option>
+        </select>
+        <select id="artSubsection" class="form-select">
+          <option value="">— Podsekce —</option>
+        </select>
+        <input type="date" id="artDate" class="form-input">
+        <input type="text" id="artPlace" class="form-input" placeholder="Místo">
+      </div>
+
+      <div class="editor-toolbar">
+        <button onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+        <div class="sep"></div>
+        <select onchange="setFontSize(this.value)" title="Velikost">
+          <option value="">Velikost</option>
+          <option value="1">Malé</option>
+          <option value="3">Normální</option>
+          <option value="5">Velké</option>
+          <option value="7">Obří</option>
+        </select>
+        <select onchange="setHeading(this.value)" title="Formát">
+          <option value="">Formát</option>
+          <option value="P">Odstavec</option>
+          <option value="H1">Nadpis 1</option>
+          <option value="H2">Nadpis 2</option>
+          <option value="H3">Nadpis 3</option>
+          <option value="BLOCKQUOTE">Citace</option>
+          <option value="PRE">Kód</option>
+        </select>
+        <div class="sep"></div>
+        <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
+        <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
+        <div class="sep"></div>
+        <button onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button onclick="alignCenter()" title="Na střed">↔️</button>
+        <button onclick="alignRight()" title="Vpravo">➡️</button>
+        <button onclick="alignJustify()" title="Do bloku">☰</button>
+        <div class="sep"></div>
+        <button onclick="insertBullet()" title="Odrážky">• List</button>
+        <button onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <div class="sep"></div>
+        <button onclick="insertImgTo('artEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button onclick="insertImgTo('artEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button onclick="insertImgTo('artEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <div class="sep"></div>
+        <button onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <div class="sep"></div>
+        <button onclick="editorUndo()" title="Zpět">↶</button>
+        <button onclick="editorRedo()" title="Vpřed">↷</button>
+      </div>
+      <div id="artEditor" contenteditable="true"></div>
+
+      <div class="form-row" style="margin-top:1rem">
+        <button id="artSubmitBtn" class="btn btn-blue" onclick="createArticle()">Vytvořit článek</button>
+      </div>
+    </div>
+
+    <div id="articleList" style="margin-top:1.5rem"></div>
+  </section>
+
+  <!-- ---------- CITÁTY ---------- -->
+  <section id="quotes" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <input type="text" id="qText" class="form-input" placeholder="Text citátu" style="flex:2">
+        <input type="text" id="qAuthor" class="form-input" placeholder="Autor">
+        <button class="btn btn-blue" onclick="createQuote()">➕ Přidat</button>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Citát</th><th>Autor</th><th></th></tr></thead>
+      <tbody id="quoteTableBody"></tbody>
+    </table>
+  </section>
+
+  <!-- ---------- PODSEKCE ---------- -->
+  <section id="subsections" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <select id="ssSection" class="form-select">
+          <option value="">— Sekce —</option>
+          <option value="travel">Cestování</option>
+          <option value="photo">Fotografování</option>
+          <option value="projects">Projekty</option>
+          <option value="about">O Zajdovi</option>
+        </select>
+        <input type="text" id="ssName" class="form-input" placeholder="Název podsekce">
+        <input type="number" id="ssOrder" class="form-input" placeholder="Pořadí" value="0" style="max-width:100px">
+        <button class="btn btn-blue" onclick="createSubsection()">➕ Přidat</button>
+      </div>
+    </div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">Covery sekcí</h3>
+    <div id="sectionCovers"></div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">Podsekce</h3>
+    <table class="data-table">
+      <thead><tr><th>Sekce</th><th>Podsekce</th><th>Slug</th><th>Pořadí</th><th></th></tr></thead>
+      <tbody id="subsectionTableBody"></tbody>
+    </table>
+  </section>
+
+  <!-- ---------- O ZAJDOVI ---------- -->
+  <section id="about" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <input type="text" id="aboutTitle" class="form-input" placeholder="Nadpis">
+      </div>
+
+      <div class="editor-toolbar">
+        <button onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+        <div class="sep"></div>
+        <select onchange="setFontSize(this.value)" title="Velikost">
+          <option value="">Velikost</option>
+          <option value="1">Malé</option>
+          <option value="3">Normální</option>
+          <option value="5">Velké</option>
+          <option value="7">Obří</option>
+        </select>
+        <select onchange="setHeading(this.value)" title="Formát">
+          <option value="">Formát</option>
+          <option value="P">Odstavec</option>
+          <option value="H1">Nadpis 1</option>
+          <option value="H2">Nadpis 2</option>
+          <option value="H3">Nadpis 3</option>
+          <option value="BLOCKQUOTE">Citace</option>
+          <option value="PRE">Kód</option>
+        </select>
+        <div class="sep"></div>
+        <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
+        <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
+        <div class="sep"></div>
+        <button onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button onclick="alignCenter()" title="Na střed">↔️</button>
+        <button onclick="alignRight()" title="Vpravo">➡️</button>
+        <button onclick="alignJustify()" title="Do bloku">☰</button>
+        <div class="sep"></div>
+        <button onclick="insertBullet()" title="Odrážky">• List</button>
+        <button onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <div class="sep"></div>
+        <button onclick="insertImgTo('aboutEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button onclick="insertImgTo('aboutEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button onclick="insertImgTo('aboutEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <div class="sep"></div>
+        <button onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <div class="sep"></div>
+        <button onclick="editorUndo()" title="Zpět">↶</button>
+        <button onclick="editorRedo()" title="Vpřed">↷</button>
+      </div>
+      <div id="aboutEditor" contenteditable="true"></div>
+    </div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">Náhled</h3>
+    <div id="aboutPreview" class="form-card"></div>
+  </section>
+
 </main>
+
+<!-- ============ UPLOAD SETTINGS MODAL ============ -->
+<div id="uploadSettingsModal" class="modal hidden">
+  <div class="modal-box">
+    <h3>⚙️ Nastavení nahrávání</h3>
+    <div class="form-row">
+      <label>Max. rozlišení</label>
+      <select id="usMaxRes" class="form-select">
+        <option value="1000">1000 px</option>
+        <option value="2000">2000 px</option>
+        <option value="4000">4000 px</option>
+        <option value="0">Originál</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Kvalita</label>
+      <select id="usQuality" class="form-select">
+        <option value="0.7">70 %</option>
+        <option value="0.85">85 %</option>
+        <option value="0.95">95 %</option>
+        <option value="1">100 %</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Auto-rotace</label>
+      <select id="usAutoRotate" class="form-select">
+        <option value="1">Zapnuto</option>
+        <option value="0">Vypnuto</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-blue" onclick="saveUploadSettings()">💾 Uložit</button>
+      <button class="btn btn-red" onclick="$('uploadSettingsModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FOTO EDITOR MODAL (beze změny, používá dashboard-editor.js) ============ -->
 <div id="editorModal" class="modal hidden">
-<div class="editor-frame">
-<div class="editor-header">
-<span>Editor fotografie</span>
-<button onclick="closeEditor()" class="btn btn-red btn-sm">✕</button>
+  <div class="editor-box">
+    <div class="editor-body">
+
+      <div class="editor-sidebar">
+
+        <div class="tool-row">
+          <button class="btn btn-sm btn-blue" onclick="setCrop('free')">Volný</button>
+          <button class="btn btn-sm" onclick="setCrop('1:1')">1:1</button>
+          <button class="btn btn-sm" onclick="setCrop('4:3')">4:3</button>
+          <button class="btn btn-sm" onclick="setCrop('3:4')">3:4</button>
+          <button class="btn btn-sm" onclick="setCrop('16:9')">16:9</button>
+        </div>
+        <div class="tool-row">
+          <button class="btn btn-sm" onclick="applyCrop()">✂️ Použít ořez</button>
+        </div>
+
+        <div class="tool-row">
+          <button class="btn btn-sm" onclick="rotateEditor(-90)">⟲ 90°</button>
+          <button class="btn btn-sm" onclick="rotateEditor(90)">⟳ 90°</button>
+        </div>
+
+        <div class="tool-row">
+          <label>Zoom</label>
+          <input type="range" id="zoomSlider" min="0.1" max="4" step="0.01" value="1" oninput="editorSetZoom(this.value)">
+        </div>
+
+        <div class="tool-row filter-row">
+          <label>Expozice <span id="fval-exposure">0</span></label>
+          <input type="range" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Kontrast <span id="fval-contrast">0</span></label>
+          <input type="range" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Sytost <span id="fval-saturation">0</span></label>
+          <input type="range" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Teplota <span id="fval-temp">0</span></label>
+          <input type="range" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Vinětace <span id="fval-vignette">0</span></label>
+          <input type="range" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Doostření <span id="fval-sharpen">0</span></label>
+          <input type="range" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Odšumění <span id="fval-denoise">0</span></label>
+          <input type="range" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
+        </div>
+        <div class="tool-row">
+          <label><input type="checkbox" id="aiCheck" onchange="setFilter('ai', this.checked ? 1 : 0)"> ✨ AI vylepšení</label>
+        </div>
+
+        <div class="tool-row">
+          <button class="btn btn-sm btn-blue" id="ex-max" onclick="setExport('max')">Max</button>
+          <button class="btn btn-sm" id="ex-2000" onclick="setExport('2000')">2000 px</button>
+          <button class="btn btn-sm" id="ex-fullhd" onclick="setExport('fullhd')">Full HD</button>
+        </div>
+
+      </div>
+
+      <div class="editor-preview" id="editPreview">
+        <img id="editImg" src="" alt="">
+        <div class="crop-layer" id="cropLayer" style="display:none">
+          <div class="crop-mask" id="maskTop"></div>
+          <div class="crop-mask" id="maskBottom"></div>
+          <div class="crop-mask" id="maskLeft"></div>
+          <div class="crop-mask" id="maskRight"></div>
+          <div class="crop-rect" id="cropRect">
+            <div class="crop-grid"></div>
+            <div class="crop-handle" data-dir="nw"></div>
+            <div class="crop-handle" data-dir="n"></div>
+            <div class="crop-handle" data-dir="ne"></div>
+            <div class="crop-handle" data-dir="w"></div>
+            <div class="crop-handle" data-dir="e"></div>
+            <div class="crop-handle" data-dir="sw"></div>
+            <div class="crop-handle" data-dir="s"></div>
+            <div class="crop-handle" data-dir="se"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="editor-footer">
+      <button class="btn btn-green" onclick="saveEditor('replace')">💾 Přepsat originál</button>
+      <button class="btn btn-blue" onclick="saveEditor('new')">💾 Uložit jako novou</button>
+      <button class="btn btn-red" onclick="closeEditor()">Zavřít</button>
+    </div>
+  </div>
 </div>
-<div class="editor-body">
-<div class="editor-sidebar">
-<h4>Ořez</h4>
-<div class="tool-row">
-<button onclick="setCrop('free')" class="btn btn-sm">Volný</button>
-<button onclick="setCrop('1:1')" class="btn btn-sm">1:1</button>
-<button onclick="setCrop('4:3')" class="btn btn-sm">4:3</button>
-<button onclick="setCrop('3:4')" class="btn btn-sm">3:4</button>
-<button onclick="setCrop('16:9')" class="btn btn-sm">16:9</button>
-</div>
-<div class="tool-row">
-<button onclick="applyCrop()" class="btn btn-green btn-sm" style="flex:1">✂️ Oříznout</button>
-</div>
-<h4>Zoom</h4>
-<input type="range" id="zoomSlider" min="0.1" max="4" step="0.1" value="1" oninput="editorSetZoom(this.value)">
-<h4>Rotace</h4>
-<div class="tool-row">
-<button onclick="rotateEditor(-90)" class="btn btn-blue btn-sm">↺</button>
-<button onclick="rotateEditor(90)" class="btn btn-blue btn-sm">↻</button>
-</div>
-<h4>Filtry</h4>
-<label>Expozice <span id="fval-exposure">0</span></label>
-<input type="range" min="-100" max="100" value="0" oninput="setFilter('exposure',this.value)">
-<label>Kontrast <span id="fval-contrast">0</span></label>
-<input type="range" min="-100" max="100" value="0" oninput="setFilter('contrast',this.value)">
-<label>Sytost <span id="fval-saturation">0</span></label>
-<input type="range" min="-100" max="100" value="0" oninput="setFilter('saturation',this.value)">
-<label>Teplota <span id="fval-temp">0</span></label>
-<input type="range" min="-100" max="100" value="0" oninput="setFilter('temp',this.value)">
-<label>Doostření <span id="fval-sharpen">0</span></label>
-<input type="range" min="0" max="100" value="0" oninput="setFilter('sharpen',this.value)">
-<label>Redukce šumu <span id="fval-denoise">0</span></label>
-<input type="range" min="0" max="100" value="0" oninput="setFilter('denoise',this.value)">
-<label>Vigneta <span id="fval-vignette">0</span></label>
-<input type="range" min="0" max="100" value="0" oninput="setFilter('vignette',this.value)">
-<label><input type="checkbox" id="aiCheck" onchange="ED.filters.ai=this.checked"> ✨ AI vylepšení</label>
-</div>
-<div class="editor-preview" id="editPreview">
-<img id="editImg" src="" alt="" draggable="false">
-<div class="crop-layer" id="cropLayer">
-<div class="crop-mask" id="maskTop"></div>
-<div class="crop-mask" id="maskRight"></div>
-<div class="crop-mask" id="maskBottom"></div>
-<div class="crop-mask" id="maskLeft"></div>
-<div class="crop-rect" id="cropRect">
-<div class="crop-grid"></div>
-<div class="crop-handle nw" data-dir="nw"></div>
-<div class="crop-handle n" data-dir="n"></div>
-<div class="crop-handle ne" data-dir="ne"></div>
-<div class="crop-handle e" data-dir="e"></div>
-<div class="crop-handle se" data-dir="se"></div>
-<div class="crop-handle s" data-dir="s"></div>
-<div class="crop-handle sw" data-dir="sw"></div>
-<div class="crop-handle w" data-dir="w"></div>
-</div>
-</div>
-</div>
-</div>
-<div class="editor-footer">
-<label>Export:</label>
-<button onclick="setExport('max')" class="btn btn-sm" id="ex-max">Max</button>
-<button onclick="setExport('2000')" class="btn btn-sm" id="ex-2000">2000px</button>
-<button onclick="setExport('fullhd')" class="btn btn-sm" id="ex-fullhd">FullHD</button>
-<div style="flex:1"></div>
-<button onclick="saveEditor('replace')" class="btn btn-green">💾 Přepsat</button>
-<button onclick="saveEditor('saveas')" class="btn btn-blue">💾 Jako nová</button>
-</div>
-</div>
-</div>
-<script src="/admin/dashboard-core.js?v=20260706"></script>
-<script src="/admin/dashboard-editor.js?v=20260706"></script>
+
+<script src="dashboard-core.js?v=20260708"></script>
+<script src="dashboard-editor.js?v=20260708"></script>
 </body>
 </html>
