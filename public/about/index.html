@@ -20,12 +20,14 @@
       overflow-x: hidden;
     }
 
-    /* === HVĚZDY === */
     .stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
     .star { position: absolute; width: 2px; height: 2px; background: white; border-radius: 50%; opacity: 0; animation: twinkle var(--dur) ease-in-out infinite; animation-delay: var(--del); }
     @keyframes twinkle { 0%,100% { opacity: 0.1; transform: scale(0.5); } 50% { opacity: 0.9; transform: scale(1); } }
 
-    /* === NADPIS === */
+    .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+    .lightbox-overlay.open { display: flex; }
+    .lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px rgba(255,102,0,0.3); }
+
     .title-block { position: relative; z-index: 10; text-align: center; padding-top: 40px; padding-bottom: 20px; }
     .title-block h1 {
       font-size: clamp(2rem, 6vw, 3.5rem);
@@ -34,7 +36,6 @@
       letter-spacing: 2px;
     }
 
-    /* === OBSAH === */
     .container { max-width: 800px; margin: 0 auto; padding: 1rem 1.5rem 3rem; position: relative; z-index: 10; }
     .content {
       background: rgba(30, 41, 59, 0.6);
@@ -53,6 +54,7 @@
       box-shadow: 0 0 30px rgba(255, 150, 50, 0.2);
       display: block;
       transition: filter 0.3s, box-shadow 0.3s, transform 0.3s;
+      cursor: pointer;
     }
     .content img:hover {
       filter: brightness(1.15) saturate(1.2);
@@ -73,7 +75,6 @@
     }
     .content hr { border: none; border-top: 1px solid #334155; margin: 1.5rem 0; }
 
-    /* === PODSEKCE === */
     .subsections { max-width: 1000px; margin: 0 auto; padding: 0 1.5rem 2rem; position: relative; z-index: 10; }
     .subsections h2 {
       font-size: 1.75rem;
@@ -146,7 +147,6 @@
     .article-link .art-date { font-size: 10px; color: #94a3b8; display: block; margin-top: 1px; }
     .no-articles { color: #64748b; font-size: 12px; padding: 8px 0; font-style: italic; }
 
-    /* === AKTUALITY === */
     .news-section { max-width: 1000px; margin: 0 auto; padding: 1rem 1.5rem 4rem; position: relative; z-index: 10; }
     .news-section h2 {
       font-size: 1.75rem;
@@ -200,7 +200,6 @@
       font-size: 2.5rem;
     }
 
-    /* === CITÁTY === */
     .quote-star { position: absolute; max-width: 300px; pointer-events: auto; z-index: 5; animation: drift linear infinite; }
     .quote-inner { color: rgba(255,255,255,0.75); font-weight: 300; font-size: 15px; text-shadow: 0 0 10px rgba(255,255,255,0.4); line-height: 1.45; transition: transform 0.35s ease, opacity 0.3s; }
     .quote-star:hover { animation-play-state: paused !important; }
@@ -208,7 +207,6 @@
     .quote-author { color: #ffcc66; font-size: 0.65em; opacity: 0.85; display: block; margin-top: 4px; }
     @keyframes drift { from { transform: translate(var(--sx), var(--sy)); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } to { transform: translate(var(--ex), var(--ey)); opacity: 0; } }
 
-    /* === BACK === */
     .back {
       display: inline-block;
       margin-top: 2rem;
@@ -229,6 +227,7 @@
 <body>
 
   <div class="stars" id="stars"></div>
+  <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
 
   <div class="title-block">
     <h1 id="pageTitle">O Zajdovi</h1>
@@ -265,7 +264,6 @@
       } catch(e) { return ''; }
     }
 
-    /* === HVĚZDY === */
     (function() {
       var starsBox = document.getElementById('stars');
       if (!starsBox) return;
@@ -282,7 +280,13 @@
       starsBox.appendChild(frag);
     })();
 
-    /* === CITÁTY === */
+    function openLightbox(src) {
+      var overlay = document.getElementById('lightboxOverlay');
+      if (!overlay) return;
+      overlay.innerHTML = '<img src="' + src + '" alt="">';
+      overlay.classList.add('open');
+    }
+
     async function loadQuotes() {
       try { var r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
       catch(e) { return []; }
@@ -316,20 +320,23 @@
       }, 5000);
     }
 
-    /* === OBSAH === */
     async function loadAbout() {
       try {
         var aboutRes = await fetch('/api/about/get');
         var data = await aboutRes.json();
-
         document.getElementById('pageTitle').textContent = data.title || 'O Zajdovi';
-
         var content = document.getElementById('content');
         content.classList.remove('loading');
         if (!data.text) {
           content.innerHTML = '<p>Zatím žádný obsah.</p>';
         } else {
           content.innerHTML = data.text;
+          content.querySelectorAll('img').forEach(function(img) {
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', function() {
+              openLightbox(this.src);
+            });
+          });
         }
       } catch (e) {
         document.getElementById('content').innerHTML =
@@ -337,7 +344,6 @@
       }
     }
 
-    /* === ČLÁNKY === */
     var cachedArticles = null;
     async function getAllArticles() {
       if (cachedArticles) return cachedArticles;
@@ -372,49 +378,40 @@
       return html;
     }
 
-    /* === PODSEKCE === */
     async function loadSubsections() {
       try {
         var r = await fetch('/api/subsections/by-section?sectionId=about');
         if (!r.ok) return;
         var subs = await r.json();
         if (!subs.length) return;
-
         document.getElementById('subsections').style.display = 'block';
-
         var allArticles = await getAllArticles();
         var html = '';
-
         for (var i = 0; i < subs.length; i++) {
           var sub = subs[i];
           var subArticles = allArticles.filter(function(a) {
             return String(a.sectionId) === 'about' && String(a.subsectionId) === String(sub.id);
           });
-
           var coverHtml = sub.coverUrl
             ? '<img class="sub-cover" src="' + sub.coverUrl + '" alt="">'
             : '';
-
           html += '<div class="sub-panel">' + coverHtml +
             '<div class="sub-body"><h3>' + escapeHtml(sub.name) + '</h3>' +
             renderArticleList(subArticles) +
             '</div></div>';
         }
-
         document.getElementById('subGrid').innerHTML = html;
       } catch (e) {
         console.error('Podsekce:', e);
       }
     }
 
-    /* === AKTUALITY === */
     async function loadNews() {
       try {
         var articles = await getAllArticles();
         var aboutArticles = articles.filter(function(a) {
           return String(a.sectionId) === 'about' && a.published;
         });
-
         var sorted = aboutArticles.sort(function(a, b) {
           var da = a.created || a.date || '';
           var db = b.created || b.date || '';
@@ -422,9 +419,7 @@
           if (da > db) return -1;
           return 0;
         }).slice(0, 4);
-
         if (!sorted.length) return;
-
         document.getElementById('newsSection').style.display = 'block';
         document.getElementById('newsGrid').innerHTML = sorted.map(function(a) {
           var excerpt = a.content
@@ -447,7 +442,6 @@
       }
     }
 
-    /* === START === */
     startQuotes();
     loadAbout();
     loadSubsections();
