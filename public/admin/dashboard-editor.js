@@ -543,6 +543,31 @@ function imgToolbarAction(action) {
   if (action === 'center') { img.style.float = 'none'; img.style.margin = '0.5rem auto'; img.style.display = 'block'; img.style.clear = 'both'; return; }
 }
 
+function deleteSelectedImg() {
+  var ed = $('aboutEditor') || $('artEditor');
+  if (!ed) return;
+  var img = ed.querySelector('img[data-active]') || currentActiveImg;
+  if (img) { img.remove(); hideImgToolbar(); }
+}
+
+function moveImageUp() {
+  var ed = $('aboutEditor') || $('artEditor');
+  if (!ed) return;
+  var img = ed.querySelector('img[data-active]') || currentActiveImg;
+  if (!img) return;
+  var p = img.previousElementSibling;
+  if (p) img.parentNode.insertBefore(img, p);
+}
+
+function moveImageDown() {
+  var ed = $('aboutEditor') || $('artEditor');
+  if (!ed) return;
+  var img = ed.querySelector('img[data-active]') || currentActiveImg;
+  if (!img) return;
+  var n = img.nextElementSibling;
+  if (n) img.parentNode.insertBefore(n, img);
+}
+
 document.addEventListener('click', e => {
   if (!e.target.closest('#img-toolbar') && !e.target.closest('img[data-active]')) {
     hideImgToolbar();
