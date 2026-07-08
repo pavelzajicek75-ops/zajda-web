@@ -28,21 +28,31 @@
     .lightbox-overlay.open { display: flex; }
     .lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px rgba(255,102,0,0.3); }
 
-    .title-block { position: relative; z-index: 10; text-align: center; padding-top: 40px; padding-bottom: 20px; }
+    .back-link {
+      position: relative; z-index: 10;
+      max-width: 1000px; margin: 0 auto; padding: 1.5rem 1.5rem 0;
+    }
+    .back-link a {
+      color: #64748b; font-size: 0.85rem; text-decoration: none;
+      transition: color 0.3s, text-shadow 0.3s;
+    }
+    .back-link a:hover { color: #ffcc66; text-shadow: 0 0 10px rgba(255,204,102,0.4); }
+
+    .title-block { position: relative; z-index: 10; text-align: center; padding: 1rem 1.5rem 0; }
     .title-block h1 {
       font-size: clamp(2rem, 6vw, 3.5rem);
       color: #ff6600;
-      text-shadow: 0 0 30px rgba(255,102,0,0.6), 0 4px 20px rgba(0,0,0,0.8);
+      text-shadow: 0 0 30px rgba(255,102,0,0.6);
       letter-spacing: 2px;
     }
 
-    .container { max-width: 800px; margin: 0 auto; padding: 1rem 1.5rem 3rem; position: relative; z-index: 10; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 1.5rem; position: relative; z-index: 10; }
     .content {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid #334155;
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(51, 65, 85, 0.5);
       border-radius: 16px;
       padding: 2.5rem;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(8px);
     }
     .content p { color: #cbd5e1; margin-bottom: 1.25rem; font-size: 1.125rem; }
     .content h2 { color: #ffcc66; margin: 1.5rem 0 0.75rem; font-size: 1.5rem; text-shadow: 0 0 15px rgba(255,204,102,0.3); }
@@ -75,94 +85,65 @@
     }
     .content hr { border: none; border-top: 1px solid #334155; margin: 1.5rem 0; }
 
-    .subsections { max-width: 1000px; margin: 0 auto; padding: 0 1.5rem 2rem; position: relative; z-index: 10; }
-    .subsections h2 {
-      font-size: 1.75rem;
-      color: #ffcc66;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      text-shadow: 0 0 20px rgba(255,204,102,0.4);
-    }
-    .sub-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.5rem;
-    }
+    .subsections { max-width: 1000px; margin: 0 auto; padding: 0 1.5rem 0; position: relative; z-index: 10; }
+    .sub-grid { display: flex; flex-direction: column; gap: 1.5rem; }
     .sub-panel {
-      background: rgba(15,23,42,0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,102,0,0.3);
-      border-radius: 14px;
+      background: rgba(15,23,42,0.3);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      display: flex;
-      flex-direction: column;
       transition: border-color 0.3s, box-shadow 0.3s;
     }
     .sub-panel:hover {
-      border-color: rgba(255,102,0,0.6);
-      box-shadow: 0 8px 40px rgba(255,102,0,0.2), 0 0 20px rgba(255,102,0,0.1);
+      border-color: rgba(255,102,0,0.5);
+      box-shadow: 0 0 20px rgba(255,102,0,0.08);
     }
     .sub-cover {
       width: 100%;
-      aspect-ratio: 4/3;
+      max-height: 140px;
       object-fit: cover;
       display: block;
-      border-bottom: 1px solid rgba(255,102,0,0.2);
-      transition: filter 0.3s, box-shadow 0.3s;
+      transition: filter 0.3s;
     }
     .sub-panel:hover .sub-cover {
-      filter: brightness(1.15) saturate(1.2);
-      box-shadow: 0 0 25px rgba(255,102,0,0.3) inset;
+      filter: brightness(1.1) saturate(1.1);
     }
-    .sub-body { padding: 0.8rem 1rem 1rem; }
+    .sub-body { padding: 0.8rem 1.25rem 1rem; }
     .sub-body h3 {
       color: #ffcc66;
-      font-size: 15px;
-      margin-bottom: 0.6rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid rgba(255,102,0,0.2);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
     }
     .article-link {
-      display: block;
-      padding: 5px 8px 5px 14px;
-      color: #e2e8f0;
+      display: inline-block;
+      padding: 3px 0;
+      color: #94a3b8;
       text-decoration: none;
-      font-size: 12px;
-      border-left: 2px solid #334155;
-      transition: all 0.25s;
-      line-height: 1.4;
-      margin: 2px 0;
-      border-radius: 0 4px 4px 0;
+      font-size: 0.85rem;
+      transition: color 0.2s, text-shadow 0.2s;
+      margin-right: 1rem;
     }
     .article-link:hover {
       color: #fff;
-      border-left-color: #ff6600;
-      padding-left: 18px;
-      background: rgba(255,102,0,0.1);
-      text-shadow: 0 0 12px rgba(255,102,0,0.8);
-      box-shadow: 0 0 15px rgba(255,102,0,0.2);
+      text-shadow: 0 0 10px rgba(255,102,0,0.5);
     }
-    .article-link .art-title { font-weight: 600; }
-    .article-link .art-date { font-size: 10px; color: #94a3b8; display: block; margin-top: 1px; }
-    .no-articles { color: #64748b; font-size: 12px; padding: 8px 0; font-style: italic; }
+    .article-link .art-date {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-left: 0.4rem;
+    }
+    .no-articles { color: #64748b; font-size: 0.85rem; padding: 4px 0; font-style: italic; }
 
-    .news-section { max-width: 1000px; margin: 0 auto; padding: 1rem 1.5rem 4rem; position: relative; z-index: 10; }
-    .news-section h2 {
-      font-size: 1.75rem;
-      color: #ffcc66;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      text-shadow: 0 0 20px rgba(255,204,102,0.4);
-    }
+    .news-section { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem 4rem; position: relative; z-index: 10; }
     .news-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
     }
     .news-card {
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid #334155;
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(51, 65, 85, 0.4);
       border-radius: 12px;
       overflow: hidden;
       transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
@@ -173,54 +154,41 @@
       flex-direction: column;
     }
     .news-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 30px rgba(255,102,0,0.2), 0 0 20px rgba(255,102,0,0.1);
-      border-color: #ff6600;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255,102,0,0.12);
+      border-color: rgba(255,102,0,0.5);
     }
     .news-card img {
       width: 100%;
-      height: 180px;
+      height: 160px;
       object-fit: cover;
       transition: filter 0.3s;
     }
-    .news-card:hover img {
-      filter: brightness(1.15) saturate(1.2);
-    }
-    .news-card .card-body { padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
-    .news-card h3 { color: #ffcc66; font-size: 1.1rem; margin-bottom: 0.5rem; }
-    .news-card .card-excerpt { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; flex: 1; }
-    .news-card .card-meta { color: #64748b; font-size: 0.8rem; margin-top: 0.75rem; }
+    .news-card:hover img { filter: brightness(1.1) saturate(1.1); }
+    .news-card .card-body { padding: 0.9rem 1.1rem; flex: 1; display: flex; flex-direction: column; }
+    .news-card h3 { color: #ffcc66; font-size: 1rem; margin-bottom: 0.4rem; }
+    .news-card .card-excerpt { color: #94a3b8; font-size: 0.85rem; line-height: 1.5; flex: 1; }
+    .news-card .card-meta { color: #64748b; font-size: 0.75rem; margin-top: 0.5rem; }
     .news-card .card-placeholder {
-      width: 100%;
-      height: 180px;
+      width: 100%; height: 160px;
       background: linear-gradient(135deg, #1e293b, #0f172a);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.5rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
     }
 
     .quote-star { position: absolute; max-width: 300px; pointer-events: auto; z-index: 5; animation: drift linear infinite; }
-    .quote-inner { color: rgba(255,255,255,0.75); font-weight: 300; font-size: 15px; text-shadow: 0 0 10px rgba(255,255,255,0.4); line-height: 1.45; transition: transform 0.35s ease, opacity 0.3s; }
+    .quote-inner { color: rgba(255,255,255,0.7); font-weight: 300; font-size: 14px; text-shadow: 0 0 10px rgba(255,255,255,0.3); line-height: 1.45; transition: transform 0.35s ease, opacity 0.3s; }
     .quote-star:hover { animation-play-state: paused !important; }
     .quote-star:hover .quote-inner { transform: scale(1.1); opacity: 1; text-shadow: 0 0 25px #fff, 0 0 40px #ff6600; }
     .quote-author { color: #ffcc66; font-size: 0.65em; opacity: 0.85; display: block; margin-top: 4px; }
     @keyframes drift { from { transform: translate(var(--sx), var(--sy)); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } to { transform: translate(var(--ex), var(--ey)); opacity: 0; } }
 
-    .back {
-      display: inline-block;
-      margin-top: 2rem;
-      color: #ffcc66;
-      text-decoration: none;
-      font-size: 1rem;
-      transition: text-shadow 0.3s;
-    }
-    .back:hover { text-shadow: 0 0 15px #ffcc66; }
     .loading { color: #64748b; text-align: center; padding: 4rem; }
 
     @media (max-width: 640px) {
       .content { padding: 1.5rem; }
-      .news-grid, .sub-grid { grid-template-columns: 1fr; }
+      .sub-cover { max-height: 100px; }
+      .news-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -229,22 +197,23 @@
   <div class="stars" id="stars"></div>
   <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
 
+  <div class="back-link">
+    <a href="/">← Zpět na hlavní stránku</a>
+  </div>
+
   <div class="title-block">
     <h1 id="pageTitle">O Zajdovi</h1>
   </div>
 
   <div class="container">
     <div id="content" class="content loading">Načítání...</div>
-    <a href="/" class="back">← Zpět na hlavní stránku</a>
   </div>
 
   <div class="subsections" id="subsections" style="display:none">
-    <h2>Podsekce</h2>
     <div class="sub-grid" id="subGrid"></div>
   </div>
 
   <div class="news-section" id="newsSection" style="display:none">
-    <h2>Aktuality</h2>
     <div class="news-grid" id="newsGrid"></div>
   </div>
 
@@ -371,8 +340,8 @@
         var title = a.title || 'Bez názvu';
         var dateStr = formatDate(a.created || a.date);
         html += '<a class="article-link" href="/article.html?id=' + encodeURIComponent(a.id) + '">' +
-          '<span class="art-title">' + escapeHtml(title) + '</span>' +
-          (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
+          escapeHtml(title) +
+          (dateStr ? '<span class="art-date">' + dateStr + '</span>' : '') +
           '</a>';
       }
       return html;
