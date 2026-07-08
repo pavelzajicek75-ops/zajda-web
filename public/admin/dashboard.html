@@ -42,6 +42,18 @@
       <option value="size">Podle velikosti</option>
     </select>
     <div class="ribbon-sep"></div>
+    <select id="upResSelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
+      <option value="1000">1000 px</option>
+      <option value="2000">2000 px</option>
+      <option value="4000">4000 px</option>
+      <option value="0">Originál</option>
+    </select>
+    <select id="upQualitySelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
+      <option value="0.7">70 %</option>
+      <option value="0.85">85 %</option>
+      <option value="0.95">95 %</option>
+      <option value="1">100 %</option>
+    </select>
     <button class="btn btn-blue btn-sm" onclick="$('fileInput').click()">⬆️ Nahrát</button>
     <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
     <button class="btn btn-sm" onclick="openUploadSettings()">⚙️ Nastavení</button>
