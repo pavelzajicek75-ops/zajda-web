@@ -330,6 +330,6 @@ input, select, textarea, button { font-family: inherit; }
   .editor-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #334155; max-height: 40vh; }
   .editor-preview { min-height: 300px; }
   .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-  #img-toolbar { top: auto !important; bottom: 10px !important; left: 10px !important; right: 10px !important; transform: none !important; justify-content: center; padding: 8px; }
+  #img-toolbar { justify-content: center; }
   #artEditor, #aboutEditor { min-height: 200px; font-size: 16px; }
 }
