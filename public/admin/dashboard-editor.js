@@ -32,10 +32,27 @@ window.G = window.G || { photos: [] };
       <filter id="ed-sharpen-strong" x="-20%" y="-20%" width="140%" height="140%">
         <feConvolveMatrix order="3" kernelMatrix="0 -1.5 0 -1.5 7 -1.5 0 -1.5 0" preserveAlpha="true"/>
       </filter>
+      <filter id="ed-sharpen-dynamic" x="-20%" y="-20%" width="140%" height="140%">
+        <feConvolveMatrix id="ed-sharpen-dynamic-matrix" order="3" kernelMatrix="0 0 0 0 1 0 0 0 0" preserveAlpha="true"/>
+      </filter>
     </defs>
   `;
   document.body.appendChild(svg);
 })();
+
+/* Přepočítá jemnost doostření plynule (k = 0 .. 1.5) místo dřívějšího
+   dvoustupňového přepínání normal/strong. Používá se pro živý náhled i export. */
+function sharpenKernelForStrength(strength) {
+  const k = Math.max(0, Math.min(100, strength)) / 100 * 1.5;
+  return { k, kernel: [0, -k, 0, -k, 1 + 4 * k, -k, 0, -k, 0] };
+}
+
+function updateSharpenFilter(strength) {
+  const matrix = document.getElementById('ed-sharpen-dynamic-matrix');
+  if (!matrix) return;
+  const { kernel } = sharpenKernelForStrength(strength);
+  matrix.setAttribute('kernelMatrix', kernel.map(v => v.toFixed(3)).join(' '));
+}
 
 /* === STAV EDITORU === */
 let ED = {
@@ -86,6 +103,7 @@ async function openEditor(id) {
   const aic = $('aiCheck');
   if (aic) aic.checked = false;
   updateFilterLabels();
+  updateSharpenFilter(0);
   setCrop('free');
   setExport('max');
   try {
@@ -161,8 +179,12 @@ function applyFilters() {
   if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`;
   else s += ` hue-rotate(${f.temp * 0.3}deg)`;
   if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
-  if (f.sharpen > 0) s += f.sharpen > 50 ? ' url(#ed-sharpen-strong)' : ' url(#ed-sharpen)';
-  if (f.ai) s += ' brightness(105%) contrast(110%) saturate(115%) url(#ed-sharpen)';
+  if (f.sharpen > 0 || f.ai) {
+    const effectiveStrength = f.ai ? Math.max(f.sharpen, 80) : f.sharpen;
+    updateSharpenFilter(effectiveStrength);
+    s += ' url(#ed-sharpen-dynamic)';
+  }
+  if (f.ai) s += ' brightness(105%) contrast(110%) saturate(115%)';
   img.style.filter = s;
   const vig = document.querySelector('.vignette-overlay');
   if (vig && f.vignette > 0) {
@@ -181,6 +203,7 @@ function setFilter(key, val) {
   ED.filters[key] = parseInt(val);
   const el = $('fval-' + key);
   if (el) el.textContent = val;
+  if (key === 'sharpen') updateSharpenFilter(ED.filters.sharpen);
   applyFilters();
 }
 
@@ -349,9 +372,7 @@ function applySharpen(ctx, w, h, strength) {
   const data = imgData.data;
   const out = ctx.createImageData(w, h);
   const od = out.data;
-  const kernel = strength === 'strong'
-    ? [0, -1.5, 0, -1.5, 7, -1.5, 0, -1.5, 0]
-    : [0, -1, 0, -1, 5, -1, 0, -1, 0];
+  const { kernel } = sharpenKernelForStrength(strength);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       let r = 0, g = 0, b = 0;
@@ -413,7 +434,8 @@ async function saveEditor(mode) {
   ctx.drawImage(img, -img.naturalWidth * drawScale / 2, -img.naturalHeight * drawScale / 2, img.naturalWidth * drawScale, img.naturalHeight * drawScale);
   ctx.restore();
   if (f.sharpen > 0 || f.ai) {
-    applySharpen(ctx, dim.w, dim.h, (f.sharpen > 50 || f.ai) ? 'strong' : 'normal');
+    const effectiveStrength = f.ai ? Math.max(f.sharpen, 80) : f.sharpen;
+    applySharpen(ctx, dim.w, dim.h, effectiveStrength);
   }
   if (f.ai) {
     ctx.globalCompositeOperation = 'overlay';
@@ -501,20 +523,31 @@ function setupArticleEditors() {
   });
 }
 
+/* Menu pro úpravu obrázku (velikost/zarovnání/obtékání/pořadí/smazání) je teď
+   zakotvené přímo v horní liště WYSIWYG editoru (.editor-toolbar), místo
+   plovoucího okna na obrazovce. */
 function showImgToolbar(img) {
+  const editorEl = img.closest('#artEditor') || img.closest('#aboutEditor');
+  const hostToolbar = editorEl ? editorEl.previousElementSibling : null;
+
   let bar = $('img-toolbar');
+  if (bar && hostToolbar && bar.parentElement !== hostToolbar) {
+    bar.remove();
+    bar = null;
+  }
   if (!bar) {
     bar = document.createElement('div');
     bar.id = 'img-toolbar';
-    bar.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #334155;border-radius:8px;padding:6px 12px;display:none;gap:6px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.5);flex-wrap:wrap;justify-content:center;';
-    document.body.appendChild(bar);
+    bar.style.cssText = 'display:none;gap:6px;flex-wrap:wrap;width:100%;margin-top:6px;padding-top:6px;border-top:1px dashed #475569;';
+    if (hostToolbar) hostToolbar.appendChild(bar);
+    else document.body.appendChild(bar);
   }
   bar.innerHTML = `
     <button onclick="imgToolbarAction('smaller')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">- Menší</button>
     <button onclick="imgToolbarAction('bigger')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">+ Větší</button>
-    <button onclick="imgToolbarAction('left')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">◀ Vlevo</button>
-    <button onclick="imgToolbarAction('center')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">Střed</button>
-    <button onclick="imgToolbarAction('right')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">Vpravo ▶</button>
+    <button onclick="imgToolbarAction('left')" class="btn btn-sm" style="padding:4px 10px;font-size:12px" title="Obtékat text vpravo od obrázku">◀ Vlevo (obtékat)</button>
+    <button onclick="imgToolbarAction('center')" class="btn btn-sm" style="padding:4px 10px;font-size:12px" title="Bez obtékání textu">Střed</button>
+    <button onclick="imgToolbarAction('right')" class="btn btn-sm" style="padding:4px 10px;font-size:12px" title="Obtékat text vlevo od obrázku">Vpravo ▶ (obtékat)</button>
     <button onclick="imgToolbarAction('up')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">↑ Nahoru</button>
     <button onclick="imgToolbarAction('down')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">↓ Dolů</button>
     <button onclick="imgToolbarAction('delete')" class="btn btn-red btn-sm" style="padding:4px 10px;font-size:12px">🗑 Smazat</button>
@@ -1146,7 +1179,7 @@ function injectEditorStyles() {
     #artEditor img.editor-img, #aboutEditor img.editor-img { max-width: 100%; height: auto; border-radius: 6px; transition: outline 0.15s; }
     #artEditor img.editor-img[data-active], #aboutEditor img.editor-img[data-active] { outline: 3px solid #3b82f6; }
     #img-toolbar { animation: toolbarIn 0.2s ease; }
-    @keyframes toolbarIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+    @keyframes toolbarIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
     #img-toolbar button { white-space: nowrap; transition: all 0.15s; }
     #img-toolbar button:hover { transform: translateY(-1px); }
     .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 20px; animation: modalIn 0.2s ease; }
@@ -1164,7 +1197,7 @@ function injectEditorStyles() {
     @keyframes lightboxIn { from { opacity: 0; } to { opacity: 1; } }
     .lightbox-modal img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px rgba(0,0,0,0.8); cursor: default; }
     @media (max-width: 640px) {
-      #img-toolbar { top: auto !important; bottom: 10px !important; left: 10px !important; right: 10px !important; transform: none !important; justify-content: center; padding: 8px; }
+      #img-toolbar { justify-content: center; }
       #artEditor, #aboutEditor { min-height: 200px; font-size: 16px; }
     }
     .editor-toolbar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; padding: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 8px 8px 0 0; border-bottom: none; }
