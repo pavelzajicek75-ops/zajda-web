@@ -25,6 +25,9 @@ function fmtBytes(n) {
 window.G = window.G || { photos: [], selected: new Set() };
 if (!G.selected) G.selected = new Set();
 
+let showExif = false;
+const exifCache = new Map();
+
 /* === AUTH === */
 async function checkAuth() {
   try {
@@ -150,12 +153,162 @@ function renderGallery() {
       <div class="item-meta">
         <div class="item-name">${escapeHtml(p.name || '')}</div>
         <div>${fmtBytes(p.size)}</div>
+        ${showExif ? `<div class="item-exif">Načítám EXIF…</div>` : ''}
       </div>
       <div class="item-actions">
         <button class="btn btn-sm" onclick="event.stopPropagation();openLightbox('${p.url}')" title="Náhled">🔍</button>
       </div>
     </div>`;
   }).join('');
+
+  if (showExif) arr.forEach(p => loadAndShowExif(p));
+}
+
+function toggleExifDisplay() {
+  showExif = $('exifToggle')?.checked || false;
+  renderGallery();
+}
+
+/* === EXIF ===
+   Vlastní minimalistický čtečka EXIF (Make/Model/expozice/clona/ISO/ohnisko/datum/GPS)
+   přímo z JPEG bajtů, bez externí knihovny. Stahuje jen prvních ~128 KB souboru
+   (přes Range hlavičku), kde EXIF blok obvykle je — šetří data. */
+async function fetchExifPrefix(url) {
+  try {
+    const r = await fetch(url, { headers: { Range: 'bytes=0-131071' } });
+    return await r.arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
+function parseExif(buf) {
+  try {
+    const view = new DataView(buf);
+    if (view.getUint16(0) !== 0xFFD8) return null;
+    let offset = 2;
+    while (offset < view.byteLength - 4) {
+      const marker = view.getUint16(offset);
+      if ((marker & 0xFF00) !== 0xFF00) break;
+      if (marker === 0xFFE1) {
+        const segLen = view.getUint16(offset + 2);
+        if (view.getUint32(offset + 4) === 0x45786966) {
+          return readExifSegment(view, offset + 10);
+        }
+        offset += 2 + segLen;
+      } else if (marker === 0xFFD8) {
+        offset += 2;
+      } else {
+        const segLen = view.getUint16(offset + 2);
+        offset += 2 + segLen;
+      }
+    }
+  } catch (e) { console.error('EXIF parse chyba:', e); }
+  return null;
+}
+
+function readExifSegment(view, tiffStart) {
+  const little = view.getUint16(tiffStart) === 0x4949;
+  const u16 = o => view.getUint16(o, little);
+  const u32 = o => view.getUint32(o, little);
+  const rational = o => { const n = u32(o), d = u32(o + 4); return d ? n / d : 0; };
+  const result = {};
+  let exifIFD = null, gpsIFD = null;
+
+  function readIFD(ifdOffset, target) {
+    const count = u16(ifdOffset);
+    for (let i = 0; i < count; i++) {
+      const e = ifdOffset + 2 + i * 12;
+      const tag = u16(e), type = u16(e + 2), num = u32(e + 4);
+      const typeSize = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 }[type] || 1;
+      const dataPos = typeSize * num > 4 ? tiffStart + u32(e + 8) : e + 8;
+
+      if (target === 'ifd0') {
+        if (tag === 0x010F) result.make = readAscii(view, dataPos, num);
+        else if (tag === 0x0110) result.model = readAscii(view, dataPos, num);
+        else if (tag === 0x0132) result.dateTime = readAscii(view, dataPos, num);
+        else if (tag === 0x8769) exifIFD = tiffStart + u32(e + 8);
+        else if (tag === 0x8825) gpsIFD = tiffStart + u32(e + 8);
+      } else if (target === 'exif') {
+        if (tag === 0x9003) result.dateTimeOriginal = readAscii(view, dataPos, num);
+        else if (tag === 0x829A) result.exposureTime = rational(dataPos);
+        else if (tag === 0x829D) result.fNumber = rational(dataPos);
+        else if (tag === 0x8827) result.iso = u16(dataPos);
+        else if (tag === 0x920A) result.focalLength = rational(dataPos);
+      } else if (target === 'gps') {
+        if (tag === 0x0001) result.gpsLatRef = String.fromCharCode(view.getUint8(dataPos));
+        else if (tag === 0x0002) result.gpsLat = readGPSCoord(view, dataPos, little);
+        else if (tag === 0x0003) result.gpsLonRef = String.fromCharCode(view.getUint8(dataPos));
+        else if (tag === 0x0004) result.gpsLon = readGPSCoord(view, dataPos, little);
+      }
+    }
+  }
+
+  try {
+    const ifd0Offset = tiffStart + u32(tiffStart + 4);
+    readIFD(ifd0Offset, 'ifd0');
+    if (exifIFD) readIFD(exifIFD, 'exif');
+    if (gpsIFD) readIFD(gpsIFD, 'gps');
+  } catch (e) { console.error('EXIF IFD chyba:', e); }
+  return result;
+}
+
+function readAscii(view, offset, length) {
+  let str = '';
+  for (let i = 0; i < length - 1; i++) {
+    const c = view.getUint8(offset + i);
+    if (c === 0) break;
+    str += String.fromCharCode(c);
+  }
+  return str.trim();
+}
+
+function readGPSCoord(view, offset, little) {
+  let coord = 0;
+  for (let i = 0; i < 3; i++) {
+    const n = view.getUint32(offset + i * 8, little);
+    const d = view.getUint32(offset + i * 8 + 4, little);
+    coord += (d ? n / d : 0) / Math.pow(60, i);
+  }
+  return coord;
+}
+
+function formatExifSummary(exif) {
+  if (!exif || (!exif.make && !exif.model && !exif.dateTimeOriginal && !exif.dateTime)) {
+    return '📷 Bez EXIF dat';
+  }
+  const parts = [];
+  const camera = [exif.make, exif.model].filter(Boolean).join(' ').trim();
+  if (camera) parts.push(camera);
+  if (exif.fNumber) parts.push('f/' + exif.fNumber.toFixed(1));
+  if (exif.exposureTime) parts.push(exif.exposureTime >= 1 ? exif.exposureTime.toFixed(1) + 's' : '1/' + Math.round(1 / exif.exposureTime) + 's');
+  if (exif.iso) parts.push('ISO ' + exif.iso);
+  if (exif.focalLength) parts.push(Math.round(exif.focalLength) + 'mm');
+  const dt = exif.dateTimeOriginal || exif.dateTime;
+  if (dt) { const m = dt.match(/(\d{4}):(\d{2}):(\d{2})/); if (m) parts.push(m[3] + '.' + m[2] + '.' + m[1]); }
+  if (exif.gpsLat != null && exif.gpsLon != null) {
+    const lat = exif.gpsLatRef === 'S' ? -exif.gpsLat : exif.gpsLat;
+    const lon = exif.gpsLonRef === 'W' ? -exif.gpsLon : exif.gpsLon;
+    parts.push('📍 ' + lat.toFixed(4) + ', ' + lon.toFixed(4));
+  }
+  return '📷 ' + (parts.length ? parts.join(' · ') : 'Bez EXIF dat');
+}
+
+async function loadAndShowExif(p) {
+  const setText = (txt) => {
+    const el = document.querySelector(`.gallery-item[data-id="${p.id}"] .item-exif`);
+    if (el) el.textContent = txt;
+  };
+  if (exifCache.has(p.id)) { setText(exifCache.get(p.id)); return; }
+  try {
+    const buf = await fetchExifPrefix(p.url);
+    const exif = buf ? parseExif(buf) : null;
+    const summary = formatExifSummary(exif);
+    exifCache.set(p.id, summary);
+    setText(summary);
+  } catch {
+    setText('📷 EXIF nedostupné');
+  }
 }
 
 function toggleSel(id) {
@@ -247,6 +400,7 @@ async function applyBulkEdit() {
 
   const ids = [...G.selected];
   if (!ids.length) return;
+
   const modal = buildBulkEditProgressModal(ids.length);
 
   for (let i = 0; i < ids.length; i++) {
@@ -254,6 +408,7 @@ async function applyBulkEdit() {
     if (!p) continue;
     if ($('beFileName')) $('beFileName').textContent = p.name || p.key || '';
     if ($('beCounter')) $('beCounter').textContent = (i + 1) + '/' + ids.length;
+
     try {
       const resizedBlob = await resizeExistingPhoto(p, maxRes, quality);
       const fd = new FormData();
@@ -330,9 +485,6 @@ function quickSaveUploadSetting() {
 
 /* === KOMPRESE OBRÁZKŮ PŘED NAHRÁNÍM === */
 async function compressImage(file, settings) {
-  if (!settings.maxRes && settings.quality >= 1) {
-    return file;
-  }
   let bitmap;
   try {
     bitmap = await createImageBitmap(file, {
