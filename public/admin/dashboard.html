@@ -4,11 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Admin · Zajda</title>
-<link rel="stylesheet" href="style.css?v=20260708">
+<link rel="stylesheet" href="style.css?v=20260710">
 </head>
 <body>
 
-<!-- ============ HEADER ============ -->
+<!-- ============ HORNÍ LIŠTA (napevno nahoře jako ve Wordu) ============ -->
+<div class="dash-topbar">
+
 <header class="dash-header">
   <div class="brand">📊 Admin</div>
   <button class="btn btn-red btn-sm" onclick="logout()">🚪 Odhlásit</button>
@@ -28,8 +30,6 @@
 
   <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
-    <span class="pill" id="galleryCountPill">0 fotek</span>
-    <div class="ribbon-sep"></div>
     <select id="viewMode" class="ribbon-select" onchange="renderGallery()">
       <option value="grid">Mřížka</option>
       <option value="small">Malé náhledy</option>
@@ -41,6 +41,9 @@
       <option value="name">Podle názvu</option>
       <option value="size">Podle velikosti</option>
     </select>
+    <label class="ribbon-label" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
+      <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
+    </label>
     <div class="ribbon-sep"></div>
     <select id="upResSelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
       <option value="1000">1000 px</option>
@@ -52,13 +55,15 @@
       <option value="0.7">70 %</option>
       <option value="0.85">85 %</option>
       <option value="0.95">95 %</option>
-      <option value="1">100 %</option>
+      <option value="0.99">99 %</option>
     </select>
     <button class="btn btn-blue btn-sm" onclick="$('fileInput').click()">⬆️ Nahrát</button>
     <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
     <button class="btn btn-sm" onclick="openUploadSettings()">⚙️ Nastavení</button>
     <button class="btn btn-sm" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
     <button class="btn btn-red btn-sm" onclick="bulkDelete()">🗑 Smazat</button>
+    <div class="ribbon-sep"></div>
+    <span class="pill" id="galleryCountPill">0 fotek</span>
   </div>
 
   <!-- Články -->
@@ -82,6 +87,9 @@
   </div>
 
 </div>
+
+</div>
+<!-- /dash-topbar -->
 
 <!-- ============ CONTENT ============ -->
 <main class="dash-content">
@@ -301,7 +309,7 @@
         <option value="0.7">70 %</option>
         <option value="0.85">85 %</option>
         <option value="0.95">95 %</option>
-        <option value="1">100 %</option>
+        <option value="0.99">99 %</option>
       </select>
     </div>
     <div class="form-row">
@@ -340,9 +348,10 @@
         <option value="0.7" selected>70 %</option>
         <option value="0.8">80 %</option>
         <option value="0.9">90 %</option>
+        <option value="0.99">99 %</option>
       </select>
     </div>
-    <p style="color:#64748b;font-size:12px;margin-top:0.5rem">Fotky se převedou na JPG a přepíší se originály v galerii (nevratné).</p>
+    <p style="color:#64748b;font-size:12px;margin-top:0.5rem">Fotky se převedou na JPG (max. kvalita 99&nbsp;%) a přepíší se originály v galerii (nevratné).</p>
     <div class="modal-actions">
       <button class="btn btn-green" onclick="applyBulkEdit()">✅ Použít na vybrané</button>
       <button class="btn btn-red" onclick="$('bulkEditModal').classList.add('hidden')">Zrušit</button>
@@ -449,7 +458,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260708"></script>
-<script src="dashboard-editor.js?v=20260708"></script>
+<script src="dashboard-core.js?v=20260710"></script>
+<script src="dashboard-editor.js?v=20260710"></script>
 </body>
 </html>
