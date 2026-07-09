@@ -183,6 +183,102 @@ async function bulkDelete() {
   loadStats();
 }
 
+/* === HROMADNÁ ÚPRAVA VYBRANÝCH FOTEK (velikost + JPG kvalita) === */
+function openBulkEditModal() {
+  if (!G.selected.size) { alert('Nejdřív vyber fotky zaškrtnutím checkboxu.'); return; }
+  if ($('bulkEditCount')) $('bulkEditCount').textContent = `Vybráno: ${G.selected.size} fotek`;
+  $('bulkEditModal')?.classList.remove('hidden');
+}
+
+async function resizeExistingPhoto(photo, maxRes, quality) {
+  const r = await fetch(photo.url);
+  if (!r.ok) throw new Error('Nepodařilo se načíst fotku ' + photo.name);
+  const blob = await r.blob();
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(blob);
+  } catch {
+    bitmap = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = URL.createObjectURL(blob);
+    });
+  }
+  const w0 = bitmap.width || bitmap.naturalWidth;
+  const h0 = bitmap.height || bitmap.naturalHeight;
+  let w = w0, h = h0;
+  if (maxRes && Math.max(w, h) > maxRes) {
+    const scale = maxRes / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+  return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/jpeg', quality));
+}
+
+function buildBulkEditProgressModal(total) {
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.id = 'bulkEditProgressModal';
+  m.innerHTML = `
+    <div class="modal-box" style="max-width:460px">
+      <h3>🔧 Hromadná úprava fotek</h3>
+      <div id="beFileName" style="font-size:13px;color:#94a3b8;margin-bottom:0.4rem"></div>
+      <div style="background:#0f172a;border-radius:6px;height:10px;overflow:hidden;margin-bottom:0.5rem">
+        <div id="beProgressBar" style="background:#ff6600;height:100%;width:0%;transition:width 0.15s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8">
+        <span id="beCounter">0/${total}</span>
+      </div>
+      <div id="beDone" style="text-align:center;color:#22c55e;font-weight:600;margin-top:0.75rem;display:none">✅ Hotovo!</div>
+    </div>`;
+  document.body.appendChild(m);
+  return m;
+}
+
+async function applyBulkEdit() {
+  const maxRes = parseInt($('beMaxRes')?.value) || 0;
+  const quality = parseFloat($('beQuality')?.value) || 0.7;
+  $('bulkEditModal')?.classList.add('hidden');
+
+  const ids = [...G.selected];
+  if (!ids.length) return;
+  const modal = buildBulkEditProgressModal(ids.length);
+
+  for (let i = 0; i < ids.length; i++) {
+    const p = G.photos.find(x => x.id === ids[i]);
+    if (!p) continue;
+    if ($('beFileName')) $('beFileName').textContent = p.name || p.key || '';
+    if ($('beCounter')) $('beCounter').textContent = (i + 1) + '/' + ids.length;
+    try {
+      const resizedBlob = await resizeExistingPhoto(p, maxRes, quality);
+      const fd = new FormData();
+      const baseName = (p.name || 'foto').replace(/\.[^.]+$/, '');
+      fd.append('file', resizedBlob, baseName + '.jpg');
+      fd.append('galleryId', 'main');
+      fd.append('oldKey', p.key);
+      fd.append('mode', 'replace');
+      await fetch('/api/photos/update', { method: 'POST', body: fd });
+    } catch (e) {
+      console.error('Chyba hromadné úpravy fotky', p, e);
+    }
+    if ($('beProgressBar')) $('beProgressBar').style.width = Math.round(((i + 1) / ids.length) * 100) + '%';
+  }
+
+  if ($('beDone')) $('beDone').style.display = 'block';
+  setTimeout(async () => {
+    modal.remove();
+    G.selected.clear();
+    await loadGallery();
+    renderGallery();
+    loadStats();
+  }, 700);
+}
+
 /* === UPLOAD SETTINGS === */
 function getUploadSettings() {
   const defaults = { maxRes: 2000, quality: 0.85, autoRotate: true };
