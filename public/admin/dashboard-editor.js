@@ -272,6 +272,11 @@ function applyFilters() {
     s += ' url(#ed-sharpen-dynamic)';
   }
   if (f.ai) s += ' brightness(105%) contrast(110%) saturate(115%)';
+  /* Vynucené překreslení — bez tohohle prohlížeč občas ignoruje změny uvnitř
+     dynamických SVG filtrů (doostření, stíny/světla), protože samotný text
+     vlastnosti filter zůstává stejný (mění se jen atributy uvnitř <svg>). */
+  img.style.filter = 'none';
+  void img.offsetHeight;
   img.style.filter = s;
   const vig = document.querySelector('.vignette-overlay');
   if (vig && f.vignette > 0) {
@@ -671,14 +676,14 @@ function showImgToolbar(img) {
     else document.body.appendChild(bar);
   }
   bar.innerHTML = `
-    <button onclick="imgToolbarAction('smaller')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">- Menší</button>
-    <button onclick="imgToolbarAction('bigger')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">+ Větší</button>
-    <button onclick="imgToolbarAction('left')" class="btn btn-sm" style="padding:4px 10px;font-size:12px" title="Obtékat text vpravo od obrázku">◀ Vlevo (obtékat)</button>
-    <button onclick="imgToolbarAction('center')" class="btn btn-sm" style="padding:4px 10px;font-size:12px" title="Bez obtékání textu">Střed</button>
-    <button onclick="imgToolbarAction('right')" class="btn btn-sm" style="padding:4px 10px;font-size:12px" title="Obtékat text vlevo od obrázku">Vpravo ▶ (obtékat)</button>
-    <button onclick="imgToolbarAction('up')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">↑ Nahoru</button>
-    <button onclick="imgToolbarAction('down')" class="btn btn-sm" style="padding:4px 10px;font-size:12px">↓ Dolů</button>
-    <button onclick="imgToolbarAction('delete')" class="btn btn-red btn-sm" style="padding:4px 10px;font-size:12px">🗑 Smazat</button>
+    <button onclick="imgToolbarAction('smaller')" class="btn btn-sm">- Menší</button>
+    <button onclick="imgToolbarAction('bigger')" class="btn btn-sm">+ Větší</button>
+    <button onclick="imgToolbarAction('left')" class="btn btn-sm" title="Obtékat text vpravo od obrázku">◀ Vlevo (obtékat)</button>
+    <button onclick="imgToolbarAction('center')" class="btn btn-sm" title="Bez obtékání textu">Střed</button>
+    <button onclick="imgToolbarAction('right')" class="btn btn-sm" title="Obtékat text vlevo od obrázku">Vpravo ▶ (obtékat)</button>
+    <button onclick="imgToolbarAction('up')" class="btn btn-sm">↑ Nahoru</button>
+    <button onclick="imgToolbarAction('down')" class="btn btn-sm">↓ Dolů</button>
+    <button onclick="imgToolbarAction('delete')" class="btn btn-red btn-sm">🗑 Smazat</button>
   `;
   bar.style.display = 'flex';
 }
@@ -741,8 +746,8 @@ function insertImgTo(editorId, align) {
   const m = document.createElement('div');
   m.className = 'modal';
   m.innerHTML = `
-    <div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155">
-      <h3 style="margin-bottom:1rem;color:#f8fafc">Vložit fotku</h3>
+    <div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252">
+      <h3 style="margin-bottom:1rem;color:#eef1f8">Vložit fotku</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
         ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}','${align}')">`).join('')}
       </div>
@@ -832,12 +837,12 @@ async function loadArticles() {
         ? `<button onclick="unpublishArticle('${a.id}')" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">⏸ Skrýt</button>`
         : `<button onclick="publishArticle('${a.id}')" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">👁 Zobrazit</button>`;
       return `
-      <div class="card" style="margin-bottom:1rem;padding:1rem;background:#1e293b;border:1px solid #334155;border-radius:10px">
+      <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px">
         <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem">
-          <h4 style="color:#ffcc66;margin:0">${escapeHtml(a.title)}</h4>
+          <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
           ${pubStatus}
         </div>
-        <p style="color:#94a3b8;font-size:13px;margin-bottom:0.5rem">
+        <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem">
           ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
         </p>
         ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5">${escapeHtml(excerpt)}</p>` : ''}
@@ -1043,9 +1048,9 @@ async function loadQuotes() {
     }
     tbody.innerHTML = arr.map(q => `
       <tr>
-        <td style="padding:0.75rem;border-bottom:1px solid #334155">"${escapeHtml(q.text)}"</td>
-        <td style="padding:0.75rem;border-bottom:1px solid #334155;color:#94a3b8">${escapeHtml(q.author) || '—'}</td>
-        <td style="padding:0.75rem;border-bottom:1px solid #334155">
+        <td style="padding:0.75rem;border-bottom:1px solid #263252">"${escapeHtml(q.text)}"</td>
+        <td style="padding:0.75rem;border-bottom:1px solid #263252;color:#92a0bc">${escapeHtml(q.author) || '—'}</td>
+        <td style="padding:0.75rem;border-bottom:1px solid #263252">
           <button onclick="deleteQuote('${encodeURIComponent(q.key || q.id)}')" class="btn btn-red btn-sm">Smazat</button>
         </td>
       </tr>`).join('');
@@ -1099,16 +1104,16 @@ async function loadSubsections() {
   }
   tbody.innerHTML = all.map(s => `
     <tr>
-      <td style="padding:0.75rem;border-bottom:1px solid #334155">${escapeHtml(s.sectionId)}</td>
-      <td style="padding:0.75rem;border-bottom:1px solid #334155">
+      <td style="padding:0.75rem;border-bottom:1px solid #263252">${escapeHtml(s.sectionId)}</td>
+      <td style="padding:0.75rem;border-bottom:1px solid #263252">
         <div style="display:flex;align-items:center;gap:0.75rem">
-          ${s.coverUrl ? `<img src="${s.coverUrl}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #334155;flex-shrink:0">` : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;border:1px solid #334155;flex-shrink:0"></div>'}
+          ${s.coverUrl ? `<img src="${s.coverUrl}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #263252;flex-shrink:0">` : '<div style="width:120px;height:80px;background:#0a0f1c;border-radius:6px;border:1px solid #263252;flex-shrink:0"></div>'}
           <span>${escapeHtml(s.name)}</span>
         </div>
       </td>
-      <td style="padding:0.75rem;border-bottom:1px solid #334155">${escapeHtml(s.slug)}</td>
-      <td style="padding:0.75rem;border-bottom:1px solid #334155">${s.order || 0}</td>
-      <td style="padding:0.75rem;border-bottom:1px solid #334155">
+      <td style="padding:0.75rem;border-bottom:1px solid #263252">${escapeHtml(s.slug)}</td>
+      <td style="padding:0.75rem;border-bottom:1px solid #263252">${s.order || 0}</td>
+      <td style="padding:0.75rem;border-bottom:1px solid #263252">
         <div style="display:flex;gap:0.5rem">
           <button onclick="pickSubsectionCover('${s.id}')" class="btn btn-blue btn-sm">Změnit cover</button>
           <button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button>
@@ -1154,8 +1159,8 @@ async function pickSubsectionCover(id) {
   const m = document.createElement('div');
   m.className = 'modal';
   m.innerHTML = `
-    <div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155">
-      <h3 style="margin-bottom:1rem;color:#f8fafc">Cover podsekce</h3>
+    <div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252">
+      <h3 style="margin-bottom:1rem;color:#eef1f8">Cover podsekce</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">
         ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSubsectionCover('${id}','${p.url}')">`).join('')}
       </div>
@@ -1205,7 +1210,7 @@ async function loadSectionCovers() {
       }
     } catch (e) { console.error('Chyba načítání coveru sekce:', e); }
     if (url) url = url + (url.includes('?') ? '&' : '?') + '_t=' + ts;
-    html += '<div style="background:#1e293b;padding:0.75rem;border-radius:8px;border:1px solid #334155;text-align:center;min-width:140px"><div style="font-size:0.875rem;margin-bottom:0.5rem;color:#ffcc66">' + escapeHtml(s.n) + '</div>' + (url ? '<img src="' + url + '" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #334155">' : '<div style="width:120px;height:80px;background:#0f172a;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #334155"></div>') + '<button onclick="pickSectionCover(\'' + s.id + '\')" class="btn btn-blue btn-sm">Změnit cover</button></div>';
+    html += '<div style="background:#131a2c;padding:0.75rem;border-radius:8px;border:1px solid #263252;text-align:center;min-width:140px"><div style="font-size:0.875rem;margin-bottom:0.5rem;color:#ffc857">' + escapeHtml(s.n) + '</div>' + (url ? '<img src="' + url + '" style="width:120px;height:80px;object-fit:cover;border-radius:6px;margin:0 auto 0.5rem;display:block;border:1px solid #263252">' : '<div style="width:120px;height:80px;background:#0a0f1c;border-radius:6px;margin:0 auto 0.5rem;border:1px solid #263252"></div>') + '<button onclick="pickSectionCover(\'' + s.id + '\')" class="btn btn-blue btn-sm">Změnit cover</button></div>';
   }
   html += '</div>';
   box.innerHTML = html;
@@ -1215,7 +1220,7 @@ function pickSectionCover(sectionId) {
   if (!G.photos || !G.photos.length) { alert('Galerie je prázdná.'); return; }
   const m = document.createElement('div');
   m.className = 'modal';
-  m.innerHTML = '<div style="background:#1e293b;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #334155"><h3 style="margin-bottom:1rem;color:#f8fafc">Cover sekce: ' + escapeHtml(sectionId) + '</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' + G.photos.map(function(p) { return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover(\'' + sectionId + '\',\'' + p.url + '\')">'; }).join('') + '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
+  m.innerHTML = '<div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252"><h3 style="margin-bottom:1rem;color:#eef1f8">Cover sekce: ' + escapeHtml(sectionId) + '</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' + G.photos.map(function(p) { return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover(\'' + sectionId + '\',\'' + p.url + '\')">'; }).join('') + '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
   m.onclick = function(e) { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
 }
@@ -1254,12 +1259,12 @@ async function loadAbout() {
       setupArticleEditors();
     }
     const prev = $('aboutPreview');
-    if (prev) prev.innerHTML = `<h4 style="color:#ffcc66;margin-bottom:0.5rem">${escapeHtml(d.title || 'O Zajdovi')}</h4><div style="line-height:1.6">${d.text || ''}</div>`;
+    if (prev) prev.innerHTML = `<h4 style="color:#ffc857;margin-bottom:0.5rem">${escapeHtml(d.title || 'O Zajdovi')}</h4><div style="line-height:1.6">${d.text || ''}</div>`;
   } catch (e) {
     console.error('About chyba:', e);
     if ($('aboutTitle')) $('aboutTitle').value = '';
     if ($('aboutEditor')) $('aboutEditor').innerHTML = '';
-    if ($('aboutPreview')) $('aboutPreview').innerHTML = '<h4 style="color:#ffcc66">O Zajdovi</h4><div></div>';
+    if ($('aboutPreview')) $('aboutPreview').innerHTML = '<h4 style="color:#ffc857">O Zajdovi</h4><div></div>';
   }
 }
 
@@ -1284,57 +1289,11 @@ async function saveAbout() {
 
 /* === CSS STYLY === */
 function injectEditorStyles() {
-  if (document.getElementById('dashboard-editor-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'dashboard-editor-styles';
-  style.textContent = `
-    #artEditor, #aboutEditor {
-      min-height: 300px; max-height: 600px; overflow-y: auto;
-      background: #0f172a; border: 1px solid #334155; border-radius: 8px;
-      padding: 1rem; color: #e2e8f0; line-height: 1.7; font-size: 15px; outline: none;
-    }
-    #artEditor:focus, #aboutEditor:focus { border-color: #ff6600; box-shadow: 0 0 0 2px rgba(255,102,0,0.2); }
-    #artEditor p, #aboutEditor p { margin-bottom: 0.75rem; }
-    #artEditor h1, #aboutEditor h1, #artEditor h2, #aboutEditor h2, #artEditor h3, #aboutEditor h3 { color: #ffcc66; margin: 1rem 0 0.5rem; font-weight: 600; }
-    #artEditor h1, #aboutEditor h1 { font-size: 24px; border-bottom: 1px solid rgba(255,102,0,0.3); padding-bottom: 0.3rem; }
-    #artEditor h2, #aboutEditor h2 { font-size: 20px; }
-    #artEditor h3, #aboutEditor h3 { font-size: 17px; color: #ffb366; }
-    #artEditor ul, #aboutEditor ul, #artEditor ol, #aboutEditor ol { margin: 0.5rem 0 0.5rem 1.5rem; }
-    #artEditor li, #aboutEditor li { margin-bottom: 0.25rem; }
-    #artEditor a, #aboutEditor a { color: #60a5fa; text-decoration: underline; }
-    #artEditor blockquote, #aboutEditor blockquote { border-left: 3px solid #ff6600; margin: 0.75rem 0; padding: 0.5rem 1rem; background: rgba(255,102,0,0.08); border-radius: 0 6px 6px 0; font-style: italic; color: #cbd5e1; }
-    #artEditor hr, #aboutEditor hr { border: none; border-top: 1px solid #334155; margin: 1rem 0; }
-    #artEditor img.editor-img, #aboutEditor img.editor-img { max-width: 100%; height: auto; border-radius: 6px; transition: outline 0.15s; }
-    #artEditor img.editor-img[data-active], #aboutEditor img.editor-img[data-active] { outline: 3px solid #3b82f6; }
-    #img-toolbar { animation: toolbarIn 0.2s ease; }
-    @keyframes toolbarIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-    #img-toolbar button { white-space: nowrap; transition: all 0.15s; }
-    #img-toolbar button:hover { transform: translateY(-1px); }
-    .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; padding: 20px; animation: modalIn 0.2s ease; }
-    @keyframes modalIn { from { opacity: 0; } to { opacity: 1; } }
-    .modal > div { animation: modalContentIn 0.25s ease; }
-    @keyframes modalContentIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-    #artEditor::-webkit-scrollbar, #aboutEditor::-webkit-scrollbar, .sub-articles::-webkit-scrollbar, .modal > div::-webkit-scrollbar { width: 6px; }
-    #artEditor::-webkit-scrollbar-thumb, #aboutEditor::-webkit-scrollbar-thumb, .sub-articles::-webkit-scrollbar-thumb, .modal > div::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
-    .article-preview { color: #94a3b8; font-size: 14px; line-height: 1.5; max-height: 120px; overflow: hidden; position: relative; }
-    .article-preview::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 40px; background: linear-gradient(to bottom, transparent, #1e293b); pointer-events: none; }
-    .article-preview img { display: none; }
-    .modal img[style*="cursor:pointer"] { transition: transform 0.15s, box-shadow 0.15s; }
-    .modal img[style*="cursor:pointer"]:hover { transform: scale(1.03); box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-    .lightbox-modal { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.92); display: flex; align-items: center; justify-content: center; cursor: zoom-out; animation: lightboxIn 0.2s ease; }
-    @keyframes lightboxIn { from { opacity: 0; } to { opacity: 1; } }
-    .lightbox-modal img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 40px rgba(0,0,0,0.8); cursor: default; }
-    @media (max-width: 640px) {
-      #img-toolbar { justify-content: center; }
-      #artEditor, #aboutEditor { min-height: 200px; font-size: 16px; }
-    }
-    .editor-toolbar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; padding: 8px; background: #1e293b; border: 1px solid #334155; border-radius: 8px 8px 0 0; border-bottom: none; }
-    .editor-toolbar button, .editor-toolbar select { background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 4px; padding: 4px 8px; font-size: 13px; cursor: pointer; transition: all 0.15s; }
-    .editor-toolbar button:hover, .editor-toolbar select:hover { background: #475569; border-color: #ff6600; }
-    .editor-toolbar select { padding: 3px 6px; }
-    .editor-toolbar .sep { width: 1px; background: #475569; margin: 0 4px; }
-  `;
-  document.head.appendChild(style);
+  /* Všechny tyto styly už žijí v style.css (s novým barevným systémem).
+     Funkce zůstává kvůli zpětné kompatibilitě volání z initDashboardEditor(),
+     ale už nic nevkládá — jinak by starými natvrdo zapsanými barvami
+     přepisovala novou paletu. */
+  return;
 }
 
 /* === INICIALIZACE === */
