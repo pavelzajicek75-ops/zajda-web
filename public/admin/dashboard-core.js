@@ -57,7 +57,18 @@ function showTab(name) {
   localStorage.setItem('dashActiveTab', name);
   showRibbonGroup(name);
   loadSection(name);
+  moveTabIndicator();
 }
+
+/* Posune plovoucí "pilulku" pod aktivní záložku (jako segmentovaný přepínač) */
+function moveTabIndicator() {
+  const active = document.querySelector('.ribbon-tab.active');
+  const indicator = $('ribbonTabIndicator');
+  if (!active || !indicator) return;
+  indicator.style.width = active.offsetWidth + 'px';
+  indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+}
+window.addEventListener('resize', () => moveTabIndicator());
 
 function showRibbonGroup(name) {
   document.querySelectorAll('.ribbon-group').forEach(g => g.classList.toggle('active', g.dataset.for === name));
@@ -613,6 +624,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const saved = localStorage.getItem('dashActiveTab') || 'galleries';
   showTab(saved);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => moveTabIndicator());
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
