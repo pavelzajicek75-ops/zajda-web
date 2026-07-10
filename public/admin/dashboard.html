@@ -367,6 +367,23 @@
       <div class="editor-sidebar">
 
         <div class="tool-row">
+          <label style="width:100%">🎨 Předvolby</label>
+        </div>
+        <div class="tool-row">
+          <select id="presetSelect" class="ribbon-select" style="width:100%" onchange="applyPreset(this.value)">
+            <option value="">— Vyber styl —</option>
+            <option value="none">↺ Bez efektu (reset)</option>
+            <option value="bw">Černobílá</option>
+            <option value="vintage">Vintage</option>
+            <option value="warm">Teplý tón</option>
+            <option value="cold">Studený tón</option>
+            <option value="highContrast">Vysoký kontrast</option>
+            <option value="vivid">Živé barvy</option>
+            <option value="filmNoir">Film Noir</option>
+          </select>
+        </div>
+
+        <div class="tool-row crop-mode-row">
           <button class="btn btn-sm btn-blue" onclick="setCrop('free')">Volný</button>
           <button class="btn btn-sm" onclick="setCrop('1:1')">1:1</button>
           <button class="btn btn-sm" onclick="setCrop('4:3')">4:3</button>
@@ -389,31 +406,43 @@
 
         <div class="tool-row filter-row">
           <label>Expozice <span id="fval-exposure">0</span></label>
-          <input type="range" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
+          <input type="range" id="fslider-exposure" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
         </div>
         <div class="tool-row filter-row">
           <label>Kontrast <span id="fval-contrast">0</span></label>
-          <input type="range" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
+          <input type="range" id="fslider-contrast" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Stíny <span id="fval-shadows">0</span></label>
+          <input type="range" id="fslider-shadows" min="-100" max="100" value="0" oninput="setFilter('shadows', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Světla <span id="fval-highlights">0</span></label>
+          <input type="range" id="fslider-highlights" min="-100" max="100" value="0" oninput="setFilter('highlights', this.value)">
         </div>
         <div class="tool-row filter-row">
           <label>Sytost <span id="fval-saturation">0</span></label>
-          <input type="range" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
+          <input type="range" id="fslider-saturation" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Živost <span id="fval-vibrance">0</span></label>
+          <input type="range" id="fslider-vibrance" min="-100" max="100" value="0" oninput="setFilter('vibrance', this.value)">
         </div>
         <div class="tool-row filter-row">
           <label>Teplota <span id="fval-temp">0</span></label>
-          <input type="range" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
+          <input type="range" id="fslider-temp" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
         </div>
         <div class="tool-row filter-row">
           <label>Vinětace <span id="fval-vignette">0</span></label>
-          <input type="range" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
+          <input type="range" id="fslider-vignette" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
         </div>
         <div class="tool-row filter-row">
           <label>Doostření <span id="fval-sharpen">0</span></label>
-          <input type="range" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
+          <input type="range" id="fslider-sharpen" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
         </div>
         <div class="tool-row filter-row">
           <label>Odšumění <span id="fval-denoise">0</span></label>
-          <input type="range" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
+          <input type="range" id="fslider-denoise" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
         </div>
         <div class="tool-row">
           <label><input type="checkbox" id="aiCheck" onchange="setFilter('ai', this.checked ? 1 : 0)"> ✨ AI vylepšení</label>
