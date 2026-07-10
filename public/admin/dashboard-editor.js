@@ -35,6 +35,13 @@ window.G = window.G || { photos: [] };
       <filter id="ed-sharpen-dynamic" x="-20%" y="-20%" width="140%" height="140%">
         <feConvolveMatrix id="ed-sharpen-dynamic-matrix" order="3" kernelMatrix="0 0 0 0 1 0 0 0 0" preserveAlpha="true"/>
       </filter>
+      <filter id="ed-tone-dynamic" x="-20%" y="-20%" width="140%" height="140%">
+        <feComponentTransfer>
+          <feFuncR id="ed-tone-r" type="table" tableValues="0 1"/>
+          <feFuncG id="ed-tone-g" type="table" tableValues="0 1"/>
+          <feFuncB id="ed-tone-b" type="table" tableValues="0 1"/>
+        </feComponentTransfer>
+      </filter>
     </defs>
   `;
   document.body.appendChild(svg);
@@ -54,6 +61,77 @@ function updateSharpenFilter(strength) {
   matrix.setAttribute('kernelMatrix', kernel.map(v => v.toFixed(3)).join(' '));
 }
 
+/* === STÍNY / SVĚTLA (tónová křivka) ===
+   Vlastní jednoduchá tónová křivka: stíny zvedají/snižují tmavé partie,
+   světla zvedají/snižují světlé partie, střední tóny se skoro nemění. */
+function toneCurveValue(x, shadows, highlights) {
+  const s = shadows / 100, h = highlights / 100;
+  const shadowWeight = Math.pow(1 - x, 2);
+  const highlightWeight = Math.pow(x, 2);
+  const y = x + s * 0.5 * shadowWeight + h * 0.5 * highlightWeight;
+  return Math.max(0, Math.min(1, y));
+}
+
+function buildToneTableSVG(shadows, highlights, steps) {
+  const vals = [];
+  for (let i = 0; i <= steps; i++) {
+    vals.push(toneCurveValue(i / steps, shadows, highlights).toFixed(4));
+  }
+  return vals.join(' ');
+}
+
+function buildToneLUT256(shadows, highlights) {
+  const lut = new Uint8ClampedArray(256);
+  for (let i = 0; i < 256; i++) {
+    lut[i] = Math.round(toneCurveValue(i / 255, shadows, highlights) * 255);
+  }
+  return lut;
+}
+
+function updateToneFilter(shadows, highlights) {
+  if (!shadows && !highlights) return;
+  const table = buildToneTableSVG(shadows, highlights, 32);
+  ['ed-tone-r', 'ed-tone-g', 'ed-tone-b'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('tableValues', table);
+  });
+}
+
+/* Pixelová aplikace tónové křivky při finálním ukládání (přesná, 256 kroků) */
+function applyToneLUT(ctx, w, h, shadows, highlights) {
+  if (!shadows && !highlights) return;
+  const lut = buildToneLUT256(shadows, highlights);
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    d[i] = lut[d[i]];
+    d[i + 1] = lut[d[i + 1]];
+    d[i + 2] = lut[d[i + 2]];
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+/* === ŽIVOST (vibrance) ===
+   Chytřejší sytost: méně syté pixely zesílí víc, už syté (a pleťové tóny)
+   šetří — na rozdíl od obyčejné sytosti, která táhne všechno stejně. */
+function applyVibrance(ctx, w, h, amount) {
+  if (!amount) return;
+  const amt = amount / 100;
+  const imgData = ctx.getImageData(0, 0, w, h);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const max = Math.max(r, g, b);
+    const avg = (r + g + b) / 3;
+    const sat = (max - avg) / 255;
+    const factor = amt * (1 - sat) * 1.6;
+    d[i] = Math.max(0, Math.min(255, r + (r - avg) * factor));
+    d[i + 1] = Math.max(0, Math.min(255, g + (g - avg) * factor));
+    d[i + 2] = Math.max(0, Math.min(255, b + (b - avg) * factor));
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
 /* === STAV EDITORU === */
 let ED = {
   photo: null,
@@ -65,7 +143,7 @@ let ED = {
   crop: 'free',
   export: 'max',
   blobUrl: null,
-  filters: { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
+  filters: { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
   cropRect: null,
   isDraggingImage: false,
   isDraggingCrop: false,
@@ -98,12 +176,16 @@ async function openEditor(id) {
   ED.photo = p;
   ED.scale = 1; ED.rotate = 0; ED.panX = 0; ED.panY = 0;
   ED.crop = 'free'; ED.export = 'max'; ED.cropRect = null;
-  ED.filters = { exposure: 0, contrast: 0, saturation: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false };
+  ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false };
   if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
   const aic = $('aiCheck');
   if (aic) aic.checked = false;
   updateFilterLabels();
   updateSharpenFilter(0);
+  updateToneFilter(0, 0);
+  const presetSel = $('presetSelect');
+  if (presetSel) presetSel.value = '';
+  syncFilterSlidersFromState();
   setCrop('free');
   setExport('max');
   try {
@@ -176,9 +258,14 @@ function applyFilters() {
   if (!img) return;
   const f = ED.filters;
   let s = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
+  if (f.vibrance) s += ` saturate(${100 + f.vibrance * 0.5}%)`;
   if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`;
   else s += ` hue-rotate(${f.temp * 0.3}deg)`;
   if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
+  if (f.shadows || f.highlights) {
+    updateToneFilter(f.shadows, f.highlights);
+    s += ' url(#ed-tone-dynamic)';
+  }
   if (f.sharpen > 0 || f.ai) {
     const effectiveStrength = f.ai ? Math.max(f.sharpen, 80) : f.sharpen;
     updateSharpenFilter(effectiveStrength);
@@ -195,8 +282,18 @@ function applyFilters() {
 
 function updateFilterLabels() {
   const f = ED.filters;
-  const ids = { exposure:'fval-exposure', contrast:'fval-contrast', saturation:'fval-saturation', temp:'fval-temp', vignette:'fval-vignette', sharpen:'fval-sharpen', denoise:'fval-denoise' };
+  const ids = { exposure:'fval-exposure', contrast:'fval-contrast', saturation:'fval-saturation', vibrance:'fval-vibrance', shadows:'fval-shadows', highlights:'fval-highlights', temp:'fval-temp', vignette:'fval-vignette', sharpen:'fval-sharpen', denoise:'fval-denoise' };
   for (const [k, id] of Object.entries(ids)) { const el = $(id); if (el) el.textContent = f[k]; }
+}
+
+/* Nastaví polohy všech posuvníků podle aktuálního ED.filters (např. po výběru předvolby) */
+function syncFilterSlidersFromState() {
+  const f = ED.filters;
+  const ids = ['exposure', 'contrast', 'saturation', 'vibrance', 'shadows', 'highlights', 'temp', 'vignette', 'sharpen', 'denoise'];
+  ids.forEach(k => { const el = $('fslider-' + k); if (el) el.value = f[k]; });
+  const aic = $('aiCheck');
+  if (aic) aic.checked = !!f.ai;
+  updateFilterLabels();
 }
 
 function setFilter(key, val) {
@@ -204,15 +301,40 @@ function setFilter(key, val) {
   const el = $('fval-' + key);
   if (el) el.textContent = val;
   if (key === 'sharpen') updateSharpenFilter(ED.filters.sharpen);
+  if (key === 'shadows' || key === 'highlights') updateToneFilter(ED.filters.shadows, ED.filters.highlights);
+  const presetSel = $('presetSelect');
+  if (presetSel) presetSel.value = '';
+  applyFilters();
+}
+
+/* === PŘEDVOLBY (jako styly ve Photoshopu) === */
+const FILTER_PRESETS = {
+  none:         { exposure: 0,   contrast: 0,   saturation: 0,   vibrance: 0,   shadows: 0,   highlights: 0,   temp: 0,   vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
+  bw:           { exposure: 0,   contrast: 15,  saturation: -100, vibrance: 0,  shadows: 5,   highlights: -10, temp: 0,   vignette: 15, sharpen: 15, denoise: 0, ai: false },
+  vintage:      { exposure: -5,  contrast: -10, saturation: -25, vibrance: -10, shadows: 10,  highlights: -15, temp: 25,  vignette: 35, sharpen: 0,  denoise: 5, ai: false },
+  warm:         { exposure: 5,   contrast: 5,   saturation: 5,   vibrance: 15,  shadows: 5,   highlights: 0,   temp: 30,  vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
+  cold:         { exposure: 0,   contrast: 8,   saturation: -5,  vibrance: 5,   shadows: 0,   highlights: 0,   temp: -30, vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
+  highContrast: { exposure: 0,   contrast: 35,  saturation: 10,  vibrance: 10,  shadows: -20, highlights: 20,  temp: 0,   vignette: 15, sharpen: 25, denoise: 0, ai: false },
+  vivid:        { exposure: 5,   contrast: 12,  saturation: 15,  vibrance: 40,  shadows: 5,   highlights: -5,  temp: 5,   vignette: 0,  sharpen: 15, denoise: 0, ai: false },
+  filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  temp: -10, vignette: 45, sharpen: 10, denoise: 0, ai: false }
+};
+
+function applyPreset(name) {
+  const preset = FILTER_PRESETS[name];
+  if (!preset) return;
+  ED.filters = { ...preset };
+  syncFilterSlidersFromState();
+  updateSharpenFilter(ED.filters.sharpen);
+  updateToneFilter(ED.filters.shadows, ED.filters.highlights);
   applyFilters();
 }
 
 /* === EDITOR: crop systém === */
 function setCrop(mode) {
   ED.crop = mode;
-  document.querySelectorAll('.editor-sidebar .tool-row:first-of-type .btn').forEach(b => b.classList.remove('btn-blue'));
+  document.querySelectorAll('.editor-sidebar .crop-mode-row .btn').forEach(b => b.classList.remove('btn-blue'));
   const labels = { free:'Volný', '1:1':'1:1', '4:3':'4:3', '3:4':'3:4', '16:9':'16:9' };
-  const btn = Array.from(document.querySelectorAll('.editor-sidebar .tool-row:first-of-type .btn')).find(b => b.textContent.trim() === labels[mode]);
+  const btn = Array.from(document.querySelectorAll('.editor-sidebar .crop-mode-row .btn')).find(b => b.textContent.trim() === labels[mode]);
   if (btn) btn.classList.add('btn-blue');
   const layer = $('cropLayer'), preview = $('editPreview');
   if (!preview) return;
@@ -433,6 +555,12 @@ async function saveEditor(mode) {
   const drawScale = Math.min(dim.w / img.naturalWidth, dim.h / img.naturalHeight);
   ctx.drawImage(img, -img.naturalWidth * drawScale / 2, -img.naturalHeight * drawScale / 2, img.naturalWidth * drawScale, img.naturalHeight * drawScale);
   ctx.restore();
+  if (f.shadows || f.highlights) {
+    applyToneLUT(ctx, dim.w, dim.h, f.shadows, f.highlights);
+  }
+  if (f.vibrance) {
+    applyVibrance(ctx, dim.w, dim.h, f.vibrance);
+  }
   if (f.sharpen > 0 || f.ai) {
     const effectiveStrength = f.ai ? Math.max(f.sharpen, 80) : f.sharpen;
     applySharpen(ctx, dim.w, dim.h, effectiveStrength);
