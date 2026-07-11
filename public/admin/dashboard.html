@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260714">
+<link rel="stylesheet" href="style.css?v=20260717">
 </head>
 <body>
 
@@ -48,6 +48,8 @@
     <select id="folderFilter" class="ribbon-select" onchange="renderGallery()" title="Filtr podle složky">
       <option value="">📁 Všechny složky</option>
     </select>
+    <button class="btn btn-sm" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová složka</button>
+    <button class="btn btn-sm" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou složku</button>
     <label class="ribbon-label" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
       <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
     </label>
@@ -336,6 +338,21 @@
   </div>
 </div>
 
+<!-- ============ NOVÁ SLOŽKA ============ -->
+<div id="newFolderModal" class="modal hidden">
+  <div class="modal-box">
+    <h3>➕ Nová složka</h3>
+    <div class="form-row">
+      <input type="text" id="newFolderName" class="form-input" placeholder="Název složky (např. Dovolená 2024)" onkeydown="if(event.key==='Enter')createNewFolder()">
+    </div>
+    <p style="color:var(--text-faint);font-size:12px;margin-top:0.5rem">Založí prázdnou složku — hned se nabídne ve filtru i při nahrávání. Naplní se, až do ní něco nahraješ nebo přesuneš.</p>
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="createNewFolder()">✅ Založit</button>
+      <button class="btn btn-red" onclick="$('newFolderModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ PŘESUN DO SLOŽKY ============ -->
 <div id="moveToFolderModal" class="modal hidden">
   <div class="modal-box">
@@ -513,7 +530,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260714"></script>
-<script src="dashboard-editor.js?v=20260714"></script>
+<script src="dashboard-core.js?v=20260717"></script>
+<script src="dashboard-editor.js?v=20260717"></script>
 </body>
 </html>
