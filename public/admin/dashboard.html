@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260717">
+<link rel="stylesheet" href="style.css?v=20260718">
 </head>
 <body>
 
@@ -30,73 +30,77 @@
 </nav>
 
 <!-- ============ RIBBON TOOLBAR ============ -->
-<div class="ribbon-toolbar">
+<div class="ribbon-toolbar" id="ribbonToolbar">
+
+  <button class="btn btn-sm ribbon-reorder-toggle" id="reorderToggleBtn" onclick="toggleRibbonReorderMode()" title="Přeuspořádat tlačítka v této liště tažením myší">↕️ Uspořádat</button>
 
   <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
-    <select id="viewMode" class="ribbon-select" onchange="renderGallery()">
+    <select id="viewMode" class="ribbon-select" data-key="viewMode" onchange="renderGallery()">
       <option value="grid">Mřížka</option>
       <option value="small">Malé náhledy</option>
       <option value="list">Seznam</option>
     </select>
-    <select id="sortMode" class="ribbon-select" onchange="renderGallery()">
+    <select id="sortMode" class="ribbon-select" data-key="sortMode" onchange="renderGallery()">
       <option value="newest">Nejnovější</option>
       <option value="oldest">Nejstarší</option>
       <option value="name">Podle názvu</option>
       <option value="size">Podle velikosti</option>
     </select>
-    <select id="folderFilter" class="ribbon-select" onchange="renderGallery()" title="Filtr podle složky">
+    <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
       <option value="">📁 Všechny složky</option>
     </select>
-    <button class="btn btn-sm" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová složka</button>
-    <button class="btn btn-sm" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou složku</button>
-    <label class="ribbon-label" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
+    <button class="btn btn-sm" data-key="newFolder" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová složka</button>
+    <button class="btn btn-sm" data-key="deleteFolder" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou složku</button>
+    <label class="ribbon-label" data-key="exifToggleLabel" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
       <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
     </label>
-    <div class="ribbon-sep"></div>
-    <select id="upResSelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
+    <div class="ribbon-sep" data-key="sep1"></div>
+    <select id="upResSelect" class="ribbon-select" data-key="upRes" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
       <option value="1000">1000 px</option>
       <option value="2000">2000 px</option>
       <option value="4000">4000 px</option>
       <option value="0">Originál</option>
     </select>
-    <select id="upQualitySelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
+    <select id="upQualitySelect" class="ribbon-select" data-key="upQuality" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
       <option value="0.7">70 %</option>
       <option value="0.85">85 %</option>
       <option value="0.95">95 %</option>
       <option value="0.99">99 %</option>
     </select>
-    <input type="text" id="uploadFolderInput" class="form-input" list="folderSuggestions" placeholder="📁 Do složky (volitelné)" style="max-width:180px;flex:0 1 180px">
+    <input type="text" id="uploadFolderInput" class="form-input" data-key="uploadFolderInput" list="folderSuggestions" placeholder="📁 Do složky (volitelné)" style="max-width:180px;flex:0 1 180px">
     <datalist id="folderSuggestions"></datalist>
-    <button class="btn btn-blue btn-sm" onclick="$('fileInput').click()">⬆️ Nahrát</button>
+    <button class="btn btn-blue btn-sm" data-key="upload" onclick="$('fileInput').click()">⬆️ Nahrát</button>
     <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
-    <button class="btn btn-sm" onclick="openUploadSettings()">⚙️ Nastavení</button>
-    <button class="btn btn-sm" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
-    <button class="btn btn-sm" onclick="openMoveToFolderModal()">📁 Přesunout do složky</button>
-    <button class="btn btn-red btn-sm" onclick="bulkDelete()">🗑 Smazat</button>
-    <div class="ribbon-sep"></div>
-    <span class="pill" id="galleryCountPill">0 fotek</span>
+    <button class="btn btn-sm" data-key="uploadSettings" onclick="openUploadSettings()">⚙️ Nastavení</button>
+    <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
+    <button class="btn btn-sm" data-key="moveToFolder" onclick="openMoveToFolderModal()">📁 Přesunout do složky</button>
+    <button class="btn btn-red btn-sm" data-key="bulkDelete" onclick="bulkDelete()">🗑 Smazat</button>
+    <div class="ribbon-sep" data-key="sep2"></div>
+    <span class="pill" id="galleryCountPill" data-key="countPill">0 fotek</span>
   </div>
 
   <!-- Články -->
   <div class="ribbon-group" data-for="articles">
-    <button class="btn btn-blue btn-sm" onclick="resetArticleForm()">➕ Nový článek</button>
+    <button class="btn btn-blue btn-sm" data-key="newArticle" onclick="resetArticleForm()">➕ Nový článek</button>
   </div>
 
   <!-- Citáty -->
   <div class="ribbon-group" data-for="quotes">
-    <span class="ribbon-label">Správa citátů</span>
+    <span class="ribbon-label" data-key="quotesLabel">Správa citátů</span>
   </div>
 
   <!-- Podsekce -->
   <div class="ribbon-group" data-for="subsections">
-    <span class="ribbon-label">Správa podsekcí a coverů</span>
+    <span class="ribbon-label" data-key="subsectionsLabel">Správa podsekcí a coverů</span>
   </div>
 
   <!-- O Zajdovi -->
   <div class="ribbon-group" data-for="about">
-    <button class="btn btn-green btn-sm" onclick="saveAbout()">💾 Uložit</button>
+    <button class="btn btn-green btn-sm" data-key="saveAbout" onclick="saveAbout()">💾 Uložit</button>
   </div>
+
+  <div class="ribbon-resize-handle" id="ribbonResizeHandle" title="Táhni pro změnu výšky lišty"></div>
 
 </div>
 
@@ -530,7 +534,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260717"></script>
-<script src="dashboard-editor.js?v=20260717"></script>
+<script src="dashboard-core.js?v=20260718"></script>
+<script src="dashboard-editor.js?v=20260718"></script>
 </body>
 </html>
