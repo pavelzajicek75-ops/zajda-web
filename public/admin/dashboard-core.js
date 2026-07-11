@@ -132,9 +132,44 @@ async function loadStats() {
   }
 }
 
+/* === SLOŽKY (virtuální, jen podle názvu souboru — bez zásahu do backendu) ===
+   Formát: "[Název složky] zbytek-názvu.jpg". Parsuje se čistě na klientovi. */
+function parsePhotoFolder(name) {
+  const m = (name || '').match(/^\[([^\]]+)\]\s*(.*)$/);
+  if (m) return { folder: m[1], base: m[2] || name };
+  return { folder: null, base: name || '' };
+}
+
+function formatFolderedName(folder, baseName) {
+  const clean = (baseName || 'foto').trim();
+  return folder ? `[${folder.trim()}] ${clean}` : clean;
+}
+
+function getAllFolders() {
+  const set = new Set();
+  G.photos.forEach(p => { const { folder } = parsePhotoFolder(p.name); if (folder) set.add(folder); });
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+function refreshFolderControls() {
+  const folders = getAllFolders();
+  const sel = $('folderFilter');
+  if (sel) {
+    const current = sel.value;
+    sel.innerHTML = '<option value="">📁 Všechny složky</option><option value="__none__">— Bez složky —</option>' +
+      folders.map(f => `<option value="${escapeHtml(f)}">📁 ${escapeHtml(f)}</option>`).join('');
+    if ([...sel.options].some(o => o.value === current)) sel.value = current;
+  }
+  const dl = $('folderSuggestions');
+  if (dl) dl.innerHTML = folders.map(f => `<option value="${escapeHtml(f)}">`).join('');
+}
+
 function sortedPhotos() {
   const mode = $('sortMode')?.value || 'newest';
-  const arr = [...G.photos];
+  const folderSel = $('folderFilter')?.value || '';
+  let arr = [...G.photos];
+  if (folderSel === '__none__') arr = arr.filter(p => !parsePhotoFolder(p.name).folder);
+  else if (folderSel) arr = arr.filter(p => parsePhotoFolder(p.name).folder === folderSel);
   if (mode === 'newest') arr.sort((a, b) => new Date(b.uploaded || b.date || 0) - new Date(a.uploaded || a.date || 0));
   else if (mode === 'oldest') arr.sort((a, b) => new Date(a.uploaded || a.date || 0) - new Date(b.uploaded || b.date || 0));
   else if (mode === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -145,24 +180,27 @@ function sortedPhotos() {
 function renderGallery() {
   const grid = $('galleryGrid');
   if (!grid) return;
+  refreshFolderControls();
   const mode = $('viewMode')?.value || 'grid';
   grid.className = 'gallery-grid' + (mode !== 'grid' ? ' mode-' + mode : '');
 
   const arr = sortedPhotos();
   if (!arr.length) {
-    grid.innerHTML = '<div style="color:#64748b;padding:2rem;text-align:center;grid-column:1/-1">Galerie je prázdná. Nahraj první fotky.</div>';
+    grid.innerHTML = '<div style="color:#64748b;padding:2rem;text-align:center;grid-column:1/-1">V této složce zatím žádné fotky.</div>';
     return;
   }
 
   grid.innerHTML = arr.map(p => {
     const selected = G.selected.has(p.id) ? ' selected' : '';
     const checked = G.selected.has(p.id) ? 'checked' : '';
+    const { folder, base } = parsePhotoFolder(p.name);
     return `
     <div class="gallery-item${selected}" data-id="${p.id}">
       <input type="checkbox" class="item-checkbox" ${checked} onclick="event.stopPropagation();toggleSel('${p.id}')">
+      ${folder ? `<span class="folder-badge">📁 ${escapeHtml(folder)}</span>` : ''}
       <img src="${p.url}" alt="${escapeHtml(p.name || '')}" onclick="openEditor('${p.id}')">
       <div class="item-meta">
-        <div class="item-name">${escapeHtml(p.name || '')}</div>
+        <div class="item-name">${escapeHtml(base || p.name || '')}</div>
         <div>${fmtBytes(p.size)}</div>
         ${showExif ? `<div class="item-exif">Načítám EXIF…</div>` : ''}
       </div>
@@ -348,6 +386,58 @@ async function bulkDelete() {
 }
 
 /* === HROMADNÁ ÚPRAVA VYBRANÝCH FOTEK (velikost + JPG kvalita) === */
+function openMoveToFolderModal() {
+  if (!G.selected.size) { alert('Nejdřív vyber fotky zaškrtnutím checkboxu.'); return; }
+  if ($('moveFolderCount')) $('moveFolderCount').textContent = `Vybráno: ${G.selected.size} fotek`;
+  if ($('moveFolderName')) $('moveFolderName').value = '';
+  $('moveToFolderModal')?.classList.remove('hidden');
+}
+
+async function applyMoveToFolder() {
+  const folder = $('moveFolderName')?.value.trim() || '';
+  $('moveToFolderModal')?.classList.add('hidden');
+  const ids = [...G.selected];
+  if (!ids.length) return;
+
+  const modal = buildBulkEditProgressModal(ids.length);
+  if ($('beFileName')) {
+    const h3 = modal.querySelector('h3');
+    if (h3) h3.textContent = '📁 Přesouvání do složky';
+  }
+
+  for (let i = 0; i < ids.length; i++) {
+    const p = G.photos.find(x => x.id === ids[i]);
+    if (!p) continue;
+    const { base } = parsePhotoFolder(p.name);
+    const newName = formatFolderedName(folder, base || p.name);
+    if ($('beFileName')) $('beFileName').textContent = newName;
+    if ($('beCounter')) $('beCounter').textContent = (i + 1) + '/' + ids.length;
+    try {
+      const r = await fetch(p.url);
+      if (!r.ok) throw new Error('Nepodařilo se načíst fotku ' + p.name);
+      const blob = await r.blob();
+      const fd = new FormData();
+      fd.append('file', blob, newName);
+      fd.append('galleryId', 'main');
+      fd.append('oldKey', p.key);
+      fd.append('mode', 'replace');
+      await fetch('/api/photos/update', { method: 'POST', body: fd });
+    } catch (e) {
+      console.error('Chyba přesunu fotky', p, e);
+    }
+    if ($('beProgressBar')) $('beProgressBar').style.width = Math.round(((i + 1) / ids.length) * 100) + '%';
+  }
+
+  if ($('beDone')) $('beDone').style.display = 'block';
+  setTimeout(async () => {
+    modal.remove();
+    G.selected.clear();
+    await loadGallery();
+    renderGallery();
+    loadStats();
+  }, 700);
+}
+
 function openBulkEditModal() {
   if (!G.selected.size) { alert('Nejdřív vyber fotky zaškrtnutím checkboxu.'); return; }
   if ($('bulkEditCount')) $('bulkEditCount').textContent = `Vybráno: ${G.selected.size} fotek`;
@@ -589,18 +679,20 @@ async function uploadFiles(input) {
   const files = Array.from(input.files || []);
   if (!files.length) return;
   const settings = getUploadSettings();
+  const targetFolder = $('uploadFolderInput')?.value.trim() || '';
   const modal = buildUploadProgressModal();
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    if ($('upFileName')) $('upFileName').textContent = file.name;
+    const uploadName = targetFolder ? formatFolderedName(targetFolder, file.name) : file.name;
+    if ($('upFileName')) $('upFileName').textContent = uploadName;
     if ($('upCounter')) $('upCounter').textContent = (i + 1) + '/' + files.length;
     if ($('upProgressBar')) $('upProgressBar').style.width = '0%';
     if ($('upPercent')) $('upPercent').textContent = '0 %';
     if ($('upSpeed')) $('upSpeed').textContent = '';
     try {
       const compressed = await compressImage(file, settings);
-      await uploadOne(compressed, file.name);
+      await uploadOne(compressed, uploadName);
     } catch (e) {
       console.error('Chyba nahrávání souboru', file.name, e);
       alert('Nepodařilo se nahrát ' + file.name + ': ' + e.message);
