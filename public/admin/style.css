@@ -160,12 +160,23 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spac
 
 /* === RIBBON TOOLBAR === */
 .ribbon-toolbar {
-  display: flex; align-items: center;
-  padding: 0.65rem 1.1rem;
+  position: relative;
+  display: flex; align-items: flex-start; flex-wrap: wrap;
+  padding: 0.65rem 1.1rem 1rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border-soft);
   min-height: 54px;
+  max-height: 320px;
+  overflow-y: auto;
   box-shadow: var(--shadow-sm);
+}
+.ribbon-reorder-toggle {
+  order: -1;
+  margin-right: 0.4rem;
+  background: var(--surface-2);
+}
+.ribbon-reorder-toggle.active {
+  background: var(--accent); border-color: var(--accent); color: #fff;
 }
 .ribbon-group {
   display: none;
@@ -175,6 +186,34 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spac
   width: 100%;
 }
 .ribbon-group.active { display: flex; }
+
+/* Režim přeuspořádání — vizuálně naznačí, že prvky jde tahat */
+.ribbon-group.reorder-mode > * {
+  cursor: grab;
+  outline: 1px dashed var(--border);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+.ribbon-group.reorder-mode > *:hover { outline-color: var(--accent); }
+.ribbon-item-dragging { opacity: 0.35; }
+
+.ribbon-resize-handle {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+  touch-action: none;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.ribbon-resize-handle::after {
+  content: '';
+  width: 44px; height: 4px;
+  margin-bottom: 2px;
+  background: var(--border);
+  border-radius: var(--r-pill);
+  transition: background 0.15s;
+}
+.ribbon-resize-handle:hover::after { background: var(--accent); }
+
 .ribbon-sep {
   width: 1px; height: 22px;
   background: var(--border);
