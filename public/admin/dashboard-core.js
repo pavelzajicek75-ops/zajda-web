@@ -145,10 +145,54 @@ function formatFolderedName(folder, baseName) {
   return folder ? `[${folder.trim()}] ${clean}` : clean;
 }
 
+function getManualFolders() {
+  try {
+    const raw = localStorage.getItem('manualFolders');
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveManualFolders(list) {
+  localStorage.setItem('manualFolders', JSON.stringify([...new Set(list)]));
+}
+
 function getAllFolders() {
-  const set = new Set();
+  const set = new Set(getManualFolders());
   G.photos.forEach(p => { const { folder } = parsePhotoFolder(p.name); if (folder) set.add(folder); });
   return [...set].sort((a, b) => a.localeCompare(b));
+}
+
+function openNewFolderModal() {
+  if ($('newFolderName')) $('newFolderName').value = '';
+  $('newFolderModal')?.classList.remove('hidden');
+  setTimeout(() => $('newFolderName')?.focus(), 50);
+}
+
+function createNewFolder() {
+  const name = $('newFolderName')?.value.trim();
+  if (!name) { alert('Zadej název složky.'); return; }
+  const manual = getManualFolders();
+  if (!manual.includes(name)) { manual.push(name); saveManualFolders(manual); }
+  $('newFolderModal')?.classList.add('hidden');
+  refreshFolderControls();
+  const uploadInput = $('uploadFolderInput');
+  if (uploadInput) uploadInput.value = name;
+  const filterSel = $('folderFilter');
+  if (filterSel) filterSel.value = name;
+  renderGallery();
+}
+
+function deleteEmptyFolder() {
+  const sel = $('folderFilter');
+  const folder = sel?.value || '';
+  if (!folder || folder === '__none__') { alert('Nejdřív ve filtru vyber konkrétní složku, kterou chceš smazat.'); return; }
+  const hasPhotos = G.photos.some(p => parsePhotoFolder(p.name).folder === folder);
+  if (hasPhotos) { alert('Tahle složka obsahuje fotky — nejdřív je přesuň jinam nebo smaž, teprve pak půjde složka odstranit.'); return; }
+  const manual = getManualFolders().filter(f => f !== folder);
+  saveManualFolders(manual);
+  if (sel) sel.value = '';
+  refreshFolderControls();
+  renderGallery();
 }
 
 function refreshFolderControls() {
