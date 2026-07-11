@@ -72,6 +72,113 @@ window.addEventListener('resize', () => moveTabIndicator());
 
 function showRibbonGroup(name) {
   document.querySelectorAll('.ribbon-group').forEach(g => g.classList.toggle('active', g.dataset.for === name));
+  restoreRibbonOrder(name);
+  const toggleBtn = $('reorderToggleBtn');
+  if (toggleBtn) toggleBtn.classList.remove('active');
+  const activeGroup = document.querySelector('.ribbon-group.active');
+  if (activeGroup) activeGroup.classList.remove('reorder-mode');
+}
+
+/* === PŘEUSPOŘÁDÁNÍ TLAČÍTEK V RIBBONU (drag & drop, uloží se do localStorage) === */
+function toggleRibbonReorderMode() {
+  const group = document.querySelector('.ribbon-group.active');
+  const toggleBtn = $('reorderToggleBtn');
+  if (!group) return;
+  const nowOn = !group.classList.contains('reorder-mode');
+  group.classList.toggle('reorder-mode', nowOn);
+  if (toggleBtn) toggleBtn.classList.toggle('active', nowOn);
+  setRibbonItemsDraggable(group, nowOn);
+}
+
+function setRibbonItemsDraggable(group, enabled) {
+  Array.from(group.children).forEach(child => {
+    if (!child.dataset.key) return;
+    child.draggable = enabled;
+  });
+}
+
+let ribbonDraggedItem = null;
+
+function initRibbonDragReorder() {
+  document.querySelectorAll('.ribbon-group').forEach(group => {
+    group.addEventListener('click', e => {
+      if (group.classList.contains('reorder-mode')) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+    group.addEventListener('dragstart', e => {
+      const item = e.target.closest('[data-key]');
+      if (!item || item.parentElement !== group || !group.classList.contains('reorder-mode')) return;
+      ribbonDraggedItem = item;
+      item.classList.add('ribbon-item-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    group.addEventListener('dragend', () => {
+      if (ribbonDraggedItem) ribbonDraggedItem.classList.remove('ribbon-item-dragging');
+      ribbonDraggedItem = null;
+      saveRibbonOrder(group);
+    });
+    group.addEventListener('dragover', e => {
+      if (!ribbonDraggedItem || !group.classList.contains('reorder-mode')) return;
+      e.preventDefault();
+      const target = e.target.closest('[data-key]');
+      if (!target || target === ribbonDraggedItem || target.parentElement !== group) return;
+      const rect = target.getBoundingClientRect();
+      const before = e.clientX < rect.left + rect.width / 2;
+      group.insertBefore(ribbonDraggedItem, before ? target : target.nextSibling);
+    });
+  });
+}
+
+function saveRibbonOrder(group) {
+  const name = group.dataset.for;
+  if (!name) return;
+  const order = Array.from(group.children).map(c => c.dataset.key).filter(Boolean);
+  localStorage.setItem('ribbonOrder:' + name, JSON.stringify(order));
+}
+
+function restoreRibbonOrder(name) {
+  const group = document.querySelector(`.ribbon-group[data-for="${name}"]`);
+  if (!group) return;
+  let order;
+  try { order = JSON.parse(localStorage.getItem('ribbonOrder:' + name) || 'null'); } catch { order = null; }
+  if (!Array.isArray(order) || !order.length) return;
+  const byKey = new Map();
+  Array.from(group.children).forEach(c => { if (c.dataset.key) byKey.set(c.dataset.key, c); });
+  order.forEach(key => {
+    const el = byKey.get(key);
+    if (el) group.appendChild(el);
+  });
+}
+
+/* === ZMĚNA VÝŠKY RIBBON TOOLBARU TAŽENÍM === */
+function initRibbonResize() {
+  const toolbar = $('ribbonToolbar');
+  const handle = $('ribbonResizeHandle');
+  if (!toolbar || !handle) return;
+
+  const saved = parseInt(localStorage.getItem('ribbonToolbarHeight'));
+  if (saved) toolbar.style.minHeight = saved + 'px';
+
+  let resizing = false, startY = 0, startH = 0;
+
+  handle.addEventListener('pointerdown', e => {
+    resizing = true;
+    startY = e.clientY;
+    startH = toolbar.offsetHeight;
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener('pointermove', e => {
+    if (!resizing) return;
+    const newH = Math.max(54, Math.min(320, startH + (e.clientY - startY)));
+    toolbar.style.minHeight = newH + 'px';
+  });
+  handle.addEventListener('pointerup', () => {
+    if (!resizing) return;
+    resizing = false;
+    localStorage.setItem('ribbonToolbarHeight', toolbar.offsetHeight);
+  });
 }
 
 function loadSection(name) {
@@ -760,6 +867,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const saved = localStorage.getItem('dashActiveTab') || 'galleries';
   showTab(saved);
+  initRibbonDragReorder();
+  initRibbonResize();
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => moveTabIndicator());
   }
