@@ -653,6 +653,98 @@ function setupArticleEditors() {
       showImgToolbar(img);
     });
     ed.addEventListener('dragstart', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
+    initBlockDragSystem(id);
+  });
+}
+
+/* === BLOK DRAG & DROP ===
+   Malý úchyt (⠿) se objeví při najetí myší/prstem na libovolný blok
+   (odstavec, nadpis, obrázek...) přímo v obsahu článku. Chytneš ho a
+   přetáhneš na jiné místo v textu — jako sazba novinových sloupců.
+   Obrázky navíc dál obtékají text přes stávající zarovnání ◀Vlevo/Vpravo▶. */
+function initBlockDragSystem(editorId) {
+  const ed = $(editorId);
+  if (!ed || ed.dataset.dragReady) return;
+  ed.dataset.dragReady = '1';
+
+  const handle = document.createElement('div');
+  handle.className = 'block-drag-handle';
+  handle.textContent = '⠿';
+  handle.title = 'Přetáhni pro přesun bloku';
+  document.body.appendChild(handle);
+
+  const indicator = document.createElement('div');
+  indicator.className = 'block-drop-indicator';
+  document.body.appendChild(indicator);
+
+  let hoveredBlock = null;
+  let draggingBlock = null;
+  let dropTarget = null;
+  let dropBefore = true;
+
+  function topLevelBlockFromPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    let node = el;
+    while (node && node !== ed && node.parentElement !== ed) node = node.parentElement;
+    return (node && node !== ed && ed.contains(node)) ? node : null;
+  }
+
+  function positionHandle(block) {
+    const r = block.getBoundingClientRect();
+    let left = r.left - 30;
+    if (left < 4) left = r.left + 4;
+    handle.style.left = left + 'px';
+    handle.style.top = (r.top + 2) + 'px';
+    handle.style.display = 'flex';
+  }
+
+  ed.addEventListener('mousemove', e => {
+    if (draggingBlock) return;
+    const block = topLevelBlockFromPoint(e.clientX, e.clientY);
+    if (block) { hoveredBlock = block; positionHandle(block); }
+    else { hoveredBlock = null; handle.style.display = 'none'; }
+  });
+  ed.addEventListener('mouseleave', () => {
+    if (!draggingBlock) { hoveredBlock = null; handle.style.display = 'none'; }
+  });
+
+  handle.addEventListener('pointerdown', e => {
+    if (!hoveredBlock) return;
+    e.preventDefault();
+    draggingBlock = hoveredBlock;
+    draggingBlock.classList.add('block-dragging');
+    handle.classList.add('grabbing');
+    handle.setPointerCapture(e.pointerId);
+  });
+
+  handle.addEventListener('pointermove', e => {
+    if (!draggingBlock) return;
+    handle.style.left = (e.clientX - 12) + 'px';
+    handle.style.top = (e.clientY - 12) + 'px';
+    const target = topLevelBlockFromPoint(e.clientX, e.clientY);
+    if (target && target !== draggingBlock) {
+      const r = target.getBoundingClientRect();
+      dropBefore = e.clientY < r.top + r.height / 2;
+      dropTarget = target;
+      indicator.style.display = 'block';
+      indicator.style.left = r.left + 'px';
+      indicator.style.width = r.width + 'px';
+      indicator.style.top = (dropBefore ? r.top - 2 : r.bottom + 2) + 'px';
+    }
+  });
+
+  handle.addEventListener('pointerup', e => {
+    if (!draggingBlock) return;
+    if (dropTarget && dropTarget !== draggingBlock && ed.contains(dropTarget)) {
+      if (dropBefore) dropTarget.parentNode.insertBefore(draggingBlock, dropTarget);
+      else dropTarget.parentNode.insertBefore(draggingBlock, dropTarget.nextSibling);
+    }
+    draggingBlock.classList.remove('block-dragging');
+    handle.classList.remove('grabbing');
+    draggingBlock = null;
+    dropTarget = null;
+    indicator.style.display = 'none';
+    handle.style.display = 'none';
   });
 }
 
@@ -1306,6 +1398,7 @@ function initDashboardEditor() {
 
   function onReady() {
     injectEditorStyles();
+    if ($('artEditor')) setupArticleEditors();
     loadGallery().then(() => {
       if ($('articleList')) loadArticles();
       if ($('quoteTableBody')) loadQuotes();
