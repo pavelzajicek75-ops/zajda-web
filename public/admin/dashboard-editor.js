@@ -636,6 +636,7 @@ function setupArticleEditors() {
   ['artEditor', 'aboutEditor'].forEach(id => {
     const ed = $(id);
     if (!ed) return;
+    promoteNestedImages(id);
     ed.addEventListener('click', e => {
       const img = e.target.closest('img.editor-img');
       if (!img) {
@@ -654,6 +655,22 @@ function setupArticleEditors() {
     });
     ed.addEventListener('dragstart', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
     initBlockDragSystem(id);
+  });
+}
+
+/* Obrázky vložené postaru (schované uvnitř odstavce) "vytáhne" ven jako
+   vlastní blok, aby šly přesouvat myší nezávisle na okolním textu — stejně
+   jako nově vkládané obrázky. Bezpečné volat opakovaně (idempotentní). */
+function promoteNestedImages(editorId) {
+  const ed = $(editorId);
+  if (!ed) return;
+  ed.querySelectorAll('img.editor-img').forEach(img => {
+    if (img.parentElement === ed) return;
+    let block = img.parentElement;
+    while (block && block.parentElement !== ed) block = block.parentElement;
+    if (block && block !== ed && ed.contains(block)) {
+      block.after(img);
+    }
   });
 }
 
@@ -857,24 +874,40 @@ function insertImgUrl(editorId, url, align) {
   let style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:pointer;';
   if (align === 'left') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 1rem 0.5rem 0;float:left;display:block;cursor:pointer;';
   else if (align === 'right') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 0 0.5rem 1rem;float:right;display:block;cursor:pointer;';
-  const html = `<img src="${url}" style="${style}" class="editor-img" draggable="false">`;
   ed.focus();
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `<img src="${url}" style="${style}" class="editor-img" draggable="false">`;
+  const imgNode = wrapper.firstElementChild;
+
+  /* Obrázek vždy vložíme jako VLASTNÍ blok (přímé dítě editoru), hned za
+     odstavec, ve kterém je kurzor — ne doprostřed textu. Díky tomu jde
+     obrázek přesouvat myší nezávisle na okolním textu (viz blok drag&drop),
+     a přitom dál obtéká přes zarovnání vlevo/vpravo. */
   const sel = window.getSelection();
+  let refBlock = null;
   if (sel.rangeCount > 0) {
     const range = sel.getRangeAt(0);
-    if (ed.contains(range.commonAncestorContainer)) {
-      range.deleteContents();
-      const frag = range.createContextualFragment(html);
-      range.insertNode(frag);
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    } else {
-      ed.insertAdjacentHTML('beforeend', html);
+    let node = range.commonAncestorContainer;
+    if (ed.contains(node)) {
+      while (node && node !== ed && node.parentElement !== ed) node = node.parentElement;
+      if (node && node !== ed && ed.contains(node)) refBlock = node;
     }
-  } else {
-    ed.insertAdjacentHTML('beforeend', html);
   }
+
+  if (refBlock) {
+    refBlock.after(imgNode);
+  } else {
+    ed.appendChild(imgNode);
+  }
+
+  // Kurzor za obrázek, ať se dá plynule pokračovat v psaní/dalším vkládání
+  const newRange = document.createRange();
+  newRange.setStartAfter(imgNode);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+
   const modal = document.querySelector('.modal');
   if (modal) modal.remove();
   setTimeout(() => setupArticleEditors(), 50);
