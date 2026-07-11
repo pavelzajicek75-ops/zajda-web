@@ -343,6 +343,37 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 #artEditor img.editor-img, #aboutEditor img.editor-img { max-width: 100%; height: auto; border-radius: var(--r-sm); transition: outline 0.15s; }
 #artEditor img.editor-img[data-active], #aboutEditor img.editor-img[data-active] { outline: 3px solid var(--blue); }
 
+/* === BLOK DRAG&DROP (přesouvání odstavců/obrázků myší, jako sazba novin) === */
+.block-drag-handle {
+  position: fixed;
+  width: 24px; height: 24px;
+  display: none; align-items: center; justify-content: center;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: 14px;
+  z-index: 500;
+  user-select: none;
+  touch-action: none;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.12s, color 0.12s, transform 0.12s;
+}
+.block-drag-handle:hover { background: var(--accent); color: #fff; transform: scale(1.08); }
+.block-drag-handle.grabbing { cursor: grabbing; background: var(--accent); color: #fff; }
+.block-dragging { opacity: 0.35; }
+.block-drop-indicator {
+  position: fixed;
+  display: none;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  z-index: 499;
+  box-shadow: 0 0 10px var(--accent-soft);
+  pointer-events: none;
+}
+
 /* === IMG TOOLBAR (zakotvený v editor-toolbar) === */
 #img-toolbar { animation: toolbarIn 0.2s var(--ease); }
 @keyframes toolbarIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
