@@ -1,0 +1,109 @@
+# Changelog — Admin dashboard (Zajda)
+
+Poznámky k tomu, co dashboard umí a kdy to přibylo. Verze odpovídají
+cache-bust parametru `?v=...` na `style.css` / `dashboard-core.js` /
+`dashboard-editor.js` v `dashboard.html`.
+
+`dashboard-editor.js` byl původně "needěnit", ale postupně jsme do něj
+sáhli, protože nová zadání (jemné doostření, stíny/světla, drag&drop
+bloků...) si to vyžádala. Pokud se v budoucnu vrátíme k pravidlu
+needěnit, je potřeba to výslovně říct.
+
+---
+
+## v20260718 — Přeuspořádatelný a roztažitelný ribbon
+- **Režim "↕️ Uspořádat"** — tlačítko v ribbon toolbaru; po zapnutí jde
+  tlačítka/selecty v aktuální liště přetahovat myší, pořadí se uloží do
+  `localStorage` (per záložka). Mimo tenhle režim klikání funguje
+  normálně (blokace kliknutí za běhu přetahování, ať se nic omylem
+  nespustí).
+- **Úchyt na spodním okraji ribbon toolbaru** — tažením nahoru/dolů jde
+  měnit jeho výšku (54–320 px), taky persistováno.
+- Každý ovládací prvek v ribbonu má `data-key="..."` — nutné pro
+  zapamatování pořadí. **Nové prvky musí mít data-key taky.**
+
+## v20260717 — Konsolidace + finální kontrola
+- Kompletní cross-check ID mezi HTML a JS, ověření syntaxe všech
+  souborů, sjednocená cache-bust verze napříč všemi odkazy.
+
+## v20260716 — Oprava přesouvání obrázků v článcích
+- Nové obrázky se vždy vkládají jako vlastní blok (sourozenec odstavce),
+  ne schované uvnitř textu — jinak nešly přesouvat nezávisle.
+- Staré/existující obrázky vložené uvnitř odstavce se automaticky
+  "vytáhnou" ven při otevření článku k editaci (`promoteNestedImages`).
+
+## v20260715 — Vytváření/mazání prázdných složek v galerii
+- **➕ Nová složka** — založí prázdnou složku (uloženo v `localStorage`,
+  dokud do ní něco nenahraješ).
+- **🗑 Smazat prázdnou složku** — jen pokud v ní nejsou žádné fotky.
+
+## v20260714 — Virtuální složky v galerii
+- Bez zásahu do backendu: složka = prefix v názvu souboru
+  `[Název] soubor.jpg`, parsuje se čistě na klientovi.
+- Filtr podle složky v ribbonu, pole "Do složky" při nahrávání,
+  hromadné "📁 Přesunout do složky" pro už nahrané fotky (re-upload
+  pod novým názvem, obsah beze změny).
+- Odznak 📁 na dlaždici fotky se složkou.
+
+## v20260713 — Drag & drop bloků v článcích
+- Plovoucí úchyt **⠿** se objeví při najetí na blok (odstavec, nadpis,
+  obrázek...) v `#artEditor` / `#aboutEditor`. Přetažením se blok
+  přesune jinam v textu — text kolem obrázků dál obtéká přes
+  zarovnání ◀Vlevo/Vpravo▶ (newspaper-style layout).
+- Funguje myší i dotykem (Pointer Events API — funguje na iPadu).
+- Handle/indikátor žijí mimo `contenteditable`, takže se nikdy neuloží
+  do obsahu článku.
+
+## v20260712 — Kompletní modernizace vzhledu
+- Nová paleta (hlubší navy, sytější oranžová), fonty **Space Grotesk**
+  (nadpisy/značka), **Inter** (UI text), **JetBrains Mono** (čísla,
+  EXIF, velikosti souborů).
+- Plovoucí "pilulka" indikátor pod aktivní záložkou (animovaný posun).
+- Karty/modaly s jemnými stíny + `backdrop-blur`, viditelný focus-ring,
+  `prefers-reduced-motion` respektováno.
+- `injectEditorStyles()` v `dashboard-editor.js` vyřazen (duplikoval a
+  přepisoval styly starými barvami) — všechno teď žije v `style.css`.
+
+## v20260711 — Editor fotek: Stíny/Světla/Živost, předvolby, responzivita
+- **Stíny/Světla** — vlastní tónová křivka přes dynamický SVG filtr
+  (`feComponentTransfer`), živý náhled i přesný pixelový přepočet při
+  ukládání.
+- **Živost** (vibrance) — chytřejší sytost, šetří už syté pixely a
+  pleťové tóny (na rozdíl od ploché sytosti).
+- **Předvolby** (Černobílá, Vintage, Teplý/Studený tón, Vysoký kontrast,
+  Živé barvy, Film Noir) — dropdown, nastaví kombinaci filtrů najednou.
+- Responzivní tiery: desktop → iPad landscape → iPad portrait/tablet →
+  mobil.
+- Oprava: vynucené překreslení (`filter: none` → reflow → zpět) pro
+  dynamické SVG filtry (doostření, tón), protože prohlížeč jinak
+  ignoroval změny atributů beze změny textu vlastnosti `filter`.
+
+## v20260710 — Sticky topbar fix
+- Header + taby + toolbar sjednoceny do jednoho `.dash-topbar` s
+  `position: sticky`, aby zůstaly nahoře při scrollování (dřív jen
+  header, taby/toolbar odscrollovávaly pryč).
+
+## v20260709 — Rychlý výběr velikosti/kvality při uploadu
+- Dva selecty přímo v ribbonu vedle "Nahrát" (místo nutnosti pokaždé
+  otvírat ⚙️ Nastavení).
+
+## v20260708 — Přestavba na ribbon layout
+- Sidebar → header + ribbon taby + kontextový toolbar (jako MS Word).
+- Hromadná úprava velikosti/kvality vybraných fotek (JPG, později 99 %
+  místo 100 % — 100% JPEG je pořád ztrátové, takže strop dává smysl).
+- EXIF čtečka (vlastní, bez knihovny — parsuje JPEG bajty přímo,
+  stahuje jen prvních 128 KB přes Range hlavičku).
+- Rozšířený WYSIWYG toolbar v "O Zajdovi" na úroveň Článků.
+- Upload s progress barem, kompresí, retry logikou.
+
+---
+
+## Poznámky pro budoucí práci
+- **`data-key`** povinné na nových prvcích v ribbon toolbaru (jinak
+  nejde zapamatovat jejich pořadí).
+- **Virtuální složky** jsou jen klientský trik (prefix v názvu souboru).
+  Skutečné server-side složky by potřebovaly vidět
+  `functions/api/[[path]].js` (endpointy `/api/photos/*`).
+- Soubory rostou (`dashboard-editor.js` ~1450 řádků) — až to začne být
+  nepřehledné, zvážit přeuspořádání funkcí podle tématu (galerie /
+  upload / EXIF / editor fotek / WYSIWYG dohromady).
