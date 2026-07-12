@@ -5,6 +5,60 @@
 /* === UTILITY === */
 function $(id) { return document.getElementById(id); }
 
+/* === TOAST NOTIFIKACE (náhrada za alert()) === */
+function showToast(message, type = 'info') {
+  let host = document.getElementById('toastHost');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'toastHost';
+    host.className = 'toast-host';
+    document.body.appendChild(host);
+  }
+  const icons = { info: 'ℹ️', success: '✅', error: '⚠️' };
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-msg"></span>`;
+  toast.querySelector('.toast-msg').textContent = message;
+  host.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('toast-in'));
+  const remove = () => {
+    toast.classList.remove('toast-in');
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 220);
+  };
+  const timer = setTimeout(remove, type === 'error' ? 5000 : 3200);
+  toast.addEventListener('click', () => { clearTimeout(timer); remove(); });
+}
+
+/* === VLASTNÍ POTVRZOVACÍ MODAL (náhrada za confirm()) ===
+   Vrací Promise<boolean> — použití: if (!(await showConfirm('Smazat?'))) return; */
+function showConfirm(message, { danger = false, confirmText = 'Potvrdit', cancelText = 'Zrušit' } = {}) {
+  return new Promise(resolve => {
+    const m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = `
+      <div class="modal-box" style="max-width:380px">
+        <h3>${danger ? '⚠️ Potvrzení' : '❓ Potvrzení'}</h3>
+        <p style="color:var(--text-muted);font-size:14px;line-height:1.5"></p>
+        <div class="modal-actions">
+          <button class="btn ${danger ? 'btn-red' : 'btn-blue'}" data-act="yes"></button>
+          <button class="btn" data-act="no"></button>
+        </div>
+      </div>`;
+    m.querySelector('p').textContent = message;
+    m.querySelector('[data-act="yes"]').textContent = confirmText;
+    m.querySelector('[data-act="no"]').textContent = cancelText;
+    const finish = (result) => { m.remove(); resolve(result); };
+    m.querySelector('[data-act="yes"]').onclick = () => finish(true);
+    m.querySelector('[data-act="no"]').onclick = () => finish(false);
+    m.onclick = e => { if (e.target === m) finish(false); };
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { document.removeEventListener('keydown', esc); finish(false); }
+    });
+    document.body.appendChild(m);
+  });
+}
+
 function escapeHtml(t) {
   if (!t) return '';
   return String(t)
@@ -93,7 +147,18 @@ function toggleRibbonReorderMode() {
 function setRibbonItemsDraggable(group, enabled) {
   Array.from(group.children).forEach(child => {
     if (!child.dataset.key) return;
-    child.draggable = enabled;
+    let badge = child.querySelector(':scope > .ribbon-grip-badge');
+    if (enabled) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'ribbon-grip-badge';
+        badge.textContent = '⠿';
+        badge.draggable = true;
+        child.appendChild(badge);
+      }
+    } else if (badge) {
+      badge.remove();
+    }
   });
 }
 
@@ -107,8 +172,12 @@ function initRibbonDragReorder() {
         e.stopPropagation();
       }
     }, true);
+    /* Tažení se zahajuje jen z malého úchytu ⠿ (spolehlivé i pro selecty,
+       které nativní HTML5 drag jinak ignorují) — ne z celého prvku. */
     group.addEventListener('dragstart', e => {
-      const item = e.target.closest('[data-key]');
+      const badge = e.target.closest('.ribbon-grip-badge');
+      if (!badge) return;
+      const item = badge.closest('[data-key]');
       if (!item || item.parentElement !== group || !group.classList.contains('reorder-mode')) return;
       ribbonDraggedItem = item;
       item.classList.add('ribbon-item-dragging');
@@ -149,35 +218,6 @@ function restoreRibbonOrder(name) {
   order.forEach(key => {
     const el = byKey.get(key);
     if (el) group.appendChild(el);
-  });
-}
-
-/* === ZMĚNA VÝŠKY RIBBON TOOLBARU TAŽENÍM === */
-function initRibbonResize() {
-  const toolbar = $('ribbonToolbar');
-  const handle = $('ribbonResizeHandle');
-  if (!toolbar || !handle) return;
-
-  const saved = parseInt(localStorage.getItem('ribbonToolbarHeight'));
-  if (saved) toolbar.style.minHeight = saved + 'px';
-
-  let resizing = false, startY = 0, startH = 0;
-
-  handle.addEventListener('pointerdown', e => {
-    resizing = true;
-    startY = e.clientY;
-    startH = toolbar.offsetHeight;
-    handle.setPointerCapture(e.pointerId);
-  });
-  handle.addEventListener('pointermove', e => {
-    if (!resizing) return;
-    const newH = Math.max(54, Math.min(320, startH + (e.clientY - startY)));
-    toolbar.style.minHeight = newH + 'px';
-  });
-  handle.addEventListener('pointerup', () => {
-    if (!resizing) return;
-    resizing = false;
-    localStorage.setItem('ribbonToolbarHeight', toolbar.offsetHeight);
   });
 }
 
@@ -277,7 +317,7 @@ function openNewFolderModal() {
 
 function createNewFolder() {
   const name = $('newFolderName')?.value.trim();
-  if (!name) { alert('Zadej název složky.'); return; }
+  if (!name) { showToast('Zadej název složky.', 'info'); return; }
   const manual = getManualFolders();
   if (!manual.includes(name)) { manual.push(name); saveManualFolders(manual); }
   $('newFolderModal')?.classList.add('hidden');
@@ -292,9 +332,9 @@ function createNewFolder() {
 function deleteEmptyFolder() {
   const sel = $('folderFilter');
   const folder = sel?.value || '';
-  if (!folder || folder === '__none__') { alert('Nejdřív ve filtru vyber konkrétní složku, kterou chceš smazat.'); return; }
+  if (!folder || folder === '__none__') { showToast('Nejdřív ve filtru vyber konkrétní složku, kterou chceš smazat.', 'info'); return; }
   const hasPhotos = G.photos.some(p => parsePhotoFolder(p.name).folder === folder);
-  if (hasPhotos) { alert('Tahle složka obsahuje fotky — nejdřív je přesuň jinam nebo smaž, teprve pak půjde složka odstranit.'); return; }
+  if (hasPhotos) { showToast('Tahle složka obsahuje fotky — nejdřív je přesuň jinam nebo smaž, teprve pak půjde složka odstranit.', 'info'); return; }
   const manual = getManualFolders().filter(f => f !== folder);
   saveManualFolders(manual);
   if (sel) sel.value = '';
@@ -318,9 +358,11 @@ function refreshFolderControls() {
 function sortedPhotos() {
   const mode = $('sortMode')?.value || 'newest';
   const folderSel = $('folderFilter')?.value || '';
+  const query = $('gallerySearch')?.value.trim().toLowerCase() || '';
   let arr = [...G.photos];
   if (folderSel === '__none__') arr = arr.filter(p => !parsePhotoFolder(p.name).folder);
   else if (folderSel) arr = arr.filter(p => parsePhotoFolder(p.name).folder === folderSel);
+  if (query) arr = arr.filter(p => (p.name || '').toLowerCase().includes(query));
   if (mode === 'newest') arr.sort((a, b) => new Date(b.uploaded || b.date || 0) - new Date(a.uploaded || a.date || 0));
   else if (mode === 'oldest') arr.sort((a, b) => new Date(a.uploaded || a.date || 0) - new Date(b.uploaded || b.date || 0));
   else if (mode === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -337,7 +379,11 @@ function renderGallery() {
 
   const arr = sortedPhotos();
   if (!arr.length) {
-    grid.innerHTML = '<div style="color:#64748b;padding:2rem;text-align:center;grid-column:1/-1">V této složce zatím žádné fotky.</div>';
+    const query = $('gallerySearch')?.value.trim() || '';
+    const msg = query
+      ? `Žádná fotka neodpovídá hledání „${escapeHtml(query)}“.`
+      : 'V této složce zatím žádné fotky.';
+    grid.innerHTML = `<div style="color:#64748b;padding:2rem;text-align:center;grid-column:1/-1">${msg}</div>`;
     return;
   }
 
@@ -519,8 +565,8 @@ function toggleSel(id) {
 }
 
 async function bulkDelete() {
-  if (!G.selected.size) { alert('Nejsou vybrány žádné fotky.'); return; }
-  if (!confirm(`Opravdu smazat ${G.selected.size} vybraných fotek?`)) return;
+  if (!G.selected.size) { showToast('Nejsou vybrány žádné fotky.', 'info'); return; }
+  if (!(await showConfirm(`Opravdu smazat ${G.selected.size} vybraných fotek?`, { danger: true, confirmText: 'Smazat' }))) return;
   const keys = [...G.selected]
     .map(id => G.photos.find(p => p.id === id)?.key)
     .filter(Boolean)
@@ -538,7 +584,7 @@ async function bulkDelete() {
 
 /* === HROMADNÁ ÚPRAVA VYBRANÝCH FOTEK (velikost + JPG kvalita) === */
 function openMoveToFolderModal() {
-  if (!G.selected.size) { alert('Nejdřív vyber fotky zaškrtnutím checkboxu.'); return; }
+  if (!G.selected.size) { showToast('Nejdřív vyber fotky zaškrtnutím checkboxu.', 'info'); return; }
   if ($('moveFolderCount')) $('moveFolderCount').textContent = `Vybráno: ${G.selected.size} fotek`;
   if ($('moveFolderName')) $('moveFolderName').value = '';
   $('moveToFolderModal')?.classList.remove('hidden');
@@ -590,7 +636,7 @@ async function applyMoveToFolder() {
 }
 
 function openBulkEditModal() {
-  if (!G.selected.size) { alert('Nejdřív vyber fotky zaškrtnutím checkboxu.'); return; }
+  if (!G.selected.size) { showToast('Nejdřív vyber fotky zaškrtnutím checkboxu.', 'info'); return; }
   if ($('bulkEditCount')) $('bulkEditCount').textContent = `Vybráno: ${G.selected.size} fotek`;
   $('bulkEditModal')?.classList.remove('hidden');
 }
@@ -846,7 +892,7 @@ async function uploadFiles(input) {
       await uploadOne(compressed, uploadName);
     } catch (e) {
       console.error('Chyba nahrávání souboru', file.name, e);
-      alert('Nepodařilo se nahrát ' + file.name + ': ' + e.message);
+      showToast('Nepodařilo se nahrát ' + file.name + ': ' + e.message, 'error');
     }
   }
 
@@ -868,7 +914,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('dashActiveTab') || 'galleries';
   showTab(saved);
   initRibbonDragReorder();
-  initRibbonResize();
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => moveTabIndicator());
   }
