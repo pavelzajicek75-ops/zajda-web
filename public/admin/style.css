@@ -166,8 +166,6 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spac
   background: var(--surface);
   border-bottom: 1px solid var(--border-soft);
   min-height: 54px;
-  max-height: 320px;
-  overflow-y: auto;
   box-shadow: var(--shadow-sm);
 }
 .ribbon-reorder-toggle {
@@ -187,32 +185,31 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spac
 }
 .ribbon-group.active { display: flex; }
 
-/* Režim přeuspořádání — vizuálně naznačí, že prvky jde tahat */
+/* Režim přeuspořádání — ovládací prvky (select/input/button) se dočasně
+   "vypnou" (pointer-events:none), aby nekradly myš při zahájení tažení;
+   veškerá interakce jde přes malý oranžový úchyt ⠿ v rohu. Spolehlivé
+   napříč prohlížeči i pro selecty, které jinak nativní drag ignorují. */
 .ribbon-group.reorder-mode > * {
-  cursor: grab;
+  position: relative;
+  pointer-events: none;
   outline: 1px dashed var(--border);
-  outline-offset: 3px;
+  outline-offset: 4px;
   border-radius: var(--r-sm);
 }
 .ribbon-group.reorder-mode > *:hover { outline-color: var(--accent); }
+.ribbon-grip-badge {
+  position: absolute; top: -10px; left: -10px;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  pointer-events: auto;
+  cursor: grab;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+}
 .ribbon-item-dragging { opacity: 0.35; }
-
-.ribbon-resize-handle {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  height: 8px;
-  cursor: ns-resize;
-  touch-action: none;
-  display: flex; align-items: flex-end; justify-content: center;
-}
-.ribbon-resize-handle::after {
-  content: '';
-  width: 44px; height: 4px;
-  margin-bottom: 2px;
-  background: var(--border);
-  border-radius: var(--r-pill);
-  transition: background 0.15s;
-}
-.ribbon-resize-handle:hover::after { background: var(--accent); }
 
 .ribbon-sep {
   width: 1px; height: 22px;
@@ -460,6 +457,30 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 }
 @keyframes modalContentIn { from { opacity: 0; transform: scale(0.96) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 .modal-box h3 { margin: 0 0 1.1rem; color: var(--text); font-family: var(--font-display); }
+
+/* === TOAST NOTIFIKACE === */
+.toast-host {
+  position: fixed; top: 16px; right: 16px; z-index: 5000;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex; align-items: center; gap: 0.6rem;
+  background: var(--surface-2); border: 1px solid var(--border-soft);
+  border-radius: var(--r-md); padding: 0.75rem 1rem;
+  box-shadow: var(--shadow-lg);
+  max-width: 340px; font-size: 13.5px; color: var(--text);
+  cursor: pointer; pointer-events: auto;
+  opacity: 0; transform: translateX(24px);
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+}
+.toast.toast-in { opacity: 1; transform: translateX(0); }
+.toast.toast-out { opacity: 0; transform: translateX(24px); }
+.toast-success { border-left: 3px solid var(--green); }
+.toast-error { border-left: 3px solid var(--red); }
+.toast-info { border-left: 3px solid var(--blue); }
+.toast-icon { font-size: 15px; flex-shrink: 0; }
+.toast-msg { line-height: 1.4; }
 .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.1rem; }
 .modal img[style*="cursor:pointer"] { transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease); border-radius: var(--r-sm); }
 .modal img[style*="cursor:pointer"]:hover { transform: scale(1.04); box-shadow: var(--shadow-md); }
@@ -521,6 +542,15 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
     linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
   background-size: 33.33% 33.33%;
   pointer-events: none;
+}
+.straighten-grid {
+  position: absolute; inset: 0; z-index: 6; display: none;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.55) 1px, transparent 1px);
+  background-size: 33.333% 33.333%;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.25);
 }
 .crop-handle {
   position: absolute; width: 14px; height: 14px;
