@@ -26,16 +26,16 @@ window.G = window.G || { photos: [] };
   svg.style.cssText = 'position:absolute;pointer-events:none;';
   svg.innerHTML = `
     <defs>
-      <filter id="ed-sharpen" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="ed-sharpen" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
         <feConvolveMatrix order="3" kernelMatrix="0 -1 0 -1 5 -1 0 -1 0" preserveAlpha="true"/>
       </filter>
-      <filter id="ed-sharpen-strong" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="ed-sharpen-strong" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
         <feConvolveMatrix order="3" kernelMatrix="0 -1.5 0 -1.5 7 -1.5 0 -1.5 0" preserveAlpha="true"/>
       </filter>
-      <filter id="ed-sharpen-dynamic" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="ed-sharpen-dynamic" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
         <feConvolveMatrix id="ed-sharpen-dynamic-matrix" order="3" kernelMatrix="0 0 0 0 1 0 0 0 0" preserveAlpha="true"/>
       </filter>
-      <filter id="ed-tone-dynamic" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="ed-tone-dynamic" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
         <feComponentTransfer>
           <feFuncR id="ed-tone-r" type="table" tableValues="0 1"/>
           <feFuncG id="ed-tone-g" type="table" tableValues="0 1"/>
@@ -64,33 +64,41 @@ function updateSharpenFilter(strength) {
 /* === STÍNY / SVĚTLA (tónová křivka) ===
    Vlastní jednoduchá tónová křivka: stíny zvedají/snižují tmavé partie,
    světla zvedají/snižují světlé partie, střední tóny se skoro nemění. */
-function toneCurveValue(x, shadows, highlights) {
+function toneCurveValue(x, shadows, highlights, blackPoint, whitePoint) {
+  const bp = (blackPoint || 0) / 255;
+  const wp = (whitePoint == null ? 255 : whitePoint) / 255;
+  let lx = wp > bp ? (x - bp) / (wp - bp) : x;
+  lx = Math.max(0, Math.min(1, lx));
   const s = shadows / 100, h = highlights / 100;
-  const shadowWeight = Math.pow(1 - x, 2);
-  const highlightWeight = Math.pow(x, 2);
-  const y = x + s * 0.5 * shadowWeight + h * 0.5 * highlightWeight;
+  const shadowWeight = Math.pow(1 - lx, 2);
+  const highlightWeight = Math.pow(lx, 2);
+  const y = lx + s * 0.5 * shadowWeight + h * 0.5 * highlightWeight;
   return Math.max(0, Math.min(1, y));
 }
 
-function buildToneTableSVG(shadows, highlights, steps) {
+function buildToneTableSVG(shadows, highlights, blackPoint, whitePoint, steps) {
   const vals = [];
   for (let i = 0; i <= steps; i++) {
-    vals.push(toneCurveValue(i / steps, shadows, highlights).toFixed(4));
+    vals.push(toneCurveValue(i / steps, shadows, highlights, blackPoint, whitePoint).toFixed(4));
   }
   return vals.join(' ');
 }
 
-function buildToneLUT256(shadows, highlights) {
+function buildToneLUT256(shadows, highlights, blackPoint, whitePoint) {
   const lut = new Uint8ClampedArray(256);
   for (let i = 0; i < 256; i++) {
-    lut[i] = Math.round(toneCurveValue(i / 255, shadows, highlights) * 255);
+    lut[i] = Math.round(toneCurveValue(i / 255, shadows, highlights, blackPoint, whitePoint) * 255);
   }
   return lut;
 }
 
-function updateToneFilter(shadows, highlights) {
-  if (!shadows && !highlights) return;
-  const table = buildToneTableSVG(shadows, highlights, 32);
+function toneIsActive(shadows, highlights, blackPoint, whitePoint) {
+  return !!shadows || !!highlights || !!blackPoint || (whitePoint != null && whitePoint < 255);
+}
+
+function updateToneFilter(shadows, highlights, blackPoint, whitePoint) {
+  if (!toneIsActive(shadows, highlights, blackPoint, whitePoint)) return;
+  const table = buildToneTableSVG(shadows, highlights, blackPoint, whitePoint, 32);
   ['ed-tone-r', 'ed-tone-g', 'ed-tone-b'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.setAttribute('tableValues', table);
@@ -98,9 +106,9 @@ function updateToneFilter(shadows, highlights) {
 }
 
 /* Pixelová aplikace tónové křivky při finálním ukládání (přesná, 256 kroků) */
-function applyToneLUT(ctx, w, h, shadows, highlights) {
-  if (!shadows && !highlights) return;
-  const lut = buildToneLUT256(shadows, highlights);
+function applyToneLUT(ctx, w, h, shadows, highlights, blackPoint, whitePoint) {
+  if (!toneIsActive(shadows, highlights, blackPoint, whitePoint)) return;
+  const lut = buildToneLUT256(shadows, highlights, blackPoint, whitePoint);
   const imgData = ctx.getImageData(0, 0, w, h);
   const d = imgData.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -109,6 +117,32 @@ function applyToneLUT(ctx, w, h, shadows, highlights) {
     d[i + 2] = lut[d[i + 2]];
   }
   ctx.putImageData(imgData, 0, 0);
+}
+
+/* === NAROVNÁNÍ HORIZONTU ===
+   Jemná rotace (±45°) nezávislá na tlačítkách ⟲⟳90° — obojí se sčítá
+   do výsledného úhlu. Volitelná vodicí mřížka pro zarovnání. */
+function setStraighten(val) {
+  ED.straighten = parseFloat(val);
+  const el = $('fval-straighten');
+  if (el) el.textContent = ED.straighten + '°';
+  updatePreviewTransform();
+}
+
+function toggleStraightenGrid(show) {
+  const preview = $('editPreview');
+  if (!preview) return;
+  let grid = preview.querySelector('.straighten-grid');
+  if (show) {
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.className = 'straighten-grid';
+      preview.appendChild(grid);
+    }
+    grid.style.display = 'block';
+  } else if (grid) {
+    grid.style.display = 'none';
+  }
 }
 
 /* === ŽIVOST (vibrance) ===
@@ -138,12 +172,13 @@ let ED = {
   img: null,
   scale: 1,
   rotate: 0,
+  straighten: 0,
   panX: 0,
   panY: 0,
   crop: 'free',
   export: 'max',
   blobUrl: null,
-  filters: { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
+  filters: { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
   cropRect: null,
   isDraggingImage: false,
   isDraggingCrop: false,
@@ -174,15 +209,22 @@ async function openEditor(id) {
   const p = G.photos.find(x => x.id === id);
   if (!p) return;
   ED.photo = p;
-  ED.scale = 1; ED.rotate = 0; ED.panX = 0; ED.panY = 0;
+  ED.scale = 1; ED.rotate = 0; ED.straighten = 0; ED.panX = 0; ED.panY = 0;
   ED.crop = 'free'; ED.export = 'max'; ED.cropRect = null;
-  ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false };
+  ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false };
   if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
   const aic = $('aiCheck');
   if (aic) aic.checked = false;
+  const straightSlider = $('fslider-straighten');
+  if (straightSlider) straightSlider.value = 0;
+  const straightLabel = $('fval-straighten');
+  if (straightLabel) straightLabel.textContent = '0°';
+  const gridToggle = $('gridToggle');
+  if (gridToggle) gridToggle.checked = false;
+  toggleStraightenGrid(false);
   updateFilterLabels();
   updateSharpenFilter(0);
-  updateToneFilter(0, 0);
+  updateToneFilter(0, 0, 0, 255);
   const presetSel = $('presetSelect');
   if (presetSel) presetSel.value = '';
   syncFilterSlidersFromState();
@@ -211,12 +253,12 @@ async function openEditor(id) {
       vig.style.opacity = 0;
     };
     img.onerror = () => {
-      alert('Obrázek se nepodařilo načíst.');
+      showToast('Obrázek se nepodařilo načíst.', 'error');
       URL.revokeObjectURL(url); ED.blobUrl = null;
     };
     img.src = url;
   } catch {
-    alert('Obrázek se nepodařilo načíst.');
+    showToast('Obrázek se nepodařilo načíst.', 'error');
   }
 }
 
@@ -246,7 +288,7 @@ function editorSetZoom(v) { ED.scale = parseFloat(v); updatePreviewTransform(); 
 function updatePreviewTransform() {
   const img = $('editImg');
   if (!img) return;
-  img.style.transform = `translate(${ED.panX}px, ${ED.panY}px) scale(${ED.scale}) rotate(${ED.rotate}deg)`;
+  img.style.transform = `translate(${ED.panX}px, ${ED.panY}px) scale(${ED.scale}) rotate(${ED.rotate + ED.straighten}deg)`;
   applyFilters();
 }
 
@@ -262,8 +304,8 @@ function applyFilters() {
   if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`;
   else s += ` hue-rotate(${f.temp * 0.3}deg)`;
   if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
-  if (f.shadows || f.highlights) {
-    updateToneFilter(f.shadows, f.highlights);
+  if (toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
+    updateToneFilter(f.shadows, f.highlights, f.blackPoint, f.whitePoint);
     s += ' url(#ed-tone-dynamic)';
   }
   if (f.sharpen > 0 || f.ai) {
@@ -287,14 +329,14 @@ function applyFilters() {
 
 function updateFilterLabels() {
   const f = ED.filters;
-  const ids = { exposure:'fval-exposure', contrast:'fval-contrast', saturation:'fval-saturation', vibrance:'fval-vibrance', shadows:'fval-shadows', highlights:'fval-highlights', temp:'fval-temp', vignette:'fval-vignette', sharpen:'fval-sharpen', denoise:'fval-denoise' };
+  const ids = { exposure:'fval-exposure', contrast:'fval-contrast', saturation:'fval-saturation', vibrance:'fval-vibrance', shadows:'fval-shadows', highlights:'fval-highlights', blackPoint:'fval-blackPoint', whitePoint:'fval-whitePoint', temp:'fval-temp', vignette:'fval-vignette', sharpen:'fval-sharpen', denoise:'fval-denoise' };
   for (const [k, id] of Object.entries(ids)) { const el = $(id); if (el) el.textContent = f[k]; }
 }
 
 /* Nastaví polohy všech posuvníků podle aktuálního ED.filters (např. po výběru předvolby) */
 function syncFilterSlidersFromState() {
   const f = ED.filters;
-  const ids = ['exposure', 'contrast', 'saturation', 'vibrance', 'shadows', 'highlights', 'temp', 'vignette', 'sharpen', 'denoise'];
+  const ids = ['exposure', 'contrast', 'saturation', 'vibrance', 'shadows', 'highlights', 'blackPoint', 'whitePoint', 'temp', 'vignette', 'sharpen', 'denoise'];
   ids.forEach(k => { const el = $('fslider-' + k); if (el) el.value = f[k]; });
   const aic = $('aiCheck');
   if (aic) aic.checked = !!f.ai;
@@ -306,7 +348,9 @@ function setFilter(key, val) {
   const el = $('fval-' + key);
   if (el) el.textContent = val;
   if (key === 'sharpen') updateSharpenFilter(ED.filters.sharpen);
-  if (key === 'shadows' || key === 'highlights') updateToneFilter(ED.filters.shadows, ED.filters.highlights);
+  if (key === 'shadows' || key === 'highlights' || key === 'blackPoint' || key === 'whitePoint') {
+    updateToneFilter(ED.filters.shadows, ED.filters.highlights, ED.filters.blackPoint, ED.filters.whitePoint);
+  }
   const presetSel = $('presetSelect');
   if (presetSel) presetSel.value = '';
   applyFilters();
@@ -314,14 +358,14 @@ function setFilter(key, val) {
 
 /* === PŘEDVOLBY (jako styly ve Photoshopu) === */
 const FILTER_PRESETS = {
-  none:         { exposure: 0,   contrast: 0,   saturation: 0,   vibrance: 0,   shadows: 0,   highlights: 0,   temp: 0,   vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
-  bw:           { exposure: 0,   contrast: 15,  saturation: -100, vibrance: 0,  shadows: 5,   highlights: -10, temp: 0,   vignette: 15, sharpen: 15, denoise: 0, ai: false },
-  vintage:      { exposure: -5,  contrast: -10, saturation: -25, vibrance: -10, shadows: 10,  highlights: -15, temp: 25,  vignette: 35, sharpen: 0,  denoise: 5, ai: false },
-  warm:         { exposure: 5,   contrast: 5,   saturation: 5,   vibrance: 15,  shadows: 5,   highlights: 0,   temp: 30,  vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
-  cold:         { exposure: 0,   contrast: 8,   saturation: -5,  vibrance: 5,   shadows: 0,   highlights: 0,   temp: -30, vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
-  highContrast: { exposure: 0,   contrast: 35,  saturation: 10,  vibrance: 10,  shadows: -20, highlights: 20,  temp: 0,   vignette: 15, sharpen: 25, denoise: 0, ai: false },
-  vivid:        { exposure: 5,   contrast: 12,  saturation: 15,  vibrance: 40,  shadows: 5,   highlights: -5,  temp: 5,   vignette: 0,  sharpen: 15, denoise: 0, ai: false },
-  filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  temp: -10, vignette: 45, sharpen: 10, denoise: 0, ai: false }
+  none:         { exposure: 0,   contrast: 0,   saturation: 0,   vibrance: 0,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 0,   vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
+  bw:           { exposure: 0,   contrast: 15,  saturation: -100, vibrance: 0,  shadows: 5,   highlights: -10, blackPoint: 5,  whitePoint: 250, temp: 0,   vignette: 15, sharpen: 15, denoise: 0, ai: false },
+  vintage:      { exposure: -5,  contrast: -10, saturation: -25, vibrance: -10, shadows: 10,  highlights: -15, blackPoint: 15, whitePoint: 235, temp: 25,  vignette: 35, sharpen: 0,  denoise: 5, ai: false },
+  warm:         { exposure: 5,   contrast: 5,   saturation: 5,   vibrance: 15,  shadows: 5,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 30,  vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
+  cold:         { exposure: 0,   contrast: 8,   saturation: -5,  vibrance: 5,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: -30, vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
+  highContrast: { exposure: 0,   contrast: 35,  saturation: 10,  vibrance: 10,  shadows: -20, highlights: 20,  blackPoint: 12, whitePoint: 245, temp: 0,   vignette: 15, sharpen: 25, denoise: 0, ai: false },
+  vivid:        { exposure: 5,   contrast: 12,  saturation: 15,  vibrance: 40,  shadows: 5,   highlights: -5,  blackPoint: 0,  whitePoint: 255, temp: 5,   vignette: 0,  sharpen: 15, denoise: 0, ai: false },
+  filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  blackPoint: 20, whitePoint: 240, temp: -10, vignette: 45, sharpen: 10, denoise: 0, ai: false }
 };
 
 function applyPreset(name) {
@@ -428,7 +472,7 @@ function renderCropRect() {
 
 function applyCrop() {
   if (!ED.img || ED.crop === 'free' || !ED.cropRect) return;
-  if (ED.rotate !== 0) { alert('Pro ořez musí být rotace 0°.'); return; }
+  if (ED.rotate !== 0 || ED.straighten !== 0) { showToast('Pro ořez musí být rotace i narovnání horizontu na 0°.', 'info'); return; }
   const preview = $('editPreview'), pW = preview.clientWidth, pH = preview.clientHeight;
   const imgW = ED.img.naturalWidth, imgH = ED.img.naturalHeight;
   const imgDisplayW = imgW * ED.scale, imgDisplayH = imgH * ED.scale;
@@ -440,7 +484,7 @@ function applyCrop() {
   if (srcX + srcW > imgW) srcW = imgW - srcX;
   if (srcY + srcH > imgH) srcH = imgH - srcY;
   srcW = Math.max(1, srcW); srcH = Math.max(1, srcH);
-  if (srcW < 2 || srcH < 2) { alert('Ořez je příliš malý.'); return; }
+  if (srcW < 2 || srcH < 2) { showToast('Ořez je příliš malý.', 'info'); return; }
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(srcW); canvas.height = Math.round(srcH);
   canvas.getContext('2d').drawImage(ED.img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
@@ -556,12 +600,12 @@ async function saveEditor(mode) {
   ctx.filter = filterStr;
   ctx.save();
   ctx.translate(dim.w / 2, dim.h / 2);
-  ctx.rotate(ED.rotate * Math.PI / 180);
+  ctx.rotate((ED.rotate + ED.straighten) * Math.PI / 180);
   const drawScale = Math.min(dim.w / img.naturalWidth, dim.h / img.naturalHeight);
   ctx.drawImage(img, -img.naturalWidth * drawScale / 2, -img.naturalHeight * drawScale / 2, img.naturalWidth * drawScale, img.naturalHeight * drawScale);
   ctx.restore();
-  if (f.shadows || f.highlights) {
-    applyToneLUT(ctx, dim.w, dim.h, f.shadows, f.highlights);
+  if (toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
+    applyToneLUT(ctx, dim.w, dim.h, f.shadows, f.highlights, f.blackPoint, f.whitePoint);
   }
   if (f.vibrance) {
     applyVibrance(ctx, dim.w, dim.h, f.vibrance);
@@ -592,11 +636,12 @@ async function saveEditor(mode) {
   try {
     await uploadWithRetry(fd, 3);
   } catch (e) {
-    alert('Nepodařilo se uložit fotku po 3 pokusech: ' + e.message);
+    showToast('Nepodařilo se uložit fotku po 3 pokusech: ' + e.message, 'error');
     return;
   }
   closeEditor();
   await loadGallery();
+  showToast('Fotka uložena', 'success');
 }
 
 /* === WYSIWYG TOOLBAR === */
@@ -851,7 +896,7 @@ document.addEventListener('click', e => {
 });
 
 function insertImgTo(editorId, align) {
-  if (!G.photos || !G.photos.length) { alert('Nejdřív nahraj fotky do galerie.'); return; }
+  if (!G.photos || !G.photos.length) { showToast('Nejdřív nahraj fotky do galerie.', 'info'); return; }
   const m = document.createElement('div');
   m.className = 'modal';
   m.innerHTML = `
@@ -1018,7 +1063,7 @@ async function editArticle(id) {
     }
     setTimeout(() => setupArticleEditors(), 100);
   } catch (e) {
-    alert('Nepodařilo se načíst článek pro úpravu');
+    showToast('Nepodařilo se načíst článek pro úpravu', 'error');
     console.error(e);
   }
 }
@@ -1028,7 +1073,7 @@ async function editArticle(id) {
 async function createArticle() {
   const title = $('artTitle')?.value.trim();
   const content = $('artEditor')?.innerHTML;
-  if (!title || !content) return alert('Vyplň nadpis a obsah');
+  if (!title || !content) return showToast('Vyplň nadpis a obsah', 'info');
   const payload = {
     title, content,
     slug: generateSlug(title),
@@ -1046,12 +1091,13 @@ async function createArticle() {
     });
     if (!r.ok) throw new Error('Chyba ukládání');
   } catch (e) {
-    alert('Nepodařilo se vytvořit článek');
+    showToast('Nepodařilo se vytvořit článek', 'error');
     console.error(e);
     return;
   }
   resetArticleForm();
   loadArticles();
+  showToast('Článek vytvořen a publikován', 'success');
 }
 
 /* === ČLÁNKY: update === */
@@ -1061,7 +1107,7 @@ async function updateArticle() {
   if (!id) return createArticle();
   const title = $('artTitle')?.value.trim();
   const content = editorEl?.innerHTML;
-  if (!title || !content) return alert('Vyplň nadpis a obsah');
+  if (!title || !content) return showToast('Vyplň nadpis a obsah', 'info');
   const payload = {
     id, title, content,
     slug: generateSlug(title),
@@ -1079,12 +1125,13 @@ async function updateArticle() {
     });
     if (!r.ok) throw new Error('Chyba ukládání');
   } catch (e) {
-    alert('Nepodařilo se uložit změny');
+    showToast('Nepodařilo se uložit změny', 'error');
     console.error(e);
     return;
   }
   resetArticleForm();
   loadArticles();
+  showToast('Změny uloženy', 'success');
 }
 
 /* === ČLÁNKY: skrýt/zobrazit === */
@@ -1098,7 +1145,7 @@ async function publishArticle(id) {
     if (!r.ok) throw new Error('Chyba publikování');
     loadArticles();
   } catch (e) {
-    alert('Nepodařilo se publikovat článek');
+    showToast('Nepodařilo se publikovat článek', 'error');
     console.error(e);
   }
 }
@@ -1113,7 +1160,7 @@ async function unpublishArticle(id) {
     if (!r.ok) throw new Error('Chyba skrývání');
     loadArticles();
   } catch (e) {
-    alert('Nepodařilo se skrýt článek');
+    showToast('Nepodařilo se skrýt článek', 'error');
     console.error(e);
   }
 }
@@ -1143,13 +1190,13 @@ function resetArticleForm() {
 
 /* === ČLÁNKY: smazání === */
 async function deleteArticle(id) {
-  if (!confirm('Opravdu smazat tento článek?')) return;
+  if (!(await showConfirm('Opravdu smazat tento článek?', { danger: true, confirmText: 'Smazat' }))) return;
   try {
     const r = await fetch('/api/articles/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
     if (!r.ok) throw new Error('Chyba mazání');
     loadArticles();
   } catch (e) {
-    alert('Nepodařilo se smazat článek');
+    showToast('Nepodařilo se smazat článek', 'error');
     console.error(e);
   }
 }
@@ -1186,7 +1233,7 @@ async function loadQuotes() {
 
 async function createQuote() {
   const text = $('qText')?.value.trim();
-  if (!text) return alert('Zadej text citátu');
+  if (!text) return showToast('Zadej text citátu', 'info');
   try {
     await fetch('/api/quotes/create', {
       method: 'POST',
@@ -1197,17 +1244,17 @@ async function createQuote() {
     $('qAuthor').value = '';
     loadQuotes();
   } catch (e) {
-    alert('Nepodařilo se uložit citát');
+    showToast('Nepodařilo se uložit citát', 'error');
   }
 }
 
 async function deleteQuote(key) {
-  if (!confirm('Smazat citát?')) return;
+  if (!(await showConfirm('Smazat citát?', { danger: true, confirmText: 'Smazat' }))) return;
   try {
     await fetch('/api/quotes/delete?key=' + key, { method: 'DELETE' });
     loadQuotes();
   } catch {
-    alert('Chyba mazání');
+    showToast('Chyba mazání', 'error');
   }
 }
 
@@ -1250,7 +1297,7 @@ async function loadSubsections() {
 async function createSubsection() {
   const sec = $('ssSection')?.value;
   const name = $('ssName')?.value.trim();
-  if (!sec || !name) return alert('Vyplň sekci a název');
+  if (!sec || !name) return showToast('Vyplň sekci a název', 'info');
   const slug = name.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
@@ -1265,22 +1312,22 @@ async function createSubsection() {
     $('ssOrder').value = '0';
     loadSubsections();
   } catch {
-    alert('Chyba vytváření podsekce');
+    showToast('Chyba vytváření podsekce', 'error');
   }
 }
 
 async function deleteSubsection(id) {
-  if (!confirm('Smazat podsekci?')) return;
+  if (!(await showConfirm('Smazat podsekci?', { danger: true, confirmText: 'Smazat' }))) return;
   try {
     await fetch('/api/subsections/delete?id=' + id, { method: 'DELETE' });
     loadSubsections();
   } catch {
-    alert('Chyba mazání');
+    showToast('Chyba mazání', 'error');
   }
 }
 
 async function pickSubsectionCover(id) {
-  if (!G.photos || !G.photos.length) { alert('Galerie je prázdná. Nejprve nahraj fotky.'); return; }
+  if (!G.photos || !G.photos.length) { showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info'); return; }
   const m = document.createElement('div');
   m.className = 'modal';
   m.innerHTML = `
@@ -1305,7 +1352,7 @@ async function saveSubsectionCover(id, url) {
       body: JSON.stringify({ id, coverUrl: url })
     });
   } catch {
-    alert('Chyba uložení coveru');
+    showToast('Chyba uložení coveru', 'error');
   } finally {
     const m = document.querySelector('.modal');
     if (m) m.remove();
@@ -1342,7 +1389,7 @@ async function loadSectionCovers() {
 }
 
 function pickSectionCover(sectionId) {
-  if (!G.photos || !G.photos.length) { alert('Galerie je prázdná.'); return; }
+  if (!G.photos || !G.photos.length) { showToast('Galerie je prázdná.', 'info'); return; }
   const m = document.createElement('div');
   m.className = 'modal';
   m.innerHTML = '<div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252"><h3 style="margin-bottom:1rem;color:#eef1f8">Cover sekce: ' + escapeHtml(sectionId) + '</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' + G.photos.map(function(p) { return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover(\'' + sectionId + '\',\'' + p.url + '\')">'; }).join('') + '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
@@ -1364,7 +1411,7 @@ async function saveSectionCover(sectionId, url) {
     }
   } catch (e) {
     console.error('Chyba uložení coveru:', e);
-    alert('Nepodařilo se uložit cover: ' + e.message);
+    showToast('Nepodařilo se uložit cover: ' + e.message, 'error');
   } finally {
     var m = document.querySelector('.modal');
     if (m) m.remove();
@@ -1406,9 +1453,10 @@ async function saveAbout() {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     loadAbout();
+    showToast('Uloženo', 'success');
   } catch (e) {
     console.error('Chyba uložení about:', e);
-    alert('Chyba uložení');
+    showToast('Chyba uložení', 'error');
   }
 }
 
