@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260718">
+<link rel="stylesheet" href="style.css?v=20260720">
 </head>
 <body>
 
@@ -47,6 +47,7 @@
       <option value="name">Podle názvu</option>
       <option value="size">Podle velikosti</option>
     </select>
+    <input type="text" id="gallerySearch" class="form-input" data-key="gallerySearch" placeholder="🔎 Hledat podle názvu…" oninput="renderGallery()" style="max-width:180px;flex:0 1 180px">
     <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
       <option value="">📁 Všechny složky</option>
     </select>
@@ -99,8 +100,6 @@
   <div class="ribbon-group" data-for="about">
     <button class="btn btn-green btn-sm" data-key="saveAbout" onclick="saveAbout()">💾 Uložit</button>
   </div>
-
-  <div class="ribbon-resize-handle" id="ribbonResizeHandle" title="Táhni pro změnu výšky lišty"></div>
 
 </div>
 
@@ -446,6 +445,16 @@
           <button class="btn btn-sm" onclick="rotateEditor(90)">⟳ 90°</button>
         </div>
 
+        <div class="tool-row filter-row">
+          <label>🌅 Narovnat horizont <span id="fval-straighten">0°</span></label>
+          <input type="range" id="fslider-straighten" min="-45" max="45" step="0.5" value="0" oninput="setStraighten(this.value)">
+        </div>
+        <div class="tool-row">
+          <label style="width:100%;display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-family:var(--font-mono)">
+            <input type="checkbox" id="gridToggle" onchange="toggleStraightenGrid(this.checked)"> Vodicí mřížka
+          </label>
+        </div>
+
         <div class="tool-row">
           <label>Zoom</label>
           <input type="range" id="zoomSlider" min="0.1" max="4" step="0.01" value="1" oninput="editorSetZoom(this.value)">
@@ -466,6 +475,14 @@
         <div class="tool-row filter-row">
           <label>Světla <span id="fval-highlights">0</span></label>
           <input type="range" id="fslider-highlights" min="-100" max="100" value="0" oninput="setFilter('highlights', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Černý bod <span id="fval-blackPoint">0</span></label>
+          <input type="range" id="fslider-blackPoint" min="0" max="120" value="0" oninput="setFilter('blackPoint', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Bílý bod <span id="fval-whitePoint">255</span></label>
+          <input type="range" id="fslider-whitePoint" min="135" max="255" value="255" oninput="setFilter('whitePoint', this.value)">
         </div>
         <div class="tool-row filter-row">
           <label>Sytost <span id="fval-saturation">0</span></label>
@@ -534,7 +551,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260718"></script>
-<script src="dashboard-editor.js?v=20260718"></script>
+<script src="dashboard-core.js?v=20260720"></script>
+<script src="dashboard-editor.js?v=20260720"></script>
 </body>
 </html>
