@@ -178,6 +178,7 @@ let ED = {
   crop: 'free',
   export: 'max',
   blobUrl: null,
+  toneBaseUrl: null,
   filters: { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
   cropRect: null,
   isDraggingImage: false,
@@ -213,6 +214,7 @@ async function openEditor(id) {
   ED.crop = 'free'; ED.export = 'max'; ED.cropRect = null;
   ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false };
   if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
+  if (ED.toneBaseUrl) { URL.revokeObjectURL(ED.toneBaseUrl); ED.toneBaseUrl = null; }
   const aic = $('aiCheck');
   if (aic) aic.checked = false;
   const straightSlider = $('fslider-straighten');
@@ -224,7 +226,6 @@ async function openEditor(id) {
   toggleStraightenGrid(false);
   updateFilterLabels();
   updateSharpenFilter(0);
-  updateToneFilter(0, 0, 0, 255);
   const presetSel = $('presetSelect');
   if (presetSel) presetSel.value = '';
   syncFilterSlidersFromState();
@@ -277,6 +278,7 @@ function fitImageToPreview() {
 function closeEditor() {
   $('editorModal')?.classList.add('hidden');
   if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
+  if (ED.toneBaseUrl) { URL.revokeObjectURL(ED.toneBaseUrl); ED.toneBaseUrl = null; }
   ED.img = null; ED.photo = null; ED.cropRect = null;
   const vig = document.querySelector('.vignette-overlay');
   if (vig) vig.style.opacity = 0;
@@ -304,10 +306,6 @@ function applyFilters() {
   if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`;
   else s += ` hue-rotate(${f.temp * 0.3}deg)`;
   if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
-  if (toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
-    updateToneFilter(f.shadows, f.highlights, f.blackPoint, f.whitePoint);
-    s += ' url(#ed-tone-dynamic)';
-  }
   if (f.sharpen > 0 || f.ai) {
     const effectiveStrength = f.ai ? Math.max(f.sharpen, 80) : f.sharpen;
     updateSharpenFilter(effectiveStrength);
@@ -315,8 +313,8 @@ function applyFilters() {
   }
   if (f.ai) s += ' brightness(105%) contrast(110%) saturate(115%)';
   /* Vynucené překreslení — bez tohohle prohlížeč občas ignoruje změny uvnitř
-     dynamických SVG filtrů (doostření, stíny/světla), protože samotný text
-     vlastnosti filter zůstává stejný (mění se jen atributy uvnitř <svg>). */
+     dynamických SVG filtrů (doostření), protože samotný text vlastnosti
+     filter zůstává stejný (mění se jen atributy uvnitř <svg>). */
   img.style.filter = 'none';
   void img.offsetHeight;
   img.style.filter = s;
@@ -325,6 +323,50 @@ function applyFilters() {
     vig.style.background = `radial-gradient(circle at center, transparent 30%, rgba(0,0,0,${f.vignette / 100}) 90%)`;
     vig.style.opacity = 1;
   } else if (vig) { vig.style.opacity = 0; }
+}
+
+/* === PŘESNÝ NÁHLED STÍNŮ/SVĚTEL/LEVELS ===
+   Tón (stíny, světla, černý/bílý bod) se v SVG filtru chovalo nespolehlivě
+   napříč prohlížeči (i po opravě barevného prostoru). Místo toho se teď
+   náhled dopočítá STEJNOU pixelovou funkcí jako finální export
+   (applyToneLUT), aby náhled = realita na 100 %. Debounce 120ms kvůli
+   plynulému tažení posuvníku. */
+let toneRegenTimer = null;
+function scheduleToneRegeneration() {
+  clearTimeout(toneRegenTimer);
+  toneRegenTimer = setTimeout(regenerateToneMappedImage, 120);
+}
+
+async function regenerateToneMappedImage() {
+  if (!ED.img) return;
+  const el = $('editImg');
+  if (!el) return;
+  const f = ED.filters;
+
+  if (!toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
+    if (ED.toneBaseUrl) { URL.revokeObjectURL(ED.toneBaseUrl); ED.toneBaseUrl = null; }
+    if (ED.blobUrl && el.src !== ED.blobUrl) el.src = ED.blobUrl;
+    return;
+  }
+
+  const maxSide = 1600; // strop pro plynulý živý náhled, export používá plné rozlišení
+  let w = ED.img.naturalWidth, h = ED.img.naturalHeight;
+  if (Math.max(w, h) > maxSide) {
+    const scale = maxSide / Math.max(w, h);
+    w = Math.round(w * scale); h = Math.round(h * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(ED.img, 0, 0, w, h);
+  applyToneLUT(ctx, w, h, f.shadows, f.highlights, f.blackPoint, f.whitePoint);
+
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+  if (!blob) return;
+  const url = URL.createObjectURL(blob);
+  if (ED.toneBaseUrl) URL.revokeObjectURL(ED.toneBaseUrl);
+  ED.toneBaseUrl = url;
+  el.src = url;
 }
 
 function updateFilterLabels() {
@@ -349,7 +391,7 @@ function setFilter(key, val) {
   if (el) el.textContent = val;
   if (key === 'sharpen') updateSharpenFilter(ED.filters.sharpen);
   if (key === 'shadows' || key === 'highlights' || key === 'blackPoint' || key === 'whitePoint') {
-    updateToneFilter(ED.filters.shadows, ED.filters.highlights, ED.filters.blackPoint, ED.filters.whitePoint);
+    scheduleToneRegeneration();
   }
   const presetSel = $('presetSelect');
   if (presetSel) presetSel.value = '';
@@ -381,7 +423,7 @@ function applyPreset(name) {
   ED.filters = { ...preset };
   syncFilterSlidersFromState();
   updateSharpenFilter(ED.filters.sharpen);
-  updateToneFilter(ED.filters.shadows, ED.filters.highlights);
+  scheduleToneRegeneration();
   applyFilters();
 }
 
@@ -507,6 +549,7 @@ function applyCrop() {
       fitImageToPreview();
       if ($('cropLayer')) $('cropLayer').style.display = 'none';
       ED.cropRect = null;
+      scheduleToneRegeneration();
     };
     newImg.src = url;
   }, 'image/png');
@@ -685,6 +728,8 @@ function toggleStrike() { execCmd('strikeThrough'); }
 let currentActiveImg = null;
 
 function setupArticleEditors() {
+  if (typeof restoreRibbonOrder === 'function') restoreRibbonOrder('wysiwyg');
+  if (typeof applyRibbonVisibility === 'function') applyRibbonVisibility('wysiwyg');
   ['artEditor', 'aboutEditor'].forEach(id => {
     const ed = $(id);
     if (!ed) return;
@@ -908,11 +953,17 @@ function insertImgTo(editorId, align) {
   m.className = 'modal';
   m.innerHTML = `
     <div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252">
-      <h3 style="margin-bottom:1rem;color:#eef1f8">Vložit fotku</h3>
+      <h3 style="margin-bottom:0.5rem;color:#eef1f8">Vložit fotky</h3>
+      <p style="color:#8d96ac;font-size:12px;margin-bottom:1rem">Klikni na jednu, nebo zaškrtni víc a vlož je najednou (ve zvoleném pořadí).</p>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
-        ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}','${align}')">`).join('')}
+        ${G.photos.map(p => `
+          <div style="position:relative">
+            <input type="checkbox" class="img-picker-check" data-url="${p.url}" style="position:absolute;top:6px;left:6px;z-index:2;width:20px;height:20px;cursor:pointer;accent-color:var(--accent)">
+            <img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}','${align}');this.closest('.modal').remove()">
+          </div>`).join('')}
       </div>
-      <div style="text-align:center;margin-top:1rem">
+      <div style="text-align:center;margin-top:1rem;display:flex;gap:0.5rem;justify-content:center">
+        <button onclick="insertSelectedImages('${editorId}','${align}')" class="btn btn-blue">✅ Vložit vybrané</button>
         <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
       </div>
     </div>`;
@@ -920,7 +971,17 @@ function insertImgTo(editorId, align) {
   document.body.appendChild(m);
 }
 
-function insertImgUrl(editorId, url, align) {
+function insertSelectedImages(editorId, align) {
+  const checks = Array.from(document.querySelectorAll('.img-picker-check:checked'));
+  if (!checks.length) { showToast('Nejdřív zaškrtni aspoň jednu fotku.', 'info'); return; }
+  checks.forEach(c => insertImgUrl(editorId, c.dataset.url, align, false));
+  const modal = document.querySelector('.modal');
+  if (modal) modal.remove();
+  setTimeout(() => setupArticleEditors(), 50);
+  showToast(`Vloženo ${checks.length} fotek`, 'success');
+}
+
+function insertImgUrl(editorId, url, align, closeModal = true) {
   const ed = $(editorId);
   if (!ed) return;
   let style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:pointer;';
@@ -960,9 +1021,11 @@ function insertImgUrl(editorId, url, align) {
   sel.removeAllRanges();
   sel.addRange(newRange);
 
-  const modal = document.querySelector('.modal');
-  if (modal) modal.remove();
-  setTimeout(() => setupArticleEditors(), 50);
+  if (closeModal) {
+    const modal = document.querySelector('.modal');
+    if (modal) modal.remove();
+    setTimeout(() => setupArticleEditors(), 50);
+  }
 }
 
 /* === PODSEKCE FORMULÁŘ === */
@@ -999,6 +1062,20 @@ async function loadArticles() {
     if (!r.ok) throw new Error('Chyba načítání');
     const data = await r.json();
     const arr = Array.isArray(data) ? data : (data.articles || []);
+
+    /* Naskenuje obsah všech článků a zapamatuje si, které URL fotek se
+       v nich objevují — galerie pak u nich zobrazí odznak "V článku". */
+    window.usedPhotoUrls = new Set();
+    arr.forEach(a => {
+      if (!a.content) return;
+      const matches = a.content.match(/<img[^>]+src=["']([^"']+)["']/g) || [];
+      matches.forEach(tag => {
+        const m = tag.match(/src=["']([^"']+)["']/);
+        if (m) window.usedPhotoUrls.add(m[1]);
+      });
+    });
+    if (typeof renderGallery === 'function' && $('galleryGrid')) renderGallery();
+
     const box = $('articleList');
     if (!box) return;
     if (!arr.length) {
