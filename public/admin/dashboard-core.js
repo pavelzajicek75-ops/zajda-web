@@ -136,39 +136,36 @@ function showRibbonGroup(name) {
 
 /* === PŘEUSPOŘÁDÁNÍ TLAČÍTEK V RIBBONU (drag & drop, uloží se do localStorage) === */
 function toggleRibbonReorderMode() {
-  const group = document.querySelector('.ribbon-group.active');
-  const toggleBtn = $('reorderToggleBtn');
-  if (!group) return;
-  const nowOn = !group.classList.contains('reorder-mode');
-  group.classList.toggle('reorder-mode', nowOn);
+  toggleToolbarReorderMode(document.querySelector('.ribbon-group.active'));
+}
+
+/* Obecná verze — funguje pro ribbon i pro WYSIWYG toolbar (Tučně/Kurzíva/...) */
+function toggleToolbarReorderMode(toolbarEl) {
+  if (!toolbarEl) return;
+  const nowOn = !toolbarEl.classList.contains('reorder-mode');
+  toolbarEl.classList.toggle('reorder-mode', nowOn);
+  setRibbonItemsDraggable(toolbarEl, nowOn);
+  const toggleBtn = toolbarEl.querySelector(':scope > .toolbar-reorder-btn') || $('reorderToggleBtn');
   if (toggleBtn) toggleBtn.classList.toggle('active', nowOn);
-  setRibbonItemsDraggable(group, nowOn);
 }
 
 function setRibbonItemsDraggable(group, enabled) {
   Array.from(group.children).forEach(child => {
     if (!child.dataset.key) return;
     let badge = child.querySelector(':scope > .ribbon-grip-badge');
-    let hideBadge = child.querySelector(':scope > .ribbon-hide-badge');
     if (enabled) {
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'ribbon-grip-badge';
         badge.textContent = '⠿';
+        badge.title = 'Táhni = přesunout · Klikni na prvek = skrýt';
         badge.draggable = true;
         child.appendChild(badge);
       }
-      if (!hideBadge) {
-        hideBadge = document.createElement('span');
-        hideBadge.className = 'ribbon-hide-badge';
-        hideBadge.textContent = '✕';
-        hideBadge.title = 'Skrýt tento prvek z panelu';
-        hideBadge.onclick = (e) => { e.stopPropagation(); hideRibbonItem(group, child.dataset.key); };
-        child.appendChild(hideBadge);
-      }
+      child.title = 'Klikni pro skrytí, nebo táhni za ⠿ pro přesun';
     } else {
       if (badge) badge.remove();
-      if (hideBadge) hideBadge.remove();
+      child.removeAttribute('title');
     }
   });
 }
@@ -188,37 +185,48 @@ function hideRibbonItem(group, key) {
   if (!hidden.includes(key)) hidden.push(key);
   saveHiddenRibbonItems(name, hidden);
   applyRibbonVisibility(name);
-  showToast('Prvek skrytý — vrátíš ho přes "↺ Obnovit vše"', 'info');
+  showToast('Prvek skrytý — vrátíš ho přes "Obnovit vše"', 'info');
 }
 
+/* Aplikuje na VŠECHNY instance se stejným data-for (např. dva editor-toolbary — Články i O Zajdovi) */
 function applyRibbonVisibility(name) {
-  const group = document.querySelector(`.ribbon-group[data-for="${name}"]`);
-  if (!group) return;
   const hidden = getHiddenRibbonItems(name);
-  Array.from(group.children).forEach(child => {
-    if (!child.dataset.key) return;
-    child.style.display = hidden.includes(child.dataset.key) ? 'none' : '';
+  document.querySelectorAll(`[data-for="${name}"]`).forEach(group => {
+    Array.from(group.children).forEach(child => {
+      if (!child.dataset.key) return;
+      child.style.display = hidden.includes(child.dataset.key) ? 'none' : '';
+    });
   });
 }
 
 function restoreAllRibbonItems() {
   const group = document.querySelector('.ribbon-group.active');
   if (!group) return;
-  const name = group.dataset.for;
+  restoreAllToolbarItems(group.dataset.for);
+}
+
+function restoreAllToolbarItems(name) {
+  if (!name) return;
   saveHiddenRibbonItems(name, []);
   applyRibbonVisibility(name);
-  showToast('Všechny prvky panelu obnoveny', 'success');
+  showToast('Všechny prvky obnoveny', 'success');
 }
 
 let ribbonDraggedItem = null;
 
 function initRibbonDragReorder() {
-  document.querySelectorAll('.ribbon-group').forEach(group => {
+  const isExempt = (el) => el.closest('.toolbar-reorder-btn, .ribbon-reorder-toggle');
+  document.querySelectorAll('.ribbon-group, .editor-toolbar').forEach(group => {
+    group.addEventListener('mousedown', e => {
+      if (!group.classList.contains('reorder-mode') || isExempt(e.target)) return;
+      if (e.target.closest('.ribbon-grip-badge')) return; // nechat projít, ať funguje tažení
+      e.preventDefault();
+      e.stopPropagation();
+      const item = e.target.closest('[data-key]');
+      if (item && item.parentElement === group) hideRibbonItem(group, item.dataset.key);
+    }, true);
     group.addEventListener('click', e => {
-      if (group.classList.contains('reorder-mode')) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      if (group.classList.contains('reorder-mode') && !isExempt(e.target)) { e.preventDefault(); e.stopPropagation(); }
     }, true);
     /* Tažení se zahajuje jen z malého úchytu ⠿ (spolehlivé i pro selecty,
        které nativní HTML5 drag jinak ignorují) — ne z celého prvku. */
@@ -253,19 +261,21 @@ function saveRibbonOrder(group) {
   if (!name) return;
   const order = Array.from(group.children).map(c => c.dataset.key).filter(Boolean);
   localStorage.setItem('ribbonOrder:' + name, JSON.stringify(order));
+  restoreRibbonOrder(name); // hned zrcadlit do všech instancí se stejným klíčem (např. druhý editor-toolbar)
 }
 
+/* Aplikuje na VŠECHNY instance se stejným data-for */
 function restoreRibbonOrder(name) {
-  const group = document.querySelector(`.ribbon-group[data-for="${name}"]`);
-  if (!group) return;
   let order;
   try { order = JSON.parse(localStorage.getItem('ribbonOrder:' + name) || 'null'); } catch { order = null; }
   if (!Array.isArray(order) || !order.length) return;
-  const byKey = new Map();
-  Array.from(group.children).forEach(c => { if (c.dataset.key) byKey.set(c.dataset.key, c); });
-  order.forEach(key => {
-    const el = byKey.get(key);
-    if (el) group.appendChild(el);
+  document.querySelectorAll(`[data-for="${name}"]`).forEach(group => {
+    const byKey = new Map();
+    Array.from(group.children).forEach(c => { if (c.dataset.key) byKey.set(c.dataset.key, c); });
+    order.forEach(key => {
+      const el = byKey.get(key);
+      if (el) group.appendChild(el);
+    });
   });
 }
 
@@ -403,6 +413,38 @@ function refreshFolderControls() {
   if (dl) dl.innerHTML = folders.map(f => `<option value="${escapeHtml(f)}">`).join('');
 }
 
+/* === ROZLIŠENÍ FOTEK (cache, lazy dopočet přes Image()) === */
+const photoDimCache = new Map();
+
+function getCachedDim(p) {
+  if (p.width && p.height) return { w: p.width, h: p.height };
+  if (photoDimCache.has(p.id)) return photoDimCache.get(p.id);
+  return null;
+}
+
+function loadPhotoDimension(p) {
+  if (getCachedDim(p) || photoDimCache.has(p.id + ':loading')) return;
+  photoDimCache.set(p.id + ':loading', true);
+  const img = new Image();
+  img.onload = () => {
+    const dim = { w: img.naturalWidth, h: img.naturalHeight };
+    photoDimCache.set(p.id, dim);
+    photoDimCache.delete(p.id + ':loading');
+    const el = document.querySelector(`.gallery-item[data-id="${p.id}"] .item-dim`);
+    if (el) el.textContent = dim.w + '×' + dim.h;
+    if (($('sortMode')?.value) === 'resolution') renderGallery();
+  };
+  img.onerror = () => photoDimCache.delete(p.id + ':loading');
+  img.src = p.url;
+}
+
+/* === "POUŽITO V ČLÁNKU" — sleduje, které fotky se objevují v obsahu článků === */
+window.usedPhotoUrls = window.usedPhotoUrls || new Set();
+
+function isPhotoUsedInArticle(p) {
+  return window.usedPhotoUrls.has(p.url);
+}
+
 function sortedPhotos() {
   const mode = $('sortMode')?.value || 'newest';
   const folderSel = $('folderFilter')?.value || '';
@@ -415,6 +457,14 @@ function sortedPhotos() {
   else if (mode === 'oldest') arr.sort((a, b) => new Date(a.uploaded || a.date || 0) - new Date(b.uploaded || b.date || 0));
   else if (mode === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   else if (mode === 'size') arr.sort((a, b) => (b.size || 0) - (a.size || 0));
+  else if (mode === 'resolution') {
+    arr.forEach(p => loadPhotoDimension(p));
+    arr.sort((a, b) => {
+      const da = getCachedDim(a), db = getCachedDim(b);
+      const pa = da ? da.w * da.h : -1, pb = db ? db.w * db.h : -1;
+      return pb - pa;
+    });
+  }
   return arr;
 }
 
@@ -439,14 +489,18 @@ function renderGallery() {
     const selected = G.selected.has(p.id) ? ' selected' : '';
     const checked = G.selected.has(p.id) ? 'checked' : '';
     const { folder, base } = parsePhotoFolder(p.name);
+    const dim = getCachedDim(p);
+    const used = isPhotoUsedInArticle(p);
+    if (mode === 'list' && !dim) loadPhotoDimension(p);
     return `
     <div class="gallery-item${selected}" data-id="${p.id}">
       <input type="checkbox" class="item-checkbox" ${checked} onclick="event.stopPropagation();toggleSel('${p.id}')">
       ${folder ? `<span class="folder-badge">📁 ${escapeHtml(folder)}</span>` : ''}
-      <img src="${p.url}" alt="${escapeHtml(p.name || '')}" onclick="openEditor('${p.id}')">
+      ${used ? `<span class="used-in-article-badge" title="Fotka je použitá v článku — neupravuj ji, radši vlož novou kopii">📄 V článku</span>` : ''}
+      <img src="${p.url}" alt="${escapeHtml(p.name || '')}" loading="lazy" onclick="openEditor('${p.id}')">
       <div class="item-meta">
         <div class="item-name">${escapeHtml(base || p.name || '')}</div>
-        <div>${fmtBytes(p.size)}</div>
+        <div>${fmtBytes(p.size)}${mode === 'list' ? ` · <span class="item-dim">${dim ? dim.w + '×' + dim.h : '…'}</span>` : ''}</div>
         ${showExif ? `<div class="item-exif">Načítám EXIF…</div>` : ''}
       </div>
       <div class="item-actions">
@@ -631,6 +685,83 @@ async function bulkDelete() {
 }
 
 /* === HROMADNÁ ÚPRAVA VYBRANÝCH FOTEK (velikost + JPG kvalita) === */
+/* === DETEKCE DUPLICITNÍCH FOTEK ===
+   Rychlá heuristika bez stahování obsahu: stejná velikost souboru v bajtech
+   (u skutečných duplicit prakticky vždy sedí). */
+function findDuplicatePhotos() {
+  const bySize = new Map();
+  G.photos.forEach(p => {
+    if (!p.size) return;
+    if (!bySize.has(p.size)) bySize.set(p.size, []);
+    bySize.get(p.size).push(p);
+  });
+  const groups = [...bySize.values()].filter(g => g.length > 1);
+  if (!groups.length) {
+    showToast('Žádné pravděpodobné duplicity nenalezeny.', 'success');
+    return;
+  }
+  const m = document.createElement('div');
+  m.className = 'modal';
+  const groupsHtml = groups.map(g => `
+    <div style="margin-bottom:1rem;padding:0.75rem;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border-soft)">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:0.5rem;font-family:var(--font-mono)">${fmtBytes(g[0].size)} · ${g.length} fotek</div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        ${g.map(p => `<div style="text-align:center"><img src="${p.url}" style="width:90px;height:90px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openLightbox('${p.url}')"><div style="font-size:10px;color:var(--text-faint);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.name || '')}</div></div>`).join('')}
+      </div>
+    </div>`).join('');
+  m.innerHTML = `
+    <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto">
+      <h3>🔍 Možné duplicity (${groups.length} skupin)</h3>
+      <p style="color:var(--text-faint);font-size:12px;margin-bottom:1rem">Podle stejné velikosti souboru — zkontroluj vizuálně, než něco smažeš.</p>
+      ${groupsHtml}
+      <div class="modal-actions">
+        <button class="btn btn-red" onclick="this.closest('.modal').remove()">Zavřít</button>
+      </div>
+    </div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+}
+
+/* === HROMADNÉ STAŽENÍ VYBRANÝCH FOTEK JAKO ZIP === */
+async function downloadSelectedAsZip() {
+  if (!G.selected.size) { showToast('Nejdřív vyber fotky zaškrtnutím checkboxu.', 'info'); return; }
+  if (typeof JSZip === 'undefined') { showToast('Knihovna pro ZIP se nenačetla, zkus obnovit stránku.', 'error'); return; }
+
+  const ids = [...G.selected];
+  const modal = buildBulkEditProgressModal(ids.length);
+  const h3 = modal.querySelector('h3');
+  if (h3) h3.textContent = '⬇️ Stahování do ZIP';
+
+  const zip = new JSZip();
+  for (let i = 0; i < ids.length; i++) {
+    const p = G.photos.find(x => x.id === ids[i]);
+    if (!p) continue;
+    if ($('beFileName')) $('beFileName').textContent = p.name || p.key || '';
+    if ($('beCounter')) $('beCounter').textContent = (i + 1) + '/' + ids.length;
+    try {
+      const r = await fetch(p.url);
+      const blob = await r.blob();
+      zip.file(p.name || ('foto-' + (i + 1) + '.jpg'), blob);
+    } catch (e) {
+      console.error('Chyba stahování fotky do ZIP', p, e);
+    }
+    if ($('beProgressBar')) $('beProgressBar').style.width = Math.round(((i + 1) / ids.length) * 100) + '%';
+  }
+
+  if ($('beDone')) $('beDone').style.display = 'block';
+  const content = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fotky-' + new Date().toISOString().split('T')[0] + '.zip';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+  setTimeout(() => modal.remove(), 700);
+}
+
 function openMoveToFolderModal() {
   if (!G.selected.size) { showToast('Nejdřív vyber fotky zaškrtnutím checkboxu.', 'info'); return; }
   if ($('moveFolderCount')) $('moveFolderCount').textContent = `Vybráno: ${G.selected.size} fotek`;
@@ -645,11 +776,10 @@ async function applyMoveToFolder() {
   if (!ids.length) return;
 
   const modal = buildBulkEditProgressModal(ids.length);
-  if ($('beFileName')) {
-    const h3 = modal.querySelector('h3');
-    if (h3) h3.textContent = '📁 Přesouvání do složky';
-  }
+  const h3 = modal.querySelector('h3');
+  if (h3) h3.textContent = '📁 Přesouvání do složky';
 
+  let failCount = 0;
   for (let i = 0; i < ids.length; i++) {
     const p = G.photos.find(x => x.id === ids[i]);
     if (!p) continue;
@@ -661,14 +791,17 @@ async function applyMoveToFolder() {
       const r = await fetch(p.url);
       if (!r.ok) throw new Error('Nepodařilo se načíst fotku ' + p.name);
       const blob = await r.blob();
-      const fd = new FormData();
-      fd.append('file', blob, newName);
-      fd.append('galleryId', 'main');
-      fd.append('oldKey', p.key);
-      fd.append('mode', 'replace');
-      await fetch('/api/photos/update', { method: 'POST', body: fd });
+      /* Nahrát pod novým (přejmenovaným) názvem jako novou fotku — ověřeně
+         funkční cesta (stejná jako normální upload), na rozdíl od
+         mode:'replace', které zřejmě jen přepisuje obsah beze změny názvu. */
+      await uploadOne(blob, newName);
+      /* A teprve po úspěšném nahrání smazat starou verzi pod původním jménem. */
+      if (p.key) {
+        await fetch('/api/photos/delete?keys=' + encodeURIComponent(p.key), { method: 'DELETE' });
+      }
     } catch (e) {
       console.error('Chyba přesunu fotky', p, e);
+      failCount++;
     }
     if ($('beProgressBar')) $('beProgressBar').style.width = Math.round(((i + 1) / ids.length) * 100) + '%';
   }
@@ -680,6 +813,8 @@ async function applyMoveToFolder() {
     await loadGallery();
     renderGallery();
     loadStats();
+    if (failCount) showToast(failCount + ' fotek se nepodařilo přesunout.', 'error');
+    else showToast('Přesunuto do složky' + (folder ? ` „${folder}“` : ' (bez složky)'), 'success');
   }, 700);
 }
 
@@ -922,6 +1057,11 @@ function uploadOne(blob, filename) {
 
 async function uploadFiles(input) {
   const files = Array.from(input.files || []);
+  await uploadFileList(files);
+  input.value = '';
+}
+
+async function uploadFileList(files) {
   if (!files.length) return;
   const settings = getUploadSettings();
   const targetFolder = $('uploadFolderInput')?.value.trim() || '';
@@ -947,11 +1087,43 @@ async function uploadFiles(input) {
   if ($('upDone')) $('upDone').style.display = 'block';
   setTimeout(async () => {
     modal.remove();
-    input.value = '';
     await loadGallery();
     renderGallery();
     loadStats();
   }, 700);
+}
+
+/* === DRAG & DROP SOUBORŮ PŘÍMO DO GALERIE === */
+function initGalleryDropZone() {
+  const section = $('galleries');
+  if (!section || section.dataset.dropReady) return;
+  section.dataset.dropReady = '1';
+
+  let dragCounter = 0;
+
+  section.addEventListener('dragenter', e => {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    dragCounter++;
+    section.classList.add('drop-active');
+  });
+  section.addEventListener('dragover', e => {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+  });
+  section.addEventListener('dragleave', () => {
+    dragCounter = Math.max(0, dragCounter - 1);
+    if (dragCounter === 0) section.classList.remove('drop-active');
+  });
+  section.addEventListener('drop', e => {
+    if (!e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    dragCounter = 0;
+    section.classList.remove('drop-active');
+    const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+    if (!files.length) { showToast('Přetáhni prosím obrázkové soubory.', 'info'); return; }
+    uploadFileList(files);
+  });
 }
 
 /* === INICIALIZACE === */
@@ -962,6 +1134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saved = localStorage.getItem('dashActiveTab') || 'galleries';
   showTab(saved);
   initRibbonDragReorder();
+  initGalleryDropZone();
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => moveTabIndicator());
   }
@@ -970,6 +1143,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape') {
       $('uploadSettingsModal')?.classList.add('hidden');
       document.querySelectorAll('.lightbox-modal').forEach(m => m.remove());
+      const gallerySection = $('galleries');
+      if (gallerySection && gallerySection.classList.contains('active') && G.selected.size) {
+        G.selected.clear();
+        renderGallery();
+      }
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const gallerySection = $('galleries');
+      const tag = document.activeElement?.tagName;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+      if (!typing && gallerySection && gallerySection.classList.contains('active') && G.selected.size) {
+        e.preventDefault();
+        bulkDelete();
+      }
     }
   });
 });
