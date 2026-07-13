@@ -127,6 +127,7 @@ window.addEventListener('resize', () => moveTabIndicator());
 function showRibbonGroup(name) {
   document.querySelectorAll('.ribbon-group').forEach(g => g.classList.toggle('active', g.dataset.for === name));
   restoreRibbonOrder(name);
+  applyRibbonVisibility(name);
   const toggleBtn = $('reorderToggleBtn');
   if (toggleBtn) toggleBtn.classList.remove('active');
   const activeGroup = document.querySelector('.ribbon-group.active');
@@ -148,6 +149,7 @@ function setRibbonItemsDraggable(group, enabled) {
   Array.from(group.children).forEach(child => {
     if (!child.dataset.key) return;
     let badge = child.querySelector(':scope > .ribbon-grip-badge');
+    let hideBadge = child.querySelector(':scope > .ribbon-hide-badge');
     if (enabled) {
       if (!badge) {
         badge = document.createElement('span');
@@ -156,10 +158,56 @@ function setRibbonItemsDraggable(group, enabled) {
         badge.draggable = true;
         child.appendChild(badge);
       }
-    } else if (badge) {
-      badge.remove();
+      if (!hideBadge) {
+        hideBadge = document.createElement('span');
+        hideBadge.className = 'ribbon-hide-badge';
+        hideBadge.textContent = '✕';
+        hideBadge.title = 'Skrýt tento prvek z panelu';
+        hideBadge.onclick = (e) => { e.stopPropagation(); hideRibbonItem(group, child.dataset.key); };
+        child.appendChild(hideBadge);
+      }
+    } else {
+      if (badge) badge.remove();
+      if (hideBadge) hideBadge.remove();
     }
   });
+}
+
+/* === SKRÝVÁNÍ PRVKŮ V PANELU (samostatně od pořadí) === */
+function getHiddenRibbonItems(name) {
+  try { return JSON.parse(localStorage.getItem('ribbonHidden:' + name) || '[]'); } catch { return []; }
+}
+
+function saveHiddenRibbonItems(name, list) {
+  localStorage.setItem('ribbonHidden:' + name, JSON.stringify([...new Set(list)]));
+}
+
+function hideRibbonItem(group, key) {
+  const name = group.dataset.for;
+  const hidden = getHiddenRibbonItems(name);
+  if (!hidden.includes(key)) hidden.push(key);
+  saveHiddenRibbonItems(name, hidden);
+  applyRibbonVisibility(name);
+  showToast('Prvek skrytý — vrátíš ho přes "↺ Obnovit vše"', 'info');
+}
+
+function applyRibbonVisibility(name) {
+  const group = document.querySelector(`.ribbon-group[data-for="${name}"]`);
+  if (!group) return;
+  const hidden = getHiddenRibbonItems(name);
+  Array.from(group.children).forEach(child => {
+    if (!child.dataset.key) return;
+    child.style.display = hidden.includes(child.dataset.key) ? 'none' : '';
+  });
+}
+
+function restoreAllRibbonItems() {
+  const group = document.querySelector('.ribbon-group.active');
+  if (!group) return;
+  const name = group.dataset.for;
+  saveHiddenRibbonItems(name, []);
+  applyRibbonVisibility(name);
+  showToast('Všechny prvky panelu obnoveny', 'success');
 }
 
 let ribbonDraggedItem = null;
