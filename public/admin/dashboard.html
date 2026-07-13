@@ -7,7 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260721">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link rel="stylesheet" href="style.css?v=20260722">
 </head>
 <body>
 
@@ -47,6 +48,7 @@
       <option value="oldest">Nejstarší</option>
       <option value="name">Podle názvu</option>
       <option value="size">Podle velikosti</option>
+      <option value="resolution">Podle rozlišení</option>
     </select>
     <input type="text" id="gallerySearch" class="form-input" data-key="gallerySearch" placeholder="🔎 Hledat podle názvu…" oninput="renderGallery()" style="max-width:180px;flex:0 1 180px">
     <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
@@ -78,6 +80,8 @@
     <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
     <button class="btn btn-sm" data-key="moveToFolder" onclick="openMoveToFolderModal()">📁 Přesunout do složky</button>
     <button class="btn btn-red btn-sm" data-key="bulkDelete" onclick="bulkDelete()">🗑 Smazat</button>
+    <button class="btn btn-sm" data-key="findDupes" onclick="findDuplicatePhotos()">🔍 Najít duplicity</button>
+    <button class="btn btn-sm" data-key="downloadZip" onclick="downloadSelectedAsZip()">⬇️ Stáhnout vybrané (ZIP)</button>
     <div class="ribbon-sep" data-key="sep2"></div>
     <span class="pill" id="galleryCountPill" data-key="countPill">0 fotek</span>
   </div>
@@ -136,20 +140,20 @@
         <input type="text" id="artPlace" class="form-input" placeholder="Místo">
       </div>
 
-      <div class="editor-toolbar">
-        <button onclick="toggleBold()" title="Tučně"><b>B</b></button>
-        <button onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
-        <button onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
-        <button onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+      <div class="editor-toolbar" data-for="wysiwyg" data-for="wysiwyg">
+        <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
         <div class="sep"></div>
-        <select onchange="setFontSize(this.value)" title="Velikost">
+        <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
           <option value="">Velikost</option>
           <option value="1">Malé</option>
           <option value="3">Normální</option>
           <option value="5">Velké</option>
           <option value="7">Obří</option>
         </select>
-        <select onchange="setHeading(this.value)" title="Formát">
+        <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
           <option value="">Formát</option>
           <option value="P">Odstavec</option>
           <option value="H1">Nadpis 1</option>
@@ -162,30 +166,33 @@
         <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
         <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
         <div class="sep"></div>
-        <button onclick="alignLeft()" title="Vlevo">⬅️</button>
-        <button onclick="alignCenter()" title="Na střed">↔️</button>
-        <button onclick="alignRight()" title="Vpravo">➡️</button>
-        <button onclick="alignJustify()" title="Do bloku">☰</button>
+        <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
+        <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
+        <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
         <div class="sep"></div>
-        <button onclick="insertBullet()" title="Odrážky">• List</button>
-        <button onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
-        <button onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
-        <button onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
+        <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
         <div class="sep"></div>
-        <button onclick="insertImgTo('artEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
-        <button onclick="insertImgTo('artEditor','center')" title="Obrázek na střed">🖼️↔</button>
-        <button onclick="insertImgTo('artEditor','right')" title="Obrázek vpravo">🖼️➡</button>
-        <button onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
-        <button onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
-        <button onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <button data-key="imgLeft" onclick="insertImgTo('artEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button data-key="imgCenter" onclick="insertImgTo('artEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button data-key="imgRight" onclick="insertImgTo('artEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
         <div class="sep"></div>
-        <button onclick="insertLink()" title="Vložit odkaz">🔗</button>
-        <button onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
-        <button onclick="insertHR()" title="Vodorovná čára">―</button>
-        <button onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
         <div class="sep"></div>
-        <button onclick="editorUndo()" title="Zpět">↶</button>
-        <button onclick="editorRedo()" title="Vpřed">↷</button>
+        <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
+        <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
+        <div class="sep"></div>
+        <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat nebo skrýt tlačítka">↕️ Uspořádat</button>
+        <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺ Obnovit</button>
       </div>
       <div id="artEditor" contenteditable="true"></div>
 
@@ -246,20 +253,20 @@
         <input type="text" id="aboutTitle" class="form-input" placeholder="Nadpis">
       </div>
 
-      <div class="editor-toolbar">
-        <button onclick="toggleBold()" title="Tučně"><b>B</b></button>
-        <button onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
-        <button onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
-        <button onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+      <div class="editor-toolbar" data-for="wysiwyg">
+        <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
         <div class="sep"></div>
-        <select onchange="setFontSize(this.value)" title="Velikost">
+        <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
           <option value="">Velikost</option>
           <option value="1">Malé</option>
           <option value="3">Normální</option>
           <option value="5">Velké</option>
           <option value="7">Obří</option>
         </select>
-        <select onchange="setHeading(this.value)" title="Formát">
+        <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
           <option value="">Formát</option>
           <option value="P">Odstavec</option>
           <option value="H1">Nadpis 1</option>
@@ -272,30 +279,33 @@
         <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
         <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
         <div class="sep"></div>
-        <button onclick="alignLeft()" title="Vlevo">⬅️</button>
-        <button onclick="alignCenter()" title="Na střed">↔️</button>
-        <button onclick="alignRight()" title="Vpravo">➡️</button>
-        <button onclick="alignJustify()" title="Do bloku">☰</button>
+        <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
+        <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
+        <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
         <div class="sep"></div>
-        <button onclick="insertBullet()" title="Odrážky">• List</button>
-        <button onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
-        <button onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
-        <button onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
+        <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
         <div class="sep"></div>
-        <button onclick="insertImgTo('aboutEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
-        <button onclick="insertImgTo('aboutEditor','center')" title="Obrázek na střed">🖼️↔</button>
-        <button onclick="insertImgTo('aboutEditor','right')" title="Obrázek vpravo">🖼️➡</button>
-        <button onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
-        <button onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
-        <button onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <button data-key="imgLeft" onclick="insertImgTo('aboutEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button data-key="imgCenter" onclick="insertImgTo('aboutEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button data-key="imgRight" onclick="insertImgTo('aboutEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
         <div class="sep"></div>
-        <button onclick="insertLink()" title="Vložit odkaz">🔗</button>
-        <button onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
-        <button onclick="insertHR()" title="Vodorovná čára">―</button>
-        <button onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
         <div class="sep"></div>
-        <button onclick="editorUndo()" title="Zpět">↶</button>
-        <button onclick="editorRedo()" title="Vpřed">↷</button>
+        <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
+        <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
+        <div class="sep"></div>
+        <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat nebo skrýt tlačítka">↕️ Uspořádat</button>
+        <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺ Obnovit</button>
       </div>
       <div id="aboutEditor" contenteditable="true"></div>
     </div>
@@ -559,7 +569,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260721"></script>
-<script src="dashboard-editor.js?v=20260721"></script>
+<script src="dashboard-core.js?v=20260722"></script>
+<script src="dashboard-editor.js?v=20260722"></script>
 </body>
 </html>
