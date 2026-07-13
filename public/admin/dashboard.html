@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260720">
+<link rel="stylesheet" href="style.css?v=20260721">
 </head>
 <body>
 
@@ -32,7 +32,8 @@
 <!-- ============ RIBBON TOOLBAR ============ -->
 <div class="ribbon-toolbar" id="ribbonToolbar">
 
-  <button class="btn btn-sm ribbon-reorder-toggle" id="reorderToggleBtn" onclick="toggleRibbonReorderMode()" title="Přeuspořádat tlačítka v této liště tažením myší">↕️ Uspořádat</button>
+  <button class="btn btn-sm ribbon-reorder-toggle" id="reorderToggleBtn" onclick="toggleRibbonReorderMode()" title="Přeuspořádat tlačítka v této liště tažením myší, nebo je skrýt">↕️ Uspořádat</button>
+  <button class="btn btn-sm ribbon-reorder-toggle" onclick="restoreAllRibbonItems()" title="Vrátit všechny skryté prvky v této liště">↺ Obnovit vše</button>
 
   <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
@@ -426,6 +427,13 @@
             <option value="highContrast">Vysoký kontrast</option>
             <option value="vivid">Živé barvy</option>
             <option value="filmNoir">Film Noir</option>
+            <option value="pastel">Pastelové</option>
+            <option value="drama">Dramatický</option>
+            <option value="sepia">Sépie</option>
+            <option value="clean">Čistý/Jasný</option>
+            <option value="matte">Matný</option>
+            <option value="sunset">Západ slunce</option>
+            <option value="night">Noční</option>
           </select>
         </div>
 
@@ -551,7 +559,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260720"></script>
-<script src="dashboard-editor.js?v=20260720"></script>
+<script src="dashboard-core.js?v=20260721"></script>
+<script src="dashboard-editor.js?v=20260721"></script>
 </body>
 </html>
