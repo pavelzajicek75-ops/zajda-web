@@ -365,7 +365,14 @@ const FILTER_PRESETS = {
   cold:         { exposure: 0,   contrast: 8,   saturation: -5,  vibrance: 5,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: -30, vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
   highContrast: { exposure: 0,   contrast: 35,  saturation: 10,  vibrance: 10,  shadows: -20, highlights: 20,  blackPoint: 12, whitePoint: 245, temp: 0,   vignette: 15, sharpen: 25, denoise: 0, ai: false },
   vivid:        { exposure: 5,   contrast: 12,  saturation: 15,  vibrance: 40,  shadows: 5,   highlights: -5,  blackPoint: 0,  whitePoint: 255, temp: 5,   vignette: 0,  sharpen: 15, denoise: 0, ai: false },
-  filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  blackPoint: 20, whitePoint: 240, temp: -10, vignette: 45, sharpen: 10, denoise: 0, ai: false }
+  filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  blackPoint: 20, whitePoint: 240, temp: -10, vignette: 45, sharpen: 10, denoise: 0, ai: false },
+  pastel:       { exposure: 8,   contrast: -15, saturation: -20, vibrance: 25,  shadows: 20,  highlights: -10, blackPoint: 15, whitePoint: 245, temp: 10,  vignette: 0,  sharpen: 0,  denoise: 5, ai: false },
+  drama:        { exposure: -8,  contrast: 40,  saturation: -10, vibrance: 20,  shadows: -30, highlights: 25,  blackPoint: 10, whitePoint: 248, temp: 0,   vignette: 30, sharpen: 20, denoise: 0, ai: false },
+  sepia:        { exposure: 0,   contrast: 8,   saturation: -80, vibrance: 0,   shadows: 12,  highlights: -8,  blackPoint: 10, whitePoint: 235, temp: 45,  vignette: 25, sharpen: 0,  denoise: 3, ai: false },
+  clean:        { exposure: 10,  contrast: 8,   saturation: 5,   vibrance: 10,  shadows: 15,  highlights: -15, blackPoint: 0,  whitePoint: 255, temp: -5,  vignette: 0,  sharpen: 10, denoise: 0, ai: false },
+  matte:        { exposure: 5,   contrast: -20, saturation: -10, vibrance: 5,   shadows: 25,  highlights: -30, blackPoint: 30, whitePoint: 225, temp: 8,   vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
+  sunset:       { exposure: 3,   contrast: 10,  saturation: 15,  vibrance: 30,  shadows: -5,  highlights: -10, blackPoint: 5,  whitePoint: 250, temp: 40,  vignette: 20, sharpen: 5,  denoise: 0, ai: false },
+  night:        { exposure: -15, contrast: 20,  saturation: -15, vibrance: 10,  shadows: 30,  highlights: -20, blackPoint: 0,  whitePoint: 240, temp: -20, vignette: 40, sharpen: 15, denoise: 20, ai: false }
 };
 
 function applyPreset(name) {
