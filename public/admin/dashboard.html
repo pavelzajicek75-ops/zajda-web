@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260722">
+<link rel="stylesheet" href="style.css?v=20260723">
 </head>
 <body>
 
@@ -38,6 +38,7 @@
 
   <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
+    <!-- Zobrazení a hledání -->
     <select id="viewMode" class="ribbon-select" data-key="viewMode" onchange="renderGallery()">
       <option value="grid">Mřížka</option>
       <option value="small">Malé náhledy</option>
@@ -51,15 +52,23 @@
       <option value="resolution">Podle rozlišení</option>
     </select>
     <input type="text" id="gallerySearch" class="form-input" data-key="gallerySearch" placeholder="🔎 Hledat podle názvu…" oninput="renderGallery()" style="max-width:180px;flex:0 1 180px">
+    <label class="ribbon-label" data-key="exifToggleLabel" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
+      <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
+    </label>
+
+    <div class="ribbon-sep" data-key="sep1"></div>
+
+    <!-- Složky -->
     <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
       <option value="">📁 Všechny složky</option>
     </select>
     <button class="btn btn-sm" data-key="newFolder" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová složka</button>
     <button class="btn btn-sm" data-key="deleteFolder" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou složku</button>
-    <label class="ribbon-label" data-key="exifToggleLabel" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
-      <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
-    </label>
-    <div class="ribbon-sep" data-key="sep1"></div>
+    <button class="btn btn-sm" data-key="moveToFolder" onclick="openMoveToFolderModal()" title="Přesunout vybrané fotky do složky">📁 Přesunout do složky</button>
+
+    <div class="ribbon-sep" data-key="sep2"></div>
+
+    <!-- Nahrávání -->
     <select id="upResSelect" class="ribbon-select" data-key="upRes" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
       <option value="1000">1000 px</option>
       <option value="2000">2000 px</option>
@@ -77,12 +86,16 @@
     <button class="btn btn-blue btn-sm" data-key="upload" onclick="$('fileInput').click()">⬆️ Nahrát</button>
     <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
     <button class="btn btn-sm" data-key="uploadSettings" onclick="openUploadSettings()">⚙️ Nastavení</button>
+
+    <div class="ribbon-sep" data-key="sep3"></div>
+
+    <!-- Hromadné akce s vybranými fotkami -->
     <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
-    <button class="btn btn-sm" data-key="moveToFolder" onclick="openMoveToFolderModal()">📁 Přesunout do složky</button>
-    <button class="btn btn-red btn-sm" data-key="bulkDelete" onclick="bulkDelete()">🗑 Smazat</button>
     <button class="btn btn-sm" data-key="findDupes" onclick="findDuplicatePhotos()">🔍 Najít duplicity</button>
     <button class="btn btn-sm" data-key="downloadZip" onclick="downloadSelectedAsZip()">⬇️ Stáhnout vybrané (ZIP)</button>
-    <div class="ribbon-sep" data-key="sep2"></div>
+    <button class="btn btn-red btn-sm" data-key="bulkDelete" onclick="bulkDelete()">🗑 Smazat</button>
+
+    <div class="ribbon-sep" data-key="sep4"></div>
     <span class="pill" id="galleryCountPill" data-key="countPill">0 fotek</span>
   </div>
 
@@ -569,7 +582,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260722"></script>
-<script src="dashboard-editor.js?v=20260722"></script>
+<script src="dashboard-core.js?v=20260723"></script>
+<script src="dashboard-editor.js?v=20260723"></script>
 </body>
 </html>
