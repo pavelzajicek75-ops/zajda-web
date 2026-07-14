@@ -951,24 +951,49 @@ function insertImgTo(editorId, align) {
   if (!G.photos || !G.photos.length) { showToast('Nejdřív nahraj fotky do galerie.', 'info'); return; }
   const m = document.createElement('div');
   m.className = 'modal';
+  const folders = typeof getAllFolders === 'function' ? getAllFolders() : [];
   m.innerHTML = `
-    <div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252">
-      <h3 style="margin-bottom:0.5rem;color:#eef1f8">Vložit fotky</h3>
-      <p style="color:#8d96ac;font-size:12px;margin-bottom:1rem">Klikni na jednu, nebo zaškrtni víc a vlož je najednou (ve zvoleném pořadí).</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
-        ${G.photos.map(p => `
-          <div style="position:relative">
-            <input type="checkbox" class="img-picker-check" data-url="${p.url}" style="position:absolute;top:6px;left:6px;z-index:2;width:20px;height:20px;cursor:pointer;accent-color:var(--accent)">
-            <img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}','${align}');this.closest('.modal').remove()">
-          </div>`).join('')}
+    <div style="background:#131a2c;border-radius:12px;max-width:90vw;width:700px;max-height:82vh;display:flex;flex-direction:column;border:1px solid #263252;padding:0">
+      <div style="padding:1.5rem 1.5rem 0.75rem;flex-shrink:0">
+        <h3 style="margin-bottom:0.3rem;color:#eef1f8">Vložit fotky</h3>
+        <p style="color:#8d96ac;font-size:12px;margin:0 0 0.75rem">Klikni na jednu, nebo zaškrtni víc a vlož je najednou (ve zvoleném pořadí).</p>
+        <select id="imgPickerFolder" class="form-select" style="max-width:220px" onchange="renderImgPickerGrid('${editorId}','${align}')">
+          <option value="">📁 Všechny složky</option>
+          <option value="__none__">— Bez složky —</option>
+          ${folders.map(f => `<option value="${f.replace(/"/g, '&quot;')}">📁 ${f}</option>`).join('')}
+        </select>
       </div>
-      <div style="text-align:center;margin-top:1rem;display:flex;gap:0.5rem;justify-content:center">
+      <div style="flex:1;overflow-y:auto;padding:0 1.5rem">
+        <div id="imgPickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem"></div>
+      </div>
+      <div style="padding:1rem 1.5rem;flex-shrink:0;border-top:1px solid #263252;display:flex;gap:0.5rem;justify-content:center">
         <button onclick="insertSelectedImages('${editorId}','${align}')" class="btn btn-blue">✅ Vložit vybrané</button>
         <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
       </div>
     </div>`;
   m.onclick = e => { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
+  renderImgPickerGrid(editorId, align);
+}
+
+function renderImgPickerGrid(editorId, align) {
+  const grid = $('imgPickerGrid');
+  if (!grid) return;
+  const folderSel = $('imgPickerFolder')?.value || '';
+  let photos = G.photos;
+  if (typeof getPhotoFolder === 'function') {
+    if (folderSel === '__none__') photos = photos.filter(p => !getPhotoFolder(p));
+    else if (folderSel) photos = photos.filter(p => getPhotoFolder(p) === folderSel);
+  }
+  if (!photos.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8d96ac;padding:1.5rem;font-size:13px">V téhle složce nejsou žádné fotky.</div>';
+    return;
+  }
+  grid.innerHTML = photos.map(p => `
+    <div style="position:relative">
+      <input type="checkbox" class="img-picker-check" data-url="${p.url}" style="position:absolute;top:6px;left:6px;z-index:2;width:20px;height:20px;cursor:pointer;accent-color:var(--accent)">
+      <img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}','${align}');this.closest('.modal').remove()">
+    </div>`).join('');
 }
 
 function insertSelectedImages(editorId, align) {
