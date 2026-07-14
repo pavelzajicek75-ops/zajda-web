@@ -208,8 +208,9 @@ function restoreAllRibbonItems() {
 function restoreAllToolbarItems(name) {
   if (!name) return;
   saveHiddenRibbonItems(name, []);
-  applyRibbonVisibility(name);
-  showToast('Všechny prvky obnoveny', 'success');
+  localStorage.removeItem('ribbonOrder:' + name);
+  showToast('Obnovuji výchozí pořadí a viditelnost…', 'success');
+  setTimeout(() => location.reload(), 500);
 }
 
 let ribbonDraggedItem = null;
@@ -337,17 +338,29 @@ async function loadStats() {
   }
 }
 
-/* === SLOŽKY (virtuální, jen podle názvu souboru — bez zásahu do backendu) ===
-   Formát: "[Název složky] zbytek-názvu.jpg". Parsuje se čistě na klientovi. */
-function parsePhotoFolder(name) {
-  const m = (name || '').match(/^\[([^\]]+)\]\s*(.*)$/);
-  if (m) return { folder: m[1], base: m[2] || name };
-  return { folder: null, base: name || '' };
+/* === SLOŽKY — čistě klientská správa (žádné síťové volání, žádná
+   závislost na tom, jak backend zachází s názvy souborů při uploadu).
+   Přiřazení fotka → složka žije jen v localStorage tohoto prohlížeče. */
+function getPhotoFolderMap() {
+  try { return JSON.parse(localStorage.getItem('photoFolderMap') || '{}'); } catch { return {}; }
 }
 
-function formatFolderedName(folder, baseName) {
-  const clean = (baseName || 'foto').trim();
-  return folder ? `[${folder.trim()}] ${clean}` : clean;
+function savePhotoFolderMap(map) {
+  localStorage.setItem('photoFolderMap', JSON.stringify(map));
+}
+
+function getPhotoFolder(p) {
+  const map = getPhotoFolderMap();
+  return map[p.id] ?? map[p.key] ?? null;
+}
+
+function setPhotoFolder(p, folder) {
+  const map = getPhotoFolderMap();
+  const key = p.id || p.key;
+  if (!key) return;
+  if (folder) map[key] = folder;
+  else delete map[key];
+  savePhotoFolderMap(map);
 }
 
 function getManualFolders() {
@@ -363,7 +376,7 @@ function saveManualFolders(list) {
 
 function getAllFolders() {
   const set = new Set(getManualFolders());
-  G.photos.forEach(p => { const { folder } = parsePhotoFolder(p.name); if (folder) set.add(folder); });
+  Object.values(getPhotoFolderMap()).forEach(f => { if (f) set.add(f); });
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
@@ -391,7 +404,7 @@ function deleteEmptyFolder() {
   const sel = $('folderFilter');
   const folder = sel?.value || '';
   if (!folder || folder === '__none__') { showToast('Nejdřív ve filtru vyber konkrétní složku, kterou chceš smazat.', 'info'); return; }
-  const hasPhotos = G.photos.some(p => parsePhotoFolder(p.name).folder === folder);
+  const hasPhotos = G.photos.some(p => getPhotoFolder(p) === folder);
   if (hasPhotos) { showToast('Tahle složka obsahuje fotky — nejdřív je přesuň jinam nebo smaž, teprve pak půjde složka odstranit.', 'info'); return; }
   const manual = getManualFolders().filter(f => f !== folder);
   saveManualFolders(manual);
@@ -450,8 +463,8 @@ function sortedPhotos() {
   const folderSel = $('folderFilter')?.value || '';
   const query = $('gallerySearch')?.value.trim().toLowerCase() || '';
   let arr = [...G.photos];
-  if (folderSel === '__none__') arr = arr.filter(p => !parsePhotoFolder(p.name).folder);
-  else if (folderSel) arr = arr.filter(p => parsePhotoFolder(p.name).folder === folderSel);
+  if (folderSel === '__none__') arr = arr.filter(p => !getPhotoFolder(p));
+  else if (folderSel) arr = arr.filter(p => getPhotoFolder(p) === folderSel);
   if (query) arr = arr.filter(p => (p.name || '').toLowerCase().includes(query));
   if (mode === 'newest') arr.sort((a, b) => new Date(b.uploaded || b.date || 0) - new Date(a.uploaded || a.date || 0));
   else if (mode === 'oldest') arr.sort((a, b) => new Date(a.uploaded || a.date || 0) - new Date(b.uploaded || b.date || 0));
@@ -488,7 +501,7 @@ function renderGallery() {
   grid.innerHTML = arr.map(p => {
     const selected = G.selected.has(p.id) ? ' selected' : '';
     const checked = G.selected.has(p.id) ? 'checked' : '';
-    const { folder, base } = parsePhotoFolder(p.name);
+    const folder = getPhotoFolder(p);
     const dim = getCachedDim(p);
     const used = isPhotoUsedInArticle(p);
     if (mode === 'list' && !dim) loadPhotoDimension(p);
@@ -499,7 +512,7 @@ function renderGallery() {
       ${used ? `<span class="used-in-article-badge" title="Fotka je použitá v článku — neupravuj ji, radši vlož novou kopii">📄 V článku</span>` : ''}
       <img src="${p.url}" alt="${escapeHtml(p.name || '')}" loading="lazy" onclick="openEditor('${p.id}')">
       <div class="item-meta">
-        <div class="item-name">${escapeHtml(base || p.name || '')}</div>
+        <div class="item-name">${escapeHtml(p.name || '')}</div>
         <div>${fmtBytes(p.size)}${mode === 'list' ? ` · <span class="item-dim">${dim ? dim.w + '×' + dim.h : '…'}</span>` : ''}</div>
         ${showExif ? `<div class="item-exif">Načítám EXIF…</div>` : ''}
       </div>
@@ -706,20 +719,50 @@ function findDuplicatePhotos() {
     <div style="margin-bottom:1rem;padding:0.75rem;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border-soft)">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:0.5rem;font-family:var(--font-mono)">${fmtBytes(g[0].size)} · ${g.length} fotek</div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-        ${g.map(p => `<div style="text-align:center"><img src="${p.url}" style="width:90px;height:90px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openLightbox('${p.url}')"><div style="font-size:10px;color:var(--text-faint);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.name || '')}</div></div>`).join('')}
+        ${g.map(p => `
+          <div style="text-align:center;position:relative">
+            <input type="checkbox" class="dupe-check" data-key="${p.key || ''}" data-id="${p.id}" style="position:absolute;top:4px;left:4px;z-index:2;width:18px;height:18px;cursor:pointer;accent-color:var(--red)">
+            <img src="${p.url}" style="width:90px;height:90px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openLightbox('${p.url}')">
+            <div style="font-size:10px;color:var(--text-faint);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.name || '')}</div>
+          </div>`).join('')}
       </div>
     </div>`).join('');
   m.innerHTML = `
-    <div class="modal-box" style="max-width:520px;max-height:80vh;overflow-y:auto">
-      <h3>🔍 Možné duplicity (${groups.length} skupin)</h3>
-      <p style="color:var(--text-faint);font-size:12px;margin-bottom:1rem">Podle stejné velikosti souboru — zkontroluj vizuálně, než něco smažeš.</p>
-      ${groupsHtml}
-      <div class="modal-actions">
-        <button class="btn btn-red" onclick="this.closest('.modal').remove()">Zavřít</button>
+    <div class="modal-box" style="max-width:560px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:0">
+      <div style="padding:1.5rem 1.5rem 0.75rem;flex-shrink:0">
+        <h3 style="margin-bottom:0.3rem">🔍 Možné duplicity (${groups.length} skupin)</h3>
+        <p style="color:var(--text-faint);font-size:12px;margin:0">Podle stejné velikosti souboru. Zaškrtni fotky ke smazání a zkontroluj náhledem, než potvrdíš.</p>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:0 1.5rem">
+        ${groupsHtml}
+      </div>
+      <div style="padding:1rem 1.5rem;flex-shrink:0;border-top:1px solid var(--border-soft);display:flex;gap:0.5rem;justify-content:center">
+        <button class="btn btn-red" onclick="deleteDuplicateSelected(this)">🗑 Smazat vybrané</button>
+        <button class="btn" onclick="this.closest('.modal').remove()">Zavřít</button>
       </div>
     </div>`;
   m.onclick = e => { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
+}
+
+async function deleteDuplicateSelected(btn) {
+  const modal = btn.closest('.modal');
+  const checks = Array.from(modal.querySelectorAll('.dupe-check:checked'));
+  if (!checks.length) { showToast('Nejdřív zaškrtni aspoň jednu fotku ke smazání.', 'info'); return; }
+  if (!(await showConfirm(`Opravdu smazat ${checks.length} vybraných fotek?`, { danger: true, confirmText: 'Smazat' }))) return;
+
+  const keys = checks.map(c => c.dataset.key).filter(Boolean);
+  try {
+    if (keys.length) await fetch('/api/photos/delete?keys=' + encodeURIComponent(keys.join(',')), { method: 'DELETE' });
+  } catch (e) {
+    console.error('Chyba mazání duplicit', e);
+    showToast('Nepodařilo se smazat některé fotky.', 'error');
+  }
+  modal.remove();
+  await loadGallery();
+  renderGallery();
+  loadStats();
+  showToast(`Smazáno ${checks.length} fotek`, 'success');
 }
 
 /* === HROMADNÉ STAŽENÍ VYBRANÝCH FOTEK JAKO ZIP === */
@@ -769,53 +812,24 @@ function openMoveToFolderModal() {
   $('moveToFolderModal')?.classList.remove('hidden');
 }
 
-async function applyMoveToFolder() {
+function applyMoveToFolder() {
   const folder = $('moveFolderName')?.value.trim() || '';
   $('moveToFolderModal')?.classList.add('hidden');
   const ids = [...G.selected];
   if (!ids.length) return;
 
-  const modal = buildBulkEditProgressModal(ids.length);
-  const h3 = modal.querySelector('h3');
-  if (h3) h3.textContent = '📁 Přesouvání do složky';
+  /* Čistě klientská operace — jen se u fotky poznamená složka do
+     localStorage, žádné nahrávání/mazání na serveru, takže to nemůže
+     selhat kvůli backendu. Okamžité. */
+  ids.forEach(id => {
+    const p = G.photos.find(x => x.id === id);
+    if (p) setPhotoFolder(p, folder);
+  });
 
-  let failCount = 0;
-  for (let i = 0; i < ids.length; i++) {
-    const p = G.photos.find(x => x.id === ids[i]);
-    if (!p) continue;
-    const { base } = parsePhotoFolder(p.name);
-    const newName = formatFolderedName(folder, base || p.name);
-    if ($('beFileName')) $('beFileName').textContent = newName;
-    if ($('beCounter')) $('beCounter').textContent = (i + 1) + '/' + ids.length;
-    try {
-      const r = await fetch(p.url);
-      if (!r.ok) throw new Error('Nepodařilo se načíst fotku ' + p.name);
-      const blob = await r.blob();
-      /* Nahrát pod novým (přejmenovaným) názvem jako novou fotku — ověřeně
-         funkční cesta (stejná jako normální upload), na rozdíl od
-         mode:'replace', které zřejmě jen přepisuje obsah beze změny názvu. */
-      await uploadOne(blob, newName);
-      /* A teprve po úspěšném nahrání smazat starou verzi pod původním jménem. */
-      if (p.key) {
-        await fetch('/api/photos/delete?keys=' + encodeURIComponent(p.key), { method: 'DELETE' });
-      }
-    } catch (e) {
-      console.error('Chyba přesunu fotky', p, e);
-      failCount++;
-    }
-    if ($('beProgressBar')) $('beProgressBar').style.width = Math.round(((i + 1) / ids.length) * 100) + '%';
-  }
-
-  if ($('beDone')) $('beDone').style.display = 'block';
-  setTimeout(async () => {
-    modal.remove();
-    G.selected.clear();
-    await loadGallery();
-    renderGallery();
-    loadStats();
-    if (failCount) showToast(failCount + ' fotek se nepodařilo přesunout.', 'error');
-    else showToast('Přesunuto do složky' + (folder ? ` „${folder}“` : ' (bez složky)'), 'success');
-  }, 700);
+  G.selected.clear();
+  renderGallery();
+  loadStats();
+  showToast(`Přesunuto ${ids.length} fotek do složky` + (folder ? ` „${folder}“` : ' (bez složky)'), 'success');
 }
 
 function openBulkEditModal() {
@@ -1066,18 +1080,19 @@ async function uploadFileList(files) {
   const settings = getUploadSettings();
   const targetFolder = $('uploadFolderInput')?.value.trim() || '';
   const modal = buildUploadProgressModal();
+  const uploadedNames = [];
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const uploadName = targetFolder ? formatFolderedName(targetFolder, file.name) : file.name;
-    if ($('upFileName')) $('upFileName').textContent = uploadName;
+    if ($('upFileName')) $('upFileName').textContent = file.name;
     if ($('upCounter')) $('upCounter').textContent = (i + 1) + '/' + files.length;
     if ($('upProgressBar')) $('upProgressBar').style.width = '0%';
     if ($('upPercent')) $('upPercent').textContent = '0 %';
     if ($('upSpeed')) $('upSpeed').textContent = '';
     try {
       const compressed = await compressImage(file, settings);
-      await uploadOne(compressed, uploadName);
+      await uploadOne(compressed, file.name);
+      uploadedNames.push(file.name);
     } catch (e) {
       console.error('Chyba nahrávání souboru', file.name, e);
       showToast('Nepodařilo se nahrát ' + file.name + ': ' + e.message, 'error');
@@ -1088,6 +1103,14 @@ async function uploadFileList(files) {
   setTimeout(async () => {
     modal.remove();
     await loadGallery();
+    /* Přiřadit cílovou složku nově nahraným fotkám (podle názvu, čistě
+       klientsky) — jen těm, co ještě žádnou složku nemají. */
+    if (targetFolder && uploadedNames.length) {
+      uploadedNames.forEach(name => {
+        const p = G.photos.find(x => x.name === name && !getPhotoFolder(x));
+        if (p) setPhotoFolder(p, targetFolder);
+      });
+    }
     renderGallery();
     loadStats();
   }, 700);
