@@ -75,6 +75,57 @@ a { color: var(--blue); }
 input, select, textarea, button { font-family: inherit; }
 .hidden { display: none !important; }
 
+/* === LOGIN STRÁNKA === */
+.login-body {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,122,26,0.08), transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(76,141,255,0.06), transparent 45%),
+    var(--bg);
+}
+.login-box {
+  width: 100%; max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-lg);
+  padding: 2.25rem 2rem;
+  box-shadow: var(--shadow-lg);
+  animation: fadeSlideIn 0.35s var(--ease);
+}
+.login-box h1 {
+  font-family: var(--font-display);
+  font-size: 1.5rem; font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  margin: 0 0 1.75rem;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.login-box form { display: flex; flex-direction: column; gap: 0.9rem; }
+.login-box input {
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 0.75rem 0.9rem; font-size: 14.5px; font-family: var(--font-body);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.login-box input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.login-box button {
+  margin-top: 0.4rem;
+  background: var(--accent); color: #fff;
+  border: 1px solid var(--accent); border-radius: var(--r-sm);
+  padding: 0.8rem; font-size: 14.5px; font-weight: 700; font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), transform 0.12s var(--ease), box-shadow 0.15s var(--ease);
+}
+.login-box button:hover { background: var(--accent-hover); box-shadow: var(--shadow-accent); transform: translateY(-1px); }
+.login-box button:active { transform: translateY(0); }
+.login-box .error {
+  color: var(--red); font-size: 13px; text-align: center; min-height: 1.2em; margin: 0;
+}
+
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
 
 :focus-visible {
