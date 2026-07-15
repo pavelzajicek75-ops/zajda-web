@@ -466,6 +466,26 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 #artEditor img.editor-img, #aboutEditor img.editor-img { max-width: 100%; height: auto; border-radius: var(--r-sm); transition: outline 0.15s; }
 #artEditor img.editor-img[data-active], #aboutEditor img.editor-img[data-active] { outline: 3px solid var(--blue); }
 
+/* === NÁHLED ČLÁNKU (stejná typografie jako editor, bez editačních prvků) === */
+.article-preview-full { color: var(--text); line-height: 1.8; font-size: 15.5px; }
+.article-preview-full::after { content: ''; display: table; clear: both; }
+.article-preview-full p { margin-bottom: 0.9rem; }
+.article-preview-full h1, .article-preview-full h2, .article-preview-full h3 {
+  font-family: var(--font-display); color: var(--gold); margin: 1.3rem 0 0.6rem; font-weight: 600;
+}
+.article-preview-full h1 { font-size: 26px; border-bottom: 1px solid var(--accent-soft); padding-bottom: 0.3rem; }
+.article-preview-full h2 { font-size: 21px; }
+.article-preview-full h3 { font-size: 18px; }
+.article-preview-full ul, .article-preview-full ol { margin: 0.5rem 0 0.9rem 1.5rem; }
+.article-preview-full li { margin-bottom: 0.3rem; }
+.article-preview-full a { color: var(--blue); text-decoration: underline; }
+.article-preview-full blockquote {
+  border-left: 3px solid var(--accent); margin: 1rem 0; padding: 0.6rem 1.1rem;
+  background: var(--accent-soft); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-style: italic; color: var(--text-muted);
+}
+.article-preview-full hr { border: none; border-top: 1px solid var(--border); margin: 1.3rem 0; }
+.article-preview-full img { max-width: 100%; height: auto; border-radius: var(--r-sm); }
+
 /* === BLOK DRAG&DROP (přesouvání odstavců/obrázků myší, jako sazba novin) === */
 .block-drag-handle {
   position: fixed;
