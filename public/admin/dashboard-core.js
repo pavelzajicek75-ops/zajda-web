@@ -102,7 +102,7 @@ async function logout() {
 }
 
 /* === NAVIGACE (ribbon) === */
-const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about'];
+const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about', 'admin'];
 
 function showTab(name) {
   if (!RIBBON_TABS.includes(name)) name = 'galleries';
@@ -294,10 +294,117 @@ function loadSection(name) {
     if (typeof loadSectionCovers === 'function') loadSectionCovers();
   } else if (name === 'about') {
     if (typeof loadAbout === 'function') loadAbout();
+  } else if (name === 'admin') {
+    loadAdminPanel();
   }
 }
 
-/* === LIGHTBOX === */
+/* === ADMIN PANEL — Cloudflare metriky + správa přístupů ===
+   Očekává 2 backendové endpointy, které zatím pravděpodobně neexistují:
+
+   GET /api/admin/usage
+     → { requestsUsed, requestsLimit, storageUsedBytes, storageLimitBytes }
+     (typicky z Cloudflare GraphQL Analytics API / R2 usage API)
+
+   GET /api/admin/users
+     → [{ email, role, created }]
+   POST /api/admin/users/invite   body: { email, role }
+   DELETE /api/admin/users?email=...
+
+   Dokud tyhle endpointy backend nemá, panel to férově řekne místo aby
+   předstíral čísla, co odnikud nejdou. */
+async function loadAdminPanel() {
+  await loadAdminUsage();
+  await loadAdminUsers();
+}
+
+async function loadAdminUsage() {
+  const box = $('adminUsageCards');
+  if (!box) return;
+  box.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Načítám…</div>';
+  try {
+    const r = await fetch('/api/admin/usage');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    const cards = [
+      { label: 'Požadavky', value: (d.requestsUsed ?? '?').toLocaleString?.() ?? d.requestsUsed, sub: d.requestsLimit ? `z ${d.requestsLimit.toLocaleString()}` : '' },
+      { label: 'Využité místo', value: fmtBytes(d.storageUsedBytes || 0), sub: '' },
+      { label: 'Zbývá volného místa', value: d.storageLimitBytes ? fmtBytes(Math.max(0, d.storageLimitBytes - (d.storageUsedBytes || 0))) : '?', sub: '' }
+    ];
+    box.innerHTML = cards.map(c => `
+      <div class="form-card" style="text-align:center;margin-bottom:0">
+        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:600;color:var(--gold)">${c.value}</div>
+        <div style="color:var(--text-muted);font-size:12.5px;margin-top:0.3rem">${c.label}</div>
+        ${c.sub ? `<div style="color:var(--text-faint);font-size:11px;margin-top:0.15rem">${c.sub}</div>` : ''}
+      </div>`).join('');
+  } catch (e) {
+    box.innerHTML = `
+      <div class="form-card" style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;line-height:1.6">
+        📡 Metriky zatím nejdou načíst — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/usage</code>.<br>
+        Jakmile ho doplníš (má vracet <code>{ requestsUsed, requestsLimit, storageUsedBytes, storageLimitBytes }</code>
+        z Cloudflare GraphQL Analytics / R2 usage API), panel se automaticky rozžije.
+      </div>`;
+  }
+}
+
+async function loadAdminUsers() {
+  const tbody = $('adminUsersTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1rem">Načítám…</td></tr>';
+  try {
+    const r = await fetch('/api/admin/users');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const arr = await r.json();
+    if (!Array.isArray(arr) || !arr.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1rem">Zatím žádní další uživatelé.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = arr.map(u => `
+      <tr>
+        <td>${escapeHtml(u.email)}</td>
+        <td>${escapeHtml(u.role || 'editor')}</td>
+        <td style="font-family:var(--font-mono);font-size:12px">${u.created ? new Date(u.created).toLocaleDateString('cs') : '—'}</td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteAdminUser('${encodeURIComponent(u.email)}')">🗑 Odebrat</button></td>
+      </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = `
+      <tr><td colspan="4" style="text-align:center;color:var(--text-muted);font-size:13px;padding:1.25rem;line-height:1.6">
+        📡 Správa přístupů zatím nejde — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/users</code>.<br>
+        Potřeba: <code>GET</code> (seznam), <code>POST /invite</code> <code>{email, role}</code>, <code>DELETE?email=</code>.
+      </td></tr>`;
+  }
+}
+
+async function inviteAdminUser() {
+  const email = $('adminInviteEmail')?.value.trim();
+  const role = $('adminInviteRole')?.value || 'editor';
+  if (!email) { showToast('Zadej e-mail osoby, kterou chceš pozvat.', 'info'); return; }
+  try {
+    const r = await fetch('/api/admin/users/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    $('adminInviteEmail').value = '';
+    showToast('Pozvánka odeslána', 'success');
+    loadAdminUsers();
+  } catch (e) {
+    showToast('Backend zatím neumí pozvat uživatele (chybí /api/admin/users/invite).', 'error');
+  }
+}
+
+async function deleteAdminUser(email) {
+  if (!(await showConfirm('Odebrat přístup pro ' + decodeURIComponent(email) + '?', { danger: true, confirmText: 'Odebrat' }))) return;
+  try {
+    const r = await fetch('/api/admin/users?email=' + email, { method: 'DELETE' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    showToast('Přístup odebrán', 'success');
+    loadAdminUsers();
+  } catch (e) {
+    showToast('Nepodařilo se odebrat přístup.', 'error');
+  }
+}
 function openLightbox(src) {
   const m = document.createElement('div');
   m.className = 'lightbox-modal';
