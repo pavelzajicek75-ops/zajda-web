@@ -989,10 +989,42 @@ function renderImgPickerGrid(editorId, align) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8d96ac;padding:1.5rem;font-size:13px">V téhle složce nejsou žádné fotky.</div>';
     return;
   }
-  grid.innerHTML = photos.map(p => `
+
+  const photoTile = p => `
     <div style="position:relative">
       <input type="checkbox" class="img-picker-check" data-url="${p.url}" style="position:absolute;top:6px;left:6px;z-index:2;width:20px;height:20px;cursor:pointer;accent-color:var(--accent)">
       <img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}','${align}');this.closest('.modal').remove()">
+    </div>`;
+
+  /* Pokud je vybraná konkrétní složka (nebo "bez složky"), zobraz prostě
+     plochý seznam. Jinak (Všechny složky) seskup podle složky s nadpisy,
+     ať je vidět struktura na první pohled. */
+  if (folderSel) {
+    grid.innerHTML = photos.map(photoTile).join('');
+    grid.style.display = 'grid';
+    return;
+  }
+
+  const groups = new Map(); // folder name (nebo '' = bez složky) -> photos[]
+  photos.forEach(p => {
+    const f = (typeof getPhotoFolder === 'function' ? getPhotoFolder(p) : null) || '';
+    if (!groups.has(f)) groups.set(f, []);
+    groups.get(f).push(p);
+  });
+  const sortedFolders = [...groups.keys()].sort((a, b) => {
+    if (!a) return 1; if (!b) return -1; // "bez složky" na konec
+    return a.localeCompare(b);
+  });
+
+  grid.style.display = 'block';
+  grid.innerHTML = sortedFolders.map(f => `
+    <div style="margin-bottom:1.1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:0.5rem;font-family:var(--font-mono)">
+        ${f ? '📁 ' + f : '— Bez složky —'} <span style="color:var(--text-faint);font-weight:400">(${groups.get(f).length})</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
+        ${groups.get(f).map(photoTile).join('')}
+      </div>
     </div>`).join('');
 }
 
@@ -1179,6 +1211,39 @@ async function editArticle(id) {
 
 
 /* === ČLÁNKY: vytvoření === */
+/* === NÁHLED ČLÁNKU PŘED ZVEŘEJNĚNÍM ===
+   Nic neukládá, nic nepublikuje — jen ukáže aktuální rozepsaný obsah
+   formuláře stylovaný jako skutečný článek na webu. */
+function previewArticle() {
+  const title = $('artTitle')?.value.trim() || '(bez nadpisu)';
+  const content = $('artEditor')?.innerHTML || '<p style="color:var(--text-faint)">(zatím žádný obsah)</p>';
+  const date = $('artDate')?.value;
+  const place = $('artPlace')?.value.trim();
+  const sectionSel = $('artSection');
+  const sectionText = sectionSel && sectionSel.selectedIndex > 0 ? sectionSel.options[sectionSel.selectedIndex].textContent : '';
+  const subsectionSel = $('artSubsection');
+  const subsectionText = subsectionSel && subsectionSel.selectedIndex > 0 ? subsectionSel.options[subsectionSel.selectedIndex].textContent : '';
+
+  const metaParts = [sectionText, subsectionText, place, date ? new Date(date).toLocaleDateString('cs') : ''].filter(Boolean);
+
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.innerHTML = `
+    <div class="modal-box" style="max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;padding:0">
+      <div style="padding:1rem 1.5rem;flex-shrink:0;border-bottom:1px solid var(--border-soft);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:var(--text-faint);font-family:var(--font-mono)">👁 NÁHLED — nic se neukládá</span>
+        <button class="btn btn-red btn-sm" onclick="this.closest('.modal').remove()">Zavřít</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:2rem 2.25rem">
+        <h1 style="font-family:var(--font-display);color:var(--text);font-size:1.9rem;margin:0 0 0.6rem;line-height:1.25">${escapeHtml(title)}</h1>
+        ${metaParts.length ? `<p style="color:var(--text-muted);font-size:13.5px;margin:0 0 1.5rem">${metaParts.map(escapeHtml).join(' • ')}</p>` : ''}
+        <div class="article-preview-full">${content}</div>
+      </div>
+    </div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+}
+
 async function createArticle() {
   const title = $('artTitle')?.value.trim();
   const content = $('artEditor')?.innerHTML;
