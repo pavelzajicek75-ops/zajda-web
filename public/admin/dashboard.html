@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260723">
+<link rel="stylesheet" href="style.css?v=20260725">
 </head>
 <body>
 
@@ -28,6 +28,7 @@
   <button class="ribbon-tab" data-tab="quotes" onclick="showTab('quotes')">💬 Citáty</button>
   <button class="ribbon-tab" data-tab="subsections" onclick="showTab('subsections')">📂 Podsekce</button>
   <button class="ribbon-tab" data-tab="about" onclick="showTab('about')">👤 O Zajdovi</button>
+  <button class="ribbon-tab" data-tab="admin" onclick="showTab('admin')">🛠️ ADMIN</button>
 </nav>
 
 <!-- ============ RIBBON TOOLBAR ============ -->
@@ -102,6 +103,7 @@
   <!-- Články -->
   <div class="ribbon-group" data-for="articles">
     <button class="btn btn-blue btn-sm" data-key="newArticle" onclick="resetArticleForm()">➕ Nový článek</button>
+    <button class="btn btn-sm" data-key="previewArticle" onclick="previewArticle()">👁 Náhled</button>
   </div>
 
   <!-- Citáty -->
@@ -117,6 +119,12 @@
   <!-- O Zajdovi -->
   <div class="ribbon-group" data-for="about">
     <button class="btn btn-green btn-sm" data-key="saveAbout" onclick="saveAbout()">💾 Uložit</button>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="ribbon-group" data-for="admin">
+    <button class="btn btn-sm" data-key="refreshAdmin" onclick="loadAdminPanel()">🔄 Obnovit</button>
+    <span class="ribbon-label" data-key="adminLabel">Cloudflare metriky a správa přístupů</span>
   </div>
 
 </div>
@@ -325,6 +333,29 @@
 
     <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">Náhled</h3>
     <div id="aboutPreview" class="form-card"></div>
+  </section>
+
+  <!-- ---------- ADMIN ---------- -->
+  <section id="admin" class="section">
+    <h3 style="margin-bottom:0.75rem">📊 Využití (Cloudflare)</h3>
+    <div id="adminUsageCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.75rem"></div>
+
+    <h3 style="margin-bottom:0.75rem">👥 Přístupy dalších lidí</h3>
+    <div class="form-card">
+      <div class="form-row">
+        <input type="email" id="adminInviteEmail" class="form-input" placeholder="E-mail nové osoby">
+        <select id="adminInviteRole" class="form-select" style="max-width:160px">
+          <option value="editor">Editor</option>
+          <option value="viewer">Jen náhled</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn btn-blue" onclick="inviteAdminUser()">➕ Pozvat</button>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>E-mail</th><th>Role</th><th>Přidán</th><th></th></tr></thead>
+      <tbody id="adminUsersTableBody"></tbody>
+    </table>
   </section>
 
 </main>
@@ -582,7 +613,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260723"></script>
-<script src="dashboard-editor.js?v=20260723"></script>
+<script src="dashboard-core.js?v=20260725"></script>
+<script src="dashboard-editor.js?v=20260725"></script>
 </body>
 </html>
