@@ -481,6 +481,53 @@ function saveManualFolders(list) {
   localStorage.setItem('manualFolders', JSON.stringify([...new Set(list)]));
 }
 
+/* === PŘENOS SLOŽEK MEZI ZAŘÍZENÍMI (export/import kódu) ===
+   Složky žijí jen v localStorage tohoto prohlížeče/zařízení — export
+   zabalí přiřazení fotka→složka i seznam prázdných složek do jednoho
+   kódu, který se dá zkopírovat a vložit jinde. */
+function exportFolderData() {
+  const payload = {
+    photoFolderMap: getPhotoFolderMap(),
+    manualFolders: getManualFolders()
+  };
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const ta = document.createElement('textarea');
+  ta.value = code;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('Kód zkopírován do schránky — vlož ho na druhém zařízení', 'success');
+  } catch {
+    showToast('Nepodařilo se zkopírovat automaticky, kód najdeš v konzoli (F12).', 'info');
+    console.log('Kód pro import složek:', code);
+  }
+  ta.remove();
+}
+
+function openImportFolderModal() {
+  if ($('importFolderCode')) $('importFolderCode').value = '';
+  $('importFolderModal')?.classList.remove('hidden');
+}
+
+function importFolderData() {
+  const raw = $('importFolderCode')?.value.trim();
+  if (!raw) { showToast('Vlož prosím kód.', 'info'); return; }
+  try {
+    const payload = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    if (payload.photoFolderMap) savePhotoFolderMap(payload.photoFolderMap);
+    if (payload.manualFolders) saveManualFolders(payload.manualFolders);
+    $('importFolderModal')?.classList.add('hidden');
+    refreshFolderControls();
+    renderGallery();
+    showToast('Složky naimportovány', 'success');
+  } catch (e) {
+    showToast('Kód se nepodařilo přečíst — zkontroluj, že je zkopírovaný celý.', 'error');
+  }
+}
+
 function getAllFolders() {
   const set = new Set(getManualFolders());
   Object.values(getPhotoFolderMap()).forEach(f => { if (f) set.add(f); });
@@ -808,7 +855,28 @@ async function bulkDelete() {
 /* === DETEKCE DUPLICITNÍCH FOTEK ===
    Rychlá heuristika bez stahování obsahu: stejná velikost souboru v bajtech
    (u skutečných duplicit prakticky vždy sedí). */
-function findDuplicatePhotos() {
+async function findDuplicatePhotos() {
+  /* Zajistí, že víme, které fotky jsou použité v článcích, i když jsme
+     ještě nebyli na záložce Články v této relaci. */
+  if (!window.usedPhotoUrls || !window.usedPhotoUrls.size) {
+    try {
+      const r = await fetch('/api/articles/list');
+      if (r.ok) {
+        const data = await r.json();
+        const arr = Array.isArray(data) ? data : (data.articles || []);
+        window.usedPhotoUrls = new Set();
+        arr.forEach(a => {
+          if (!a.content) return;
+          const matches = a.content.match(/<img[^>]+src=["']([^"']+)["']/g) || [];
+          matches.forEach(tag => {
+            const m = tag.match(/src=["']([^"']+)["']/);
+            if (m) window.usedPhotoUrls.add(m[1]);
+          });
+        });
+      }
+    } catch (e) { console.error('Nepodařilo se dotáhnout seznam článků pro kontrolu duplicit:', e); }
+  }
+
   const bySize = new Map();
   G.photos.forEach(p => {
     if (!p.size) return;
@@ -826,19 +894,23 @@ function findDuplicatePhotos() {
     <div style="margin-bottom:1rem;padding:0.75rem;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border-soft)">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:0.5rem;font-family:var(--font-mono)">${fmtBytes(g[0].size)} · ${g.length} fotek</div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-        ${g.map(p => `
+        ${g.map(p => {
+          const used = typeof isPhotoUsedInArticle === 'function' && isPhotoUsedInArticle(p);
+          return `
           <div style="text-align:center;position:relative">
             <input type="checkbox" class="dupe-check" data-key="${p.key || ''}" data-id="${p.id}" style="position:absolute;top:4px;left:4px;z-index:2;width:18px;height:18px;cursor:pointer;accent-color:var(--red)">
             <img src="${p.url}" style="width:90px;height:90px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openLightbox('${p.url}')">
             <div style="font-size:10px;color:var(--text-faint);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.name || '')}</div>
-          </div>`).join('')}
+            ${used ? '<div style="font-size:9.5px;color:#06281f;background:var(--green);border-radius:4px;padding:1px 4px;margin-top:2px;font-weight:700">📄 V ČLÁNKU</div>' : ''}
+          </div>`;
+        }).join('')}
       </div>
     </div>`).join('');
   m.innerHTML = `
     <div class="modal-box" style="max-width:560px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:0">
       <div style="padding:1.5rem 1.5rem 0.75rem;flex-shrink:0">
         <h3 style="margin-bottom:0.3rem">🔍 Možné duplicity (${groups.length} skupin)</h3>
-        <p style="color:var(--text-faint);font-size:12px;margin:0">Podle stejné velikosti souboru. Zaškrtni fotky ke smazání a zkontroluj náhledem, než potvrdíš.</p>
+        <p style="color:var(--text-faint);font-size:12px;margin:0">Podle stejné velikosti souboru. Zelený štítek "V ČLÁNKU" = fotka je použitá v nějakém článku, radši ji nemaž. Zaškrtni fotky ke smazání a zkontroluj náhledem, než potvrdíš.</p>
       </div>
       <div style="flex:1;overflow-y:auto;padding:0 1.5rem">
         ${groupsHtml}
