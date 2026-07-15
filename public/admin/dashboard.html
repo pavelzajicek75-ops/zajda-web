@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260725">
+<link rel="stylesheet" href="style.css?v=20260726">
 </head>
 <body>
 
@@ -356,9 +356,41 @@
       <thead><tr><th>E-mail</th><th>Role</th><th>Přidán</th><th></th></tr></thead>
       <tbody id="adminUsersTableBody"></tbody>
     </table>
+
+    <h3 style="margin:1.75rem 0 0.75rem">🔗 Užitečné odkazy</h3>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.75rem">
+      <a href="https://claude.ai" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none">🤖 Claude</a>
+      <a href="https://github.com" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none">🐙 GitHub</a>
+      <a href="https://dash.cloudflare.com" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none">☁️ Cloudflare Dashboard</a>
+    </div>
+    <p style="color:var(--text-faint);font-size:11.5px;margin-top:-1rem;margin-bottom:1.75rem">Odkazy míří na obecné vstupní stránky — pokud chceš rovnou konkrétní repo/účet, dej vědět a doplním přesné URL.</p>
+
+    <h3 style="margin-bottom:0.75rem">📁 Přenos složek mezi zařízeními</h3>
+    <div class="form-card">
+      <p style="color:var(--text-faint);font-size:12px;margin-bottom:0.75rem">Složky se pamatují jen v tomto prohlížeči/zařízení. Chceš-li je mít i jinde (mobil, iPad...), zkopíruj kód tady a vlož ho na tom druhém zařízení přes "Importovat".</p>
+      <div class="form-row">
+        <button class="btn btn-sm" onclick="exportFolderData()">⬇️ Exportovat kód složek</button>
+        <button class="btn btn-sm" onclick="openImportFolderModal()">⬆️ Importovat kód složek</button>
+      </div>
+    </div>
   </section>
 
 </main>
+
+<!-- ============ IMPORT SLOŽEK ============ -->
+<div id="importFolderModal" class="modal hidden">
+  <div class="modal-box">
+    <h3>⬆️ Importovat kód složek</h3>
+    <div class="form-row">
+      <textarea id="importFolderCode" class="form-input" rows="5" placeholder="Sem vlož kód vyexportovaný z druhého zařízení…" style="font-family:var(--font-mono);font-size:12px;resize:vertical"></textarea>
+    </div>
+    <p style="color:var(--text-faint);font-size:12px;margin-top:0.5rem">Přepíše aktuální přiřazení složek v tomto prohlížeči.</p>
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="importFolderData()">✅ Importovat</button>
+      <button class="btn btn-red" onclick="$('importFolderModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
 
 <!-- ============ UPLOAD SETTINGS MODAL ============ -->
 <div id="uploadSettingsModal" class="modal hidden">
@@ -613,7 +645,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260725"></script>
-<script src="dashboard-editor.js?v=20260725"></script>
+<script src="dashboard-core.js?v=20260726"></script>
+<script src="dashboard-editor.js?v=20260726"></script>
 </body>
 </html>
