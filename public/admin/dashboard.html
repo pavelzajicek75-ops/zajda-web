@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260726">
+<link rel="stylesheet" href="style.css?v=20260727">
 </head>
 <body>
 
@@ -369,8 +369,9 @@
     <div class="form-card">
       <p style="color:var(--text-faint);font-size:12px;margin-bottom:0.75rem">Složky se pamatují jen v tomto prohlížeči/zařízení. Chceš-li je mít i jinde (mobil, iPad...), zkopíruj kód tady a vlož ho na tom druhém zařízení přes "Importovat".</p>
       <div class="form-row">
-        <button class="btn btn-sm" onclick="exportFolderData()">⬇️ Exportovat kód složek</button>
-        <button class="btn btn-sm" onclick="openImportFolderModal()">⬆️ Importovat kód složek</button>
+        <button class="btn btn-sm" onclick="exportFolderData()">📋 Kopírovat kód</button>
+        <button class="btn btn-blue btn-sm" onclick="exportFolderDataAsFile()">⬇️ Stáhnout jako soubor (.txt)</button>
+        <button class="btn btn-sm" onclick="openImportFolderModal()">⬆️ Importovat</button>
       </div>
     </div>
   </section>
@@ -382,7 +383,11 @@
   <div class="modal-box">
     <h3>⬆️ Importovat kód složek</h3>
     <div class="form-row">
-      <textarea id="importFolderCode" class="form-input" rows="5" placeholder="Sem vlož kód vyexportovaný z druhého zařízení…" style="font-family:var(--font-mono);font-size:12px;resize:vertical"></textarea>
+      <textarea id="importFolderCode" class="form-input" rows="5" placeholder="Sem vlož kód/JSON, nebo použij tlačítko níže pro nahrání souboru…" style="font-family:var(--font-mono);font-size:12px;resize:vertical"></textarea>
+    </div>
+    <div class="form-row">
+      <label style="min-width:auto">nebo</label>
+      <input type="file" accept=".txt,.json" onchange="importFolderDataFromFile(this)" class="form-input">
     </div>
     <p style="color:var(--text-faint);font-size:12px;margin-top:0.5rem">Přepíše aktuální přiřazení složek v tomto prohlížeči.</p>
     <div class="modal-actions">
@@ -645,7 +650,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260726"></script>
-<script src="dashboard-editor.js?v=20260726"></script>
+<script src="dashboard-core.js?v=20260727"></script>
+<script src="dashboard-editor.js?v=20260727"></script>
 </body>
 </html>
