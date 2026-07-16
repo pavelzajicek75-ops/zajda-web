@@ -580,6 +580,52 @@ function importFolderDataFromFile(input) {
   reader.readAsText(file);
 }
 
+/* === SERVEROVÁ SYNCHRONIZACE SLOŽEK MEZI ZAŘÍZENÍMI ===
+   Uloží/načte stejná data (photoFolderMap + manualFolders) přes malý
+   backendový endpoint /api/data/folders — funguje odkudkoliv, bez
+   ručního kopírování souboru/kódu mezi zařízeními. */
+async function saveFoldersToServer() {
+  const status = $('folderSyncStatus');
+  if (status) status.textContent = 'Ukládám…';
+  try {
+    const payload = {
+      photoFolderMap: getPhotoFolderMap(),
+      manualFolders: getManualFolders()
+    };
+    const r = await fetch('/api/data/folders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    showToast('Složky uloženy na server', 'success');
+    if (status) status.textContent = d.updated ? 'Uloženo ' + new Date(d.updated).toLocaleString('cs') : '';
+  } catch (e) {
+    showToast('Backend zatím nemá endpoint /api/data/folders (viz functions-example).', 'error');
+    if (status) status.textContent = '';
+  }
+}
+
+async function loadFoldersFromServer() {
+  const status = $('folderSyncStatus');
+  if (status) status.textContent = 'Načítám…';
+  try {
+    const r = await fetch('/api/data/folders');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (d.photoFolderMap) savePhotoFolderMap(d.photoFolderMap);
+    if (d.manualFolders) saveManualFolders(d.manualFolders);
+    refreshFolderControls();
+    renderGallery();
+    showToast('Složky načteny ze serveru', 'success');
+    if (status) status.textContent = d.updated ? 'Naposled uloženo ' + new Date(d.updated).toLocaleString('cs') : 'Server zatím nic neukládal';
+  } catch (e) {
+    showToast('Backend zatím nemá endpoint /api/data/folders (viz functions-example).', 'error');
+    if (status) status.textContent = '';
+  }
+}
+
 function openImportFolderModal() {
   if ($('importFolderCode')) $('importFolderCode').value = '';
   $('importFolderModal')?.classList.remove('hidden');
