@@ -30,6 +30,46 @@ function showToast(message, type = 'info') {
   toast.addEventListener('click', () => { clearTimeout(timer); remove(); });
 }
 
+/* === "ZRUŠITELNÝ" TOAST — bezpečnostní síťka pro mazání ===
+   Akce (smazání) se hned VIZUÁLNĚ projeví, ale skutečně se provede
+   (onCommit) až po pár vteřinách — mezitím jde kliknout na "Zpět"
+   (onUndo) a nic se nestane. */
+function showUndoToast(message, onUndo, onCommit, delayMs = 6000) {
+  let host = document.getElementById('toastHost');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'toastHost';
+    host.className = 'toast-host';
+    document.body.appendChild(host);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-info toast-undo';
+  toast.innerHTML = `<span class="toast-icon">🗑️</span><span class="toast-msg"></span><button class="toast-undo-btn">↩ Zpět</button>`;
+  toast.querySelector('.toast-msg').textContent = message;
+  host.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('toast-in'));
+
+  let done = false;
+  const remove = () => {
+    toast.classList.remove('toast-in');
+    toast.classList.add('toast-out');
+    setTimeout(() => toast.remove(), 220);
+  };
+  const timer = setTimeout(() => {
+    if (done) return;
+    done = true;
+    onCommit();
+    remove();
+  }, delayMs);
+  toast.querySelector('.toast-undo-btn').addEventListener('click', () => {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    onUndo();
+    remove();
+  });
+}
+
 /* === VLASTNÍ POTVRZOVACÍ MODAL (náhrada za confirm()) ===
    Vrací Promise<boolean> — použití: if (!(await showConfirm('Smazat?'))) return; */
 function showConfirm(message, { danger = false, confirmText = 'Potvrdit', cancelText = 'Zrušit' } = {}) {
@@ -507,6 +547,39 @@ function exportFolderData() {
   ta.remove();
 }
 
+/* Jednodušší varianta — rovnou stáhne .txt soubor se stejnými daty
+   (čitelný JSON, ne zakódovaný text), který jde poslat/nahrát na druhé
+   zařízení jakkoliv (mail, cloud, USB...), bez kopírování textu. */
+function exportFolderDataAsFile() {
+  const payload = {
+    photoFolderMap: getPhotoFolderMap(),
+    manualFolders: getManualFolders()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'slozky-' + new Date().toISOString().split('T')[0] + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  showToast('Soubor stažen — přenes ho na druhé zařízení a nahraj přes "Importovat"', 'success');
+}
+
+function importFolderDataFromFile(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    if ($('importFolderCode')) $('importFolderCode').value = reader.result;
+    importFolderData();
+    input.value = '';
+  };
+  reader.onerror = () => showToast('Soubor se nepodařilo přečíst.', 'error');
+  reader.readAsText(file);
+}
+
 function openImportFolderModal() {
   if ($('importFolderCode')) $('importFolderCode').value = '';
   $('importFolderModal')?.classList.remove('hidden');
@@ -514,18 +587,26 @@ function openImportFolderModal() {
 
 function importFolderData() {
   const raw = $('importFolderCode')?.value.trim();
-  if (!raw) { showToast('Vlož prosím kód.', 'info'); return; }
+  if (!raw) { showToast('Vlož prosím kód nebo nahraj soubor.', 'info'); return; }
+  let payload;
   try {
-    const payload = JSON.parse(decodeURIComponent(escape(atob(raw))));
-    if (payload.photoFolderMap) savePhotoFolderMap(payload.photoFolderMap);
-    if (payload.manualFolders) saveManualFolders(payload.manualFolders);
-    $('importFolderModal')?.classList.add('hidden');
-    refreshFolderControls();
-    renderGallery();
-    showToast('Složky naimportovány', 'success');
-  } catch (e) {
-    showToast('Kód se nepodařilo přečíst — zkontroluj, že je zkopírovaný celý.', 'error');
+    // Nejdřív zkusit obyčejný čitelný JSON (ze staženého .txt souboru)
+    payload = JSON.parse(raw);
+  } catch {
+    try {
+      // Jinak zkusit starší zakódovaný kód (kopírování přes schránku)
+      payload = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    } catch {
+      showToast('Kód/soubor se nepodařilo přečíst — zkontroluj, že je celý.', 'error');
+      return;
+    }
   }
+  if (payload.photoFolderMap) savePhotoFolderMap(payload.photoFolderMap);
+  if (payload.manualFolders) saveManualFolders(payload.manualFolders);
+  $('importFolderModal')?.classList.add('hidden');
+  refreshFolderControls();
+  renderGallery();
+  showToast('Složky naimportovány', 'success');
 }
 
 function getAllFolders() {
