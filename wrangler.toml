@@ -25,7 +25,7 @@ id = "2d74f6e45eda4cbea51275017ba66c23"
 
 [[kv_namespaces]]
 binding = "APP_DATA"
-id = "SEM_VLOŽ_ID"
+id = "0415a2b978c8488e81fc3cf264cafb4b"
 
 [[r2_buckets]]
 binding = "PHOTOS_R2"
