@@ -1,109 +1,47 @@
 // functions/api/admin/users.js
 //
-// GET    /api/admin/users         → seznam všech uživatelů
-// POST   /api/admin/users         body: { email, role }  → přidat uživatele
-// DELETE /api/admin/users?email=x → smazat uživatele
+// GET    /api/admin/users            → [{ email, role, created }]
+// DELETE /api/admin/users?email=...  → smaže přístup danému e-mailu
 //
-// Ukládá se do KV namespace APP_DATA pod klíčem "users".
+// OPRAVENO: používá KV binding APP_DATA, který už máš (klíče s prefixem
+// "user:", ať se to nemíchá se záznamem "folder-sync-data" ve stejném
+// namespace) — nepotřebuješ zakládat žádný nový KV navíc.
 
-async function requireAuth(request, env) {
-  const cookie = request.headers.get('Cookie') || '';
-  return cookie.includes('session=');
-}
+import { requireAdmin, json } from '../_auth-utils.js';
 
-const KV_KEY = 'users';
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  });
-}
-
-function validateEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-const VALID_ROLES = ['admin', 'editor', 'viewer'];
+const USER_PREFIX = 'user:';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
-  if (!(await requireAuth(request, env))) {
+  if (!(await requireAdmin(request, env))) {
     return json({ error: 'Unauthorized' }, 401);
   }
 
-  const raw = await env.APP_DATA.get(KV_KEY);
-  const users = raw ? JSON.parse(raw) : [];
-  return json({ users });
-}
+  const list = await env.APP_DATA.list({ prefix: USER_PREFIX });
+  const users = await Promise.all(
+    list.keys.map(async (k) => {
+      const raw = await env.APP_DATA.get(k.name);
+      if (!raw) return null;
+      const record = JSON.parse(raw);
+      // Hash hesla ven neposíláme, i kdyby se dostal do odpovědi omylem.
+      const { passwordHash, salt, ...safe } = record;
+      return safe;
+    })
+  );
 
-export async function onRequestPost(context) {
-  const { request, env } = context;
-  if (!(await requireAuth(request, env))) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Neplatný JSON' }, 400);
-  }
-
-  const email = (body.email || '').trim().toLowerCase();
-  const role = (body.role || 'editor').trim().toLowerCase();
-
-  if (!validateEmail(email)) {
-    return json({ error: 'Neplatný e-mail' }, 400);
-  }
-
-  if (!VALID_ROLES.includes(role)) {
-    return json({ error: 'Neplatná role. Povolené: ' + VALID_ROLES.join(', ') }, 400);
-  }
-
-  const raw = await env.APP_DATA.get(KV_KEY);
-  const users = raw ? JSON.parse(raw) : [];
-
-  // Už existuje?
-  if (users.find(u => u.email === email)) {
-    return json({ error: 'Uživatel s tímto e-mailem už existuje' }, 409);
-  }
-
-  const newUser = {
-    email,
-    role,
-    added: new Date().toISOString()
-  };
-
-  users.push(newUser);
-  await env.APP_DATA.put(KV_KEY, JSON.stringify(users));
-
-  return json({ ok: true, user: newUser });
+  return json(users.filter(Boolean));
 }
 
 export async function onRequestDelete(context) {
   const { request, env } = context;
-  if (!(await requireAuth(request, env))) {
+  if (!(await requireAdmin(request, env))) {
     return json({ error: 'Unauthorized' }, 401);
   }
 
   const url = new URL(request.url);
-  const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+  const email = url.searchParams.get('email');
+  if (!email) return json({ error: 'Chybí parametr email' }, 400);
 
-  if (!email) {
-    return json({ error: 'Chybí parametr email' }, 400);
-  }
-
-  const raw = await env.APP_DATA.get(KV_KEY);
-  const users = raw ? JSON.parse(raw) : [];
-
-  const filtered = users.filter(u => u.email !== email);
-
-  if (filtered.length === users.length) {
-    return json({ error: 'Uživatel nenalezen' }, 404);
-  }
-
-  await env.APP_DATA.put(KV_KEY, JSON.stringify(filtered));
-
+  await env.APP_DATA.delete(USER_PREFIX + email.toLowerCase());
   return json({ ok: true });
 }
