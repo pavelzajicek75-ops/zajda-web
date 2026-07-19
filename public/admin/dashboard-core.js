@@ -367,22 +367,37 @@ async function loadAdminUsage() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     const cards = [
-      { label: 'Požadavky', value: (d.requestsUsed ?? '?').toLocaleString?.() ?? d.requestsUsed, sub: d.requestsLimit ? `z ${d.requestsLimit.toLocaleString()}` : '' },
+      {
+        label: 'Požadavky (30 dní)',
+        value: d.requestsUsed != null ? d.requestsUsed.toLocaleString('cs') : '⚠️',
+        sub: d.requestsError ? 'chyba: ' + d.requestsError.slice(0, 60) : (d.requestsLimit ? `z ${d.requestsLimit.toLocaleString('cs')}` : '')
+      },
       { label: 'Využité místo', value: fmtBytes(d.storageUsedBytes || 0), sub: '' },
       { label: 'Zbývá volného místa', value: d.storageLimitBytes ? fmtBytes(Math.max(0, d.storageLimitBytes - (d.storageUsedBytes || 0))) : '?', sub: '' }
     ];
-    box.innerHTML = cards.map(c => `
+    let html = cards.map(c => `
       <div class="form-card" style="text-align:center;margin-bottom:0">
         <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:600;color:var(--gold)">${c.value}</div>
         <div style="color:var(--text-muted);font-size:12.5px;margin-top:0.3rem">${c.label}</div>
-        ${c.sub ? `<div style="color:var(--text-faint);font-size:11px;margin-top:0.15rem">${c.sub}</div>` : ''}
+        ${c.sub ? `<div style="color:var(--text-faint);font-size:11px;margin-top:0.15rem;word-break:break-word">${escapeHtml(c.sub)}</div>` : ''}
       </div>`).join('');
+
+    if (Array.isArray(d.buckets) && d.buckets.length) {
+      html += `<div class="form-card" style="grid-column:1/-1;margin-bottom:0">
+        <div style="color:var(--text-muted);font-size:12px;margin-bottom:0.5rem">📦 Podle bucketu</div>
+        ${d.buckets.map(b => `
+          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:12.5px;padding:0.25rem 0;border-bottom:1px solid var(--border-soft)">
+            <span>${escapeHtml(b.name)}${b.error ? ' ⚠️' : ''}</span>
+            <span>${b.error ? escapeHtml(b.error.slice(0, 40)) : fmtBytes(b.bytes) + ' · ' + b.objects + ' souborů'}</span>
+          </div>`).join('')}
+      </div>`;
+    }
+    box.innerHTML = html;
   } catch (e) {
     box.innerHTML = `
       <div class="form-card" style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;line-height:1.6">
         📡 Metriky zatím nejdou načíst — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/usage</code>.<br>
-        Jakmile ho doplníš (má vracet <code>{ requestsUsed, requestsLimit, storageUsedBytes, storageLimitBytes }</code>
-        z Cloudflare GraphQL Analytics / R2 usage API), panel se automaticky rozžije.
+        Jakmile ho doplníš (viz functions-example), panel se automaticky rozžije.
       </div>`;
   }
 }
@@ -425,13 +440,34 @@ async function inviteAdminUser() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, role })
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
     $('adminInviteEmail').value = '';
-    showToast('Pozvánka odeslána', 'success');
     loadAdminUsers();
+    showInvitedCredentials(d.email, d.temporaryPassword);
   } catch (e) {
-    showToast('Backend zatím neumí pozvat uživatele (chybí /api/admin/users/invite).', 'error');
+    showToast('Nepodařilo se pozvat uživatele: ' + e.message, 'error');
   }
+}
+
+/* Dočasné heslo se z backendu vrátí jen JEDNOU — musí se hned tady ukázat,
+   ať ho jde zkopírovat a poslat nové osobě (Signal/WhatsApp/osobně...). */
+function showInvitedCredentials(email, tempPassword) {
+  if (!tempPassword) { showToast('Uživatel pozván', 'success'); return; }
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.innerHTML = `
+    <div class="modal-box" style="max-width:420px">
+      <h3>✅ Uživatel pozván</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:1rem">Tohle heslo se zobrazí JEN TEĎ — pošli ho nové osobě ručně (nikam se dál neukládá v čitelné podobě).</p>
+      <div class="form-row"><label>E-mail</label><input class="form-input" readonly value="${escapeHtml(email)}" onclick="this.select()"></div>
+      <div class="form-row"><label>Heslo</label><input class="form-input" readonly value="${escapeHtml(tempPassword)}" onclick="this.select()" style="font-family:var(--font-mono)"></div>
+      <div class="modal-actions">
+        <button class="btn btn-blue" onclick="navigator.clipboard.writeText('${email}: ${tempPassword}').then(()=>showToast('Zkopírováno','success'))">📋 Kopírovat oboje</button>
+        <button class="btn btn-red" onclick="this.closest('.modal').remove()">Zavřít</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
 }
 
 async function deleteAdminUser(email) {
