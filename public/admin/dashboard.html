@@ -222,7 +222,13 @@
       </div>
     </div>
 
-    <div id="articleList" style="margin-top:1.5rem"></div>
+    <div id="articleBulkBar" class="hidden" style="display:none;align-items:center;gap:0.5rem;margin-top:1.5rem;padding:0.75rem 1rem;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border-soft)">
+      <span id="articleBulkCount" style="color:var(--text-muted);font-size:13px;font-family:var(--font-mono)"></span>
+      <button class="btn btn-green btn-sm" onclick="bulkPublishArticles(true)">✅ Publikovat vybrané</button>
+      <button class="btn btn-sm" onclick="bulkPublishArticles(false)">⏸ Skrýt vybrané</button>
+      <button class="btn btn-red btn-sm" onclick="bulkDeleteArticles()">🗑 Smazat vybrané</button>
+    </div>
+    <div id="articleList" style="margin-top:1rem"></div>
   </section>
 
   <!-- ---------- CITÁTY ---------- -->
