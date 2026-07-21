@@ -55,16 +55,38 @@
     .share-btn:hover { background: rgba(255,102,0,0.2); border-color: #ff6600; transform: translateY(-2px); }
     .share-btn.wa { color: #25d366; border-color: rgba(37,211,102,0.3); }
     .share-btn.wa:hover { background: rgba(37,211,102,0.15); border-color: #25d366; }
+
+    /* Lightbox s listováním */
     .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
     .lightbox-overlay.open { display: flex; }
-    .lightbox-overlay img { max-width: 92vw; max-height: 92vh; border-radius: 8px; box-shadow: 0 0 50px rgba(255,102,0,0.3); }
-    @media (max-width: 700px) { .nav-bar { padding: 16px 20px; } .article-container { padding: 16px 16px 60px; } .article-body { font-size: 16px; } .article-footer { flex-direction: column; align-items: stretch; } .share-bar-inline { justify-content: center; } }
+    .lightbox-overlay img { max-width: 88vw; max-height: 88vh; border-radius: 8px; box-shadow: 0 0 50px rgba(255,102,0,0.3); cursor: default; user-select: none; }
+    .lightbox-close { position: absolute; top: 18px; right: 24px; color: #ffcc66; font-size: 34px; line-height: 1; cursor: pointer; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,102,0,0.3); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .lightbox-close:hover { background: rgba(255,102,0,0.25); border-color: #ff6600; }
+    .lightbox-arrow { position: absolute; top: 50%; transform: translateY(-50%); color: #ffcc66; font-size: 30px; cursor: pointer; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,102,0,0.3); border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; user-select: none; }
+    .lightbox-arrow:hover { background: rgba(255,102,0,0.25); border-color: #ff6600; }
+    .lightbox-arrow.prev { left: 18px; }
+    .lightbox-arrow.next { right: 18px; }
+    .lightbox-counter { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); color: #ffcc66; font-size: 14px; background: rgba(15,23,42,0.6); border: 1px solid rgba(255,102,0,0.3); padding: 6px 16px; border-radius: 20px; }
+    @media (max-width: 700px) {
+      .nav-bar { padding: 16px 20px; } .article-container { padding: 16px 16px 60px; } .article-body { font-size: 16px; } .article-footer { flex-direction: column; align-items: stretch; } .share-bar-inline { justify-content: center; }
+      .lightbox-arrow { width: 42px; height: 42px; font-size: 22px; }
+      .lightbox-arrow.prev { left: 6px; } .lightbox-arrow.next { right: 6px; }
+      .lightbox-close { width: 38px; height: 38px; font-size: 26px; top: 10px; right: 10px; }
+    }
   </style>
 </head>
 <body>
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
-  <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
+
+  <div class="lightbox-overlay" id="lightboxOverlay">
+    <span class="lightbox-close" id="lightboxClose">&times;</span>
+    <span class="lightbox-arrow prev" id="lightboxPrev">&#10094;</span>
+    <img id="lightboxImg" src="" alt="">
+    <span class="lightbox-arrow next" id="lightboxNext">&#10095;</span>
+    <span class="lightbox-counter" id="lightboxCounter"></span>
+  </div>
+
   <div class="nav-bar">
     <a href="/" class="back-btn">← Zpět na vesmír</a>
     <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
@@ -76,12 +98,72 @@
     </div>
   </div>
   <script>
-  function openLightbox(src) {
-    var overlay = document.getElementById('lightboxOverlay');
-    if (!overlay) return;
-    overlay.innerHTML = '<img src="' + src + '" alt="">';
-    overlay.classList.add('open');
+  // --- Lightbox s galerií ---
+  var galleryImages = [];
+  var galleryIndex = 0;
+
+  function buildGallery() {
+    var body = document.getElementById('articleBody');
+    galleryImages = body ? Array.prototype.slice.call(body.querySelectorAll('img')) : [];
+    galleryImages.forEach(function(img, i) {
+      img.addEventListener('click', function() { openLightbox(i); });
+    });
   }
+
+  function updateLightboxImage() {
+    var img = galleryImages[galleryIndex];
+    if (!img) return;
+    var lbImg = document.getElementById('lightboxImg');
+    lbImg.src = img.getAttribute('src');
+    lbImg.alt = img.getAttribute('alt') || '';
+    var counter = document.getElementById('lightboxCounter');
+    var multi = galleryImages.length > 1;
+    document.getElementById('lightboxPrev').style.display = multi ? 'flex' : 'none';
+    document.getElementById('lightboxNext').style.display = multi ? 'flex' : 'none';
+    counter.style.display = multi ? 'block' : 'none';
+    counter.textContent = (galleryIndex + 1) + ' / ' + galleryImages.length;
+  }
+
+  function openLightbox(index) {
+    if (!galleryImages.length) return;
+    galleryIndex = ((index % galleryImages.length) + galleryImages.length) % galleryImages.length;
+    updateLightboxImage();
+    document.getElementById('lightboxOverlay').classList.add('open');
+  }
+
+  function closeLightbox() {
+    document.getElementById('lightboxOverlay').classList.remove('open');
+  }
+
+  function showPrevImage() {
+    if (!galleryImages.length) return;
+    galleryIndex = (galleryIndex - 1 + galleryImages.length) % galleryImages.length;
+    updateLightboxImage();
+  }
+
+  function showNextImage() {
+    if (!galleryImages.length) return;
+    galleryIndex = (galleryIndex + 1) % galleryImages.length;
+    updateLightboxImage();
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var overlay = document.getElementById('lightboxOverlay');
+    // Kliknutí mimo fotku (na tmavé pozadí) zavře náhled a vrátí zpět na článek
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) closeLightbox();
+    });
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    document.getElementById('lightboxPrev').addEventListener('click', function(e) { e.stopPropagation(); showPrevImage(); });
+    document.getElementById('lightboxNext').addEventListener('click', function(e) { e.stopPropagation(); showNextImage(); });
+
+    document.addEventListener('keydown', function(e) {
+      if (!overlay.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') showPrevImage();
+      else if (e.key === 'ArrowRight') showNextImage();
+    });
+  });
 
   function escapeHtml(t) {
     if (t == null) return '';
@@ -177,12 +259,7 @@
 
     container.innerHTML = html;
 
-    var body = document.getElementById('articleBody');
-    if (body) {
-      body.querySelectorAll('img').forEach(function(img) {
-        img.addEventListener('click', function() { openLightbox(this.src); });
-      });
-    }
+    buildGallery();
   }
   </script>
 </body>
