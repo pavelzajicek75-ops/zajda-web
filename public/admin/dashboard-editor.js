@@ -1148,22 +1148,25 @@ async function loadArticles() {
         ? `<button onclick="unpublishArticle('${a.id}')" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">⏸ Skrýt</button>`
         : `<button onclick="publishArticle('${a.id}')" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">👁 Zobrazit</button>`;
       return `
-      <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px">
-        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem">
+      <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px;position:relative">
+        <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem;padding-left:1.75rem">
           <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
           ${pubStatus}
         </div>
-        <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem">
+        <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem;padding-left:1.75rem">
           ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
         </p>
-        ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5">${escapeHtml(excerpt)}</p>` : ''}
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5;padding-left:1.75rem">${escapeHtml(excerpt)}</p>` : ''}
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-left:1.75rem">
           <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
+          <button onclick="duplicateArticle('${a.id}')" class="btn btn-sm">📋 Duplikovat</button>
           ${toggleBtn}
           <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">🗑 Smazat</button>
         </div>
       </div>`;
     }).join('');
+    updateArticleBulkBar();
   } catch (e) {
     console.error('Chyba článků:', e);
     const box = $('articleList');
@@ -1363,6 +1366,78 @@ function resetArticleForm() {
 }
 
 /* === ČLÁNKY: smazání === */
+/* === ČLÁNKY: hromadné akce (publikovat/skrýt/smazat víc najednou) === */
+function updateArticleBulkBar() {
+  const bar = $('articleBulkBar');
+  const checks = document.querySelectorAll('.article-check:checked');
+  if (!bar) return;
+  if (checks.length) {
+    bar.style.display = 'flex';
+    if ($('articleBulkCount')) $('articleBulkCount').textContent = `Vybráno: ${checks.length} článků`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+async function bulkPublishArticles(publish) {
+  const ids = Array.from(document.querySelectorAll('.article-check:checked')).map(c => c.dataset.id);
+  if (!ids.length) return;
+  for (const id of ids) {
+    try {
+      await fetch('/api/articles/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, published: publish })
+      });
+    } catch (e) { console.error('Chyba hromadné akce', id, e); }
+  }
+  showToast(`${ids.length} článků ${publish ? 'publikováno' : 'skryto'}`, 'success');
+  loadArticles();
+}
+
+async function bulkDeleteArticles() {
+  const ids = Array.from(document.querySelectorAll('.article-check:checked')).map(c => c.dataset.id);
+  if (!ids.length) return;
+  if (!(await showConfirm(`Opravdu smazat ${ids.length} článků?`, { danger: true, confirmText: 'Smazat' }))) return;
+  for (const id of ids) {
+    try {
+      await fetch('/api/articles/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
+    } catch (e) { console.error('Chyba hromadného mazání', id, e); }
+  }
+  showToast(`${ids.length} článků smazáno`, 'success');
+  loadArticles();
+}
+
+/* === ČLÁNKY: duplikace (užitečné jako šablona pro podobné příspěvky) === */
+async function duplicateArticle(id) {
+  try {
+    const r = await fetch('/api/articles/get?id=' + encodeURIComponent(id));
+    if (!r.ok) throw new Error('Server vrátil ' + r.status);
+    const a = await r.json();
+    const payload = {
+      title: (a.title || '') + ' (kopie)',
+      content: a.content || '',
+      slug: generateSlug((a.title || '') + '-kopie-' + Date.now()),
+      sectionId: a.sectionId || a.section || null,
+      subsectionId: a.subsectionId || a.subsection || null,
+      date: new Date().toISOString().split('T')[0],
+      place: a.place || '',
+      published: false // kopie se rovnou nezveřejní, ať ji stihneš upravit
+    };
+    const cr = await fetch('/api/articles/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!cr.ok) throw new Error('Chyba ukládání kopie');
+    showToast('Článek duplikován (jako skrytý koncept)', 'success');
+    loadArticles();
+  } catch (e) {
+    console.error('Chyba duplikace článku:', e);
+    showToast('Nepodařilo se duplikovat článek', 'error');
+  }
+}
+
 async function deleteArticle(id) {
   if (!(await showConfirm('Opravdu smazat tento článek?', { danger: true, confirmText: 'Smazat' }))) return;
   try {
