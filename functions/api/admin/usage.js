@@ -1,18 +1,15 @@
 // functions/api/admin/usage.js
 //
-// GET /api/admin/usage → { requestsUsed, requestsLimit, storageUsedBytes, storageLimitBytes, buckets: [...] }
-//
-// DRUHÁ OPRAVA requestů: httpRequests1dGroups je pro ZÓNY (weby v
-// Cloudflare DNS/CDN) — pokud tvoje doména není plnohodnotná Cloudflare
-// zóna (běžíš jen na Pages Functions), ta sada vždycky vrátí prázdno.
-// Správná sada pro Workers/Pages Functions je workersInvocationsAdaptive
-// (počítá přímo SPUŠTĚNÍ funkcí, ne HTTP provoz na doméně).
-//
-// Volitelně nastav CF_WORKER_SCRIPT_NAME v proměnných prostředí, pokud
-// chceš čísla jen za tenhle konkrétní Pages projekt (najdeš ho v
-// Cloudflare dashboard → Workers & Pages → tvůj projekt → název nahoře).
-// Bez něj se sečtou requesty za CELÝ účet (všechny Workers/Pages
-// projekty dohromady, pokud jich máš víc).
+// GET /api/admin/usage → {
+//   requestsUsed,
+//   subrequests,
+//   errors,
+//   durationMs,
+//   requestsLimit,
+//   storageUsedBytes,
+//   storageLimitBytes,
+//   buckets: [...]
+// }
 
 import { requireAdmin, json } from '../_auth-utils.js';
 
@@ -25,11 +22,21 @@ export async function onRequestGet(context) {
 
   const [storage, requests] = await Promise.all([
     getR2StorageUsage(env),
-    getRequestsUsage(env).catch(e => ({ used: null, limit: null, error: String(e) }))
+    getRequestsUsage(env).catch(e => ({
+      used: null,
+      subrequests: null,
+      errors: null,
+      durationMs: null,
+      limit: null,
+      error: String(e)
+    }))
   ]);
 
   return json({
     requestsUsed: requests.used,
+    subrequests: requests.subrequests,
+    errors: requests.errors,
+    durationMs: requests.durationMs,
     requestsLimit: requests.limit,
     requestsError: requests.error || null,
     storageUsedBytes: storage.totalBytes,
@@ -85,7 +92,7 @@ async function getRequestsUsage(env) {
   start.setDate(start.getDate() - 30);
 
   const scriptFilter = env.CF_WORKER_SCRIPT_NAME
-    ? `, scriptName: "${env.CF_WORKER_SCRIPT_NAME}"`
+    ? `scriptName: "${env.CF_WORKER_SCRIPT_NAME}"`
     : '';
 
   const query = `
@@ -97,10 +104,15 @@ async function getRequestsUsage(env) {
             filter: {
               datetime_geq: "${start.toISOString()}"
               datetime_leq: "${now.toISOString()}"
-              ${scriptFilter ? scriptFilter.replace(/^,\s*/, '') : ''}
+              ${scriptFilter}
             }
           ) {
-            sum { requests }
+            sum {
+              requests
+              subrequests
+              errors
+              durationMs
+            }
           }
         }
       }
@@ -127,10 +139,17 @@ async function getRequestsUsage(env) {
   }
 
   const groups = data?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
-  const used = groups.reduce((sum, g) => sum + (g.sum?.requests || 0), 0);
 
-  // Workers/Pages Free plán: 100 000 requestů/DEN (k červenci 2026, ověř
-  // aktuální limit na cloudflare.com/plans — může se změnit). Tohle číslo
-  // je součet za 30 dní, ne přímo srovnatelné s denním limitem 1:1.
-  return { used, limit: null };
+  const used = groups.reduce((sum, g) => sum + (g.sum?.requests || 0), 0);
+  const subrequests = groups.reduce((sum, g) => sum + (g.sum?.subrequests || 0), 0);
+  const errors = groups.reduce((sum, g) => sum + (g.sum?.errors || 0), 0);
+  const durationMs = groups.reduce((sum, g) => sum + (g.sum?.durationMs || 0), 0);
+
+  return {
+    used,
+    subrequests,
+    errors,
+    durationMs,
+    limit: null
+  };
 }
