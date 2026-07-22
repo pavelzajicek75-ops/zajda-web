@@ -351,6 +351,9 @@ function loadSection(name) {
    POST /api/admin/users/invite   body: { email, role }
    DELETE /api/admin/users?email=...
 
+   GET /api/admin/usage/history?period=week|month
+     → [{ label, requests, storageBytes }, ...]  (vývoj v čase pro graf níže)
+
    Dokud tyhle endpointy backend nemá, panel to férově řekne místo aby
    předstíral čísla, co odnikud nejdou. */
 async function loadAdminPanel() {
@@ -398,6 +401,78 @@ async function loadAdminUsage() {
       <div class="form-card" style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;line-height:1.6">
         📡 Metriky zatím nejdou načíst — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/usage</code>.<br>
         Jakmile ho doplníš (viz functions-example), panel se automaticky rozžije.
+      </div>`;
+  }
+
+  /* Graf vývoje v čase (týdny/měsíce) — samostatný blok pod kartami */
+  injectAdminMetricsUI();
+  loadAdminMetricsHistory();
+}
+
+/* === ADMIN METRIKY V ČASE (týdny / měsíce) ===
+   Aktuální /api/admin/usage vrací jen okamžitý stav. Pro graf podle týdnů
+   nebo měsíců je potřeba nový backendový endpoint s historií — viz komentář
+   výše u loadAdminPanel(). Dokud neexistuje, zobrazí se srozumitelný fallback
+   místo prázdného/vymyšleného grafu. */
+let adminMetricsPeriod = 'week';
+
+function setAdminMetricsPeriod(period) {
+  adminMetricsPeriod = period;
+  document.querySelectorAll('.admin-metrics-period-btn').forEach(b => b.classList.toggle('btn-blue', b.dataset.period === period));
+  loadAdminMetricsHistory();
+}
+
+function injectAdminMetricsUI() {
+  const usageBox = $('adminUsageCards');
+  if (!usageBox || $('adminMetricsSection')) return;
+  const section = document.createElement('div');
+  section.id = 'adminMetricsSection';
+  section.style.cssText = 'grid-column:1/-1;margin-top:1rem';
+  section.innerHTML = `
+    <div class="form-card" style="margin-bottom:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem">
+        <h3 style="margin:0;font-size:0.95rem">📈 Vývoj v čase</h3>
+        <div style="display:flex;gap:0.4rem">
+          <button class="btn btn-sm admin-metrics-period-btn btn-blue" data-period="week" onclick="setAdminMetricsPeriod('week')">Týdny</button>
+          <button class="btn btn-sm admin-metrics-period-btn" data-period="month" onclick="setAdminMetricsPeriod('month')">Měsíce</button>
+        </div>
+      </div>
+      <div id="adminMetricsHistory"></div>
+    </div>`;
+  usageBox.parentElement.insertBefore(section, usageBox.nextSibling);
+}
+
+async function loadAdminMetricsHistory() {
+  const box = $('adminMetricsHistory');
+  if (!box) return;
+  box.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Načítám…</div>';
+  try {
+    const r = await fetch('/api/admin/usage/history?period=' + adminMetricsPeriod);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const points = Array.isArray(data) ? data : (data.points || []);
+    if (!points.length) {
+      box.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center">Zatím žádná data.</div>';
+      return;
+    }
+    const maxReq = Math.max(...points.map(p => p.requests || 0), 1);
+    box.innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:6px;height:160px;padding:0.5rem 0 0.25rem">
+        ${points.map(p => `
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px" title="${escapeHtml(p.label)}: ${(p.requests || 0).toLocaleString('cs')} požadavků">
+            <div style="width:100%;background:var(--accent);border-radius:4px 4px 0 0;height:${Math.max(4, Math.round((p.requests || 0) / maxReq * 140))}px"></div>
+            <div style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono);white-space:nowrap">${escapeHtml(p.label)}</div>
+          </div>`).join('')}
+      </div>
+      <table class="data-table" style="margin-top:0.75rem">
+        <thead><tr><th>${adminMetricsPeriod === 'week' ? 'Týden' : 'Měsíc'}</th><th>Požadavky</th><th>Úložiště</th></tr></thead>
+        <tbody>${points.map(p => `<tr><td>${escapeHtml(p.label)}</td><td style="font-family:var(--font-mono)">${(p.requests || 0).toLocaleString('cs')}</td><td style="font-family:var(--font-mono)">${p.storageBytes != null ? fmtBytes(p.storageBytes) : '—'}</td></tr>`).join('')}</tbody>
+      </table>`;
+  } catch (e) {
+    box.innerHTML = `
+      <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:1.25rem;line-height:1.6">
+        📡 Historie zatím nejde načíst — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/usage/history?period=week|month</code>.<br>
+        Očekávaný formát odpovědi: <code>[{ "label": "27.7.–2.8.", "requests": 1234, "storageBytes": 5000000 }]</code>
       </div>`;
   }
 }
@@ -519,6 +594,134 @@ async function loadStats() {
     pill.textContent = count + ' ' + (count === 1 ? 'fotka' : (count >= 2 && count <= 4 ? 'fotky' : 'fotek')) +
       (totalBytes ? ' · ' + fmtBytes(totalBytes) : '');
   }
+}
+
+/* === KOŠ (soft-delete) ===
+   Smazání fotky z galerie NEJDŘÍV jen schová (žije v localStorage tohoto
+   prohlížeče) — jako koš ve Windows. Fotka zmizí z běžného zobrazení
+   galerie, ale dá se z koše obnovit. Skutečně se z R2/serveru smaže až:
+   - ručně přes "Vysypat koš" (nebo smazáním jednotlivé položky v koši), nebo
+   - automaticky po uplynutí TRASH_RETENTION_DAYS dní od přesunu do koše.
+   Je to čistě klientská vrstva nad existujícím /api/photos/delete — server
+   se nijak nemusí měnit. */
+const TRASH_RETENTION_DAYS = 30;
+let viewingTrash = false;
+
+function getTrashMap() {
+  try { return JSON.parse(localStorage.getItem('photoTrash') || '{}'); } catch { return {}; }
+}
+function saveTrashMap(map) { localStorage.setItem('photoTrash', JSON.stringify(map)); }
+function isInTrash(p) { return !!getTrashMap()[p.id]; }
+
+function moveToTrash(ids) {
+  const map = getTrashMap();
+  const now = Date.now();
+  ids.forEach(id => {
+    const p = G.photos.find(x => x.id === id);
+    if (p) map[id] = { deletedAt: now, key: p.key, name: p.name };
+  });
+  saveTrashMap(map);
+}
+
+function restoreFromTrash(ids) {
+  const map = getTrashMap();
+  ids.forEach(id => delete map[id]);
+  saveTrashMap(map);
+}
+
+function getTrashedPhotos() {
+  const map = getTrashMap();
+  return G.photos
+    .filter(p => map[p.id])
+    .map(p => ({ ...p, _deletedAt: map[p.id].deletedAt }))
+    .sort((a, b) => b._deletedAt - a._deletedAt);
+}
+
+function trashCount() { return Object.keys(getTrashMap()).length; }
+
+function daysLeftInTrash(deletedAt) {
+  const left = TRASH_RETENTION_DAYS - Math.floor((Date.now() - deletedAt) / 86400000);
+  return Math.max(0, left);
+}
+
+function updateTrashBadge() {
+  const btn = $('trashToggleBtn');
+  if (!btn) return;
+  const n = trashCount();
+  btn.textContent = '🗑 Koš' + (n ? ` (${n})` : '');
+}
+
+async function permanentlyDeleteTrashIds(ids) {
+  if (!ids.length) return;
+  const map = getTrashMap();
+  const keys = ids
+    .map(id => (G.photos.find(x => x.id === id)?.key) || map[id]?.key)
+    .filter(Boolean)
+    .join(',');
+  try {
+    if (keys) await fetch('/api/photos/delete?keys=' + encodeURIComponent(keys), { method: 'DELETE' });
+  } catch (e) {
+    console.error('Chyba trvalého mazání z koše', e);
+  }
+  ids.forEach(id => delete map[id]);
+  saveTrashMap(map);
+  await loadGallery();
+  renderGallery();
+  loadStats();
+  updateTrashBadge();
+}
+
+async function emptyTrash() {
+  const ids = Object.keys(getTrashMap());
+  if (!ids.length) { showToast('Koš je prázdný.', 'info'); return; }
+  if (!(await showConfirm(`Opravdu natrvalo smazat ${ids.length} fotek z koše? Tohle už nejde vzít zpět.`, { danger: true, confirmText: 'Vysypat koš' }))) return;
+  await permanentlyDeleteTrashIds(ids);
+  showToast('Koš vysypán', 'success');
+}
+
+function restoreSelectedFromTrash() {
+  if (!G.selected.size) { showToast('Nejdřív něco vyber.', 'info'); return; }
+  const ids = [...G.selected];
+  restoreFromTrash(ids);
+  G.selected.clear();
+  renderGallery();
+  updateTrashBadge();
+  showToast('Fotky obnoveny z koše', 'success');
+}
+
+function toggleTrashView() {
+  viewingTrash = !viewingTrash;
+  G.selected.clear();
+  $('trashToggleBtn')?.classList.toggle('btn-blue', viewingTrash);
+  const bar = $('trashActionsBar');
+  if (bar) bar.style.display = viewingTrash ? 'flex' : 'none';
+  renderGallery();
+}
+
+/* Fotky starší TRASH_RETENTION_DAYS dní v koši se natrvalo smažou —
+   kontrola proběhne vždy při startu dashboardu. */
+async function purgeExpiredTrash() {
+  const map = getTrashMap();
+  const now = Date.now();
+  const expired = Object.keys(map).filter(id => (now - map[id].deletedAt) > TRASH_RETENTION_DAYS * 86400000);
+  if (expired.length) await permanentlyDeleteTrashIds(expired);
+}
+
+/* Vloží tlačítko Koš + akční lištu nad galerii, bez nutnosti měnit HTML šablonu */
+function injectTrashUI() {
+  if ($('trashToggleBtn')) { updateTrashBadge(); return; }
+  const grid = $('galleryGrid');
+  if (!grid || !grid.parentElement) return;
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap';
+  bar.innerHTML = `
+    <button id="trashToggleBtn" class="btn btn-sm" onclick="toggleTrashView()">🗑 Koš</button>
+    <div id="trashActionsBar" style="display:none;gap:0.5rem">
+      <button class="btn btn-sm" onclick="restoreSelectedFromTrash()">↩ Obnovit vybrané</button>
+      <button class="btn btn-red btn-sm" onclick="emptyTrash()">🔥 Vysypat koš</button>
+    </div>`;
+  grid.parentElement.insertBefore(bar, grid);
+  updateTrashBadge();
 }
 
 /* === SLOŽKY — čistě klientská správa (žádné síťové volání, žádná
@@ -779,7 +982,7 @@ function sortedPhotos() {
   const mode = $('sortMode')?.value || 'newest';
   const folderSel = $('folderFilter')?.value || '';
   const query = $('gallerySearch')?.value.trim().toLowerCase() || '';
-  let arr = [...G.photos];
+  let arr = [...G.photos].filter(p => !isInTrash(p));
   if (folderSel === '__none__') arr = arr.filter(p => !getPhotoFolder(p));
   else if (folderSel) arr = arr.filter(p => getPhotoFolder(p) === folderSel);
   if (query) arr = arr.filter(p => (p.name || '').toLowerCase().includes(query));
@@ -801,12 +1004,17 @@ function sortedPhotos() {
 function renderGallery() {
   const grid = $('galleryGrid');
   if (!grid) return;
+  injectTrashUI();
   refreshFolderControls();
   const mode = $('viewMode')?.value || 'grid';
   grid.className = 'gallery-grid' + (mode !== 'grid' ? ' mode-' + mode : '');
 
-  const arr = sortedPhotos();
+  const arr = viewingTrash ? getTrashedPhotos() : sortedPhotos();
   if (!arr.length) {
+    if (viewingTrash) {
+      grid.innerHTML = `<div style="color:#64748b;padding:2rem;text-align:center;grid-column:1/-1">Koš je prázdný.</div>`;
+      return;
+    }
     const query = $('gallerySearch')?.value.trim() || '';
     const msg = query
       ? `Žádná fotka neodpovídá hledání „${escapeHtml(query)}“.`
@@ -822,24 +1030,32 @@ function renderGallery() {
     const dim = getCachedDim(p);
     const used = isPhotoUsedInArticle(p);
     if (mode === 'list' && !dim) loadPhotoDimension(p);
+
+    const topBadge = viewingTrash
+      ? `<span class="folder-badge" style="background:rgba(247,92,92,0.85);color:#fff">Smaže se za ${daysLeftInTrash(p._deletedAt)} dní</span>`
+      : (folder ? `<span class="folder-badge">📁 ${escapeHtml(folder)}</span>` : '');
+
+    const actions = viewingTrash
+      ? `<button class="btn btn-sm" onclick="event.stopPropagation();restoreFromTrash(['${p.id}']);renderGallery();updateTrashBadge();showToast('Obnoveno','success')" title="Obnovit">↩</button>
+         <button class="btn btn-red btn-sm" onclick="event.stopPropagation();(async()=>{if(await showConfirm('Natrvalo smazat tuhle fotku?',{danger:true,confirmText:'Smazat'}))permanentlyDeleteTrashIds(['${p.id}'])})()" title="Smazat natrvalo">🗑</button>`
+      : `<button class="btn btn-sm" onclick="event.stopPropagation();openLightbox('${p.url}')" title="Náhled">🔍</button>`;
+
     return `
     <div class="gallery-item${selected}" data-id="${p.id}">
       <input type="checkbox" class="item-checkbox" ${checked} onclick="event.stopPropagation();toggleSel('${p.id}')">
-      ${folder ? `<span class="folder-badge">📁 ${escapeHtml(folder)}</span>` : ''}
-      ${used ? `<span class="used-in-article-badge" title="Fotka je použitá v článku — neupravuj ji, radši vlož novou kopii">📄 V článku</span>` : ''}
-      <img src="${p.url}" alt="${escapeHtml(p.name || '')}" loading="lazy" onclick="openEditor('${p.id}')">
+      ${topBadge}
+      ${used && !viewingTrash ? `<span class="used-in-article-badge" title="Fotka je použitá v článku — neupravuj ji, radši vlož novou kopii">📄 V článku</span>` : ''}
+      <img src="${p.url}" alt="${escapeHtml(p.name || '')}" loading="lazy" ${viewingTrash ? `onclick="openLightbox('${p.url}')"` : `onclick="openEditor('${p.id}')"`}>
       <div class="item-meta">
         <div class="item-name">${escapeHtml(p.name || '')}</div>
         <div>${fmtBytes(p.size)}${mode === 'list' ? ` · <span class="item-dim">${dim ? dim.w + '×' + dim.h : '…'}</span>` : ''}</div>
-        ${showExif ? `<div class="item-exif">Načítám EXIF…</div>` : ''}
+        ${showExif && !viewingTrash ? `<div class="item-exif">Načítám EXIF…</div>` : ''}
       </div>
-      <div class="item-actions">
-        <button class="btn btn-sm" onclick="event.stopPropagation();openLightbox('${p.url}')" title="Náhled">🔍</button>
-      </div>
+      <div class="item-actions">${actions}</div>
     </div>`;
   }).join('');
 
-  if (showExif) arr.forEach(p => loadAndShowExif(p));
+  if (showExif && !viewingTrash) arr.forEach(p => loadAndShowExif(p));
 }
 
 function toggleExifDisplay() {
@@ -996,22 +1212,19 @@ function toggleSel(id) {
   if (el) el.classList.toggle('selected', G.selected.has(id));
 }
 
+/* Mazání z hlavní galerie teď NEMAŽE rovnou na serveru — jen přesune
+   vybrané fotky do koše (viz sekce KOŠ výše). Skutečné smazání proběhne
+   až při vysypání koše nebo automaticky po uplynutí lhůty. */
 async function bulkDelete() {
   if (!G.selected.size) { showToast('Nejsou vybrány žádné fotky.', 'info'); return; }
-  if (!(await showConfirm(`Opravdu smazat ${G.selected.size} vybraných fotek?`, { danger: true, confirmText: 'Smazat' }))) return;
-  const keys = [...G.selected]
-    .map(id => G.photos.find(p => p.id === id)?.key)
-    .filter(Boolean)
-    .join(',');
-  try {
-    if (keys) await fetch('/api/photos/delete?keys=' + encodeURIComponent(keys), { method: 'DELETE' });
-  } catch (e) {
-    console.error('Chyba hromadného mazání', e);
-  }
+  const ids = [...G.selected];
+  if (!(await showConfirm(`Přesunout ${ids.length} vybraných fotek do koše?`, { confirmText: 'Do koše' }))) return;
+  moveToTrash(ids);
   G.selected.clear();
-  await loadGallery();
   renderGallery();
   loadStats();
+  updateTrashBadge();
+  showToast(`${ids.length} fotek přesunuto do koše`, 'success');
 }
 
 /* === HROMADNÁ ÚPRAVA VYBRANÝCH FOTEK (velikost + JPG kvalita) === */
@@ -1073,13 +1286,13 @@ async function findDuplicatePhotos() {
     <div class="modal-box" style="max-width:560px;width:100%;max-height:82vh;display:flex;flex-direction:column;padding:0">
       <div style="padding:1.5rem 1.5rem 0.75rem;flex-shrink:0">
         <h3 style="margin-bottom:0.3rem">🔍 Možné duplicity (${groups.length} skupin)</h3>
-        <p style="color:var(--text-faint);font-size:12px;margin:0">Podle stejné velikosti souboru. Zelený štítek "V ČLÁNKU" = fotka je použitá v nějakém článku, radši ji nemaž. Zaškrtni fotky ke smazání a zkontroluj náhledem, než potvrdíš.</p>
+        <p style="color:var(--text-faint);font-size:12px;margin:0">Podle stejné velikosti souboru. Zelený štítek "V ČLÁNKU" = fotka je použitá v nějakém článku, radši ji nemaž. Zaškrtni fotky ke smazání (přesunou se do koše) a zkontroluj náhledem, než potvrdíš.</p>
       </div>
       <div style="flex:1;overflow-y:auto;padding:0 1.5rem">
         ${groupsHtml}
       </div>
       <div style="padding:1rem 1.5rem;flex-shrink:0;border-top:1px solid var(--border-soft);display:flex;gap:0.5rem;justify-content:center">
-        <button class="btn btn-red" onclick="deleteDuplicateSelected(this)">🗑 Smazat vybrané</button>
+        <button class="btn btn-red" onclick="deleteDuplicateSelected(this)">🗑 Do koše</button>
         <button class="btn" onclick="this.closest('.modal').remove()">Zavřít</button>
       </div>
     </div>`;
@@ -1091,20 +1304,15 @@ async function deleteDuplicateSelected(btn) {
   const modal = btn.closest('.modal');
   const checks = Array.from(modal.querySelectorAll('.dupe-check:checked'));
   if (!checks.length) { showToast('Nejdřív zaškrtni aspoň jednu fotku ke smazání.', 'info'); return; }
-  if (!(await showConfirm(`Opravdu smazat ${checks.length} vybraných fotek?`, { danger: true, confirmText: 'Smazat' }))) return;
+  if (!(await showConfirm(`Přesunout ${checks.length} vybraných fotek do koše?`, { confirmText: 'Do koše' }))) return;
 
-  const keys = checks.map(c => c.dataset.key).filter(Boolean);
-  try {
-    if (keys.length) await fetch('/api/photos/delete?keys=' + encodeURIComponent(keys.join(',')), { method: 'DELETE' });
-  } catch (e) {
-    console.error('Chyba mazání duplicit', e);
-    showToast('Nepodařilo se smazat některé fotky.', 'error');
-  }
+  const ids = checks.map(c => c.dataset.id).filter(Boolean);
+  moveToTrash(ids);
   modal.remove();
-  await loadGallery();
   renderGallery();
   loadStats();
-  showToast(`Smazáno ${checks.length} fotek`, 'success');
+  updateTrashBadge();
+  showToast(`${checks.length} fotek přesunuto do koše`, 'success');
 }
 
 /* === HROMADNÉ STAŽENÍ VYBRANÝCH FOTEK JAKO ZIP === */
@@ -1500,6 +1708,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   showTab(saved);
   initRibbonDragReorder();
   initGalleryDropZone();
+  purgeExpiredTrash();
+  updateTrashBadge();
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(() => moveTabIndicator());
   }
