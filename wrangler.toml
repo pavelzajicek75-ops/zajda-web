@@ -53,7 +53,7 @@ CF_ACCOUNT_ID = "cfd33ce0793cdf5eb04ef70ff7d0cfde"
 CF_PLAN = "free"
 R2_BUCKET_NAMES = "zajda-photos,zajda-quotes"
 KV_NAMESPACE_IDS = "f03cc831474f4af3b2e0a6c5f3aa069c,56e1ba6fdafc4d46a5de4e4690d01fa3,dd6ee2a83add46339418a5294c74c7ef,2d74f6e45eda4cbea51275017ba66c23,0415a2b978c8488e81fc3cf264cafb4b"
-CF_API_TOKEN = "cfut_OqwNoVXXPfWy11OTpxC3qHFucX9UUvjaQbvFJSGgba9468af"
+CF_API_TOKEN = "cfut_nx0W3DSC9mGBGndvzDdGUms2hHQsPmRlIDvlalFS0186a784"
 
 [[env.production.kv_namespaces]]
 binding = "SESSIONS"
