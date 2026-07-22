@@ -251,13 +251,13 @@
       if (run.length >= 2) {
         var grid = document.createElement('div');
         grid.className = 'photo-grid';
+        var refNode = run[0];
+        refNode.parentNode.insertBefore(grid, refNode);
         run.forEach(function(node) {
           var img = extractImg(node);
           if (img) grid.appendChild(img);
+          if (node !== img && node.parentNode) node.parentNode.removeChild(node);
         });
-        var firstNode = run[0];
-        firstNode.parentNode.insertBefore(grid, firstNode);
-        run.forEach(function(node) { if (node.parentNode) node.parentNode.removeChild(node); });
       }
       run = [];
     }
@@ -274,7 +274,7 @@
   }
 
   function buildGallery() {
-    groupImages();
+    try { groupImages(); } catch (e) { console.error('groupImages selhalo:', e); }
     var body = document.getElementById('articleBody');
     galleryImages = body ? Array.prototype.slice.call(body.querySelectorAll('img')) : [];
     galleryImages.forEach(function(img, i) {
@@ -393,7 +393,12 @@
         container.innerHTML = '<div class="article-notfound"><h2>Článek nenalezen</h2><p>Tento článek neexistuje nebo byl smazán.</p></div>';
         return;
       }
-      renderArticle(article);
+      try {
+        renderArticle(article);
+      } catch (renderErr) {
+        console.error('Chyba renderování článku:', renderErr);
+        container.innerHTML = '<div class="article-notfound"><h2>Chyba zobrazení</h2><p>Článek se podařilo načíst, ale nastala chyba při jeho zobrazení.</p></div>';
+      }
     } catch(e) {
       container.innerHTML = '<div class="article-notfound"><h2>Chyba načítání</h2><p>Nepodařilo se načíst článek. Zkus to prosím později.</p></div>';
     }
