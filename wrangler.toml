@@ -3,6 +3,8 @@ compatibility_date = "2026-06-13"
 
 pages_build_output_dir = "public"
 
+# ── Top-level (lokální vývoj) ──────────────────────────────
+
 [vars]
 ADMIN_JWT_SECRET = "TVŮJ_SECRET"
 CDN_BASE_URL = "https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev"
@@ -12,7 +14,6 @@ R2_BUCKET_NAMES = "zajda-photos,zajda-quotes"
 KV_NAMESPACE_IDS = "f03cc831474f4af3b2e0a6c5f3aa069c,56e1ba6fdafc4d46a5de4e4690d01fa3,dd6ee2a83add46339418a5294c74c7ef,2d74f6e45eda4cbea51275017ba66c23,0415a2b978c8488e81fc3cf264cafb4b"
 CF_API_TOKEN = "cfut_OqwNoVXXPfWy11OTpxC3qHFucX9UUvjaQbvFJSGgba9468af"
 
-# Workers KV (funguje pro Workers, ne pro Pages)
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "f03cc831474f4af3b2e0a6c5f3aa069c"
@@ -33,7 +34,6 @@ id = "2d74f6e45eda4cbea51275017ba66c23"
 binding = "APP_DATA"
 id = "0415a2b978c8488e81fc3cf264cafb4b"
 
-# R2 buckets (funguje pro Pages i Workers)
 [[r2_buckets]]
 binding = "PHOTOS_R2"
 bucket_name = "zajda-photos"
@@ -42,13 +42,47 @@ bucket_name = "zajda-photos"
 binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
 
-# 🔥 Pages Functions KV bindingy MUSÍ být zde:
-[env.production]
-kv_namespaces = [
-  { binding = "SESSIONS", id = "f03cc831474f4af3b2e0a6c5f3aa069c" },
-  { binding = "ARTICLES", id = "56e1ba6fdafc4d46a5de4e4690d01fa3" },
-  { binding = "SUBSECTIONS", id = "dd6ee2a83add46339418a5294c74c7ef" },
-  { binding = "PHOTOS", id = "2d74f6e45eda4cbea51275017ba66c23" },
-  { binding = "APP_DATA", id = "0415a2b978c8488e81fc3cf264cafb4b" },
-  { binding = "USAGE_KV", id = "TVŮJ_USAGE_KV_NAMESPACE_ID" }
-]
+# ── Production environment ─────────────────────────────────
+# Všechny non-inheritable klíče (vars, kv_namespaces, r2_buckets)
+# musí být uvedeny znovu, jinak Wrangler odmítne deploy.
+
+[env.production.vars]
+ADMIN_JWT_SECRET = "TVŮJ_SECRET"
+CDN_BASE_URL = "https://pub-04881c4bbea24b2ab23b9be5a7bd0aa1.r2.dev"
+CF_ACCOUNT_ID = "cfd33ce0793cdf5eb04ef70ff7d0cfde"
+CF_PLAN = "free"
+R2_BUCKET_NAMES = "zajda-photos,zajda-quotes"
+KV_NAMESPACE_IDS = "f03cc831474f4af3b2e0a6c5f3aa069c,56e1ba6fdafc4d46a5de4e4690d01fa3,dd6ee2a83add46339418a5294c74c7ef,2d74f6e45eda4cbea51275017ba66c23,0415a2b978c8488e81fc3cf264cafb4b"
+CF_API_TOKEN = "cfut_OqwNoVXXPfWy11OTpxC3qHFucX9UUvjaQbvFJSGgba9468af"
+
+[[env.production.kv_namespaces]]
+binding = "SESSIONS"
+id = "f03cc831474f4af3b2e0a6c5f3aa069c"
+
+[[env.production.kv_namespaces]]
+binding = "ARTICLES"
+id = "56e1ba6fdafc4d46a5de4e4690d01fa3"
+
+[[env.production.kv_namespaces]]
+binding = "SUBSECTIONS"
+id = "dd6ee2a83add46339418a5294c74c7ef"
+
+[[env.production.kv_namespaces]]
+binding = "PHOTOS"
+id = "2d74f6e45eda4cbea51275017ba66c23"
+
+[[env.production.kv_namespaces]]
+binding = "APP_DATA"
+id = "0415a2b978c8488e81fc3cf264cafb4b"
+
+[[env.production.kv_namespaces]]
+binding = "USAGE_KV"
+id = "dd6ee2a83add46339418a5294c74c7ef"
+
+[[env.production.r2_buckets]]
+binding = "PHOTOS_R2"
+bucket_name = "zajda-photos"
+
+[[env.production.r2_buckets]]
+binding = "QUOTES_R2"
+bucket_name = "zajda-quotes"
