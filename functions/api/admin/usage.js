@@ -22,14 +22,7 @@ export async function onRequestGet(context) {
 
   const [storage, requests] = await Promise.all([
     getR2StorageUsage(env),
-    getRequestsUsage(env).catch(e => ({
-      used: null,
-      subrequests: null,
-      errors: null,
-      durationMs: null,
-      limit: null,
-      error: String(e)
-    }))
+    getRequestsUsageCached(env)
   ]);
 
   return json({
@@ -81,10 +74,33 @@ async function getR2StorageUsage(env) {
   return { buckets: results, totalBytes, limitBytes: FREE_TIER_BYTES };
 }
 
-/* Počet spuštění Workers/Pages Functions za posledních 30 dní. */
+/* --- KV CACHE WRAPPER --- */
+async function getRequestsUsageCached(env) {
+  if (!env.USAGE_KV) {
+    return { used: null, subrequests: null, errors: null, durationMs: null, limit: null, error: 'KV binding USAGE_KV chybí' };
+  }
+
+  const CACHE_KEY = 'cf_usage_cache_v1';
+  const cached = await env.USAGE_KV.get(CACHE_KEY, { type: 'json' });
+
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+
+  const fresh = await getRequestsUsage(env);
+
+  await env.USAGE_KV.put(CACHE_KEY, JSON.stringify({
+    expires: Date.now() + 60000, // 60 sekund
+    data: fresh
+  }));
+
+  return fresh;
+}
+
+/* --- RAW GRAPHQL REQUEST --- */
 async function getRequestsUsage(env) {
   if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) {
-    throw new Error('CF_API_TOKEN nebo CF_ACCOUNT_ID není nastaveno');
+    return { used: null, subrequests: null, errors: null, durationMs: null, limit: null, error: 'CF_API_TOKEN nebo CF_ACCOUNT_ID není nastaveno' };
   }
 
   const now = new Date();
@@ -130,12 +146,26 @@ async function getRequestsUsage(env) {
 
   if (!r.ok) {
     const text = await r.text();
-    throw new Error(`GraphQL API ${r.status}: ${text.slice(0, 200)}`);
+    return {
+      used: null,
+      subrequests: null,
+      errors: null,
+      durationMs: null,
+      limit: null,
+      error: `GraphQL API ${r.status}: ${text.slice(0, 200)}`
+    };
   }
 
   const data = await r.json();
   if (data.errors?.length) {
-    throw new Error(data.errors.map(e => e.message).join('; '));
+    return {
+      used: null,
+      subrequests: null,
+      errors: null,
+      durationMs: null,
+      limit: null,
+      error: data.errors.map(e => e.message).join('; ')
+    };
   }
 
   const groups = data?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
@@ -150,6 +180,7 @@ async function getRequestsUsage(env) {
     subrequests,
     errors,
     durationMs,
-    limit: null
+    limit: null,
+    error: null
   };
 }
