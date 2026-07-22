@@ -1,119 +1,3 @@
-
-
-Zkontrolovat existující soubory pro úpravu
-Zkontrolovat existující soubory pro úpravu
-Nejdřív opravím prokliky citátů (jsou blokované vrstvou sekcí) a zvýrazním text „Jsem Zajda...":
-
-
-Řešil problém s vrstvením prvků a interakcemi v designu
-Řešil problém s vrstvením prvků a interakcemi v designu
-Teď zvýrazním text „Jsem Zajda...":
-
-
-Předělat intro-text na výraznou skleněnou kartu se zvýrazněným úvodem "Jsem Zajda."
-Předělat intro-text na výraznou skleněnou kartu se zvýrazněným úvodem "Jsem Zajda."
-pokksracuj, chci aby to bylo moderni,...... poplatne dobe 2026, rovnou dopuporav design stranky s clankem!
-
-
-Orchestroval modernizaci článku s novým designovým systémem
-Orchestroval modernizaci článku s novým designovým systémem
-Homepage je hotová. Teď kompletně předělám article.html na stejný vizuální systém (stejná paleta, fonty, hvězdy) a zachovám funkční galerii/lightbox.
-
-
-Rekonfiguroval nástroj a připravil opakovaný pokus
-Rekonfiguroval nástroj a připravil opakovaný pokus
-Hotovo, opravil jsem obojí:
-
-1. Oprava blokovaných citátů
-Bylo to přesně, jak jsi tušil — .sections-container a .title-block neměly žádné pozadí, ale jako běžné bloky pořád "zabíraly" plochu obrazovky nad citáty (vyšší z-index), takže myš tam hover na citát vůbec nezachytila. Nastavil jsem jim pointer-events: none a jen kartám sekcí vrátil pointer-events: auto — teď citáty fungují (zvětší se, zastaví, rozzáří) úplně kdekoliv na obrazovce, i uprostřed mezi kartami.
-
-2. Zvýraznění „Jsem Zajda..."
-Text teď sedí ve vlastní skleněné kartě s oranžovým akcentním okrajem vlevo, a úvodní „Jsem Zajda." je zvýrazněné jako velký gradientový nadpis (oranžová → tyrkysová) — konečně vypadá jako podpis autora, ne jako mimoběžný text.
-
-3. Článek (article.html) předělaný na stejný systém 2026
-
-Stejná paleta (aurora/ember/nova), stejné fonty (Space Grotesk + Inter)
-Hvězdné pozadí teď má i barevnou variaci (ne jen bílé tečky)
-Nadpisy, odkazy, citace, kód, tabulky, badge sekce — vše přebarveno do nového stylu
-Galerie fotek s listováním v lightboxu (co jsme dělali dřív) zůstala 100% funkční beze změny
-Oba soubory teď tvoří jeden vizuálně sjednocený web. Chceš ještě sjednotit i vzhled about stránky, pokud existuje?
-
-
-Index
-Code · HTML 
-
-Article
-Code · HTML 
-jasny i about!
-
-
-Identified missing file and flagged request for clarification
-Identified missing file and flagged request for clarification
-Jasně, ráda to sjednotím i tam! Nemám ale zatím k dispozici zdrojový kód about stránky (na tu se z homepage jen odkazuje přes /about/, ale její HTML jsi mi zatím neposlal).
-
-Můžeš mi ho prosím vložit (stejně jako u homepage a article.html — buď vlož kód přímo do zprávy, nebo nahraj soubor)?
-
-
-<!DOCTYPE html> <html lang="cs"> <head> <meta charset="UTF-8"> <title>O Zajdovi</title> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <style> * { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: system-ui, sans-serif;
-
-pasted
-
-
-Orchestrated visual redesign and resolved layering conflicts across pages
-Orchestrated visual redesign and resolved layering conflicts across pages
-Hotovo, about.html je teď plně sladěná se zbytkem webu:
-
-Stejná paleta a fonty – Space Grotesk pro nadpisy, Inter pro text, barevné hvězdy, gradientový titulek.
-Skleněné panely (obsah, podsekce, novinky) mají stejný hairline akcent, hover efekty a stíny jako karty na homepage.
-Citáty jsou 1:1 stejné jako na homepage – signální bod, dekódování textu, ohon komety, souhvězdí i vzplanutí při najetí myší.
-Oprava blokování – stejně jako u homepage jsem dal pointer-events: none na strukturální obaly (.back-link, .title-block, .container, .subsections, .news-section) a pointer-events: auto jen na skutečně interaktivní prvky, takže se citáty dají chytit i uprostřed stránky, ne jen po stranách.
-Celý web (homepage, článek, about) teď funguje jako jeden vizuálně i interakčně konzistentní kus. Chceš, abych ještě něco doladil, nebo je to takhle kompletní?
-
-
-Index
-Code · HTML 
-
-Article
-Code · HTML 
-
-About
-Code · HTML 
-nejake napady pro zlepseni?
-
-
-Orchestroval seznam vylepšení pro UX, výkon a dostupnost
-Orchestroval seznam vylepšení pro UX, výkon a dostupnost
-Pár nápadů, seřazených podle toho, co by dalo nejvíc za nejméně práce:
-
-Rychlé vylepšení (malé, ale znatelné)
-
-Sdílené hvězdné pozadí – teď se #stars generuje znovu na každé stránce při načtení (flash při přechodu). Dalo by se udělat plynulý fade-in canvasu, ať to nenaskočí najednou.
-Skeleton loading místo spinneru – u článku/about místo kolečka rovnou nastínit rozvržení (šedé bloky pro nadpis, odstavce) — na 2026 web to působí rychleji, i když data trvají stejně dlouho.
-Meta tagy pro sdílení (Open Graph) – když někdo hodí odkaz na článek do WhatsAppu/Messengeru, ať se ukáže obrázek + titulek + popisek, ne holý link. Teď to asi chybí úplně.
-Střední dopad
-
-Přechod mezi stránkami – teď je to tvrdý reload (window.location.href). I jednoduchý fade-out/fade-in (200ms) při odchodu z homepage by dost pomohl plynulosti, o warp efektu jsme mluvili dřív.
-Progress/reading bar u dlouhých článků – tenká linka nahoře, co ukazuje, kolik čtenář přečetl. Levné na implementaci, hezky to ladí s "cestou vesmírem" motivem.
-Related articles na konci článku – "Další ze stejné sekce" karty pod share barem, ať čtenář neodchází hned po jednom článku.
-Obsahové/SEO
-
-Vyhledávání napříč články – i jednoduché klientské (fetch všech článků, filtrovat podle textu) by pomohlo, pokud jich přibývá.
-RSS/odběr novinek – lidi, co to čtou pravidelně kvůli diagnóze/cestování, by ocenili možnost se přihlásit k odběru bez nutnosti chodit na web.
-Technický dluh
-
-Teď má každá stránka (index, article, about) svoje vlastní kopie stejného CSS/JS bloku (hvězdy, citáty, paleta). Funguje to, ale při další úpravě je nutné to měnit na 3 místech. Časem by dávalo smysl vytáhnout sdílené kusy (stars.js, quotes.js, theme.css) do samostatných souborů a includovat je — ať se štěstí typu "zapomněl jsem to změnit na jedné stránce" nestává.
-Chceš, abych se pustil do některého z těchto bodů rovnou?
-
-
-
-
-
-
-
-Claude is AI and can make mistakes. Please double-check responses.
-
-
-Article · HTML
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -125,10 +9,11 @@ Article · HTML
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
- 
+
     :root {
       --void: #08080f;
       --panel: rgba(20, 21, 38, 0.55);
+      --panel-solid: rgba(28, 29, 48, 0.92);
       --panel-border: rgba(140, 150, 255, 0.18);
       --panel-border-hover: rgba(255, 122, 69, 0.55);
       --aurora: #8f6bff;
@@ -141,13 +26,13 @@ Article · HTML
       --mist: #b3b6da;
       --mist-dim: #6a6d90;
     }
- 
+
     body {
       font-family: 'Inter', system-ui, sans-serif;
       background: var(--void); color: var(--parchment);
       overflow-x: hidden; min-height: 100vh; position: relative; font-weight: 400;
     }
- 
+
     .bg {
       position: fixed; inset: 0; z-index: 0;
       background:
@@ -156,7 +41,7 @@ Article · HTML
         radial-gradient(circle at 12% 75%, rgba(143,107,255,0.08), transparent 55%),
         linear-gradient(180deg, #06060c 0%, #0a0a16 45%, #08080f 100%);
     }
- 
+
     .stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
     .star {
       position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%;
@@ -167,25 +52,26 @@ Article · HTML
     .star:nth-of-type(11n) { background: var(--nova); box-shadow: 0 0 6px var(--nova-dim); }
     .star:nth-of-type(17n) { background: var(--aurora); box-shadow: 0 0 6px var(--aurora-dim); }
     @keyframes twinkle { 0%,100% { opacity: 0.08; transform: scale(0.5); } 50% { opacity: 0.9; transform: scale(1); } }
- 
+
     .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
     .back-btn {
       display: inline-flex; align-items: center; gap: 8px;
-      background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--panel-border); color: var(--parchment); padding: 10px 20px;
-      border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 500; text-decoration: none;
-      transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      background: var(--panel-solid); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none;
+      transition: all 0.3s; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
     }
-    .back-btn:hover { border-color: var(--panel-border-hover); transform: translateX(-3px); background: rgba(255,122,69,0.1); }
+    .back-btn:hover { border-color: var(--ember); transform: translateX(-3px); background: rgba(255,122,69,0.18); }
     .nav-title {
       font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; letter-spacing: 0.3px;
       background: linear-gradient(90deg, var(--ember), var(--nova));
       -webkit-background-clip: text; background-clip: text; color: transparent;
       text-decoration: none;
+      filter: drop-shadow(0 0 12px rgba(255,122,69,0.25));
     }
-    .nav-title:hover { filter: brightness(1.2); }
- 
-    .article-container { position: relative; z-index: 10; max-width: 800px; margin: 0 auto; padding: 20px 24px 80px; }
+    .nav-title:hover { filter: drop-shadow(0 0 18px rgba(47,230,201,0.4)) brightness(1.15); }
+
+    .article-container { position: relative; z-index: 10; max-width: 1200px; width: 100%; margin: 0 auto; padding: 20px 40px 80px; }
     .article-loading { text-align: center; padding: 80px 20px; color: var(--mist-dim); font-size: 18px; }
     .article-loading .spinner {
       display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(255,122,69,0.2);
@@ -195,7 +81,7 @@ Article · HTML
     .article-notfound { text-align: center; padding: 80px 20px; }
     .article-notfound h2 { font-family: 'Space Grotesk', sans-serif; font-size: 28px; color: var(--ember); margin-bottom: 12px; }
     .article-notfound p { color: var(--mist); font-size: 16px; }
- 
+
     .article-header { text-align: center; margin-bottom: 32px; }
     .article-title {
       font-family: 'Space Grotesk', sans-serif; font-size: clamp(26px, 4vw, 42px); font-weight: 700;
@@ -210,7 +96,7 @@ Article · HTML
       padding: 3px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;
     }
     .article-divider { width: 60%; max-width: 300px; height: 1px; margin: 0 auto 32px; background: linear-gradient(to right, transparent, var(--ember-dim), transparent); }
- 
+
     .article-body { color: #dcdce8; font-size: 17px; line-height: 1.8; }
     .article-body p { margin-bottom: 18px; }
     .article-body h2 {
@@ -223,6 +109,17 @@ Article · HTML
       box-shadow: 0 4px 20px rgba(0,0,0,0.6); transition: transform 0.3s, box-shadow 0.3s;
     }
     .article-body img:hover { transform: scale(1.02); box-shadow: 0 6px 30px rgba(255,122,69,0.3); }
+
+    .photo-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+      margin: 24px 0;
+    }
+    .photo-grid img {
+      margin: 0; width: 100%; height: 240px; object-fit: cover;
+    }
+    @media (max-width: 900px) { .photo-grid { grid-template-columns: repeat(2, 1fr); } .photo-grid img { height: 200px; } }
+    @media (max-width: 520px) { .photo-grid { grid-template-columns: 1fr; } .photo-grid img { height: auto; } }
+
     .article-body a { color: var(--ember); text-decoration: none; border-bottom: 1px solid var(--ember-dim); transition: all 0.2s; }
     .article-body a:hover { color: var(--nova); border-bottom-color: var(--nova); text-shadow: 0 0 10px rgba(47,230,201,0.4); }
     .article-body ul, .article-body ol { margin: 14px 0 18px 24px; }
@@ -241,52 +138,55 @@ Article · HTML
     .article-body table { width: 100%; border-collapse: collapse; margin: 16px 0; }
     .article-body th, .article-body td { border: 1px solid rgba(255,122,69,0.2); padding: 10px 14px; text-align: left; }
     .article-body th { background: rgba(255,122,69,0.1); color: var(--parchment); }
- 
+
     .article-footer {
       margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(140,150,255,0.14);
       display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
     }
     .share-bar-inline { display: flex; gap: 10px; flex-wrap: wrap; }
     .share-btn {
-      background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-      border: 1px solid var(--panel-border); color: var(--parchment); padding: 8px 16px;
-      border-radius: 30px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      background: var(--panel-solid); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,122,69,0.3); color: var(--parchment); padding: 9px 18px;
+      border-radius: 30px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.3s;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.5);
     }
-    .share-btn:hover { border-color: var(--panel-border-hover); background: rgba(255,122,69,0.1); transform: translateY(-2px); }
-    .share-btn.wa { color: #4fe0a3; border-color: rgba(79,224,163,0.25); }
-    .share-btn.wa:hover { background: rgba(79,224,163,0.1); border-color: #4fe0a3; }
- 
+    .share-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); transform: translateY(-2px); }
+    .share-btn.wa { color: #4fe0a3; border-color: rgba(79,224,163,0.4); }
+    .share-btn.wa:hover { background: rgba(79,224,163,0.18); border-color: #4fe0a3; }
+
     /* Lightbox s listováním */
     .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(4,4,10,0.94); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
     .lightbox-overlay.open { display: flex; }
     .lightbox-overlay img { max-width: 88vw; max-height: 88vh; border-radius: 8px; box-shadow: 0 0 50px rgba(255,122,69,0.25); cursor: default; user-select: none; }
     .lightbox-close {
-      position: absolute; top: 18px; right: 24px; color: var(--parchment); font-size: 34px; line-height: 1; cursor: pointer;
-      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 50%; width: 44px; height: 44px;
+      position: absolute; top: 18px; right: 24px; color: #fff; font-size: 34px; line-height: 1; cursor: pointer;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.35); border-radius: 50%; width: 46px; height: 46px;
       display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
-    .lightbox-close:hover { background: rgba(255,122,69,0.2); border-color: var(--panel-border-hover); }
+    .lightbox-close:hover { background: rgba(255,122,69,0.35); border-color: var(--ember); }
     .lightbox-arrow {
-      position: absolute; top: 50%; transform: translateY(-50%); color: var(--parchment); font-size: 30px; cursor: pointer;
-      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 50%; width: 52px; height: 52px;
+      position: absolute; top: 50%; transform: translateY(-50%); color: #fff; font-size: 28px; cursor: pointer;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.35); border-radius: 50%; width: 54px; height: 54px;
       display: flex; align-items: center; justify-content: center; transition: all 0.2s; user-select: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
-    .lightbox-arrow:hover { background: rgba(255,122,69,0.2); border-color: var(--panel-border-hover); }
-    .lightbox-arrow.prev { left: 18px; }
-    .lightbox-arrow.next { right: 18px; }
+    .lightbox-arrow:hover { background: rgba(255,122,69,0.35); border-color: var(--ember); transform: translateY(-50%) scale(1.08); }
+    .lightbox-arrow.prev { left: 22px; }
+    .lightbox-arrow.next { right: 22px; }
     .lightbox-counter {
-      position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); color: var(--parchment); font-size: 14px;
-      background: var(--panel); border: 1px solid var(--panel-border); padding: 6px 16px; border-radius: 20px;
+      position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 14px; font-weight: 500;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); padding: 7px 18px; border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
- 
+
     :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
- 
+
     @media (prefers-reduced-motion: reduce) {
       .star { animation: none !important; opacity: 0.5; }
       .back-btn, .share-btn, .article-body img { transition: none !important; }
     }
- 
+
     @media (max-width: 700px) {
       .nav-bar { padding: 16px 20px; } .article-container { padding: 16px 16px 60px; } .article-body { font-size: 16px; } .article-footer { flex-direction: column; align-items: stretch; } .share-bar-inline { justify-content: center; }
       .lightbox-arrow { width: 42px; height: 42px; font-size: 22px; }
@@ -298,7 +198,7 @@ Article · HTML
 <body>
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
- 
+
   <div class="lightbox-overlay" id="lightboxOverlay">
     <span class="lightbox-close" id="lightboxClose">&times;</span>
     <span class="lightbox-arrow prev" id="lightboxPrev">&#10094;</span>
@@ -306,7 +206,7 @@ Article · HTML
     <span class="lightbox-arrow next" id="lightboxNext">&#10095;</span>
     <span class="lightbox-counter" id="lightboxCounter"></span>
   </div>
- 
+
   <div class="nav-bar">
     <a href="/" class="back-btn">← Zpět na vesmír</a>
     <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
@@ -321,15 +221,67 @@ Article · HTML
   // --- Lightbox s galerií ---
   var galleryImages = [];
   var galleryIndex = 0;
- 
+
+  function isImageOnlyNode(node) {
+    if (!node) return false;
+    if (node.nodeType === 3) return node.textContent.trim() === '';
+    if (node.nodeType !== 1) return false;
+    if (node.tagName === 'IMG') return true;
+    if (node.tagName === 'P' || node.tagName === 'DIV') {
+      var kids = Array.prototype.slice.call(node.childNodes).filter(function(n) {
+        return !(n.nodeType === 3 && n.textContent.trim() === '');
+      });
+      return kids.length === 1 && kids[0].nodeType === 1 && kids[0].tagName === 'IMG';
+    }
+    return false;
+  }
+
+  function extractImg(node) {
+    if (node.tagName === 'IMG') return node;
+    return node.querySelector('img');
+  }
+
+  function groupImages() {
+    var body = document.getElementById('articleBody');
+    if (!body) return;
+    var children = Array.prototype.slice.call(body.childNodes);
+    var run = [];
+
+    function flushRun() {
+      if (run.length >= 2) {
+        var grid = document.createElement('div');
+        grid.className = 'photo-grid';
+        run.forEach(function(node) {
+          var img = extractImg(node);
+          if (img) grid.appendChild(img);
+        });
+        var firstNode = run[0];
+        firstNode.parentNode.insertBefore(grid, firstNode);
+        run.forEach(function(node) { if (node.parentNode) node.parentNode.removeChild(node); });
+      }
+      run = [];
+    }
+
+    for (var i = 0; i < children.length; i++) {
+      var node = children[i];
+      if (isImageOnlyNode(node)) {
+        if (node.nodeType === 1) run.push(node);
+      } else {
+        flushRun();
+      }
+    }
+    flushRun();
+  }
+
   function buildGallery() {
+    groupImages();
     var body = document.getElementById('articleBody');
     galleryImages = body ? Array.prototype.slice.call(body.querySelectorAll('img')) : [];
     galleryImages.forEach(function(img, i) {
       img.addEventListener('click', function() { openLightbox(i); });
     });
   }
- 
+
   function updateLightboxImage() {
     var img = galleryImages[galleryIndex];
     if (!img) return;
@@ -343,30 +295,30 @@ Article · HTML
     counter.style.display = multi ? 'block' : 'none';
     counter.textContent = (galleryIndex + 1) + ' / ' + galleryImages.length;
   }
- 
+
   function openLightbox(index) {
     if (!galleryImages.length) return;
     galleryIndex = ((index % galleryImages.length) + galleryImages.length) % galleryImages.length;
     updateLightboxImage();
     document.getElementById('lightboxOverlay').classList.add('open');
   }
- 
+
   function closeLightbox() {
     document.getElementById('lightboxOverlay').classList.remove('open');
   }
- 
+
   function showPrevImage() {
     if (!galleryImages.length) return;
     galleryIndex = (galleryIndex - 1 + galleryImages.length) % galleryImages.length;
     updateLightboxImage();
   }
- 
+
   function showNextImage() {
     if (!galleryImages.length) return;
     galleryIndex = (galleryIndex + 1) % galleryImages.length;
     updateLightboxImage();
   }
- 
+
   document.addEventListener('DOMContentLoaded', function() {
     var overlay = document.getElementById('lightboxOverlay');
     overlay.addEventListener('click', function(e) {
@@ -375,7 +327,7 @@ Article · HTML
     document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
     document.getElementById('lightboxPrev').addEventListener('click', function(e) { e.stopPropagation(); showPrevImage(); });
     document.getElementById('lightboxNext').addEventListener('click', function(e) { e.stopPropagation(); showNextImage(); });
- 
+
     document.addEventListener('keydown', function(e) {
       if (!overlay.classList.contains('open')) return;
       if (e.key === 'Escape') closeLightbox();
@@ -383,12 +335,12 @@ Article · HTML
       else if (e.key === 'ArrowRight') showNextImage();
     });
   });
- 
+
   function escapeHtml(t) {
     if (t == null) return '';
     return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
- 
+
   function getArticleId() {
     var params = new URLSearchParams(window.location.search);
     var id = params.get('id');
@@ -397,14 +349,14 @@ Article · HTML
     if (parts.length >= 2 && parts[0] === 'article') return decodeURIComponent(parts[1]);
     return null;
   }
- 
+
   var SECTION_NAMES = {
     'travel': 'Cestování',
     'photo': 'Fotografování',
     'projects': 'Projekty',
     'about': 'O Zajdovi'
   };
- 
+
   document.addEventListener('DOMContentLoaded', async function() {
     var starsBox = document.getElementById('stars');
     if (starsBox) {
@@ -420,15 +372,15 @@ Article · HTML
       }
       starsBox.appendChild(frag);
     }
- 
+
     var container = document.getElementById('articleContainer');
     var articleId = getArticleId();
- 
+
     if (!articleId) {
       container.innerHTML = '<div class="article-notfound"><h2>Chybí ID článku</h2><p>Zkus se vrátit na <a href="/" style="color:var(--ember)">hlavní stránku</a>.</p></div>';
       return;
     }
- 
+
     try {
       var r = await fetch('/api/articles/list');
       if (!r.ok) throw new Error('API chyba');
@@ -446,16 +398,16 @@ Article · HTML
       container.innerHTML = '<div class="article-notfound"><h2>Chyba načítání</h2><p>Nepodařilo se načíst článek. Zkus to prosím později.</p></div>';
     }
   });
- 
+
   function renderArticle(article) {
     var container = document.getElementById('articleContainer');
     var title = article.title || 'Bez názvu';
     var content = article.content || '';
-    var date = article.created || article.date || '';
+    var date = article.date || article.created || '';
     var dateStr = '';
     if (date) { try { dateStr = new Date(date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) {} }
     var sectionName = SECTION_NAMES[article.sectionId] || article.sectionId || '';
- 
+
     var html = '';
     html += '<div class="article-header">';
     html += '<h1 class="article-title">' + escapeHtml(title) + '</h1>';
@@ -465,7 +417,7 @@ Article · HTML
     html += '</div></div>';
     html += '<div class="article-divider"></div>';
     html += '<div class="article-body" id="articleBody">' + content + '</div>';
- 
+
     var shareUrl = window.location.href;
     var shareText = title + ' — Moje diagnóza, můj vesmír';
     html += '<div class="article-footer">';
@@ -475,12 +427,11 @@ Article · HTML
     html += '<a class="share-btn" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X / Twitter</a>';
     html += '</div>';
     html += '</div>';
- 
+
     container.innerHTML = html;
- 
+
     buildGallery();
   }
   </script>
 </body>
 </html>
- 
