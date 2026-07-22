@@ -550,8 +550,8 @@
     function renderArticleList(articles) {
       if (!articles.length) return '<div class="no-articles">Žádné články</div>';
       var sorted = articles.slice().sort(function(a, b) {
-        var da = a.created || a.date || '';
-        var db = b.created || b.date || '';
+        var da = a.date || a.created || '';
+        var db = b.date || b.created || '';
         if (da < db) return 1;
         if (da > db) return -1;
         return 0;
@@ -560,7 +560,7 @@
       for (var i = 0; i < sorted.length; i++) {
         var a = sorted[i];
         var title = a.title || 'Bez názvu';
-        var dateStr = formatDate(a.created || a.date);
+        var dateStr = formatDate(a.date || a.created);
         html += '<a class="article-link" href="/article.html?id=' + encodeURIComponent(a.id) + '">' +
           escapeHtml(title) +
           (dateStr ? '<span class="art-date">' + dateStr + '</span>' : '') +
@@ -604,8 +604,8 @@
           return String(a.sectionId) === 'about' && a.published;
         });
         var sorted = aboutArticles.sort(function(a, b) {
-          var da = a.created || a.date || '';
-          var db = b.created || b.date || '';
+          var da = a.date || a.created || '';
+          var db = b.date || b.created || '';
           if (da < db) return 1;
           if (da > db) return -1;
           return 0;
