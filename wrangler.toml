@@ -12,6 +12,7 @@ R2_BUCKET_NAMES = "zajda-photos,zajda-quotes"
 KV_NAMESPACE_IDS = "f03cc831474f4af3b2e0a6c5f3aa069c,56e1ba6fdafc4d46a5de4e4690d01fa3,dd6ee2a83add46339418a5294c74c7ef,2d74f6e45eda4cbea51275017ba66c23,0415a2b978c8488e81fc3cf264cafb4b"
 CF_API_TOKEN = "cfut_OqwNoVXXPfWy11OTpxC3qHFucX9UUvjaQbvFJSGgba9468af"
 
+# Workers KV (funguje pro Workers, ne pro Pages)
 [[kv_namespaces]]
 binding = "SESSIONS"
 id = "f03cc831474f4af3b2e0a6c5f3aa069c"
@@ -32,6 +33,7 @@ id = "2d74f6e45eda4cbea51275017ba66c23"
 binding = "APP_DATA"
 id = "0415a2b978c8488e81fc3cf264cafb4b"
 
+# R2 buckets (funguje pro Pages i Workers)
 [[r2_buckets]]
 binding = "PHOTOS_R2"
 bucket_name = "zajda-photos"
@@ -39,3 +41,14 @@ bucket_name = "zajda-photos"
 [[r2_buckets]]
 binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
+
+# 🔥 Pages Functions KV bindingy MUSÍ být zde:
+[env.production]
+kv_namespaces = [
+  { binding = "SESSIONS", id = "f03cc831474f4af3b2e0a6c5f3aa069c" },
+  { binding = "ARTICLES", id = "56e1ba6fdafc4d46a5de4e4690d01fa3" },
+  { binding = "SUBSECTIONS", id = "dd6ee2a83add46339418a5294c74c7ef" },
+  { binding = "PHOTOS", id = "2d74f6e45eda4cbea51275017ba66c23" },
+  { binding = "APP_DATA", id = "0415a2b978c8488e81fc3cf264cafb4b" },
+  { binding = "USAGE_KV", id = "TVŮJ_USAGE_KV_NAMESPACE_ID" }
+]
