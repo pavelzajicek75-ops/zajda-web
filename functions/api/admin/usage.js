@@ -2,15 +2,17 @@
 //
 // GET /api/admin/usage → { requestsUsed, requestsLimit, storageUsedBytes, storageLimitBytes, buckets: [...] }
 //
-// OPRAVENO podle tvého skutečného wrangler.toml:
-// - Místo volání externí Cloudflare R2 API (potřebovalo by R2_BUCKET_NAME,
-//   který nemáš, a token s přesně sedícím oprávněním) čteme velikost
-//   PŘÍMO přes R2 bindingy, které už máš nastavené: PHOTOS_R2, QUOTES_R2.
-//   Žádný token, žádné externí volání, nemůže to selhat kvůli oprávněním.
-// - Počet requestů pořád jede přes GraphQL Analytics API (CF_API_TOKEN +
-//   CF_ACCOUNT_ID) — to jediné externí volání, co zůstává. Pokud token
-//   nemá oprávnění "Account Analytics: Read", tahle ČÁST selže, ale
-//   storage se stejně zobrazí (odděleně ošetřené chyby).
+// DRUHÁ OPRAVA requestů: httpRequests1dGroups je pro ZÓNY (weby v
+// Cloudflare DNS/CDN) — pokud tvoje doména není plnohodnotná Cloudflare
+// zóna (běžíš jen na Pages Functions), ta sada vždycky vrátí prázdno.
+// Správná sada pro Workers/Pages Functions je workersInvocationsAdaptive
+// (počítá přímo SPUŠTĚNÍ funkcí, ne HTTP provoz na doméně).
+//
+// Volitelně nastav CF_WORKER_SCRIPT_NAME v proměnných prostředí, pokud
+// chceš čísla jen za tenhle konkrétní Pages projekt (najdeš ho v
+// Cloudflare dashboard → Workers & Pages → tvůj projekt → název nahoře).
+// Bez něj se sečtou requesty za CELÝ účet (všechny Workers/Pages
+// projekty dohromady, pokud jich máš víc).
 
 import { requireAdmin, json } from '../_auth-utils.js';
 
@@ -36,7 +38,6 @@ export async function onRequestGet(context) {
   });
 }
 
-/* Skutečná velikost obou R2 bucketů — přímo přes binding, žádné API volání. */
 async function getR2StorageUsage(env) {
   const buckets = [
     { name: 'zajda-photos', binding: env.PHOTOS_R2 },
@@ -69,27 +70,35 @@ async function getR2StorageUsage(env) {
     }
   }
 
-  // R2 Free tier: 10 GB úložiště zdarma (ověř aktuální limit na
-  // https://developers.cloudflare.com/r2/pricing/, může se změnit)
   const FREE_TIER_BYTES = 10 * 1024 * 1024 * 1024;
-
   return { buckets: results, totalBytes, limitBytes: FREE_TIER_BYTES };
 }
 
-/* Počet requestů za posledních 30 dní přes Cloudflare GraphQL Analytics API. */
+/* Počet spuštění Workers/Pages Functions za posledních 30 dní. */
 async function getRequestsUsage(env) {
   if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) {
     throw new Error('CF_API_TOKEN nebo CF_ACCOUNT_ID není nastaveno');
   }
 
-  const since = thirtyDaysAgo();
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - 30);
+
+  const scriptFilter = env.CF_WORKER_SCRIPT_NAME
+    ? `, scriptName: "${env.CF_WORKER_SCRIPT_NAME}"`
+    : '';
+
   const query = `
     query {
       viewer {
         accounts(filter: { accountTag: "${env.CF_ACCOUNT_ID}" }) {
-          httpRequests1dGroups(
-            limit: 30
-            filter: { date_geq: "${since}" }
+          workersInvocationsAdaptive(
+            limit: 10000
+            filter: {
+              datetime_geq: "${start.toISOString()}"
+              datetime_leq: "${now.toISOString()}"
+              ${scriptFilter ? scriptFilter.replace(/^,\s*/, '') : ''}
+            }
           ) {
             sum { requests }
           }
@@ -117,16 +126,11 @@ async function getRequestsUsage(env) {
     throw new Error(data.errors.map(e => e.message).join('; '));
   }
 
-  const groups = data?.data?.viewer?.accounts?.[0]?.httpRequests1dGroups || [];
+  const groups = data?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
   const used = groups.reduce((sum, g) => sum + (g.sum?.requests || 0), 0);
 
-  // Workers/Pages Free plán má denní limit (ne měsíční) — 100 000 requestů/den
-  // k červenci 2026, ověř aktuální hodnotu na cloudflare.com/plans
+  // Workers/Pages Free plán: 100 000 requestů/DEN (k červenci 2026, ověř
+  // aktuální limit na cloudflare.com/plans — může se změnit). Tohle číslo
+  // je součet za 30 dní, ne přímo srovnatelné s denním limitem 1:1.
   return { used, limit: null };
-}
-
-function thirtyDaysAgo() {
-  const d = new Date();
-  d.setDate(d.getDate() - 30);
-  return d.toISOString().split('T')[0];
 }
