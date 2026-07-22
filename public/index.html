@@ -521,8 +521,8 @@
       if (!box) return;
       var articles = await getAllArticles();
       var sorted = articles.slice().sort(function(a, b) {
-        var da = a.created || a.date || '';
-        var db = b.created || b.date || '';
+        var da = a.date || a.created || '';
+        var db = b.date || b.created || '';
         if (da < db) return 1;
         if (da > db) return -1;
         return 0;
@@ -537,7 +537,7 @@
         var a = latest[i];
         var artId = a.id || '';
         var title = a.title || 'Bez názvu';
-        var date = a.created || a.date || '';
+        var date = a.date || a.created || '';
         var dateStr = formatDate(date);
         var meta = dateStr ? '• ' + dateStr : '';
         html += '<a class="latest-item" href="/article.html?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
@@ -577,8 +577,8 @@
     function renderArticleList(articles) {
       if (!articles.length) return '<div class="no-articles">Žádné články</div>';
       var sorted = articles.slice().sort(function(a, b) {
-        var da = a.created || a.date || '';
-        var db = b.created || b.date || '';
+        var da = a.date || a.created || '';
+        var db = b.date || b.created || '';
         if (da < db) return 1;
         if (da > db) return -1;
         return 0;
@@ -588,7 +588,7 @@
         var a = sorted[i];
         var artId = a.id || '';
         var title = a.title || 'Bez názvu';
-        var date = a.created || a.date || '';
+        var date = a.date || a.created || '';
         var dateStr = formatDate(date);
         var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '';
         html += '<a class="article-link" href="/article.html?id=' + encodeURIComponent(artId) + '">' +
