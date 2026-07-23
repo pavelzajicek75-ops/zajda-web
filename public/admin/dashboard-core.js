@@ -707,9 +707,33 @@ async function purgeExpiredTrash() {
   if (expired.length) await permanentlyDeleteTrashIds(expired);
 }
 
-/* Vloží tlačítko Koš + akční lištu nad galerii, bez nutnosti měnit HTML šablonu */
+/* Vloží tlačítko Koš + akční lištu, bez nutnosti měnit HTML šablonu.
+   Primárně do ribbon toolbaru záložky Galerie (spolehlivá, známá kotva —
+   [data-for="galleries"] existuje vždy, viz showRibbonGroup výš).
+   Pokud by z nějakého důvodu ribbon toolbar nebyl v DOM, spadne to jako
+   záložní varianta na vložení řádku nad #galleryGrid. */
 function injectTrashUI() {
   if ($('trashToggleBtn')) { updateTrashBadge(); return; }
+
+  const ribbon = document.querySelector('.ribbon-group[data-for="galleries"]');
+  if (ribbon) {
+    const sep = document.createElement('span');
+    sep.className = 'ribbon-sep';
+    const wrap = document.createElement('span');
+    wrap.style.cssText = 'display:flex;align-items:center;gap:0.5rem';
+    wrap.innerHTML = `
+      <button id="trashToggleBtn" class="btn btn-sm" onclick="toggleTrashView()">🗑 Koš</button>
+      <span id="trashActionsBar" style="display:none;gap:0.5rem">
+        <button class="btn btn-sm" onclick="restoreSelectedFromTrash()">↩ Obnovit vybrané</button>
+        <button class="btn btn-red btn-sm" onclick="emptyTrash()">🔥 Vysypat koš</button>
+      </span>`;
+    ribbon.appendChild(sep);
+    ribbon.appendChild(wrap);
+    updateTrashBadge();
+    return;
+  }
+
+  // Záložní varianta, kdyby ribbon toolbar nebyl (nemělo by nastat)
   const grid = $('galleryGrid');
   if (!grid || !grid.parentElement) return;
   const bar = document.createElement('div');
