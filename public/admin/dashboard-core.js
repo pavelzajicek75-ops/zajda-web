@@ -190,19 +190,18 @@ function toggleToolbarReorderMode(toolbarEl) {
 }
 
 function setRibbonItemsDraggable(group, enabled) {
-  Array.from(group.children).forEach(child => {
-    if (!child.dataset.key) return;
+  group.querySelectorAll('[data-key]').forEach(child => {
     let badge = child.querySelector(':scope > .ribbon-grip-badge');
     if (enabled) {
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'ribbon-grip-badge';
         badge.textContent = '⠿';
-        badge.title = 'Táhni = přesunout · Klikni na prvek = skrýt';
+        badge.title = 'Táhni = přesunout v rámci skupiny · Klikni na prvek = skrýt';
         badge.draggable = true;
         child.appendChild(badge);
       }
-      child.title = 'Klikni pro skrytí, nebo táhni za ⠿ pro přesun';
+      child.title = 'Klikni pro skrytí, nebo táhni za ⠿ pro přesun v rámci skupiny';
     } else {
       if (badge) badge.remove();
       child.removeAttribute('title');
@@ -232,8 +231,7 @@ function hideRibbonItem(group, key) {
 function applyRibbonVisibility(name) {
   const hidden = getHiddenRibbonItems(name);
   document.querySelectorAll(`[data-for="${name}"]`).forEach(group => {
-    Array.from(group.children).forEach(child => {
-      if (!child.dataset.key) return;
+    group.querySelectorAll('[data-key]').forEach(child => {
       child.style.display = hidden.includes(child.dataset.key) ? 'none' : '';
     });
   });
@@ -264,7 +262,7 @@ function initRibbonDragReorder() {
       e.preventDefault();
       e.stopPropagation();
       const item = e.target.closest('[data-key]');
-      if (item && item.parentElement === group) hideRibbonItem(group, item.dataset.key);
+      if (item) hideRibbonItem(group, item.dataset.key);
     }, true);
     group.addEventListener('click', e => {
       if (group.classList.contains('reorder-mode') && !isExempt(e.target)) { e.preventDefault(); e.stopPropagation(); }
@@ -275,7 +273,7 @@ function initRibbonDragReorder() {
       const badge = e.target.closest('.ribbon-grip-badge');
       if (!badge) return;
       const item = badge.closest('[data-key]');
-      if (!item || item.parentElement !== group || !group.classList.contains('reorder-mode')) return;
+      if (!item || !group.contains(item) || !group.classList.contains('reorder-mode')) return;
       ribbonDraggedItem = item;
       item.classList.add('ribbon-item-dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -289,10 +287,13 @@ function initRibbonDragReorder() {
       if (!ribbonDraggedItem || !group.classList.contains('reorder-mode')) return;
       e.preventDefault();
       const target = e.target.closest('[data-key]');
-      if (!target || target === ribbonDraggedItem || target.parentElement !== group) return;
+      /* Přesun se omezuje na stejnou vizuální sekci (stejný přímý rodič) —
+         dává smysl přesouvat tlačítka jen v rámci logické skupiny (Písmo,
+         Zarovnání, Obrázky…), ne napříč sekcemi. */
+      if (!target || target === ribbonDraggedItem || target.parentElement !== ribbonDraggedItem.parentElement) return;
       const rect = target.getBoundingClientRect();
       const before = e.clientX < rect.left + rect.width / 2;
-      group.insertBefore(ribbonDraggedItem, before ? target : target.nextSibling);
+      target.parentElement.insertBefore(ribbonDraggedItem, before ? target : target.nextSibling);
     });
   });
 }
@@ -300,7 +301,7 @@ function initRibbonDragReorder() {
 function saveRibbonOrder(group) {
   const name = group.dataset.for;
   if (!name) return;
-  const order = Array.from(group.children).map(c => c.dataset.key).filter(Boolean);
+  const order = Array.from(group.querySelectorAll('[data-key]')).map(c => c.dataset.key).filter(Boolean);
   localStorage.setItem('ribbonOrder:' + name, JSON.stringify(order));
   restoreRibbonOrder(name); // hned zrcadlit do všech instancí se stejným klíčem (např. druhý editor-toolbar)
 }
@@ -312,10 +313,12 @@ function restoreRibbonOrder(name) {
   if (!Array.isArray(order) || !order.length) return;
   document.querySelectorAll(`[data-for="${name}"]`).forEach(group => {
     const byKey = new Map();
-    Array.from(group.children).forEach(c => { if (c.dataset.key) byKey.set(c.dataset.key, c); });
+    group.querySelectorAll('[data-key]').forEach(c => { if (c.dataset.key) byKey.set(c.dataset.key, c); });
     order.forEach(key => {
       const el = byKey.get(key);
-      if (el) group.appendChild(el);
+      // Posune prvek na konec v rámci JEHO VLASTNÍHO rodiče (sekce) — nikdy
+      // ho nepřesouvá mezi sekcemi, jen mění pořadí uvnitř té svojí.
+      if (el && el.parentElement) el.parentElement.appendChild(el);
     });
   });
 }
@@ -717,18 +720,19 @@ function injectTrashUI() {
 
   const ribbon = document.querySelector('.ribbon-group[data-for="galleries"]');
   if (ribbon) {
-    const sep = document.createElement('span');
-    sep.className = 'ribbon-sep';
-    const wrap = document.createElement('span');
-    wrap.style.cssText = 'display:flex;align-items:center;gap:0.5rem';
-    wrap.innerHTML = `
-      <button id="trashToggleBtn" class="btn btn-sm" onclick="toggleTrashView()">🗑 Koš</button>
-      <span id="trashActionsBar" style="display:none;gap:0.5rem">
-        <button class="btn btn-sm" onclick="restoreSelectedFromTrash()">↩ Obnovit vybrané</button>
-        <button class="btn btn-red btn-sm" onclick="emptyTrash()">🔥 Vysypat koš</button>
-      </span>`;
-    ribbon.appendChild(sep);
-    ribbon.appendChild(wrap);
+    const section = document.createElement('div');
+    section.className = 'ribbon-section';
+    section.innerHTML = `
+      <div class="ribbon-section-items">
+        <button id="trashToggleBtn" class="btn btn-sm" onclick="toggleTrashView()">🗑 Koš</button>
+        <span id="trashActionsBar" style="display:none;gap:0.5rem">
+          <button class="btn btn-sm" onclick="restoreSelectedFromTrash()">↩ Obnovit vybrané</button>
+          <button class="btn btn-red btn-sm" onclick="emptyTrash()">🔥 Vysypat koš</button>
+        </span>
+      </div>
+      <span class="ribbon-section-label">Koš</span>`;
+    const pill = ribbon.querySelector('#galleryCountPill');
+    if (pill) ribbon.insertBefore(section, pill); else ribbon.appendChild(section);
     updateTrashBadge();
     return;
   }
