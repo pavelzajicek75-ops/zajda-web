@@ -1423,8 +1423,6 @@ function openShareModal(article) {
       <div class="form-row"><input class="form-input" id="shareUrlInput" readonly></div>
       <div class="modal-actions" style="flex-wrap:wrap;justify-content:flex-start;gap:0.5rem">
         <button class="btn btn-blue" id="shareNativeBtn" style="display:none">📱 Nabídka aplikací</button>
-        <button class="btn" id="shareWhatsappBtn" style="background:#25D366;border-color:#25D366;color:#06281f">💬 WhatsApp</button>
-        <button class="btn" id="shareMessengerBtn" style="background:#0084FF;border-color:#0084FF;color:#fff">📨 Messenger</button>
         <button class="btn btn-blue" id="shareCopyBtn">📋 Kopírovat odkaz</button>
       </div>
       <div style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
@@ -1448,34 +1446,12 @@ function openShareModal(article) {
     };
   }
 
-  m.querySelector('#shareWhatsappBtn').onclick = () => {
-    window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + urlInput.value), '_blank');
-  };
-
-  m.querySelector('#shareMessengerBtn').onclick = () => shareViaMessenger(urlInput.value);
-
   m.querySelector('#shareCopyBtn').onclick = () => copyShareLink(urlInput.value);
 
   m.querySelector('#shareUrlPatternBtn').onclick = () => {
     promptArticleUrlPattern();
     urlInput.value = getArticlePublicUrl(article);
   };
-}
-
-/* Messenger nemá bez registrované Facebook aplikace (App ID) spolehlivé
-   webové sdílení — nejlépe proto funguje na mobilu přes appku samotnou
-   (deep link fb-messenger://), kde si uživatel vybere kontakt stejně jako
-   v samotné appce. Na desktopu je nejspolehlivější zkopírovat odkaz a
-   vložit ho do Messengeru ručně. */
-function shareViaMessenger(url) {
-  const isMobile = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
-  if (isMobile) {
-    window.location.href = 'fb-messenger://share/?link=' + encodeURIComponent(url);
-    setTimeout(() => copyShareLink(url), 1000);
-  } else {
-    showToast('Messenger sdílení funguje spolehlivě hlavně na mobilu. Odkaz jsem zkopíroval — vlož ho do Messengeru ručně.', 'info');
-    copyShareLink(url);
-  }
 }
 
 function copyShareLink(url) {
@@ -1612,7 +1588,7 @@ function renderArticleList(arr) {
       ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5;padding-left:1.75rem">${escapeHtml(excerpt)}</p>` : ''}
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-left:1.75rem">
         <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
-        <button onclick="shareArticle('${a.id}')" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#06281f">🔗 Sdílet</button>
+        <button onclick="shareArticle('${a.id}')" class="btn btn-blue btn-sm">🔗 Sdílet</button>
         <button onclick="duplicateArticle('${a.id}')" class="btn btn-sm">📋 Duplikovat</button>
         ${toggleBtn}
         <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">🗑 Smazat</button>
