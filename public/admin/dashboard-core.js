@@ -754,7 +754,6 @@ function injectTrashUI() {
 function getPhotoFolderMap() {
   try { return JSON.parse(localStorage.getItem('photoFolderMap') || '{}'); } catch { return {}; }
 }
-
 function savePhotoFolderMap(map) {
   localStorage.setItem('photoFolderMap', JSON.stringify(map));
 }
@@ -771,6 +770,67 @@ function setPhotoFolder(p, folder) {
   if (folder) map[key] = folder;
   else delete map[key];
   savePhotoFolderMap(map);
+}
+
+/* === POPISKY FOTEK — čistě klientská správa, stejný princip jako složky.
+   Popisek se zobrazí pod fotkou v galerii a jako výchozí figcaption při
+   vložení fotky do článku (jde tam přepsat/smazat i zvlášť). */
+function getPhotoCaptionMap() {
+  try { return JSON.parse(localStorage.getItem('photoCaptionMap') || '{}'); } catch { return {}; }
+}
+
+function savePhotoCaptionMap(map) {
+  localStorage.setItem('photoCaptionMap', JSON.stringify(map));
+}
+
+function getPhotoCaption(p) {
+  const map = getPhotoCaptionMap();
+  return map[p.id] ?? map[p.key] ?? '';
+}
+
+function setPhotoCaption(p, caption) {
+  const map = getPhotoCaptionMap();
+  const key = p.id || p.key;
+  if (!key) return;
+  if (caption) map[key] = caption;
+  else delete map[key];
+  savePhotoCaptionMap(map);
+}
+
+function editPhotoCaption(id) {
+  const p = G.photos.find(x => x.id === id);
+  if (!p) return;
+  const current = getPhotoCaption(p);
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.innerHTML = `
+    <div class="modal-box" style="max-width:420px">
+      <h3>📝 Popisek fotky</h3>
+      <p style="color:var(--text-muted);font-size:12.5px;margin:-0.6rem 0 0.9rem">Zobrazí se pod fotkou, když ji vložíš do článku (jde upravit i přímo v editoru).</p>
+      <div class="form-row"><input class="form-input" id="captionInput" placeholder="Např. Západ slunce nad Alpami" value="${escapeHtml(current)}"></div>
+      <div class="modal-actions">
+        <button class="btn btn-blue" onclick="saveCaptionFromModal('${id}')">Uložit</button>
+        <button class="btn" onclick="this.closest('.modal').remove()">Zrušit</button>
+      </div>
+    </div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+  setTimeout(() => {
+    const inp = $('captionInput');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 50);
+  const onEnter = (e) => { if (e.key === 'Enter') saveCaptionFromModal(id); };
+  $('captionInput')?.addEventListener('keydown', onEnter);
+}
+
+function saveCaptionFromModal(id) {
+  const p = G.photos.find(x => x.id === id);
+  if (!p) return;
+  const val = $('captionInput')?.value.trim() || '';
+  setPhotoCaption(p, val);
+  document.querySelector('.modal')?.remove();
+  renderGallery();
+  showToast(val ? 'Popisek uložen' : 'Popisek smazán', 'success');
 }
 
 function getManualFolders() {
@@ -1051,6 +1111,7 @@ function renderGallery() {
     const selected = G.selected.has(p.id) ? ' selected' : '';
     const checked = G.selected.has(p.id) ? 'checked' : '';
     const folder = getPhotoFolder(p);
+    const caption = getPhotoCaption(p);
     const dim = getCachedDim(p);
     const used = isPhotoUsedInArticle(p);
     if (mode === 'list' && !dim) loadPhotoDimension(p);
@@ -1062,7 +1123,8 @@ function renderGallery() {
     const actions = viewingTrash
       ? `<button class="btn btn-sm" onclick="event.stopPropagation();restoreFromTrash(['${p.id}']);renderGallery();updateTrashBadge();showToast('Obnoveno','success')" title="Obnovit">↩</button>
          <button class="btn btn-red btn-sm" onclick="event.stopPropagation();(async()=>{if(await showConfirm('Natrvalo smazat tuhle fotku?',{danger:true,confirmText:'Smazat'}))permanentlyDeleteTrashIds(['${p.id}'])})()" title="Smazat natrvalo">🗑</button>`
-      : `<button class="btn btn-sm" onclick="event.stopPropagation();openLightbox('${p.url}')" title="Náhled">🔍</button>`;
+      : `<button class="btn btn-sm" onclick="event.stopPropagation();openLightbox('${p.url}')" title="Náhled">🔍</button>
+         <button class="btn btn-sm" onclick="event.stopPropagation();editPhotoCaption('${p.id}')" title="Popisek">📝</button>`;
 
     return `
     <div class="gallery-item${selected}" data-id="${p.id}">
@@ -1073,6 +1135,7 @@ function renderGallery() {
       <div class="item-meta">
         <div class="item-name">${escapeHtml(p.name || '')}</div>
         <div>${fmtBytes(p.size)}${mode === 'list' ? ` · <span class="item-dim">${dim ? dim.w + '×' + dim.h : '…'}</span>` : ''}</div>
+        ${caption && !viewingTrash ? `<div style="color:var(--text-faint);font-size:11px;font-style:italic;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">💬 ${escapeHtml(caption)}</div>` : ''}
         ${showExif && !viewingTrash ? `<div class="item-exif">Načítám EXIF…</div>` : ''}
       </div>
       <div class="item-actions">${actions}</div>
