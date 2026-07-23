@@ -1204,7 +1204,26 @@ function generateSlug(title) {
     .substring(0, 60) || 'clanek-' + Date.now();
 }
 
+/* Vloží panel hromadných akcí (Publikovat/Skrýt/Smazat vybrané) nad seznam
+   článků, bez nutnosti mít ho předpřipravený v HTML šabloně. */
+function injectArticleBulkBar() {
+  if ($('articleBulkBar')) return;
+  const box = $('articleList');
+  if (!box || !box.parentElement) return;
+  const bar = document.createElement('div');
+  bar.id = 'articleBulkBar';
+  bar.style.cssText = 'display:none;align-items:center;gap:0.5rem;margin-bottom:1rem;padding:0.6rem 0.9rem;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--r-md);flex-wrap:wrap';
+  bar.innerHTML = `
+    <span id="articleBulkCount" style="color:var(--text-muted);font-size:13px;margin-right:auto"></span>
+    <button class="btn btn-sm" style="background:var(--green);border-color:var(--green);color:#06281f" onclick="bulkPublishArticles(true)">👁 Publikovat vybrané</button>
+    <button class="btn btn-sm" style="background:#f59e0b;border-color:#f59e0b;color:#fff" onclick="bulkPublishArticles(false)">⏸ Skrýt vybrané</button>
+    <button class="btn btn-red btn-sm" onclick="bulkDeleteArticles()">🗑 Smazat vybrané</button>
+  `;
+  box.parentElement.insertBefore(bar, box);
+}
+
 async function loadArticles() {
+  injectArticleBulkBar();
   try {
     const r = await fetch('/api/articles/list');
     if (!r.ok) throw new Error('Chyba načítání');
