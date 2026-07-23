@@ -755,6 +755,113 @@ function setupArticleEditors() {
     initBlockDragSystem(id);
     initImageDirectDrag(id);
   });
+  initArticleAutosave();
+}
+
+/* === AUTOSAVE KONCEPTU ČLÁNKU ===
+   Rozepsaný nadpis + obsah se průběžně ukládá do localStorage tohoto
+   prohlížeče (debounce 1,2 s po psaní), aby se neztratil při pádu karty
+   nebo zavření prohlížeče. Koncept se váže na konkrétní editovaný článek
+   (podle ID), nebo na "nový článek", pokud se zrovna nic needituje. Při
+   dalším otevření záložky se nabídne obnovení, pokud koncept existuje. */
+let articleDraftTimer = null;
+let lastDraftKeyChecked = null;
+
+function articleDraftKey() {
+  const id = $('artEditor')?.dataset?.editId;
+  return 'articleDraft:' + (id || 'new');
+}
+
+function saveArticleDraft() {
+  const titleEl = $('artTitle'), editorEl = $('artEditor');
+  if (!titleEl || !editorEl) return;
+  const title = titleEl.value || '';
+  const content = editorEl.innerHTML || '';
+  if (!title.trim() && !content.replace(/<[^>]+>/g, '').trim()) {
+    localStorage.removeItem(articleDraftKey());
+    updateArticleDraftStatus('');
+    return;
+  }
+  const draft = {
+    title, content,
+    date: $('artDate')?.value || '',
+    place: $('artPlace')?.value || '',
+    sectionId: $('artSection')?.value || '',
+    subsectionId: $('artSubsection')?.value || '',
+    savedAt: Date.now()
+  };
+  localStorage.setItem(articleDraftKey(), JSON.stringify(draft));
+  updateArticleDraftStatus('💾 Koncept uložen ' + new Date(draft.savedAt).toLocaleTimeString('cs', { hour: '2-digit', minute: '2-digit' }));
+}
+
+function scheduleArticleDraftSave() {
+  clearTimeout(articleDraftTimer);
+  articleDraftTimer = setTimeout(saveArticleDraft, 1200);
+}
+
+function clearArticleDraft(key) {
+  localStorage.removeItem(key || articleDraftKey());
+  updateArticleDraftStatus('');
+}
+
+function injectArticleDraftStatus() {
+  if ($('articleDraftStatus')) return;
+  const titleEl = $('artTitle');
+  if (!titleEl) return;
+  const row = titleEl.closest('.form-row') || titleEl.parentElement;
+  if (!row || !row.parentElement) return;
+  const status = document.createElement('div');
+  status.id = 'articleDraftStatus';
+  status.style.cssText = 'font-size:11.5px;color:var(--text-faint);font-family:var(--font-mono);margin:-0.5rem 0 0.6rem 2px;min-height:1.2em';
+  row.after(status);
+}
+
+function updateArticleDraftStatus(text) {
+  const el = $('articleDraftStatus');
+  if (el) el.textContent = text;
+}
+
+async function offerDraftRestore(key) {
+  let draft;
+  try { draft = JSON.parse(localStorage.getItem(key) || 'null'); } catch { draft = null; }
+  if (!draft) return;
+  const when = new Date(draft.savedAt).toLocaleString('cs');
+  const preview = (draft.title || '(bez nadpisu)').slice(0, 60);
+  const ok = await showConfirm(`Našel jsem neuložený rozepsaný koncept z ${when} ("${preview}"). Chceš ho obnovit?`, { confirmText: 'Obnovit koncept', cancelText: 'Zahodit' });
+  if (ok) {
+    if ($('artTitle')) $('artTitle').value = draft.title || '';
+    if ($('artEditor')) $('artEditor').innerHTML = draft.content || '';
+    if ($('artDate')) $('artDate').value = draft.date || '';
+    if ($('artPlace')) $('artPlace').value = draft.place || '';
+    if ($('artSection') && draft.sectionId) { $('artSection').value = draft.sectionId; await loadArtSubsections(); }
+    if ($('artSubsection') && draft.subsectionId) $('artSubsection').value = draft.subsectionId;
+    setTimeout(() => setupArticleEditors(), 50);
+    updateArticleDraftStatus('Koncept obnoven — nezapomeň uložit');
+  } else {
+    localStorage.removeItem(key);
+  }
+}
+
+function initArticleAutosave() {
+  const titleEl = $('artTitle');
+  const editorEl = $('artEditor');
+  if (!titleEl || !editorEl) return;
+  injectArticleDraftStatus();
+  if (!titleEl.dataset.draftReady) {
+    titleEl.dataset.draftReady = '1';
+    titleEl.addEventListener('input', scheduleArticleDraftSave);
+  }
+  if (!editorEl.dataset.draftReady) {
+    editorEl.dataset.draftReady = '1';
+    editorEl.addEventListener('input', scheduleArticleDraftSave);
+  }
+  // Nabídku obnovy zkontrolovat pokaždé, když se změní kontext (jiný
+  // editovaný článek / nový článek) — ne jen při úplně prvním spuštění.
+  const key = articleDraftKey();
+  if (key !== lastDraftKeyChecked) {
+    lastDraftKeyChecked = key;
+    offerDraftRestore(key);
+  }
 }
 
 /* Obrázky vložené postaru (schované uvnitř odstavce) "vytáhne" ven jako
@@ -766,6 +873,9 @@ function promoteNestedImages(editorId) {
   ed.querySelectorAll('img.editor-img').forEach(img => {
     if (img.style.cursor === 'pointer' || !img.style.cursor) img.style.cursor = 'grab';
     if (img.parentElement === ed) return;
+    // Obrázek s popiskem má vlastní obal (.editor-img-wrap), který je sám
+    // top-level blok — ten nerozebírat, jinak by se popisek odtrhl.
+    if (img.parentElement && img.parentElement.classList.contains('editor-img-wrap') && img.parentElement.parentElement === ed) return;
     let block = img.parentElement;
     while (block && block.parentElement !== ed) block = block.parentElement;
     if (block && block !== ed && ed.contains(block)) {
@@ -908,8 +1018,13 @@ function initImageDirectDrag(editorId) {
 
   ed.addEventListener('pointerdown', e => {
     const img = e.target.closest('img.editor-img');
-    if (!img || img.parentElement !== ed) return;
-    draggingImg = img;
+    if (!img) return;
+    // Táhneme celý top-level blok, kterým obrázek patří — buď je to
+    // samotný <img>, nebo (má-li obrázek popisek) jeho obal .editor-img-wrap.
+    let block = img;
+    while (block && block.parentElement !== ed) block = block.parentElement;
+    if (!block || block.parentElement !== ed) return;
+    draggingImg = block;
     startX = e.clientX; startY = e.clientY;
     dragging = false;
   });
@@ -978,6 +1093,7 @@ function showImgToolbar(img) {
     <button onclick="imgToolbarAction('left')" class="btn btn-sm" title="Obtékat text vpravo od obrázku">◀ Vlevo (obtékat)</button>
     <button onclick="imgToolbarAction('center')" class="btn btn-sm" title="Bez obtékání textu">Střed</button>
     <button onclick="imgToolbarAction('right')" class="btn btn-sm" title="Obtékat text vlevo od obrázku">Vpravo ▶ (obtékat)</button>
+    <button onclick="imgToolbarAction('caption')" class="btn btn-sm" title="Přidat/upravit popisek pod obrázkem">💬 Popisek</button>
     <button onclick="imgToolbarAction('up')" class="btn btn-sm">↑ Nahoru</button>
     <button onclick="imgToolbarAction('down')" class="btn btn-sm">↓ Dolů</button>
     <button onclick="imgToolbarAction('delete')" class="btn btn-red btn-sm">🗑 Smazat</button>
@@ -996,14 +1112,54 @@ function imgToolbarAction(action) {
   if (!ed) return;
   const img = ed.querySelector('img[data-active]') || currentActiveImg;
   if (!img) { hideImgToolbar(); return; }
-  if (action === 'delete') { img.remove(); hideImgToolbar(); return; }
-  if (action === 'up') { const p = img.previousElementSibling; if (p) img.parentNode.insertBefore(img, p); return; }
-  if (action === 'down') { const n = img.nextElementSibling; if (n) img.parentNode.insertBefore(n, img); return; }
-  if (action === 'smaller') { let w = parseInt(img.style.width) || 300; img.style.width = Math.max(80, w - 40) + 'px'; img.style.maxWidth = img.style.width; return; }
-  if (action === 'bigger') { let w = parseInt(img.style.width) || 300; img.style.width = Math.min(800, w + 40) + 'px'; img.style.maxWidth = img.style.width; return; }
-  if (action === 'left') { img.style.float = 'left'; img.style.margin = '0.5rem 1rem 0.5rem 0'; img.style.display = 'block'; img.style.clear = 'none'; return; }
-  if (action === 'right') { img.style.float = 'right'; img.style.margin = '0.5rem 0 0.5rem 1rem'; img.style.display = 'block'; img.style.clear = 'none'; return; }
-  if (action === 'center') { img.style.float = 'none'; img.style.margin = '0.5rem auto'; img.style.display = 'block'; img.style.clear = 'both'; return; }
+  let block = img;
+  while (block && block.parentElement !== ed) block = block.parentElement;
+  if (!block) block = img;
+
+  if (action === 'delete') { block.remove(); hideImgToolbar(); return; }
+  if (action === 'up') { const p = block.previousElementSibling; if (p) block.parentNode.insertBefore(block, p); return; }
+  if (action === 'down') { const n = block.nextElementSibling; if (n) block.parentNode.insertBefore(n, block); return; }
+  if (action === 'smaller') { let w = parseInt(img.style.width) || 300; img.style.width = Math.max(80, w - 40) + 'px'; img.style.maxWidth = img.style.width; if (block !== img) block.style.width = img.style.width; return; }
+  if (action === 'bigger') { let w = parseInt(img.style.width) || 300; img.style.width = Math.min(800, w + 40) + 'px'; img.style.maxWidth = img.style.width; if (block !== img) block.style.width = img.style.width; return; }
+  if (action === 'left') { block.style.float = 'left'; block.style.margin = '0.5rem 1rem 0.5rem 0'; block.style.display = 'block'; block.style.clear = 'none'; return; }
+  if (action === 'right') { block.style.float = 'right'; block.style.margin = '0.5rem 0 0.5rem 1rem'; block.style.display = 'block'; block.style.clear = 'none'; return; }
+  if (action === 'center') { block.style.float = 'none'; block.style.margin = '0.5rem auto'; block.style.display = 'block'; block.style.clear = 'both'; return; }
+  if (action === 'caption') {
+    const capEl = block.querySelector('.editor-img-caption');
+    const current = capEl ? capEl.textContent : '';
+    const val = prompt('Popisek pod obrázkem (prázdné = smazat):', current);
+    if (val === null) return;
+    if (val.trim()) {
+      if (capEl) {
+        capEl.textContent = val.trim();
+      } else if (block === img) {
+        // obrázek zatím neměl obal — vytvoříme .editor-img-wrap a přeneseme layout
+        const wrap = document.createElement('div');
+        wrap.className = 'editor-img-wrap';
+        wrap.style.cssText = 'display:block;cursor:grab;max-width:300px;width:100%;' +
+          'float:' + (img.style.float || 'none') + ';margin:' + (img.style.margin || '0.5rem auto') + ';';
+        img.style.float = 'none';
+        img.style.margin = '0';
+        img.style.width = '100%';
+        img.parentNode.insertBefore(wrap, img);
+        wrap.appendChild(img);
+        const cap = document.createElement('div');
+        cap.className = 'editor-img-caption';
+        cap.style.cssText = 'font-size:12.5px;color:var(--text-faint);text-align:center;margin-top:0.3rem;font-style:italic';
+        cap.textContent = val.trim();
+        wrap.appendChild(cap);
+      } else {
+        const cap = document.createElement('div');
+        cap.className = 'editor-img-caption';
+        cap.style.cssText = 'font-size:12.5px;color:var(--text-faint);text-align:center;margin-top:0.3rem;font-style:italic';
+        cap.textContent = val.trim();
+        block.appendChild(cap);
+      }
+    } else if (capEl) {
+      capEl.remove();
+    }
+    return;
+  }
 }
 
 function deleteSelectedImg() {
@@ -1137,8 +1293,24 @@ function insertImgUrl(editorId, url, align, closeModal = true) {
   else if (align === 'right') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 0 0.5rem 1rem;float:right;display:block;cursor:grab;';
   ed.focus();
 
+  const photoObj = (window.G?.photos || []).find(ph => ph.url === url);
+  const caption = photoObj && typeof getPhotoCaption === 'function' ? getPhotoCaption(photoObj) : '';
+
   const wrapper = document.createElement('div');
-  wrapper.innerHTML = `<img src="${url}" style="${style}" class="editor-img" draggable="false">`;
+  if (caption) {
+    /* Obrázek s popiskem se vkládá jako blok (div.editor-img-wrap) — layout
+       (obtékání/margin) nese tenhle obal, ne samotný <img>, aby popisek
+       zůstal vždycky u obrázku i při tažení. */
+    let wrapStyle = 'display:block;margin:0.5rem auto;cursor:grab;';
+    if (align === 'left') wrapStyle = 'display:block;float:left;margin:0.5rem 1rem 0.5rem 0;cursor:grab;';
+    else if (align === 'right') wrapStyle = 'display:block;float:right;margin:0.5rem 0 0.5rem 1rem;cursor:grab;';
+    wrapper.innerHTML = `<div class="editor-img-wrap" style="${wrapStyle}max-width:300px;width:100%">
+      <img src="${url}" style="width:100%;height:auto;border-radius:6px;display:block;" class="editor-img" draggable="false">
+      <div class="editor-img-caption" style="font-size:12.5px;color:var(--text-faint);text-align:center;margin-top:0.3rem;font-style:italic">${escapeHtml(caption)}</div>
+    </div>`;
+  } else {
+    wrapper.innerHTML = `<img src="${url}" style="${style}" class="editor-img" draggable="false">`;
+  }
   const imgNode = wrapper.firstElementChild;
 
   /* Obrázek vždy vložíme jako VLASTNÍ blok (přímé dítě editoru), hned za
@@ -1204,6 +1376,119 @@ function generateSlug(title) {
     .substring(0, 60) || 'clanek-' + Date.now();
 }
 
+/* === SDÍLENÍ ODKAZU NA ČLÁNEK ===
+   Skutečná struktura veřejné URL webu: {doména}/article?id={id} (ověřeno
+   na produkci). Šablona jde přesto jednorázově upravit tlačítkem
+   "⚙️ Formát URL" v okně sdílení, kdyby se struktura webu v budoucnu
+   změnila — uloží se do tohoto prohlížeče a použije se příště automaticky. */
+function getArticleUrlPattern() {
+  return localStorage.getItem('articleUrlPattern') || (window.location.origin + '/article?id={id}');
+}
+
+function setArticleUrlPattern(p) {
+  localStorage.setItem('articleUrlPattern', p);
+}
+
+function getArticlePublicUrl(article) {
+  return getArticleUrlPattern()
+    .replace('{slug}', article.slug || '')
+    .replace('{section}', article.sectionId || article.section || '')
+    .replace('{subsection}', article.subsectionId || article.subsection || '')
+    .replace('{id}', article.id || '');
+}
+
+function promptArticleUrlPattern() {
+  const current = getArticleUrlPattern();
+  const val = prompt('Formát veřejné URL článku. Použij {id} jako zástupný text za ID článku (volitelně i {slug}, {section}, {subsection}).', current);
+  if (val && val.trim()) setArticleUrlPattern(val.trim());
+}
+
+function shareArticle(id) {
+  const arr = window._articlesCache || [];
+  const a = arr.find(x => x.id === id);
+  if (!a) { showToast('Článek nenalezen — zkus obnovit seznam.', 'error'); return; }
+  openShareModal(a);
+}
+
+function openShareModal(article) {
+  const url = getArticlePublicUrl(article);
+  const text = article.title || 'Nový článek';
+
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.innerHTML = `
+    <div class="modal-box" style="max-width:440px">
+      <h3>🔗 Sdílet článek</h3>
+      <p style="color:var(--text-muted);font-size:13px;margin:-0.6rem 0 0.9rem">${escapeHtml(text)}</p>
+      <div class="form-row"><input class="form-input" id="shareUrlInput" readonly></div>
+      <div class="modal-actions" style="flex-wrap:wrap;justify-content:flex-start;gap:0.5rem">
+        <button class="btn btn-blue" id="shareNativeBtn" style="display:none">📱 Nabídka aplikací</button>
+        <button class="btn" id="shareWhatsappBtn" style="background:#25D366;border-color:#25D366;color:#06281f">💬 WhatsApp</button>
+        <button class="btn" id="shareMessengerBtn" style="background:#0084FF;border-color:#0084FF;color:#fff">📨 Messenger</button>
+        <button class="btn btn-blue" id="shareCopyBtn">📋 Kopírovat odkaz</button>
+      </div>
+      <div style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
+        <button class="btn btn-sm" id="shareUrlPatternBtn" title="Uprav formát veřejné URL, pokud neodpovídá tvému webu">⚙️ Formát URL</button>
+        <button class="btn btn-red btn-sm" onclick="this.closest('.modal').remove()">Zavřít</button>
+      </div>
+    </div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+
+  const urlInput = m.querySelector('#shareUrlInput');
+  urlInput.value = url;
+  urlInput.onclick = () => urlInput.select();
+
+  const nativeBtn = m.querySelector('#shareNativeBtn');
+  if (navigator.share) {
+    nativeBtn.style.display = '';
+    nativeBtn.onclick = async () => {
+      try { await navigator.share({ title: text, url: urlInput.value }); }
+      catch { /* uživatel nabídku zavřel/zrušil — nic se neděje */ }
+    };
+  }
+
+  m.querySelector('#shareWhatsappBtn').onclick = () => {
+    window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + urlInput.value), '_blank');
+  };
+
+  m.querySelector('#shareMessengerBtn').onclick = () => shareViaMessenger(urlInput.value);
+
+  m.querySelector('#shareCopyBtn').onclick = () => copyShareLink(urlInput.value);
+
+  m.querySelector('#shareUrlPatternBtn').onclick = () => {
+    promptArticleUrlPattern();
+    urlInput.value = getArticlePublicUrl(article);
+  };
+}
+
+/* Messenger nemá bez registrované Facebook aplikace (App ID) spolehlivé
+   webové sdílení — nejlépe proto funguje na mobilu přes appku samotnou
+   (deep link fb-messenger://), kde si uživatel vybere kontakt stejně jako
+   v samotné appce. Na desktopu je nejspolehlivější zkopírovat odkaz a
+   vložit ho do Messengeru ručně. */
+function shareViaMessenger(url) {
+  const isMobile = /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
+  if (isMobile) {
+    window.location.href = 'fb-messenger://share/?link=' + encodeURIComponent(url);
+    setTimeout(() => copyShareLink(url), 1000);
+  } else {
+    showToast('Messenger sdílení funguje spolehlivě hlavně na mobilu. Odkaz jsem zkopíroval — vlož ho do Messengeru ručně.', 'info');
+    copyShareLink(url);
+  }
+}
+
+function copyShareLink(url) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => showToast('Odkaz zkopírován do schránky', 'success'))
+      .catch(() => showToast('Nepodařilo se zkopírovat automaticky — označ a zkopíruj odkaz ručně.', 'info'));
+  } else {
+    showToast('Kopírování není v tomhle prohlížeči podporované — označ a zkopíruj odkaz ručně.', 'info');
+  }
+}
+
+
 /* Vloží panel hromadných akcí (Publikovat/Skrýt/Smazat vybrané) nad seznam
    článků, bez nutnosti mít ho předpřipravený v HTML šabloně. */
 function injectArticleBulkBar() {
@@ -1222,13 +1507,59 @@ function injectArticleBulkBar() {
   box.parentElement.insertBefore(bar, box);
 }
 
+/* Vloží panel hledání/filtrování nad seznam článků. */
+function injectArticleFilterBar() {
+  if ($('articleFilterBar')) return;
+  const box = $('articleList');
+  if (!box || !box.parentElement) return;
+  const bar = document.createElement('div');
+  bar.id = 'articleFilterBar';
+  bar.style.cssText = 'display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center';
+  bar.innerHTML = `
+    <input type="text" id="articleSearch" class="form-input" placeholder="🔍 Hledat podle nadpisu…" style="flex:1;min-width:180px" oninput="filterAndRenderArticles()">
+    <select id="articleFilterSection" class="form-select" style="max-width:170px" onchange="filterAndRenderArticles()">
+      <option value="">Všechny sekce</option>
+      <option value="travel">Cestování</option>
+      <option value="photo">Fotografování</option>
+      <option value="projects">Projekty</option>
+      <option value="about">O Zajdovi</option>
+    </select>
+    <select id="articleFilterStatus" class="form-select" style="max-width:150px" onchange="filterAndRenderArticles()">
+      <option value="">Vše</option>
+      <option value="published">✅ Publikované</option>
+      <option value="hidden">⏸ Skryté</option>
+    </select>
+  `;
+  box.parentElement.insertBefore(bar, box);
+}
+
+function getFilteredArticles() {
+  const arr = window._articlesCache || [];
+  const q = ($('articleSearch')?.value || '').trim().toLowerCase();
+  const sectionFilter = $('articleFilterSection')?.value || '';
+  const statusFilter = $('articleFilterStatus')?.value || '';
+  return arr.filter(a => {
+    if (q && !(a.title || '').toLowerCase().includes(q)) return false;
+    if (sectionFilter && (a.sectionId || a.section) !== sectionFilter) return false;
+    if (statusFilter === 'published' && !a.published) return false;
+    if (statusFilter === 'hidden' && a.published) return false;
+    return true;
+  });
+}
+
+function filterAndRenderArticles() {
+  renderArticleList(getFilteredArticles());
+}
+
 async function loadArticles() {
+  injectArticleFilterBar();
   injectArticleBulkBar();
   try {
     const r = await fetch('/api/articles/list');
     if (!r.ok) throw new Error('Chyba načítání');
     const data = await r.json();
     const arr = Array.isArray(data) ? data : (data.articles || []);
+    window._articlesCache = arr;
 
     /* Naskenuje obsah všech článků a zapamatuje si, které URL fotek se
        v nich objevují — galerie pak u nich zobrazí odznak "V článku". */
@@ -1243,45 +1574,52 @@ async function loadArticles() {
     });
     if (typeof renderGallery === 'function' && $('galleryGrid')) renderGallery();
 
-    const box = $('articleList');
-    if (!box) return;
-    if (!arr.length) {
-      box.innerHTML = '<div style="color:#64748b;padding:1rem;text-align:center">Zatím žádné články</div>';
-      return;
-    }
-    box.innerHTML = arr.map(a => {
-      const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '';
-      const pubStatus = a.published
-        ? '<span style="color:#22c55e;font-size:12px">✅ Publikováno</span>'
-        : '<span style="color:#ef4444;font-size:12px">⏸ Skryto</span>';
-      const toggleBtn = a.published
-        ? `<button onclick="unpublishArticle('${a.id}')" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">⏸ Skrýt</button>`
-        : `<button onclick="publishArticle('${a.id}')" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">👁 Zobrazit</button>`;
-      return `
-      <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px;position:relative">
-        <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
-        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem;padding-left:1.75rem">
-          <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
-          ${pubStatus}
-        </div>
-        <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem;padding-left:1.75rem">
-          ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
-        </p>
-        ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5;padding-left:1.75rem">${escapeHtml(excerpt)}</p>` : ''}
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-left:1.75rem">
-          <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
-          <button onclick="duplicateArticle('${a.id}')" class="btn btn-sm">📋 Duplikovat</button>
-          ${toggleBtn}
-          <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">🗑 Smazat</button>
-        </div>
-      </div>`;
-    }).join('');
-    updateArticleBulkBar();
+    renderArticleList(getFilteredArticles());
   } catch (e) {
     console.error('Chyba článků:', e);
     const box = $('articleList');
     if (box) box.innerHTML = '<div style="color:#ef4444;padding:1rem;text-align:center">Nepodařilo se načíst články</div>';
   }
+}
+
+function renderArticleList(arr) {
+  const box = $('articleList');
+  if (!box) return;
+  if (!arr.length) {
+    const hasAny = (window._articlesCache || []).length > 0;
+    box.innerHTML = `<div style="color:#64748b;padding:1rem;text-align:center">${hasAny ? 'Žádné články neodpovídají filtru.' : 'Zatím žádné články'}</div>`;
+    updateArticleBulkBar();
+    return;
+  }
+  box.innerHTML = arr.map(a => {
+    const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '';
+    const pubStatus = a.published
+      ? '<span style="color:#22c55e;font-size:12px">✅ Publikováno</span>'
+      : '<span style="color:#ef4444;font-size:12px">⏸ Skryto</span>';
+    const toggleBtn = a.published
+      ? `<button onclick="unpublishArticle('${a.id}')" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">⏸ Skrýt</button>`
+      : `<button onclick="publishArticle('${a.id}')" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">👁 Zobrazit</button>`;
+    return `
+    <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px;position:relative">
+      <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem;padding-left:1.75rem">
+        <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
+        ${pubStatus}
+      </div>
+      <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem;padding-left:1.75rem">
+        ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
+      </p>
+      ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5;padding-left:1.75rem">${escapeHtml(excerpt)}</p>` : ''}
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-left:1.75rem">
+        <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
+        <button onclick="shareArticle('${a.id}')" class="btn btn-sm" style="background:#25D366;border-color:#25D366;color:#06281f">🔗 Sdílet</button>
+        <button onclick="duplicateArticle('${a.id}')" class="btn btn-sm">📋 Duplikovat</button>
+        ${toggleBtn}
+        <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">🗑 Smazat</button>
+      </div>
+    </div>`;
+  }).join('');
+  updateArticleBulkBar();
 }
 
 /* === ČLÁNKY: editace === */
@@ -1370,6 +1708,7 @@ async function createArticle() {
     place: $('artPlace')?.value || '',
     published: true
   };
+  let created = null;
   try {
     const r = await fetch('/api/articles/create', {
       method: 'POST',
@@ -1377,14 +1716,25 @@ async function createArticle() {
       body: JSON.stringify(payload)
     });
     if (!r.ok) throw new Error('Chyba ukládání');
+    try { created = await r.json(); } catch { created = null; }
   } catch (e) {
     showToast('Nepodařilo se vytvořit článek', 'error');
     console.error(e);
     return;
   }
   resetArticleForm();
-  loadArticles();
+  await loadArticles();
   showToast('Článek vytvořen a publikován', 'success');
+
+  // Rovnou nabídne poslání odkazu na nový článek — použije skutečný záznam
+  // z čerstvě načteného seznamu (má jistě správné ID z databáze), případně
+  // ID vrácené rovnou z /api/articles/create.
+  const realArticle = (window._articlesCache || []).find(a => a.slug === payload.slug)
+    || (created?.id ? { ...payload, id: created.id } : null);
+  if (realArticle) {
+    const shouldShare = await showConfirm('Chceš rovnou poslat odkaz na nový článek?', { confirmText: 'Sdílet odkaz', cancelText: 'Teď ne' });
+    if (shouldShare) openShareModal(realArticle);
+  }
 }
 
 /* === ČLÁNKY: update === */
@@ -1454,6 +1804,7 @@ async function unpublishArticle(id) {
 
 /* === ČLÁNKY: reset formuláře === */
 function resetArticleForm() {
+  if (typeof clearArticleDraft === 'function') clearArticleDraft(articleDraftKey());
   if ($('artTitle')) $('artTitle').value = '';
   if ($('artEditor')) {
     $('artEditor').innerHTML = '';
