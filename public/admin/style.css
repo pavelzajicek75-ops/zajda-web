@@ -229,26 +229,57 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spac
 }
 .ribbon-group {
   display: none;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: stretch;
+  gap: 0.6rem;
   flex-wrap: wrap;
   width: 100%;
 }
 .ribbon-group.active { display: flex; }
 
+/* === SESKUPENÍ NÁSTROJŮ PODLE OBLASTI (jako ve Wordu) ===
+   Každá logická skupina ovládacích prvků (Zobrazení, Složky, Nahrávání…) má
+   vlastní ohraničený box s malým popiskem dole — takže je na první pohled
+   jasné, co k sobě patří, i když je tlačítek víc. */
+.ribbon-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.65rem 0.4rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+.ribbon-section-items {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.ribbon-section-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 /* Režim přeuspořádání — klik na prvek ho skryje, tažení za úchyt ⠿ ho
-   přesune. Funguje spolehlivě i pro selecty (přes úchyt, ne nativní drag
-   celého prvku). */
-.ribbon-group.reorder-mode > *,
-.editor-toolbar.reorder-mode > * {
+   přesune v rámci stejné skupiny. Funguje spolehlivě i pro selecty
+   (přes úchyt, ne nativní drag celého prvku), a to i uvnitř vnořených
+   sekcí (podporuje libovolnou hloubku zanoření). */
+.ribbon-group.reorder-mode [data-key],
+.editor-toolbar.reorder-mode [data-key] {
   position: relative;
   cursor: pointer;
   outline: 1px dashed var(--border);
   outline-offset: 4px;
   border-radius: var(--r-sm);
 }
-.ribbon-group.reorder-mode > *:hover,
-.editor-toolbar.reorder-mode > *:hover { outline-color: var(--red); background: rgba(247,92,92,0.08); }
+.ribbon-group.reorder-mode [data-key]:hover,
+.editor-toolbar.reorder-mode [data-key]:hover { outline-color: var(--red); background: rgba(247,92,92,0.08); }
 .ribbon-grip-badge {
   position: absolute; top: -10px; left: -10px;
   width: 20px; height: 20px;
@@ -422,8 +453,8 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 
 /* === WYSIWYG EDITOR === */
 .editor-toolbar {
-  display: flex; flex-wrap: wrap; gap: 4px;
-  margin-bottom: 8px; padding: 8px;
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.55rem;
+  margin-bottom: 8px; padding: 0.6rem;
   background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--r-md) var(--r-md) 0 0;
   border-bottom: none;
 }
@@ -434,12 +465,37 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   transition: background 0.15s, border-color 0.15s;
 }
 .editor-toolbar button:hover, .editor-toolbar select:hover { background: #2c3757; border-color: var(--accent); }
-.toolbar-reorder-btn {
-  margin-left: auto;
+
+/* Seskupení tlačítek WYSIWYG lišty podle oblasti (Písmo/Odstavec/Obrázky…),
+   stejný princip jako .ribbon-section v horním ribbonu. */
+.toolbar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.5rem 0.3rem;
   background: var(--surface-3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
 }
+.toolbar-group-items {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: center;
+}
+.toolbar-group-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.toolbar-utility {
+  display: flex; align-items: center; gap: 4px;
+  margin-left: auto;
+  align-self: center;
+}
+.toolbar-reorder-btn { background: var(--surface-3); }
 .toolbar-reorder-btn.active { background: var(--accent) !important; color: #fff; border-color: var(--accent) !important; }
-.editor-toolbar .sep { width: 1px; background: var(--border); margin: 0 4px; }
 .color-picker { width: 32px; height: 28px; padding: 2px; cursor: pointer; border-radius: 6px; }
 
 #artEditor, #aboutEditor {
@@ -605,8 +661,49 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 .editor-sidebar {
   width: 280px; flex-shrink: 0; overflow-y: auto;
   background: var(--surface-2); border-right: 1px solid var(--border-soft);
-  padding: 1.1rem; display: flex; flex-direction: column; gap: 1rem;
+  padding: 0.75rem; display: flex; flex-direction: column; gap: 0.6rem;
 }
+
+/* === PHOTOSHOP-STYLE SKLÁDACÍ PANELY ===
+   Postranní panel fotoeditoru je rozdělený na skládací sekce (Předvolby,
+   Ořez, Transformace, Světlo, Barva, Efekty, Export) — přesně jako panely
+   ve Photoshopu. Používá nativní <details>/<summary>, takže sbalení a
+   rozbalení funguje bez jakéhokoliv JS. */
+.editor-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.editor-panel summary {
+  display: flex; align-items: center;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 600;
+  color: var(--gold);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  transition: background 0.12s var(--ease);
+}
+.editor-panel summary::-webkit-details-marker { display: none; }
+.editor-panel summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: var(--text-faint);
+  transition: transform 0.18s var(--ease);
+  font-size: 11px;
+}
+.editor-panel[open] summary::before { transform: rotate(90deg); }
+.editor-panel summary:hover { background: var(--surface-2); }
+.editor-panel-body {
+  padding: 0.7rem 0.85rem 0.85rem;
+  display: flex; flex-direction: column; gap: 0.7rem;
+  border-top: 1px solid var(--border-soft);
+  animation: fadeSlideIn 0.18s var(--ease);
+}
+
 .editor-sidebar .tool-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
 .editor-sidebar .tool-row label { font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; font-family: var(--font-mono); }
 .editor-sidebar .filter-row { flex-direction: column; align-items: stretch; }
@@ -687,13 +784,12 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   .editor-body { flex-direction: column; }
   .editor-sidebar {
     width: 100%; max-height: 45vh; border-right: none; border-bottom: 1px solid var(--border-soft);
-    flex-direction: row; flex-wrap: wrap; align-content: flex-start;
   }
-  .editor-sidebar .tool-row { width: auto; flex: 1 1 45%; }
-  .editor-sidebar .filter-row { flex: 1 1 100%; }
   .editor-preview { min-height: 320px; }
   .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .form-card .form-row { gap: 0.5rem; }
+  .ribbon-section { align-items: stretch; }
+  .ribbon-section-items { justify-content: flex-start; }
 }
 
 /* Mobil (~480px a méně) */
@@ -710,10 +806,10 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   .gallery-item img { height: 150px; }
   .gallery-item .item-actions { opacity: 1; }
   .editor-sidebar { max-height: 50vh; }
-  .editor-sidebar .tool-row { flex: 1 1 100%; }
   #img-toolbar { justify-content: center; }
   #artEditor, #aboutEditor { min-height: 180px; font-size: 16px; }
   .editor-toolbar button, .editor-toolbar select { padding: 7px 10px; font-size: 14px; }
+  .toolbar-utility { margin-left: 0; width: 100%; justify-content: center; }
   .modal-box { padding: 1.2rem; }
   .editor-footer { flex-wrap: wrap; }
   .editor-footer .btn { flex: 1 1 auto; justify-content: center; }
