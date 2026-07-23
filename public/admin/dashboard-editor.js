@@ -742,6 +742,7 @@ function setupArticleEditors() {
         hideImgToolbar();
         return;
       }
+      if (img.dataset.justDragged) { delete img.dataset.justDragged; return; }
       e.preventDefault();
       e.stopPropagation();
       ed.querySelectorAll('img.editor-img').forEach(i => { i.style.outline = ''; i.removeAttribute('data-active'); });
@@ -752,6 +753,7 @@ function setupArticleEditors() {
     });
     ed.addEventListener('dragstart', e => { if (e.target.tagName === 'IMG') e.preventDefault(); });
     initBlockDragSystem(id);
+    initImageDirectDrag(id);
   });
 }
 
@@ -762,6 +764,7 @@ function promoteNestedImages(editorId) {
   const ed = $(editorId);
   if (!ed) return;
   ed.querySelectorAll('img.editor-img').forEach(img => {
+    if (img.style.cursor === 'pointer' || !img.style.cursor) img.style.cursor = 'grab';
     if (img.parentElement === ed) return;
     let block = img.parentElement;
     while (block && block.parentElement !== ed) block = block.parentElement;
@@ -813,7 +816,7 @@ function initBlockDragSystem(editorId) {
   }
 
   ed.addEventListener('mousemove', e => {
-    if (draggingBlock) return;
+    if (draggingBlock || ed._imgDragActive) return;
     const block = topLevelBlockFromPoint(e.clientX, e.clientY);
     if (block) { hoveredBlock = block; positionHandle(block); }
     else { hoveredBlock = null; handle.style.display = 'none'; }
@@ -860,6 +863,94 @@ function initBlockDragSystem(editorId) {
     indicator.style.display = 'none';
     handle.style.display = 'none';
   });
+}
+
+/* === PŘÍMÉ TAŽENÍ OBRÁZKŮ MYŠÍ (živé obtékání textu) ===
+   Umožňuje chytit obrázek přímo myší (bez nutnosti hledat úchyt ⠿) a
+   volně ho přetahovat v textu. Za jízdy — ne až po puštění — se:
+   - obrázek podle vodorovné polohy kurzoru sám nastaví na obtékání
+     vlevo / vpravo / na střed,
+   - a rovnou přesune na novou pozici mezi odstavci,
+   takže je hned vidět, jak text kolem něj poteče — skládání layoutu
+   jako z kostiček Lega v reálném čase. Krátké kliknutí (bez tažení)
+   dál funguje jako dřív a otevře nástrojovou lištu obrázku. */
+function initImageDirectDrag(editorId) {
+  const ed = $(editorId);
+  if (!ed || ed.dataset.imgDragReady) return;
+  ed.dataset.imgDragReady = '1';
+
+  let draggingImg = null;
+  let startX = 0, startY = 0;
+  let dragging = false;
+
+  function topLevelBlockFromPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    let node = el;
+    while (node && node !== ed && node.parentElement !== ed) node = node.parentElement;
+    return (node && node !== ed && ed.contains(node)) ? node : null;
+  }
+
+  function applyLiveFloat(clientX) {
+    const rect = ed.getBoundingClientRect();
+    const rel = (clientX - rect.left) / rect.width;
+    if (rel < 0.33) {
+      draggingImg.style.float = 'left';
+      draggingImg.style.margin = '0.5rem 1rem 0.5rem 0';
+    } else if (rel > 0.66) {
+      draggingImg.style.float = 'right';
+      draggingImg.style.margin = '0.5rem 0 0.5rem 1rem';
+    } else {
+      draggingImg.style.float = 'none';
+      draggingImg.style.margin = '0.5rem auto';
+    }
+    draggingImg.style.display = 'block';
+  }
+
+  ed.addEventListener('pointerdown', e => {
+    const img = e.target.closest('img.editor-img');
+    if (!img || img.parentElement !== ed) return;
+    draggingImg = img;
+    startX = e.clientX; startY = e.clientY;
+    dragging = false;
+  });
+
+  ed.addEventListener('pointermove', e => {
+    if (!draggingImg) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (!dragging) {
+      // malý práh, ať obyčejné kliknutí neomylem nezačne tažení
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      dragging = true;
+      ed._imgDragActive = true;
+      draggingImg.style.cursor = 'grabbing';
+      draggingImg.style.opacity = '0.85';
+      try { draggingImg.setPointerCapture(e.pointerId); } catch {}
+      ed.style.userSelect = 'none';
+    }
+    e.preventDefault();
+    applyLiveFloat(e.clientX);
+    const target = topLevelBlockFromPoint(e.clientX, e.clientY);
+    if (target && target !== draggingImg) {
+      const r = target.getBoundingClientRect();
+      const before = e.clientY < r.top + r.height / 2;
+      if (before) target.parentNode.insertBefore(draggingImg, target);
+      else target.parentNode.insertBefore(draggingImg, target.nextSibling);
+    }
+  });
+
+  const endDrag = () => {
+    if (draggingImg && dragging) {
+      draggingImg.style.cursor = 'grab';
+      draggingImg.style.opacity = '';
+      draggingImg.dataset.justDragged = '1';
+      ed.style.userSelect = '';
+    }
+    ed._imgDragActive = false;
+    draggingImg = null;
+    dragging = false;
+  };
+  ed.addEventListener('pointerup', endDrag);
+  ed.addEventListener('pointercancel', endDrag);
 }
 
 /* Menu pro úpravu obrázku (velikost/zarovnání/obtékání/pořadí/smazání) je teď
@@ -1041,9 +1132,9 @@ function insertSelectedImages(editorId, align) {
 function insertImgUrl(editorId, url, align, closeModal = true) {
   const ed = $(editorId);
   if (!ed) return;
-  let style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:pointer;';
-  if (align === 'left') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 1rem 0.5rem 0;float:left;display:block;cursor:pointer;';
-  else if (align === 'right') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 0 0.5rem 1rem;float:right;display:block;cursor:pointer;';
+  let style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:grab;';
+  if (align === 'left') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 1rem 0.5rem 0;float:left;display:block;cursor:grab;';
+  else if (align === 'right') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 0 0.5rem 1rem;float:right;display:block;cursor:grab;';
   ed.focus();
 
   const wrapper = document.createElement('div');
