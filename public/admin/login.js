@@ -13,7 +13,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     });
     const data = await res.json();
     if (res.ok) {
-      window.location.href = '/admin/dashboard.html';
+      if (!data.token) {
+        err.textContent = 'Server nevrátil token — zkontroluj odpověď /api/auth/login.';
+        console.error('Login response bez tokenu:', data);
+        return;
+      }
+      localStorage.setItem('token', data.token);
+      window.location.href = '/admin/index.html';
     } else {
       err.textContent = data.error || 'Špatné přihlašovací údaje';
     }
