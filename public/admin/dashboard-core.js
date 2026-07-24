@@ -165,20 +165,42 @@ async function checkAuth() {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token }
     });
+    const bodyText = await r.clone().text().catch(() => '');
     let data = {};
-    try { data = await r.json(); } catch (e) { console.error('/api/verify: odpověď nejde přečíst jako JSON', e); }
-    console.log('/api/verify odpověď:', r.status, data);
+    try { data = JSON.parse(bodyText); } catch (e) { /* odpověď není JSON, bodyText se ukáže syrový */ }
     if (!r.ok || !data.ok) {
-      localStorage.removeItem('token');
-      window.location.href = '/admin/login.html';
+      showAuthFailureScreen(r.status, bodyText);
       return false;
     }
     return true;
   } catch (e) {
-    console.error('Chyba při volání /api/verify:', e);
-    showToast('Nepodařilo se ověřit přihlášení (chyba serveru): ' + e.message, 'error');
+    showAuthFailureScreen('síťová chyba / nedostupný server', e.message);
     return false;
   }
+}
+
+/* Místo tichého přesměrování na login (kde chybu nikdy nikdo neuvidí) se
+   při selhání ověření zobrazí přímo na obrazovce PŘESNĚ to, co server
+   vrátil — stav i tělo odpovědi. Token se nemaže automaticky (mohla by to
+   být jen dočasná chyba serveru); na login se jde až po kliknutí. */
+function showAuthFailureScreen(status, bodyText) {
+  document.body.innerHTML = '';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0a0f1c;color:#eef1f8;display:flex;align-items:center;justify-content:center;padding:2rem;font-family:monospace;';
+  overlay.innerHTML = `
+    <div style="max-width:600px;width:100%;text-align:left">
+      <h2 style="color:#f75c5c;margin-bottom:1rem;font-family:sans-serif">⚠️ Ověření přihlášení (/api/verify) selhalo</h2>
+      <p style="margin-bottom:0.5rem"><b>Stav odpovědi:</b> ${escapeHtml(String(status))}</p>
+      <p style="margin-bottom:0.5rem"><b>Tělo odpovědi serveru:</b></p>
+      <pre style="background:#131a2c;padding:1rem;border-radius:8px;overflow:auto;max-height:240px;white-space:pre-wrap;word-break:break-all;border:1px solid #263252">${escapeHtml(bodyText || '(prázdná odpověď)')}</pre>
+      <p style="margin-top:1rem;color:#92a0bc;font-size:12.5px">Pošli tenhle text (stav + tělo odpovědi) zpátky — podle toho poznáme přesně, co backend čeká jinak.</p>
+      <button id="authFailContinue" style="margin-top:1rem;background:#ff7a1a;color:#fff;border:none;padding:0.7rem 1.4rem;border-radius:8px;cursor:pointer;font-size:14px;font-family:sans-serif">Pokračovat na přihlášení</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('authFailContinue').onclick = () => {
+    localStorage.removeItem('token');
+    window.location.href = '/admin/login.html';
+  };
 }
 
 async function logout() {
