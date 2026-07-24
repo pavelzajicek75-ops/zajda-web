@@ -2,6 +2,34 @@
    DASHBOARD CORE — auth, navigace, galerie, upload
    ========================================================= */
 
+/* === AUTOMATICKÉ PŘIPOJENÍ PŘIHLAŠOVACÍHO TOKENU KE VŠEM VOLÁNÍM ===
+   Web ukládá přihlašovací token do localStorage (ne do cookie) a backend
+   ho čeká jako "Authorization: Bearer <token>" hlavičku (viz /admin/index.js
+   a jeho /api/verify). Aby nebylo nutné ručně dopisovat hlavičku do
+   desítek jednotlivých fetch() volání po celém dashboardu, "nastrčí" se
+   token automaticky do každého fetch() na tento web hned tady — jednou,
+   na jednom místě. Volání na cizí domény (mimo tento původ) hlavičku
+   nedostanou, aby se token neposílal nikam ven. */
+(function patchFetchWithAuthToken() {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      let url;
+      try { url = new URL(typeof input === 'string' ? input : input.url, window.location.origin); }
+      catch { url = null; }
+      const sameOrigin = !url || url.origin === window.location.origin;
+      if (sameOrigin) {
+        init = init || {};
+        const headers = new Headers(init.headers || (typeof input !== 'string' ? input.headers : undefined) || {});
+        if (!headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + token);
+        init.headers = headers;
+      }
+    }
+    return originalFetch(input, init);
+  };
+})();
+
 /* === UTILITY === */
 function $(id) { return document.getElementById(id); }
 
@@ -124,20 +152,29 @@ const exifCache = new Map();
 
 /* === AUTH === */
 async function checkAuth() {
-  try {
-    const r = await fetch('/api/auth/me');
-    if (!r.ok) throw new Error('unauthorized');
-    return true;
-  } catch {
+  const token = localStorage.getItem('token');
+  if (!token) {
     window.location.href = '/admin/login.html';
+    return false;
+  }
+  try {
+    const r = await fetch('/api/verify', { method: 'POST' });
+    const data = await r.json().catch(() => ({ ok: false }));
+    if (!r.ok || !data.ok) {
+      localStorage.removeItem('token');
+      window.location.href = '/admin/login.html';
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Chyba ověření přihlášení:', e);
+    showToast('Nepodařilo se ověřit přihlášení (chyba serveru).', 'error');
     return false;
   }
 }
 
 async function logout() {
-  try {
-    await fetch('/api/auth/logout', { method: 'POST' });
-  } catch {}
+  localStorage.removeItem('token');
   window.location.href = '/admin/login.html';
 }
 
