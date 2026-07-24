@@ -179,14 +179,16 @@ let ED = {
   export: 'max',
   blobUrl: null,
   toneBaseUrl: null,
-  filters: { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false },
+  filters: { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0 },
   cropRect: null,
   isDraggingImage: false,
   isDraggingCrop: false,
   isResizingCrop: false,
   resizeDir: '',
   lastX: 0,
-  lastY: 0
+  lastY: 0,
+  stats: null,
+  activePreset: ''
 };
 
 /* === GALERIE === */
@@ -212,11 +214,10 @@ async function openEditor(id) {
   ED.photo = p;
   ED.scale = 1; ED.rotate = 0; ED.straighten = 0; ED.panX = 0; ED.panY = 0;
   ED.crop = 'free'; ED.export = 'max'; ED.cropRect = null;
-  ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0, ai: false };
+  ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0 };
+  ED.stats = null;
   if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
   if (ED.toneBaseUrl) { URL.revokeObjectURL(ED.toneBaseUrl); ED.toneBaseUrl = null; }
-  const aic = $('aiCheck');
-  if (aic) aic.checked = false;
   const straightSlider = $('fslider-straighten');
   if (straightSlider) straightSlider.value = 0;
   const straightLabel = $('fval-straighten');
@@ -226,8 +227,7 @@ async function openEditor(id) {
   toggleStraightenGrid(false);
   updateFilterLabels();
   updateSharpenFilter(0);
-  const presetSel = $('presetSelect');
-  if (presetSel) presetSel.value = '';
+  ED.activePreset = '';
   syncFilterSlidersFromState();
   setCrop('free');
   setExport('max');
@@ -252,6 +252,7 @@ async function openEditor(id) {
         $('editPreview').appendChild(vig);
       }
       vig.style.opacity = 0;
+      renderPresetSwatches();
     };
     img.onerror = () => {
       showToast('Obrázek se nepodařilo načíst.', 'error');
@@ -306,12 +307,10 @@ function applyFilters() {
   if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`;
   else s += ` hue-rotate(${f.temp * 0.3}deg)`;
   if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
-  if (f.sharpen > 0 || f.ai) {
-    const effectiveStrength = f.ai ? Math.max(f.sharpen, 80) : f.sharpen;
-    updateSharpenFilter(effectiveStrength);
+  if (f.sharpen > 0) {
+    updateSharpenFilter(f.sharpen);
     s += ' url(#ed-sharpen-dynamic)';
   }
-  if (f.ai) s += ' brightness(105%) contrast(110%) saturate(115%)';
   /* Vynucené překreslení — bez tohohle prohlížeč občas ignoruje změny uvnitř
      dynamických SVG filtrů (doostření), protože samotný text vlastnosti
      filter zůstává stejný (mění se jen atributy uvnitř <svg>). */
@@ -380,8 +379,6 @@ function syncFilterSlidersFromState() {
   const f = ED.filters;
   const ids = ['exposure', 'contrast', 'saturation', 'vibrance', 'shadows', 'highlights', 'blackPoint', 'whitePoint', 'temp', 'vignette', 'sharpen', 'denoise'];
   ids.forEach(k => { const el = $('fslider-' + k); if (el) el.value = f[k]; });
-  const aic = $('aiCheck');
-  if (aic) aic.checked = !!f.ai;
   updateFilterLabels();
 }
 
@@ -393,38 +390,175 @@ function setFilter(key, val) {
   if (key === 'shadows' || key === 'highlights' || key === 'blackPoint' || key === 'whitePoint') {
     scheduleToneRegeneration();
   }
-  const presetSel = $('presetSelect');
-  if (presetSel) presetSel.value = '';
+  ED.activePreset = '';
+  document.querySelectorAll('.preset-swatch.active').forEach(b => b.classList.remove('active'));
   applyFilters();
 }
 
 /* === PŘEDVOLBY (jako styly ve Photoshopu) === */
 const FILTER_PRESETS = {
-  none:         { exposure: 0,   contrast: 0,   saturation: 0,   vibrance: 0,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 0,   vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
-  bw:           { exposure: 0,   contrast: 15,  saturation: -100, vibrance: 0,  shadows: 5,   highlights: -10, blackPoint: 5,  whitePoint: 250, temp: 0,   vignette: 15, sharpen: 15, denoise: 0, ai: false },
-  vintage:      { exposure: -5,  contrast: -10, saturation: -25, vibrance: -10, shadows: 10,  highlights: -15, blackPoint: 15, whitePoint: 235, temp: 25,  vignette: 35, sharpen: 0,  denoise: 5, ai: false },
-  warm:         { exposure: 5,   contrast: 5,   saturation: 5,   vibrance: 15,  shadows: 5,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 30,  vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
-  cold:         { exposure: 0,   contrast: 8,   saturation: -5,  vibrance: 5,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: -30, vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
-  highContrast: { exposure: 0,   contrast: 35,  saturation: 10,  vibrance: 10,  shadows: -20, highlights: 20,  blackPoint: 12, whitePoint: 245, temp: 0,   vignette: 15, sharpen: 25, denoise: 0, ai: false },
-  vivid:        { exposure: 5,   contrast: 12,  saturation: 15,  vibrance: 40,  shadows: 5,   highlights: -5,  blackPoint: 0,  whitePoint: 255, temp: 5,   vignette: 0,  sharpen: 15, denoise: 0, ai: false },
-  filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  blackPoint: 20, whitePoint: 240, temp: -10, vignette: 45, sharpen: 10, denoise: 0, ai: false },
-  pastel:       { exposure: 8,   contrast: -15, saturation: -20, vibrance: 25,  shadows: 20,  highlights: -10, blackPoint: 15, whitePoint: 245, temp: 10,  vignette: 0,  sharpen: 0,  denoise: 5, ai: false },
-  drama:        { exposure: -8,  contrast: 40,  saturation: -10, vibrance: 20,  shadows: -30, highlights: 25,  blackPoint: 10, whitePoint: 248, temp: 0,   vignette: 30, sharpen: 20, denoise: 0, ai: false },
-  sepia:        { exposure: 0,   contrast: 8,   saturation: -80, vibrance: 0,   shadows: 12,  highlights: -8,  blackPoint: 10, whitePoint: 235, temp: 45,  vignette: 25, sharpen: 0,  denoise: 3, ai: false },
-  clean:        { exposure: 10,  contrast: 8,   saturation: 5,   vibrance: 10,  shadows: 15,  highlights: -15, blackPoint: 0,  whitePoint: 255, temp: -5,  vignette: 0,  sharpen: 10, denoise: 0, ai: false },
-  matte:        { exposure: 5,   contrast: -20, saturation: -10, vibrance: 5,   shadows: 25,  highlights: -30, blackPoint: 30, whitePoint: 225, temp: 8,   vignette: 0,  sharpen: 0,  denoise: 0, ai: false },
-  sunset:       { exposure: 3,   contrast: 10,  saturation: 15,  vibrance: 30,  shadows: -5,  highlights: -10, blackPoint: 5,  whitePoint: 250, temp: 40,  vignette: 20, sharpen: 5,  denoise: 0, ai: false },
-  night:        { exposure: -15, contrast: 20,  saturation: -15, vibrance: 10,  shadows: 30,  highlights: -20, blackPoint: 0,  whitePoint: 240, temp: -20, vignette: 40, sharpen: 15, denoise: 20, ai: false }
+  none:         { exposure: 0,   contrast: 0,   saturation: 0,   vibrance: 0,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 0,   vignette: 0,  sharpen: 0,  denoise: 0 },
+  bw:           { exposure: 0,   contrast: 15,  saturation: -100, vibrance: 0,  shadows: 5,   highlights: -10, blackPoint: 5,  whitePoint: 250, temp: 0,   vignette: 15, sharpen: 15, denoise: 0 },
+  vintage:      { exposure: -5,  contrast: -10, saturation: -25, vibrance: -10, shadows: 10,  highlights: -15, blackPoint: 15, whitePoint: 235, temp: 25,  vignette: 35, sharpen: 0,  denoise: 5 },
+  warm:         { exposure: 5,   contrast: 5,   saturation: 5,   vibrance: 15,  shadows: 5,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 30,  vignette: 0,  sharpen: 0,  denoise: 0 },
+  cold:         { exposure: 0,   contrast: 8,   saturation: -5,  vibrance: 5,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: -30, vignette: 0,  sharpen: 0,  denoise: 0 },
+  highContrast: { exposure: 0,   contrast: 35,  saturation: 10,  vibrance: 10,  shadows: -20, highlights: 20,  blackPoint: 12, whitePoint: 245, temp: 0,   vignette: 15, sharpen: 25, denoise: 0 },
+  vivid:        { exposure: 5,   contrast: 12,  saturation: 15,  vibrance: 40,  shadows: 5,   highlights: -5,  blackPoint: 0,  whitePoint: 255, temp: 5,   vignette: 0,  sharpen: 15, denoise: 0 },
+  filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  blackPoint: 20, whitePoint: 240, temp: -10, vignette: 45, sharpen: 10, denoise: 0 },
+  pastel:       { exposure: 8,   contrast: -15, saturation: -20, vibrance: 25,  shadows: 20,  highlights: -10, blackPoint: 15, whitePoint: 245, temp: 10,  vignette: 0,  sharpen: 0,  denoise: 5 },
+  drama:        { exposure: -8,  contrast: 40,  saturation: -10, vibrance: 20,  shadows: -30, highlights: 25,  blackPoint: 10, whitePoint: 248, temp: 0,   vignette: 30, sharpen: 20, denoise: 0 },
+  sepia:        { exposure: 0,   contrast: 8,   saturation: -80, vibrance: 0,   shadows: 12,  highlights: -8,  blackPoint: 10, whitePoint: 235, temp: 45,  vignette: 25, sharpen: 0,  denoise: 3 },
+  clean:        { exposure: 10,  contrast: 8,   saturation: 5,   vibrance: 10,  shadows: 15,  highlights: -15, blackPoint: 0,  whitePoint: 255, temp: -5,  vignette: 0,  sharpen: 10, denoise: 0 },
+  matte:        { exposure: 5,   contrast: -20, saturation: -10, vibrance: 5,   shadows: 25,  highlights: -30, blackPoint: 30, whitePoint: 225, temp: 8,   vignette: 0,  sharpen: 0,  denoise: 0 },
+  sunset:       { exposure: 3,   contrast: 10,  saturation: 15,  vibrance: 30,  shadows: -5,  highlights: -10, blackPoint: 5,  whitePoint: 250, temp: 40,  vignette: 20, sharpen: 5,  denoise: 0 },
+  night:        { exposure: -15, contrast: 20,  saturation: -15, vibrance: 10,  shadows: 30,  highlights: -20, blackPoint: 0,  whitePoint: 240, temp: -20, vignette: 40, sharpen: 15, denoise: 20 }
 };
+
+/* === AUTO VYLEPŠENÍ (skutečná analýza obrázku, ne pevný "kosmetický" filtr) ===
+   Starý přepínač "✨ AI vylepšení" jen natvrdo přidal fixní zesílení jasu/
+   kontrastu/sytosti bez ohledu na to, jak fotka vlastně vypadá — proto na
+   spoustě fotek nefungoval (přepálil je, nebo se nic nezměnilo). Tohle
+   místo toho fotku skutečně změří (histogram jasu a průměr barevných
+   kanálů) a spočítá, co konkrétně potřebuje — přesně jako "Auto Tone /
+   Auto Contrast / Auto Color" ve Photoshopu. */
+function analyzeImageStats(img) {
+  const maxSide = 300; // stačí zmenšenina, jde jen o statistiku
+  let w = img.naturalWidth, h = img.naturalHeight;
+  if (Math.max(w, h) > maxSide) {
+    const s = maxSide / Math.max(w, h);
+    w = Math.max(1, Math.round(w * s));
+    h = Math.max(1, Math.round(h * s));
+  }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h).data;
+  let rSum = 0, gSum = 0, bSum = 0, lumMin = 255, lumMax = 0;
+  const n = w * h;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    rSum += r; gSum += g; bSum += b;
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (lum < lumMin) lumMin = lum;
+    if (lum > lumMax) lumMax = lum;
+  }
+  return { rAvg: rSum / n, gAvg: gSum / n, bAvg: bSum / n, lumMin, lumMax };
+}
+
+/* Statistiky se počítají jen jednou na fotku (a znovu po ořezu), ne při
+   každém kliknutí na auto-tlačítko. */
+function getImageStats() {
+  if (!ED.img) return null;
+  if (!ED.stats) ED.stats = analyzeImageStats(ED.img);
+  return ED.stats;
+}
+
+/* Auto kontrast — natáhne histogram jasu tak, aby nejtmavší místo bylo
+   téměř černé a nejsvětlejší téměř bílé (klasický "auto levels"). */
+function autoContrast() {
+  const s = getImageStats();
+  if (!s) return;
+  ED.filters.blackPoint = Math.max(0, Math.min(60, Math.round(s.lumMin)));
+  ED.filters.whitePoint = Math.min(255, Math.max(195, Math.round(s.lumMax)));
+  syncFilterSlidersFromState();
+  scheduleToneRegeneration();
+  applyFilters();
+  showToast('Auto kontrast použit', 'success');
+}
+
+/* Auto expozice — posune průměrný jas fotky směrem ke střední šedé. */
+function autoExposure() {
+  const s = getImageStats();
+  if (!s) return;
+  const avgLum = (s.rAvg + s.gAvg + s.bAvg) / 3;
+  ED.filters.exposure = Math.max(-40, Math.min(40, Math.round((128 - avgLum) * 0.35)));
+  syncFilterSlidersFromState();
+  applyFilters();
+  showToast('Auto expozice použita', 'success');
+}
+
+/* Auto bílá — gray-world vyvážení: pokud fotka táhne do modra/žluta,
+   jemně to narovná přes teplotu. */
+function autoWhiteBalance() {
+  const s = getImageStats();
+  if (!s) return;
+  const rbDiff = s.rAvg - s.bAvg;
+  ED.filters.temp = Math.max(-30, Math.min(30, Math.round(-rbDiff * 0.6)));
+  syncFilterSlidersFromState();
+  applyFilters();
+  showToast('Auto bílá použita', 'success');
+}
+
+/* Auto vše — spojí kontrast, expozici a bílou dohromady, plus jemné
+   doladění živosti a ostrosti. Tohle nahrazuje starý přepínač. */
+function autoEnhanceAll() {
+  const s = getImageStats();
+  if (!s) return;
+  ED.filters.blackPoint = Math.max(0, Math.min(60, Math.round(s.lumMin)));
+  ED.filters.whitePoint = Math.min(255, Math.max(195, Math.round(s.lumMax)));
+  const avgLum = (s.rAvg + s.gAvg + s.bAvg) / 3;
+  ED.filters.exposure = Math.max(-40, Math.min(40, Math.round((128 - avgLum) * 0.35)));
+  const rbDiff = s.rAvg - s.bAvg;
+  ED.filters.temp = Math.max(-30, Math.min(30, Math.round(-rbDiff * 0.6)));
+  ED.filters.vibrance = Math.max(ED.filters.vibrance, 15);
+  ED.filters.sharpen = Math.max(ED.filters.sharpen, 20);
+  syncFilterSlidersFromState();
+  scheduleToneRegeneration();
+  applyFilters();
+  showToast('Auto vylepšení použito (expozice, kontrast, bílá, ostrost)', 'success');
+}
 
 function applyPreset(name) {
   const preset = FILTER_PRESETS[name];
   if (!preset) return;
   ED.filters = { ...preset };
+  ED.activePreset = name;
   syncFilterSlidersFromState();
   updateSharpenFilter(ED.filters.sharpen);
   scheduleToneRegeneration();
   applyFilters();
+  document.querySelectorAll('.preset-swatch').forEach(b => b.classList.toggle('active', b.dataset.preset === name));
+}
+
+const PRESET_LABELS = {
+  none: '↺ Bez efektu', bw: 'Černobílá', vintage: 'Vintage', warm: 'Teplý tón', cold: 'Studený tón',
+  highContrast: 'Vysoký kontrast', vivid: 'Živé barvy', filmNoir: 'Film Noir', pastel: 'Pastelové',
+  drama: 'Dramatický', sepia: 'Sépie', clean: 'Čistý/Jasný', matte: 'Matný', sunset: 'Západ slunce', night: 'Noční'
+};
+
+/* Přibližný CSS filtr pro RYCHLÝ náhled stylu na malé miniatuře (jen
+   exposure/contrast/saturation/temp — stíny/světla/vinětace apod. se do
+   rychlého CSS filtru nedají přenést přesně, na miniatuře ale stačí na
+   rozpoznání stylu). Přesný výsledek se použije až po kliknutí. */
+function presetPreviewFilterString(preset) {
+  let s = `brightness(${100 + preset.exposure}%) contrast(${100 + preset.contrast}%) saturate(${100 + preset.saturation}%)`;
+  if (preset.temp > 0) s += ` sepia(${preset.temp * 0.5}%)`;
+  else s += ` hue-rotate(${preset.temp * 0.3}deg)`;
+  return s;
+}
+
+/* Vykreslí mřížku náhledů stylů — miniatury AKTUÁLNÍ fotky s filtrem
+   přímo v panelu (jako swatch v Photoshopu), místo textového rozbalovacího
+   seznamu. Díky tomu je hned vidět, jak bude fotka vypadat, a na mobilu to
+   nezakrývá náhled fotky přes celou obrazovku (je to obyčejný obsah
+   sbalitelného panelu, ne nativní <select> overlay). */
+function renderPresetSwatches() {
+  const box = $('presetSwatches');
+  if (!box || !ED.img) return;
+  const thumbSrc = ED.toneBaseUrl || ED.blobUrl || '';
+  const activeName = ED.activePreset || '';
+  box.innerHTML = Object.keys(FILTER_PRESETS).map(key => {
+    const preset = FILTER_PRESETS[key];
+    const label = PRESET_LABELS[key] || key;
+    const filterCss = presetPreviewFilterString(preset);
+    const active = key === activeName ? ' active' : '';
+    return `
+      <button type="button" class="preset-swatch${active}" onclick="applyPreset('${key}')" data-preset="${key}" title="${escapeHtml(label)}">
+        <span class="preset-swatch-thumb" style="background-image:url('${thumbSrc}');filter:${filterCss}"></span>
+        <span class="preset-swatch-label">${escapeHtml(label)}</span>
+      </button>`;
+  }).join('');
 }
 
 /* === EDITOR: crop systém === */
@@ -544,12 +678,14 @@ function applyCrop() {
     const newImg = new Image();
     newImg.onload = () => {
       ED.img = newImg; ED.crop = 'free'; ED.panX = 0; ED.panY = 0; ED.rotate = 0; ED.scale = 1;
+      ED.stats = null;
       const zs = $('zoomSlider'); if (zs) zs.value = 1;
       const el = $('editImg'); if (el) el.src = url;
       fitImageToPreview();
       if ($('cropLayer')) $('cropLayer').style.display = 'none';
       ED.cropRect = null;
       scheduleToneRegeneration();
+      renderPresetSwatches();
     };
     newImg.src = url;
   }, 'image/png');
@@ -660,15 +796,8 @@ async function saveEditor(mode) {
   if (f.vibrance) {
     applyVibrance(ctx, dim.w, dim.h, f.vibrance);
   }
-  if (f.sharpen > 0 || f.ai) {
-    const effectiveStrength = f.ai ? Math.max(f.sharpen, 80) : f.sharpen;
-    applySharpen(ctx, dim.w, dim.h, effectiveStrength);
-  }
-  if (f.ai) {
-    ctx.globalCompositeOperation = 'overlay';
-    ctx.fillStyle = 'rgba(200,220,255,0.04)';
-    ctx.fillRect(0, 0, dim.w, dim.h);
-    ctx.globalCompositeOperation = 'source-over';
+  if (f.sharpen > 0) {
+    applySharpen(ctx, dim.w, dim.h, f.sharpen);
   }
   if (f.vignette > 0) {
     const grad = ctx.createRadialGradient(dim.w / 2, dim.h / 2, dim.w * 0.25, dim.w / 2, dim.h / 2, dim.w * 0.9);
