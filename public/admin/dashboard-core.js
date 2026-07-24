@@ -158,8 +158,16 @@ async function checkAuth() {
     return false;
   }
   try {
-    const r = await fetch('/api/verify', { method: 'POST' });
-    const data = await r.json().catch(() => ({ ok: false }));
+    // Hlavička se posílá PŘÍMO tady (stejně jako v původním funkčním
+    // /admin/index.js), nespoléhá se jen na automatický patch fetch() níže
+    // — pro tenhle kritický krok je jistota důležitější.
+    const r = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    let data = {};
+    try { data = await r.json(); } catch (e) { console.error('/api/verify: odpověď nejde přečíst jako JSON', e); }
+    console.log('/api/verify odpověď:', r.status, data);
     if (!r.ok || !data.ok) {
       localStorage.removeItem('token');
       window.location.href = '/admin/login.html';
@@ -167,8 +175,8 @@ async function checkAuth() {
     }
     return true;
   } catch (e) {
-    console.error('Chyba ověření přihlášení:', e);
-    showToast('Nepodařilo se ověřit přihlášení (chyba serveru).', 'error');
+    console.error('Chyba při volání /api/verify:', e);
+    showToast('Nepodařilo se ověřit přihlášení (chyba serveru): ' + e.message, 'error');
     return false;
   }
 }
