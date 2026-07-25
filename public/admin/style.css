@@ -653,11 +653,12 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 /* === PHOTO EDITOR MODAL === */
 .editor-box {
   background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--r-lg);
-  width: 95vw; max-width: 1200px; height: 90vh;
+  width: 95vw; max-width: 1200px;
+  height: 90vh; height: 90dvh; /* dvh = skutečná viditelná výška, bez schované části za lištou prohlížeče */
   display: flex; flex-direction: column; overflow: hidden;
   box-shadow: var(--shadow-lg);
 }
-.editor-body { flex: 1; display: flex; overflow: hidden; }
+.editor-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
 .editor-sidebar {
   width: 280px; flex-shrink: 0; overflow-y: auto;
   min-height: 0; /* KRITICKÉ pro flexbox: bez tohohle prohlížeč vnitřní
@@ -716,7 +717,7 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
    obsah panelu, který se s ním sbaluje/rozbaluje). */
 .preset-swatches {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
   gap: 0.5rem;
   width: 100%;
 }
@@ -735,7 +736,7 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 .preset-swatch:hover .preset-swatch-thumb { border-color: var(--text-faint); transform: translateY(-1px); }
 .preset-swatch.active .preset-swatch-thumb { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .preset-swatch-label {
-  font-size: 9.5px; color: var(--text-muted); text-align: center; line-height: 1.25;
+  font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.25;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
 }
 .preset-swatch.active .preset-swatch-label { color: var(--gold); font-weight: 600; }
@@ -807,7 +808,7 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 
 /* Tablet / iPad landscape (~1024px a méně) */
 @media (max-width: 1080px) {
-  .editor-box { width: 98vw; height: 94vh; }
+  .editor-box { width: 98vw; height: 94vh; height: 94dvh; }
   .editor-sidebar { width: 230px; }
   .form-input, .form-select { min-width: 120px; }
 }
@@ -816,7 +817,7 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 @media (max-width: 820px) {
   .dash-header { padding: 0.7rem 1rem; }
   .dash-content { padding: 1rem; }
-  .editor-box { width: 100vw; height: 100vh; border-radius: 0; }
+  .editor-box { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; }
   .editor-body { flex-direction: column; }
   /* Náhled fotky dostane pevnou MENŠÍ výšku (místo aby si bral, kolik
      chtěl) a zbytek obrazovky připadne panelu nástrojů — na malém displeji
@@ -830,6 +831,12 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
     width: 100%; flex: 1 1 auto; max-height: none; min-height: 0;
     border-right: none; border-bottom: 1px solid var(--border-soft);
   }
+  /* Tlačítka uvnitř panelů (Ořez, Auto vylepšení...) byla na mobilu na
+     sebe nalepená — víc mezery mezi nimi a větší dotyková plocha, ať se
+     netrefí omylem vedle. */
+  .editor-sidebar .tool-row { gap: 0.65rem; row-gap: 0.6rem; }
+  .editor-sidebar .btn-sm { padding: 0.6rem 0.85rem; font-size: 13px; min-height: 40px; }
+  .editor-panel-body { gap: 0.85rem; }
   .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .form-card .form-row { gap: 0.5rem; }
   .ribbon-section { align-items: stretch; }
@@ -851,9 +858,12 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   .gallery-item .item-actions { opacity: 1; }
   .editor-preview { flex-basis: 28vh; max-height: 28vh; }
   .editor-sidebar input[type="range"] { height: 24px; }
-  .editor-panel-body { gap: 0.5rem; padding: 0.55rem 0.7rem 0.65rem; }
+  .editor-panel-body { gap: 0.7rem; padding: 0.6rem 0.7rem 0.7rem; }
   .editor-panel summary { padding: 0.5rem 0.7rem; font-size: 12.5px; }
-  .preset-swatches { grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+  .preset-swatches { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 0.4rem; }
+  .preset-swatch-thumb { border-width: 2px; }
+  .preset-swatch-label { font-size: 10px; }
+  .preset-swatch { touch-action: manipulation; }
   #img-toolbar { justify-content: center; }
   #artEditor, #aboutEditor { min-height: 180px; font-size: 16px; }
   .editor-toolbar button, .editor-toolbar select { padding: 7px 10px; font-size: 14px; }
