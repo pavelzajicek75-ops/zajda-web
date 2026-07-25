@@ -472,7 +472,7 @@ function autoExposure() {
   const s = getImageStats();
   if (!s) return;
   const avgLum = (s.rAvg + s.gAvg + s.bAvg) / 3;
-  ED.filters.exposure = Math.max(-40, Math.min(40, Math.round((128 - avgLum) * 0.35)));
+  ED.filters.exposure = Math.max(-60, Math.min(60, Math.round((128 - avgLum) * 0.5)));
   syncFilterSlidersFromState();
   applyFilters();
   showToast('Auto expozice použita', 'success');
@@ -484,7 +484,7 @@ function autoWhiteBalance() {
   const s = getImageStats();
   if (!s) return;
   const rbDiff = s.rAvg - s.bAvg;
-  ED.filters.temp = Math.max(-30, Math.min(30, Math.round(-rbDiff * 0.6)));
+  ED.filters.temp = Math.max(-45, Math.min(45, Math.round(-rbDiff * 0.85)));
   syncFilterSlidersFromState();
   applyFilters();
   showToast('Auto bílá použita', 'success');
@@ -538,11 +538,11 @@ function autoSharpen() {
   const { sharpnessVariance } = computeBlurAndNoiseScores(ED.img);
   // Nízká variance Laplaciánu = rozmazaná fotka → potřebuje víc doostřit.
   let amount;
-  if (sharpnessVariance < 15) amount = 65;
-  else if (sharpnessVariance < 40) amount = 45;
-  else if (sharpnessVariance < 100) amount = 25;
-  else if (sharpnessVariance < 300) amount = 12;
-  else amount = 5;
+  if (sharpnessVariance < 20) amount = 75;
+  else if (sharpnessVariance < 60) amount = 55;
+  else if (sharpnessVariance < 150) amount = 35;
+  else if (sharpnessVariance < 400) amount = 22;
+  else amount = 14;
   ED.filters.sharpen = amount;
   syncFilterSlidersFromState();
   updateSharpenFilter(amount);
@@ -581,12 +581,12 @@ function computeAutoStraightenAngle(img) {
       const gx = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
       const gy = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
       const mag = Math.sqrt(gx * gx + gy * gy);
-      if (mag < 40) continue; // slabé hrany (šum) ignorovat
+      if (mag < 25) continue; // slabé hrany (šum) ignorovat
       const gradAngle = Math.atan2(gy, gx) * 180 / Math.PI;
       let lineAngle = gradAngle - 90; // směr čáry je kolmý na gradient
       while (lineAngle > 90) lineAngle -= 180;
       while (lineAngle < -90) lineAngle += 180;
-      if (Math.abs(lineAngle) > 20) continue; // zajímají nás jen téměř vodorovné linie
+      if (Math.abs(lineAngle) > 25) continue; // zajímají nás jen téměř vodorovné linie
       const bin = Math.round(lineAngle * 2) / 2; // kroky po 0,5°
       bins[bin] = (bins[bin] || 0) + mag;
     }
@@ -596,7 +596,7 @@ function computeAutoStraightenAngle(img) {
   for (const key in bins) {
     if (bins[key] > bestWeight) { bestWeight = bins[key]; bestAngle = parseFloat(key); }
   }
-  if (bestWeight < 500) return null; // nedostatek důkazů — radši nic nedělat
+  if (bestWeight < 220) return null; // nedostatek důkazů — radši nic nedělat
   return -bestAngle;
 }
 
