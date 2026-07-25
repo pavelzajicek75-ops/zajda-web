@@ -2285,6 +2285,26 @@ function injectEditorStyles() {
 }
 
 /* === INICIALIZACE === */
+/* === HARMONIKA PANELŮ FOTOEDITORU (jako ve Photoshopu) ===
+   Otevření jednoho panelu (Předvolby, Ořez, Světlo...) automaticky zavře
+   ostatní. Díky tomu nikdy nenaroste postranní panel do výšky, se kterou
+   by si vnitřní scroll neporadil — hlavně na mobilu, kde je místa málo. */
+function initEditorPanelAccordion() {
+  const sidebar = document.querySelector('.editor-sidebar');
+  if (!sidebar || sidebar.dataset.accordionReady) return;
+  sidebar.dataset.accordionReady = '1';
+  sidebar.querySelectorAll('.editor-panel').forEach(panel => {
+    panel.addEventListener('toggle', () => {
+      if (!panel.open) return;
+      sidebar.querySelectorAll('.editor-panel').forEach(p => {
+        if (p !== panel) p.open = false;
+      });
+      // Po rozbalení panel doscrolluje do vidu, ať ho na mobilu vidíš celý
+      requestAnimationFrame(() => panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    });
+  });
+}
+
 function initDashboardEditor() {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', onReady);
@@ -2294,6 +2314,7 @@ function initDashboardEditor() {
 
   function onReady() {
     injectEditorStyles();
+    initEditorPanelAccordion();
     if ($('artEditor')) setupArticleEditors();
     loadGallery().then(() => {
       if ($('articleList')) loadArticles();
