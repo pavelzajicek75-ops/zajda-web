@@ -692,7 +692,7 @@
         <details class="editor-panel">
           <summary>✨ Auto vylepšení</summary>
           <div class="editor-panel-body">
-            <p style="color:var(--text-faint);font-size:11px;margin:-0.2rem 0 0;line-height:1.5">Rozebere histogram TÉTO fotky (jas, barevný nádech) a podle toho nastaví posuvníky výše — na rozdíl od pevného filtru to reaguje na konkrétní snímek.</p>
+            <p style="color:var(--text-faint);font-size:11px;margin:-0.2rem 0 0;line-height:1.5">Rozebere TUTO fotku (histogram jasu/barev, ostrost, šum, náklon linií) a podle toho nastaví posuvníky výše — na rozdíl od pevného filtru to reaguje na konkrétní snímek.</p>
             <div class="tool-row">
               <button class="btn btn-sm btn-blue" onclick="autoEnhanceAll()" style="width:100%;justify-content:center">✨ Auto vše</button>
             </div>
@@ -700,6 +700,11 @@
               <button class="btn btn-sm" onclick="autoContrast()">🌗 Auto kontrast</button>
               <button class="btn btn-sm" onclick="autoExposure()">💡 Auto expozice</button>
               <button class="btn btn-sm" onclick="autoWhiteBalance()">🎨 Auto bílá</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoSharpen()">🔎 Auto doostření</button>
+              <button class="btn btn-sm" onclick="autoDenoise()">🧹 Auto odšumění</button>
+              <button class="btn btn-sm" onclick="autoStraighten()">📐 Auto horizont</button>
             </div>
           </div>
         </details>
