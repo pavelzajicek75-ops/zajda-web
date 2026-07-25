@@ -490,8 +490,150 @@ function autoWhiteBalance() {
   showToast('Auto bílá použita', 'success');
 }
 
-/* Auto vše — spojí kontrast, expozici a bílou dohromady, plus jemné
-   doladění živosti a ostrosti. Tohle nahrazuje starý přepínač. */
+/* === AUTO DOOSTŘENÍ / ODŠUMĚNÍ (reálná analýza, ne pevná hodnota) ===
+   Míra rozmazání se počítá přes varianci Laplaciánu (klasická metrika
+   "jak ostrá je fotka" — ostré hrany dávají vysokou varianci, rozmazané
+   plochy nízkou). Míra šumu se odhaduje přes Immerkærovu metodu (rychlý
+   odhad směrodatné odchylky šumu z vysokofrekvenčního obsahu). Obojí se
+   počítá na zmenšenině, stačí to na spolehlivý odhad a je to rychlé. */
+function computeBlurAndNoiseScores(img) {
+  const maxSide = 260;
+  let w = img.naturalWidth, h = img.naturalHeight;
+  if (Math.max(w, h) > maxSide) {
+    const s = maxSide / Math.max(w, h);
+    w = Math.max(3, Math.round(w * s));
+    h = Math.max(3, Math.round(h * s));
+  }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h).data;
+  const gray = new Float64Array(w * h);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    gray[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  const at = (x, y) => gray[y * w + x];
+
+  let lapSum = 0, lapSumSq = 0, lapCount = 0, noiseAbsSum = 0;
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const lap = at(x - 1, y) + at(x + 1, y) + at(x, y - 1) + at(x, y + 1) - 4 * at(x, y);
+      lapSum += lap; lapSumSq += lap * lap; lapCount++;
+
+      const n = at(x - 1, y - 1) - 2 * at(x, y - 1) + at(x + 1, y - 1)
+              - 2 * at(x - 1, y) + 4 * at(x, y) - 2 * at(x + 1, y)
+              + at(x - 1, y + 1) - 2 * at(x, y + 1) + at(x + 1, y + 1);
+      noiseAbsSum += Math.abs(n);
+    }
+  }
+  const lapMean = lapSum / lapCount;
+  const sharpnessVariance = lapSumSq / lapCount - lapMean * lapMean;
+  const noiseSigma = Math.sqrt(Math.PI / 2) * noiseAbsSum / (6 * Math.max(1, (w - 2) * (h - 2)));
+  return { sharpnessVariance, noiseSigma };
+}
+
+function autoSharpen() {
+  if (!ED.img) return;
+  const { sharpnessVariance } = computeBlurAndNoiseScores(ED.img);
+  // Nízká variance Laplaciánu = rozmazaná fotka → potřebuje víc doostřit.
+  let amount;
+  if (sharpnessVariance < 15) amount = 65;
+  else if (sharpnessVariance < 40) amount = 45;
+  else if (sharpnessVariance < 100) amount = 25;
+  else if (sharpnessVariance < 300) amount = 12;
+  else amount = 5;
+  ED.filters.sharpen = amount;
+  syncFilterSlidersFromState();
+  updateSharpenFilter(amount);
+  applyFilters();
+  showToast('Auto doostření nastaveno (' + amount + ')', 'success');
+}
+
+function autoDenoise() {
+  if (!ED.img) return;
+  const { noiseSigma } = computeBlurAndNoiseScores(ED.img);
+  // Vyšší odhadovaný šum → víc odšumit.
+  let amount;
+  if (noiseSigma < 1.5) amount = 0;
+  else if (noiseSigma < 3) amount = 15;
+  else if (noiseSigma < 5) amount = 30;
+  else if (noiseSigma < 8) amount = 50;
+  else amount = 70;
+  ED.filters.denoise = amount;
+  syncFilterSlidersFromState();
+  applyFilters();
+  showToast(amount ? 'Auto odšumění nastaveno (' + amount + ')' : 'Šum nenalezen, odšumění nepotřeba', 'success');
+}
+
+/* === AUTO NAROVNÁNÍ HORIZONTU ===
+   Přes Sobelův gradient najde ve fotce nejvýraznější téměř vodorovné linie
+   (horizont, hrany budov, čáry na zemi...) a spočítá, o kolik stupňů jsou
+   nakloněné — pak fotku narovná o opačný úhel. Funguje dobře na fotkách
+   s jasnou vodorovnou linií; pokud žádnou výraznou nenajde, radši nic
+   nezmění a řekne to, než aby otočila fotku nasilu špatně. */
+function computeAutoStraightenAngle(img) {
+  const maxSide = 260;
+  let w = img.naturalWidth, h = img.naturalHeight;
+  if (Math.max(w, h) > maxSide) {
+    const s = maxSide / Math.max(w, h);
+    w = Math.max(3, Math.round(w * s));
+    h = Math.max(3, Math.round(h * s));
+  }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h).data;
+  const gray = new Float64Array(w * h);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    gray[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  const at = (x, y) => gray[y * w + x];
+
+  const bins = {};
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const gx = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
+      const gy = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
+      const mag = Math.sqrt(gx * gx + gy * gy);
+      if (mag < 40) continue; // slabé hrany (šum) ignorovat
+      const gradAngle = Math.atan2(gy, gx) * 180 / Math.PI;
+      let lineAngle = gradAngle - 90; // směr čáry je kolmý na gradient
+      while (lineAngle > 90) lineAngle -= 180;
+      while (lineAngle < -90) lineAngle += 180;
+      if (Math.abs(lineAngle) > 20) continue; // zajímají nás jen téměř vodorovné linie
+      const bin = Math.round(lineAngle * 2) / 2; // kroky po 0,5°
+      bins[bin] = (bins[bin] || 0) + mag;
+    }
+  }
+
+  let bestAngle = 0, bestWeight = 0;
+  for (const key in bins) {
+    if (bins[key] > bestWeight) { bestWeight = bins[key]; bestAngle = parseFloat(key); }
+  }
+  if (bestWeight < 500) return null; // nedostatek důkazů — radši nic nedělat
+  return -bestAngle;
+}
+
+function autoStraighten() {
+  if (!ED.img) return;
+  const angle = computeAutoStraightenAngle(ED.img);
+  if (angle == null) {
+    showToast('Nenašel jsem dost výraznou vodorovnou linii k narovnání — zkus ruční posuvník.', 'info');
+    return;
+  }
+  ED.straighten = Math.max(-45, Math.min(45, Math.round(angle * 10) / 10));
+  const slider = $('fslider-straighten');
+  if (slider) slider.value = ED.straighten;
+  const label = $('fval-straighten');
+  if (label) label.textContent = ED.straighten + '°';
+  updatePreviewTransform();
+  showToast('Horizont narovnán o ' + ED.straighten + '°', 'success');
+}
+
+/* Auto vše — spojí kontrast, expozici, bílou, ostrost, odšumění a
+   narovnání horizontu dohromady. Tohle nahrazuje starý přepínač. */
 function autoEnhanceAll() {
   const s = getImageStats();
   if (!s) return;
@@ -502,11 +644,29 @@ function autoEnhanceAll() {
   const rbDiff = s.rAvg - s.bAvg;
   ED.filters.temp = Math.max(-30, Math.min(30, Math.round(-rbDiff * 0.6)));
   ED.filters.vibrance = Math.max(ED.filters.vibrance, 15);
-  ED.filters.sharpen = Math.max(ED.filters.sharpen, 20);
+
+  const { sharpnessVariance, noiseSigma } = computeBlurAndNoiseScores(ED.img);
+  if (sharpnessVariance < 15) ED.filters.sharpen = Math.max(ED.filters.sharpen, 65);
+  else if (sharpnessVariance < 40) ED.filters.sharpen = Math.max(ED.filters.sharpen, 45);
+  else if (sharpnessVariance < 100) ED.filters.sharpen = Math.max(ED.filters.sharpen, 25);
+  else ED.filters.sharpen = Math.max(ED.filters.sharpen, 12);
+  if (noiseSigma >= 3) ED.filters.denoise = Math.max(ED.filters.denoise, noiseSigma < 5 ? 20 : 40);
+
+  const angle = computeAutoStraightenAngle(ED.img);
+  if (angle != null) {
+    ED.straighten = Math.max(-45, Math.min(45, Math.round(angle * 10) / 10));
+    const slider = $('fslider-straighten');
+    if (slider) slider.value = ED.straighten;
+    const label = $('fval-straighten');
+    if (label) label.textContent = ED.straighten + '°';
+  }
+
   syncFilterSlidersFromState();
+  updateSharpenFilter(ED.filters.sharpen);
   scheduleToneRegeneration();
   applyFilters();
-  showToast('Auto vylepšení použito (expozice, kontrast, bílá, ostrost)', 'success');
+  updatePreviewTransform();
+  showToast('Auto vylepšení použito (expozice, kontrast, bílá, ostrost, šum' + (angle != null ? ', horizont' : '') + ')', 'success');
 }
 
 function applyPreset(name) {
