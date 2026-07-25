@@ -550,22 +550,6 @@ function autoSharpen() {
   showToast('Auto doostření nastaveno (' + amount + ')', 'success');
 }
 
-function autoDenoise() {
-  if (!ED.img) return;
-  const { noiseSigma } = computeBlurAndNoiseScores(ED.img);
-  // Vyšší odhadovaný šum → víc odšumit.
-  let amount;
-  if (noiseSigma < 1.5) amount = 0;
-  else if (noiseSigma < 3) amount = 15;
-  else if (noiseSigma < 5) amount = 30;
-  else if (noiseSigma < 8) amount = 50;
-  else amount = 70;
-  ED.filters.denoise = amount;
-  syncFilterSlidersFromState();
-  applyFilters();
-  showToast(amount ? 'Auto odšumění nastaveno (' + amount + ')' : 'Šum nenalezen, odšumění nepotřeba', 'success');
-}
-
 /* === AUTO NAROVNÁNÍ HORIZONTU ===
    Přes Sobelův gradient najde ve fotce nejvýraznější téměř vodorovné linie
    (horizont, hrany budov, čáry na zemi...) a spočítá, o kolik stupňů jsou
@@ -630,43 +614,6 @@ function autoStraighten() {
   if (label) label.textContent = ED.straighten + '°';
   updatePreviewTransform();
   showToast('Horizont narovnán o ' + ED.straighten + '°', 'success');
-}
-
-/* Auto vše — spojí kontrast, expozici, bílou, ostrost, odšumění a
-   narovnání horizontu dohromady. Tohle nahrazuje starý přepínač. */
-function autoEnhanceAll() {
-  const s = getImageStats();
-  if (!s) return;
-  ED.filters.blackPoint = Math.max(0, Math.min(60, Math.round(s.lumMin)));
-  ED.filters.whitePoint = Math.min(255, Math.max(195, Math.round(s.lumMax)));
-  const avgLum = (s.rAvg + s.gAvg + s.bAvg) / 3;
-  ED.filters.exposure = Math.max(-40, Math.min(40, Math.round((128 - avgLum) * 0.35)));
-  const rbDiff = s.rAvg - s.bAvg;
-  ED.filters.temp = Math.max(-30, Math.min(30, Math.round(-rbDiff * 0.6)));
-  ED.filters.vibrance = Math.max(ED.filters.vibrance, 15);
-
-  const { sharpnessVariance, noiseSigma } = computeBlurAndNoiseScores(ED.img);
-  if (sharpnessVariance < 15) ED.filters.sharpen = Math.max(ED.filters.sharpen, 65);
-  else if (sharpnessVariance < 40) ED.filters.sharpen = Math.max(ED.filters.sharpen, 45);
-  else if (sharpnessVariance < 100) ED.filters.sharpen = Math.max(ED.filters.sharpen, 25);
-  else ED.filters.sharpen = Math.max(ED.filters.sharpen, 12);
-  if (noiseSigma >= 3) ED.filters.denoise = Math.max(ED.filters.denoise, noiseSigma < 5 ? 20 : 40);
-
-  const angle = computeAutoStraightenAngle(ED.img);
-  if (angle != null) {
-    ED.straighten = Math.max(-45, Math.min(45, Math.round(angle * 10) / 10));
-    const slider = $('fslider-straighten');
-    if (slider) slider.value = ED.straighten;
-    const label = $('fval-straighten');
-    if (label) label.textContent = ED.straighten + '°';
-  }
-
-  syncFilterSlidersFromState();
-  updateSharpenFilter(ED.filters.sharpen);
-  scheduleToneRegeneration();
-  applyFilters();
-  updatePreviewTransform();
-  showToast('Auto vylepšení použito (expozice, kontrast, bílá, ostrost, šum' + (angle != null ? ', horizont' : '') + ')', 'success');
 }
 
 function applyPreset(name) {
