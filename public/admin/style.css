@@ -716,12 +716,18 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
    první pohled, aniž by cokoliv zakrylo náhled fotky (je to obyčejný
    obsah panelu, který se s ním sbaluje/rozbaluje). */
 .preset-swatches {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 0.5rem;
   width: 100%;
+  padding-bottom: 3px;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
 }
 .preset-swatch {
+  flex: 0 0 68px;
+  scroll-snap-align: start;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   background: transparent; border: none; padding: 0; cursor: pointer;
   border-radius: var(--r-sm);
@@ -741,7 +747,17 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 }
 .preset-swatch.active .preset-swatch-label { color: var(--gold); font-weight: 600; }
 
-.editor-sidebar .tool-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+/* Řádky s tlačítky/volbami (ořez, export, auto-vylepšení...) se místo
+   zalamování na víc řádků VODOROVNĚ odsouvají — díky tomu panel vždycky
+   zabere jen málo výšky, což je klíčové hlavně na šířku (landscape) na
+   mobilu, kde je výšky málo a spodní tlačítka by jinak zůstala schovaná
+   pod hranou okna. */
+.editor-sidebar .tool-row {
+  display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 0.4rem; align-items: center;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 3px; /* místo pro scrollbar, ať nepřekrývá poslední řádek */
+}
+.editor-sidebar .tool-row > .btn { flex: 0 0 auto; }
 .editor-sidebar .tool-row label { font-size: 11.5px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; font-family: var(--font-mono); }
 .editor-sidebar .filter-row { flex-direction: column; align-items: stretch; }
 .editor-sidebar input[type="range"] {
@@ -844,6 +860,19 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   .ribbon-section-items { justify-content: flex-start; }
 }
 
+/* Mobil NA ŠÍŘKU (landscape) — výšky je málo, ale šířky dost, takže se
+   sidebar vrátí vedle náhledu (jako na počítači) místo naskládání pod
+   sebe. V kombinaci s vodorovně odsouvatelnými řádky výše se tak i při
+   spoustě předvoleb/nastavení nikdy nic neschová pod hranou okna. */
+@media (max-width: 900px) and (max-height: 500px) and (orientation: landscape) {
+  .editor-body { flex-direction: row; }
+  .editor-preview { flex: 1 1 auto; max-height: none; min-height: 0; }
+  .editor-sidebar {
+    width: 250px; flex: 0 0 250px; max-height: none; min-height: 0;
+    border-bottom: none; border-right: 1px solid var(--border-soft);
+  }
+}
+
 /* Mobil (~480px a méně) */
 @media (max-width: 480px) {
   .dash-header .brand { font-size: 1rem; }
@@ -861,10 +890,9 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   .editor-sidebar input[type="range"] { height: 24px; }
   .editor-panel-body { gap: 0.7rem; padding: 0.6rem 0.7rem 0.7rem; }
   .editor-panel summary { padding: 0.5rem 0.7rem; font-size: 12.5px; }
-  .preset-swatches { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 0.4rem; }
+  .preset-swatch { flex-basis: 58px; touch-action: manipulation; }
   .preset-swatch-thumb { border-width: 2px; }
   .preset-swatch-label { font-size: 10px; }
-  .preset-swatch { touch-action: manipulation; }
   #img-toolbar { justify-content: center; }
   #artEditor, #aboutEditor { min-height: 180px; font-size: 16px; }
   .editor-toolbar button, .editor-toolbar select { padding: 7px 10px; font-size: 14px; }
