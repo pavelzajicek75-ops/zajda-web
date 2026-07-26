@@ -680,6 +680,10 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   border: 1px solid var(--border-soft);
   border-radius: var(--r-md);
   overflow: hidden;
+  flex-shrink: 0; /* KRITICKÉ: bez tohohle flexbox panel v malém prostoru
+    prostě zmenší POD výšku obsahu (protože overflow:hidden ruší defaultní
+    ochranu proti zmenšení) — poslední posuvník(y) se pak neviditelně
+    uřízly, místo aby se scrollovalo celým sidebarem. */
 }
 .editor-panel summary {
   display: flex; align-items: center;
