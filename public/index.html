@@ -4,6 +4,27 @@
   <meta charset="UTF-8">
   <title>Moje diagnóza, můj vesmír</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou. Cestování, fotografování a projekty na jednom místě.">
+  <link rel="canonical" href="https://zajda-web.pages.dev/">
+
+  <!-- Open Graph (náhled při sdílení na Facebooku, WhatsAppu, Messengeru...) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Moje diagnóza, můj vesmír">
+  <meta property="og:title" content="Moje diagnóza, můj vesmír">
+  <meta property="og:description" content="Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou.">
+  <meta property="og:url" content="https://zajda-web.pages.dev/">
+  <meta property="og:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
+  <meta property="og:locale" content="cs_CZ">
+
+  <!-- Twitter/X karta -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Moje diagnóza, můj vesmír">
+  <meta name="twitter:description" content="Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou.">
+  <meta name="twitter:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
+
+  <!-- RSS -->
+  <link rel="alternate" type="application/rss+xml" title="Moje diagnóza, můj vesmír" href="/rss.xml">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -275,6 +296,78 @@
     .lightbox-overlay.open { display: flex; }
     .lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 0 50px rgba(140,150,255,0.25); }
 
+    /* === VYHLEDÁVÁNÍ === */
+    .search-panel {
+      position: relative; z-index: 10; max-width: 480px; margin: 24px auto 0; padding: 0 20px;
+    }
+    .search-panel input {
+      width: 100%; padding: 0.85rem 1.2rem; border-radius: 30px;
+      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border); color: var(--parchment); font-size: 14.5px;
+      font-family: 'Inter', sans-serif; outline: none; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      transition: border-color 0.25s ease;
+    }
+    .search-panel input:focus { border-color: var(--panel-border-hover); }
+    .search-panel input::placeholder { color: var(--mist-dim); }
+    .search-results {
+      margin-top: 8px; max-height: 340px; overflow-y: auto;
+      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border); border-radius: 14px; display: none;
+    }
+    .search-results.open { display: block; }
+    .search-results .article-link { border-left: none; padding: 10px 16px; margin: 0; border-radius: 0; border-bottom: 1px solid rgba(140,150,255,0.08); }
+    .search-results .article-link:last-child { border-bottom: none; }
+    .search-no-results { padding: 14px 18px; color: var(--mist-dim); font-size: 13px; font-style: italic; }
+
+    /* === "ZOBRAZIT VŠE" — modal na procházení celé sekce === */
+    .show-all-link {
+      display: block; text-align: center; margin-top: 10px; padding: 8px;
+      color: var(--nova); font-size: 12px; font-weight: 600; cursor: pointer;
+      border-top: 1px solid rgba(140,150,255,0.12); letter-spacing: 0.3px;
+      transition: color 0.2s ease, background 0.2s ease; border-radius: 6px;
+    }
+    .show-all-link:hover, .show-all-link:focus-visible { color: #fff; background: rgba(47,230,201,0.08); }
+
+    .section-modal-overlay {
+      position: fixed; inset: 0; z-index: 8000; background: rgba(4,4,10,0.85);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .section-modal-overlay.open { display: flex; }
+    .section-modal-box {
+      width: 100%; max-width: 640px; max-height: 82vh;
+      background: var(--void-2); border: 1px solid var(--panel-border);
+      border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .section-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 1.4rem; border-bottom: 1px solid rgba(140,150,255,0.14); flex-shrink: 0;
+    }
+    .section-modal-header h2 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
+    }
+    .section-modal-close {
+      background: rgba(140,150,255,0.1); border: 1px solid var(--panel-border); color: var(--parchment);
+      width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+    }
+    .section-modal-close:hover { border-color: var(--panel-border-hover); background: rgba(255,122,69,0.12); }
+    /* Scrollbar VPRAVO je tu záměrně vždycky vidět (ne jen při najetí myší),
+       ať je na první pohled jasné, že je čím se posouvat dál ke starším
+       záznamům — přesně to uživatel chtěl. */
+    .section-modal-scroll {
+      flex: 1; overflow-y: scroll; padding: 1rem 0.5rem 1.4rem 1.4rem;
+      scrollbar-width: auto; scrollbar-color: var(--nova) rgba(20,21,38,0.4);
+    }
+    .section-modal-scroll::-webkit-scrollbar { width: 10px; }
+    .section-modal-scroll::-webkit-scrollbar-track { background: rgba(20,21,38,0.4); border-radius: 5px; }
+    .section-modal-scroll::-webkit-scrollbar-thumb { background: var(--nova); border-radius: 5px; }
+    .section-modal-scroll .sub-block { margin-bottom: 0.6rem; }
+    .section-modal-scroll .sub-title { font-size: 13.5px; padding: 10px 12px; }
+    .section-modal-scroll .article-link { font-size: 13px; padding: 8px 10px 8px 16px; }
+
+
     :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
 
     @media (prefers-reduced-motion: reduce) {
@@ -289,6 +382,8 @@
       .sections-container { padding: 40px 20px 100px; flex-direction: column; align-items: center; }
       .section-panel { width: 90%; max-width: 400px; flex: none; }
       .panel-scroll { max-height: 300px; }
+      .search-panel { max-width: none; }
+      .section-modal-box { max-height: 88vh; }
     }
   </style>
 </head>
@@ -306,7 +401,21 @@
     <div class="loading-text">Načítání...</div>
   </div>
   <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...</div>
+  <div class="search-panel">
+    <input type="text" id="siteSearchInput" placeholder="🔍 Hledat v článcích…" autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+  </div>
   <div class="sections-container" id="sectionsContainer"></div>
+
+  <div class="section-modal-overlay" id="sectionModalOverlay">
+    <div class="section-modal-box">
+      <div class="section-modal-header">
+        <h2 id="sectionModalTitle"></h2>
+        <button class="section-modal-close" id="sectionModalClose" aria-label="Zavřít">✕</button>
+      </div>
+      <div class="section-modal-scroll" id="sectionModalScroll"></div>
+    </div>
+  </div>
   <script>
   function openLightbox(src) {
     var overlay = document.getElementById('lightboxOverlay');
@@ -516,7 +625,7 @@
         var date = a.date || a.created || '';
         var dateStr = formatDate(date);
         var meta = dateStr ? '• ' + dateStr : '';
-        html += '<a class="latest-item" href="/article.html?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
+        html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       box.innerHTML = html;
     }
@@ -562,13 +671,127 @@
         var date = a.date || a.created || '';
         var dateStr = formatDate(date);
         var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '';
-        html += '<a class="article-link" href="/article.html?id=' + encodeURIComponent(artId) + '">' +
+        html += '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
           '<span class="art-title">' + escapeHtml(title) + '</span>' +
           (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
           (excerpt ? '<span class="art-excerpt">' + escapeHtml(excerpt) + '</span>' : '') +
           '</a>';
       }
       return html;
+    }
+
+    /* === MODAL "ZOBRAZIT VŠE" — všechny články dané sekce, podsekce
+       seřazené a uvnitř nich články od nejnovějšího, s viditelným
+       scrollbarem vpravo, aby šlo snadno doscrollovat i ke starým
+       záznamům (na rozdíl od malého okénka v kartě sekce). */
+    async function openSectionModal(sectionId, sectionName) {
+      var overlay = document.getElementById('sectionModalOverlay');
+      var titleEl = document.getElementById('sectionModalTitle');
+      var scrollEl = document.getElementById('sectionModalScroll');
+      if (!overlay || !titleEl || !scrollEl) return;
+
+      titleEl.textContent = sectionName;
+      scrollEl.innerHTML = '<div class="loading-text">Načítání...</div>';
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      var allArticles = await getAllArticles();
+      var subs = await loadSubsections(sectionId);
+      var html = '';
+
+      if (!subs.length) {
+        var articles = allArticles.filter(function(a) {
+          var secId = a.sectionId;
+          if (secId == null) return false;
+          return String(secId) === sectionId;
+        });
+        html = renderArticleList(articles);
+      } else {
+        for (var i = 0; i < subs.length; i++) {
+          var sub = subs[i];
+          var subId = sub.id || '';
+          var subName = sub.name || '';
+          var subArticles = allArticles.filter(function(a) {
+            var aSec = a.sectionId;
+            var aSub = a.subsectionId;
+            if (aSec == null || aSub == null) return false;
+            return String(aSec) === String(sectionId) && String(aSub) === String(subId);
+          });
+          if (!subArticles.length) continue;
+          html += '<div class="sub-block">' +
+            '<div class="sub-title">' + escapeHtml(subName) + ' (' + subArticles.length + ')</div>' +
+            '<div class="sub-articles">' + renderArticleList(subArticles) + '</div>' +
+            '</div>';
+        }
+        if (!html) html = '<div class="no-articles">Žádné články</div>';
+      }
+
+      scrollEl.innerHTML = html;
+      scrollEl.querySelectorAll('.sub-title').forEach(function(titleEl2) {
+        titleEl2.addEventListener('click', function() {
+          var block = this.parentElement;
+          if (block) block.classList.toggle('collapsed');
+        });
+      });
+    }
+
+    function closeSectionModal() {
+      var overlay = document.getElementById('sectionModalOverlay');
+      if (overlay) overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function initSectionModal() {
+      var overlay = document.getElementById('sectionModalOverlay');
+      var closeBtn = document.getElementById('sectionModalClose');
+      if (closeBtn) closeBtn.addEventListener('click', closeSectionModal);
+      if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSectionModal(); });
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSectionModal(); });
+    }
+
+    /* === VYHLEDÁVÁNÍ NAPŘÍČ VŠEMI ČLÁNKY === */
+    function initSiteSearch() {
+      var input = document.getElementById('siteSearchInput');
+      var results = document.getElementById('searchResults');
+      if (!input || !results) return;
+      var debounceTimer = null;
+
+      input.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runSearch, 220);
+      });
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-panel')) results.classList.remove('open');
+      });
+
+      async function runSearch() {
+        var q = input.value.trim().toLowerCase();
+        if (!q) { results.classList.remove('open'); results.innerHTML = ''; return; }
+        var articles = await getAllArticles();
+        var matches = articles.filter(function(a) {
+          var title = (a.title || '').toLowerCase();
+          var text = (a.content || '').replace(/<[^>]+>/g, '').toLowerCase();
+          return title.indexOf(q) !== -1 || text.indexOf(q) !== -1;
+        }).sort(function(a, b) {
+          var da = a.date || a.created || '', db = b.date || b.created || '';
+          return da < db ? 1 : da > db ? -1 : 0;
+        }).slice(0, 8);
+
+        if (!matches.length) {
+          results.innerHTML = '<div class="search-no-results">Nic jsem nenašel pro „' + escapeHtml(input.value.trim()) + '“</div>';
+        } else {
+          results.innerHTML = matches.map(function(a) {
+            var artId = a.id || '';
+            var title = a.title || 'Bez názvu';
+            var dateStr = formatDate(a.date || a.created || '');
+            return '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
+              '<span class="art-title">' + escapeHtml(title) + '</span>' +
+              (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
+              '</a>';
+          }).join('');
+        }
+        results.classList.add('open');
+      }
     }
 
     async function buildSections() {
@@ -637,6 +860,7 @@
           (async function() {
             var subs = await loadSubsections(sec.id);
             var html = '';
+            var totalCount = 0;
 
             if (!subs.length) {
               var articles = allArticles.filter(function(a) {
@@ -644,6 +868,7 @@
                 if (secId == null) return false;
                 return String(secId) === sec.id;
               });
+              totalCount = articles.length;
               html += renderArticleList(articles);
             } else {
               for (var i = 0; i < subs.length; i++) {
@@ -656,11 +881,16 @@
                   if (aSec == null || aSub == null) return false;
                   return String(aSec) === String(sec.id) && String(aSub) === String(subId);
                 });
+                totalCount += subArticles.length;
                 html += '<div class="sub-block">' +
                   '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
                   '<div class="sub-articles">' + renderArticleList(subArticles) + '</div>' +
                   '</div>';
               }
+            }
+
+            if (totalCount > 0) {
+              html += '<div class="show-all-link" tabindex="0" role="button" data-section-id="' + escapeHtml(sec.id) + '" data-section-name="' + escapeHtml(sec.name) + '">Zobrazit vše (' + totalCount + ') →</div>';
             }
 
             scroll.innerHTML = html;
@@ -673,6 +903,19 @@
                 if (block) block.classList.toggle('collapsed');
               });
             });
+
+            var showAllEl = scroll.querySelector('.show-all-link');
+            if (showAllEl) {
+              var openThisModal = function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                openSectionModal(sec.id, sec.name);
+              };
+              showAllEl.addEventListener('click', openThisModal);
+              showAllEl.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') openThisModal(e);
+              });
+            }
           })();
         })(SECTIONS[s]);
       }
@@ -681,6 +924,8 @@
     startQuotes();
     loadLatest();
     buildSections();
+    initSiteSearch();
+    initSectionModal();
   });
   </script>
 </body>
