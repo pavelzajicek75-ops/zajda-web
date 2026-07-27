@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zajda-web.pages.dev/sitemap.xml
