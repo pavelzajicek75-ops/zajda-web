@@ -97,9 +97,35 @@ export async function onRequestGet(context) {
     byDay[day] = (byDay[day] || 0) + (g?.sum?.requests || 0);
   }
 
-  const points = period === 'week' ? bucketByWeek(byDay, 8, now) : bucketByMonth(byDay, 6, now);
+  const points = await getHistoryCached(env, period, now);
   return json(points);
 }
+
+/* Stejný princip jako getRequestsUsageCached() v usage.js — historická
+   data se nemění vteřinu od vteřiny, takže je zbytečné (a teď i škodlivé
+   kvůli rate limitu 429) ptát se Cloudflare GraphQL API při každém
+   načtení stránky nebo přepnutí Týdny/Měsíce. Cache na 10 minut. */
+async function getHistoryCached(env, period, now) {
+  if (!env.USAGE_KV) return await fetchHistoryFromGraphQL(env, period, now);
+
+  const cacheKey = 'cf_usage_history_v1:' + period;
+  const cached = await env.USAGE_KV.get(cacheKey, { type: 'json' });
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+
+  const fresh = await fetchHistoryFromGraphQL(env, period, now);
+  // Chybovou odpověď (např. 429) si necachovat jen na chviličku, ať se
+  // po vyřešení rate limitu hned zkusí znovu, místo aby to viselo 10 minut.
+  const isError = fresh && fresh.length === 1 && fresh[0] && fresh[0].error;
+  await env.USAGE_KV.put(cacheKey, JSON.stringify({
+    expires: Date.now() + (isError ? 20000 : 600000), // 20 s při chybě, jinak 10 min
+    data: fresh
+  }));
+  return fresh;
+}
+
+async function fetchHistoryFromGraphQL(env, period, now) {
 
 function bucketByWeek(byDay, weeksCount, now) {
   const points = [];
