@@ -437,8 +437,9 @@ async function loadAdminUsage() {
   box.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Načítám…</div>';
   try {
     const r = await fetch('/api/admin/usage');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
+    const bodyText = await r.clone().text().catch(() => '');
+    if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
+    const d = JSON.parse(bodyText);
     const cards = [
       {
         label: 'Požadavky (30 dní)',
@@ -467,10 +468,11 @@ async function loadAdminUsage() {
     }
     box.innerHTML = html;
   } catch (e) {
+    console.error('/api/admin/usage selhalo:', e);
     box.innerHTML = `
       <div class="form-card" style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:13px;line-height:1.6">
-        📡 Metriky zatím nejdou načíst — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/usage</code>.<br>
-        Jakmile ho doplníš (viz functions-example), panel se automaticky rozžije.
+        📡 Metriky se nepodařilo načíst.<br>
+        <code style="color:var(--red);word-break:break-word;display:inline-block;margin-top:0.4rem;font-size:11.5px">${escapeHtml(e.message)}</code>
       </div>`;
   }
 
@@ -518,8 +520,9 @@ async function loadAdminMetricsHistory() {
   box.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Načítám…</div>';
   try {
     const r = await fetch('/api/admin/usage/history?period=' + adminMetricsPeriod);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    const bodyText = await r.clone().text().catch(() => '');
+    if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
+    const data = JSON.parse(bodyText);
     const points = Array.isArray(data) ? data : (data.points || []);
     if (!points.length) {
       box.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center">Zatím žádná data.</div>';
@@ -539,10 +542,11 @@ async function loadAdminMetricsHistory() {
         <tbody>${points.map(p => `<tr><td>${escapeHtml(p.label)}</td><td style="font-family:var(--font-mono)">${(p.requests || 0).toLocaleString('cs')}</td><td style="font-family:var(--font-mono)">${p.storageBytes != null ? fmtBytes(p.storageBytes) : '—'}</td></tr>`).join('')}</tbody>
       </table>`;
   } catch (e) {
+    console.error('/api/admin/usage/history selhalo:', e);
     box.innerHTML = `
       <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:1.25rem;line-height:1.6">
-        📡 Historie zatím nejde načíst — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/usage/history?period=week|month</code>.<br>
-        Očekávaný formát odpovědi: <code>[{ "label": "27.7.–2.8.", "requests": 1234, "storageBytes": 5000000 }]</code>
+        📡 Historie se nepodařilo načíst.<br>
+        <code style="color:var(--red);word-break:break-word;display:inline-block;margin-top:0.4rem;font-size:11.5px">${escapeHtml(e.message)}</code>
       </div>`;
   }
 }
@@ -991,12 +995,14 @@ async function saveFoldersToServer() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
+    const bodyText = await r.clone().text().catch(() => '');
+    if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
+    const d = JSON.parse(bodyText);
     showToast('Složky uloženy na server', 'success');
     if (status) status.textContent = d.updated ? 'Uloženo ' + new Date(d.updated).toLocaleString('cs') : '';
   } catch (e) {
-    showToast('Backend zatím nemá endpoint /api/data/folders (viz functions-example).', 'error');
+    console.error('/api/data/folders (POST) selhalo:', e);
+    showToast('Nepodařilo se uložit složky: ' + e.message, 'error');
     if (status) status.textContent = '';
   }
 }
@@ -1006,8 +1012,9 @@ async function loadFoldersFromServer() {
   if (status) status.textContent = 'Načítám…';
   try {
     const r = await fetch('/api/data/folders');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
+    const bodyText = await r.clone().text().catch(() => '');
+    if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
+    const d = JSON.parse(bodyText);
     if (d.photoFolderMap) savePhotoFolderMap(d.photoFolderMap);
     if (d.manualFolders) saveManualFolders(d.manualFolders);
     refreshFolderControls();
@@ -1015,7 +1022,8 @@ async function loadFoldersFromServer() {
     showToast('Složky načteny ze serveru', 'success');
     if (status) status.textContent = d.updated ? 'Naposled uloženo ' + new Date(d.updated).toLocaleString('cs') : 'Server zatím nic neukládal';
   } catch (e) {
-    showToast('Backend zatím nemá endpoint /api/data/folders (viz functions-example).', 'error');
+    console.error('/api/data/folders (GET) selhalo:', e);
+    showToast('Nepodařilo se načíst složky: ' + e.message, 'error');
     if (status) status.textContent = '';
   }
 }
