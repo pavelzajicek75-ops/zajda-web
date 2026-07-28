@@ -5,19 +5,23 @@
 // data/folders.js, auth/login.js, auth/me.js), ať to není na 6 místech
 // napsané 6x jinak.
 //
-// Vychází přesně z tvého existujícího auth/login.js + auth/me.js —
-// stejný formát cookie (admin_token = base64(sessionId:timestamp)),
-// stejný SESSIONS KV namespace, beze změny chování pro tvůj současný
-// jediný účet.
+// OPRAVA: getSessionFromRequest() dřív hledala session v cookie
+// ("admin_token" = base64(sessionId:timestamp)), ale skutečné přihlášení
+// (viz functions/api/verify.js) posílá token jako "Authorization: Bearer
+// <token>" hlavičku, kde token JE PŘÍMO sessionId v env.SESSIONS — žádná
+// cookie, žádné base64, žádný ":" oddělovač. Proto všechno přes
+// requireAuth/requireAdmin dostávalo 401 (cookie tam nikdy nebyla).
+// Teď se čte úplně stejně jako ve verify.js, aby oboje sedělo na stejnou
+// session.
 
-/* === Session (beze změny principu, jen na jednom místě) === */
+/* === Session — čte Bearer token stejně jako functions/api/verify.js === */
 export async function getSessionFromRequest(request, env) {
-  const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/admin_token=([^;]+)/);
+  const authHeader = request.headers.get('Authorization') || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match) return null;
+  const token = match[1];
   try {
-    const sessionId = atob(match[1]).split(':')[0];
-    const raw = await env.SESSIONS.get(sessionId);
+    const raw = await env.SESSIONS.get(token);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch {
