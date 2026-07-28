@@ -624,7 +624,8 @@
         var title = a.title || 'Bez názvu';
         var date = a.date || a.created || '';
         var dateStr = formatDate(date);
-        var meta = dateStr ? '• ' + dateStr : '';
+        var breadcrumb = await getArticleBreadcrumb(a);
+        var meta = [breadcrumb, dateStr].filter(Boolean).join(' • ');
         html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       box.innerHTML = html;
@@ -636,6 +637,37 @@
       { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
       { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
     ];
+
+    function getSectionName(id) {
+      for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].id === id) return SECTIONS[i].name;
+      return id || '';
+    }
+
+    /* Mapa sectionId:subsectionId -> název podsekce, natažená jednou a
+       znovupoužitá — kvůli přehlednosti (aby bylo vidět, kam článek patří,
+       hlavně ve vyhledávání a v "Poslední aktuality", kde se mísí sekce). */
+    var subsectionNameCache = null;
+    async function getSubsectionNameMap() {
+      if (subsectionNameCache) return subsectionNameCache;
+      subsectionNameCache = {};
+      for (var i = 0; i < SECTIONS.length; i++) {
+        var sec = SECTIONS[i];
+        var subs = await loadSubsections(sec.id);
+        subs.forEach(function(sub) {
+          subsectionNameCache[sec.id + ':' + (sub.id || '')] = sub.name || '';
+        });
+      }
+      return subsectionNameCache;
+    }
+
+    async function getArticleBreadcrumb(a) {
+      var secName = getSectionName(a.sectionId);
+      if (!secName) return '';
+      if (!a.subsectionId) return secName;
+      var map = await getSubsectionNameMap();
+      var subName = map[a.sectionId + ':' + a.subsectionId] || '';
+      return subName ? secName + ' › ' + subName : secName;
+    }
 
     async function loadSectionCover(secId) {
       try {
@@ -780,15 +812,18 @@
         if (!matches.length) {
           results.innerHTML = '<div class="search-no-results">Nic jsem nenašel pro „' + escapeHtml(input.value.trim()) + '“</div>';
         } else {
-          results.innerHTML = matches.map(function(a) {
+          var rendered = await Promise.all(matches.map(async function(a) {
             var artId = a.id || '';
             var title = a.title || 'Bez názvu';
             var dateStr = formatDate(a.date || a.created || '');
+            var breadcrumb = await getArticleBreadcrumb(a);
+            var meta = [breadcrumb, dateStr].filter(Boolean).join(' • ');
             return '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
               '<span class="art-title">' + escapeHtml(title) + '</span>' +
-              (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
+              (meta ? '<span class="art-date">' + escapeHtml(meta) + '</span>' : '') +
               '</a>';
-          }).join('');
+          }));
+          results.innerHTML = rendered.join('');
         }
         results.classList.add('open');
       }
