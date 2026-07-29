@@ -1,4 +1,10 @@
-import { hashPassword, generateTempPassword } from '../_auth-utils.js';
+// functions/api/auth/login.js
+//
+// OPRAVA: Přepis z KV sessions na JWT — žádné zápisy do KV, žádné limity.
+// Token je teď JWT podepsaný HMAC-SHA256, frontend ho ukládá do localStorage
+// stejně jako dřív. Žádný env.SESSIONS.put() → žádný KV limit.
+
+import { hashPassword, signJWT } from '../_auth-utils.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -15,18 +21,24 @@ export async function onRequestPost(context) {
     let authedUser = null;
     let role = 'admin';
 
+    // 1) Hlavní admin účet — vždy přednost
     if (username === ADMIN_USER && password === ADMIN_PASS) {
       authedUser = ADMIN_USER;
       role = 'admin';
     } else if (env.APP_DATA) {
-      const raw = await env.APP_DATA.get('user:' + String(username).toLowerCase());
-      if (raw) {
-        const record = JSON.parse(raw);
-        const hash = await hashPassword(password, record.salt);
-        if (hash === record.passwordHash) {
-          authedUser = record.email;
-          role = record.role || 'editor';
+      // 2) Pozvaní uživatelé v KV (jen čtení — žádný zápis)
+      try {
+        const raw = await env.APP_DATA.get('user:' + String(username).toLowerCase());
+        if (raw) {
+          const record = JSON.parse(raw);
+          const hash = await hashPassword(password, record.salt);
+          if (hash === record.passwordHash) {
+            authedUser = record.email;
+            role = record.role || 'editor';
+          }
         }
+      } catch (kvErr) {
+        console.error('Chyba při čtení APP_DATA KV:', kvErr.message);
       }
     }
 
@@ -34,18 +46,10 @@ export async function onRequestPost(context) {
       return Response.json({ error: 'Špatné přihlašovací údaje' }, { status: 401 });
     }
 
-    if (!env.SESSIONS) {
-      return Response.json({ error: 'Chybí SESSIONS KV binding' }, { status: 500 });
-    }
+    // Vytvoření JWT tokenu (žádný KV zápis!)
+    const token = await signJWT({ user: authedUser, role }, env);
 
-    const sessionId = crypto.randomUUID();
-    await env.SESSIONS.put(
-      sessionId,
-      JSON.stringify({ user: authedUser, role, created: Date.now() }),
-      { expirationTtl: 86400 }
-    );
-
-    return Response.json({ ok: true, token: sessionId, user: authedUser, role });
+    return Response.json({ ok: true, token, user: authedUser, role });
 
   } catch (err) {
     return Response.json({ error: 'Server error: ' + err.message }, { status: 500 });
