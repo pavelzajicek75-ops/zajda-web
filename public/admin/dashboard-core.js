@@ -440,11 +440,18 @@ async function loadAdminUsage() {
     const bodyText = await r.clone().text().catch(() => '');
     if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
     const d = JSON.parse(bodyText);
+    const dailyLimit = d.requestsDailyLimit || 100000;
+    const todayPct = d.requestsToday != null ? Math.round((d.requestsToday / dailyLimit) * 100) : null;
     const cards = [
       {
-        label: 'Požadavky (30 dní)',
+        label: 'Dnes (limit je denní, ne měsíční)',
+        value: d.requestsToday != null ? d.requestsToday.toLocaleString('cs') : '⚠️',
+        sub: d.requestsToday != null ? `${todayPct}% z denního limitu ${dailyLimit.toLocaleString('cs')}` : (d.requestsError ? 'chyba: ' + d.requestsError.slice(0, 60) : '')
+      },
+      {
+        label: 'Požadavky (posledních 30 dní celkem)',
         value: d.requestsUsed != null ? d.requestsUsed.toLocaleString('cs') : '⚠️',
-        sub: d.requestsError ? 'chyba: ' + d.requestsError.slice(0, 60) : (d.requestsLimit ? `z ${d.requestsLimit.toLocaleString('cs')}` : '')
+        sub: d.requestsUsed != null ? `Ø ${Math.round(d.requestsUsed / 30).toLocaleString('cs')}/den` : ''
       },
       { label: 'Využité místo', value: fmtBytes(d.storageUsedBytes || 0), sub: '' },
       { label: 'Zbývá volného místa', value: d.storageLimitBytes ? fmtBytes(Math.max(0, d.storageLimitBytes - (d.storageUsedBytes || 0))) : '?', sub: '' }
@@ -557,8 +564,9 @@ async function loadAdminUsers() {
   tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1rem">Načítám…</td></tr>';
   try {
     const r = await fetch('/api/admin/users');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const arr = await r.json();
+    const bodyText = await r.clone().text().catch(() => '');
+    if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
+    const arr = JSON.parse(bodyText);
     if (!Array.isArray(arr) || !arr.length) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1rem">Zatím žádní další uživatelé.</td></tr>';
       return;
@@ -571,10 +579,11 @@ async function loadAdminUsers() {
         <td><button class="btn btn-red btn-sm" onclick="deleteAdminUser('${encodeURIComponent(u.email)}')">🗑 Odebrat</button></td>
       </tr>`).join('');
   } catch (e) {
+    console.error('/api/admin/users selhalo:', e);
     tbody.innerHTML = `
       <tr><td colspan="4" style="text-align:center;color:var(--text-muted);font-size:13px;padding:1.25rem;line-height:1.6">
-        📡 Správa přístupů zatím nejde — backend ještě nemá endpoint <code style="color:var(--gold)">/api/admin/users</code>.<br>
-        Potřeba: <code>GET</code> (seznam), <code>POST /invite</code> <code>{email, role}</code>, <code>DELETE?email=</code>.
+        📡 Správu přístupů se nepodařilo načíst.<br>
+        <code style="color:var(--red);word-break:break-word;display:inline-block;margin-top:0.4rem;font-size:11.5px">${escapeHtml(e.message)}</code>
       </td></tr>`;
   }
 }
