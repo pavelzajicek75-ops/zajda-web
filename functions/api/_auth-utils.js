@@ -101,4 +101,35 @@ export async function requireAdmin(request, env) {
   return session.role === 'admin' || session.role === undefined;
 }
 
-/* === Hesla pro pozvané uživatele (PBKDF
+/* === Hesla pro pozvané uživatele (PBKDF2 přes Web Crypto API) === */
+export async function hashPassword(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  return btoa(String.fromCharCode(...new Uint8Array(bits)));
+}
+
+export function generateSalt() {
+  return crypto.randomUUID();
+}
+
+export function generateTempPassword(length = 12) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const arr = new Uint32Array(length);
+  crypto.getRandomValues(arr);
+  let pass = '';
+  for (let i = 0; i < length; i++) pass += chars[arr[i] % chars.length];
+  return pass;
+}
+
+export function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
