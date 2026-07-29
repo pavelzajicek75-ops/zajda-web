@@ -2,14 +2,19 @@
 //
 // GET /api/admin/usage → {
 //   requestsUsed,
-//   subrequests,
-//   errors,
-//   durationMs,
-//   requestsLimit,
 //   storageUsedBytes,
 //   storageLimitBytes,
 //   buckets: [...]
 // }
+//
+// ZMĚNA: počet požadavků se dřív tahal z Cloudflare GraphQL Analytics API
+// (potřeboval CF_API_TOKEN s oprávněním Account Analytics: Read) — to
+// dlouhodobě padalo na "GraphQL API 401 Authentication error" a řešení
+// oprávnění tokenu se ukázalo jako slepá ulička. Místo toho se teď
+// požadavky počítají VLASTNÍ cestou přes functions/_middleware.js, který
+// při každém /api/ volání připočítá +1 do KV (klíč "reqcount:YYYY-MM-DD").
+// Tady se těch posledních 30 denních počítadel jen sečte. Žádný
+// Cloudflare token, žádné oprávnění, žádný GraphQL.
 
 import { requireAdmin, json } from '../_auth-utils.js';
 
@@ -22,14 +27,11 @@ export async function onRequestGet(context) {
 
   const [storage, requests] = await Promise.all([
     getR2StorageUsage(env),
-    getRequestsUsageCached(env)
+    getRequestsUsageFromKV(env, 30)
   ]);
 
   return json({
     requestsUsed: requests.used,
-    subrequests: requests.subrequests,
-    errors: requests.errors,
-    durationMs: requests.durationMs,
     requestsLimit: requests.limit,
     requestsError: requests.error || null,
     storageUsedBytes: storage.totalBytes,
@@ -74,113 +76,25 @@ async function getR2StorageUsage(env) {
   return { buckets: results, totalBytes, limitBytes: FREE_TIER_BYTES };
 }
 
-/* --- KV CACHE WRAPPER --- */
-async function getRequestsUsageCached(env) {
+/* Sečte posledních `days` denních počítadel z KV (viz _middleware.js).
+   Čtení jdou paralelně (Promise.all), aby to nebylo `days` pomalých
+   sekvenčních volání za sebou. */
+async function getRequestsUsageFromKV(env, days) {
   if (!env.USAGE_KV) {
-    return { used: null, subrequests: null, errors: null, durationMs: null, limit: null, error: 'KV binding USAGE_KV chybí' };
+    return { used: null, limit: null, error: 'KV binding USAGE_KV chybí' };
   }
-
-  const CACHE_KEY = 'cf_usage_cache_v1';
-  const cached = await env.USAGE_KV.get(CACHE_KEY, { type: 'json' });
-
-  if (cached && cached.expires > Date.now()) {
-    return cached.data;
-  }
-
-  const fresh = await getRequestsUsage(env);
-
-  await env.USAGE_KV.put(CACHE_KEY, JSON.stringify({
-    expires: Date.now() + 60000, // 60 sekund
-    data: fresh
-  }));
-
-  return fresh;
-}
-
-/* --- RAW GRAPHQL REQUEST --- */
-async function getRequestsUsage(env) {
-  if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) {
-    return { used: null, subrequests: null, errors: null, durationMs: null, limit: null, error: 'CF_API_TOKEN nebo CF_ACCOUNT_ID není nastaveno' };
-  }
-
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(start.getDate() - 30);
-
-  const scriptFilter = env.CF_WORKER_SCRIPT_NAME
-    ? `scriptName: "${env.CF_WORKER_SCRIPT_NAME}"`
-    : '';
-
-  const query = `
-    query {
-      viewer {
-        accounts(filter: { accountTag: "${env.CF_ACCOUNT_ID}" }) {
-          workersInvocationsAdaptive(
-            limit: 10000
-            filter: {
-              datetime_geq: "${start.toISOString()}"
-              datetime_leq: "${now.toISOString()}"
-              ${scriptFilter}
-            }
-          ) {
-            sum {
-              requests
-              subrequests
-              errors
-              durationMs
-            }
-          }
-        }
-      }
+  try {
+    const now = new Date();
+    const keys = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      keys.push('reqcount:' + d.toISOString().slice(0, 10));
     }
-  `;
-
-  const r = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${env.CF_API_TOKEN}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query })
-  });
-
-  if (!r.ok) {
-    const text = await r.text();
-    return {
-      used: null,
-      subrequests: null,
-      errors: null,
-      durationMs: null,
-      limit: null,
-      error: `GraphQL API ${r.status}: ${text.slice(0, 200)}`
-    };
+    const values = await Promise.all(keys.map(k => env.USAGE_KV.get(k)));
+    const used = values.reduce((sum, v) => sum + (v ? (parseInt(v, 10) || 0) : 0), 0);
+    return { used, limit: null, error: null };
+  } catch (e) {
+    return { used: null, limit: null, error: String(e) };
   }
-
-  const data = await r.json();
-  if (data.errors?.length) {
-    return {
-      used: null,
-      subrequests: null,
-      errors: null,
-      durationMs: null,
-      limit: null,
-      error: data.errors.map(e => e.message).join('; ')
-    };
-  }
-
-  const groups = data?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
-
-  const used = groups.reduce((sum, g) => sum + (g.sum?.requests || 0), 0);
-  const subrequests = groups.reduce((sum, g) => sum + (g.sum?.subrequests || 0), 0);
-  const errors = groups.reduce((sum, g) => sum + (g.sum?.errors || 0), 0);
-  const durationMs = groups.reduce((sum, g) => sum + (g.sum?.durationMs || 0), 0);
-
-  return {
-    used,
-    subrequests,
-    errors,
-    durationMs,
-    limit: null,
-    error: null
-  };
 }
