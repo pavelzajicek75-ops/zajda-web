@@ -25,20 +25,29 @@ export async function onRequestGet(context) {
     return json({ error: 'Unauthorized' }, 401);
   }
 
-  const [storage, requests] = await Promise.all([
+  const [storage, requests, errors] = await Promise.all([
     getR2StorageUsage(env),
-    getRequestsUsageFromKV(env, 30)
+    getRequestsUsageFromKV(env, 30),
+    getErrorsUsageFromKV(env, 30)
   ]);
 
   return json({
+    requestsToday: requests.today,
+    requestsDailyLimit: DAILY_LIMIT,
     requestsUsed: requests.used,
     requestsLimit: requests.limit,
     requestsError: requests.error || null,
+    errorsToday: errors.today,
+    errorsUsed: errors.used,
     storageUsedBytes: storage.totalBytes,
     storageLimitBytes: storage.limitBytes,
     buckets: storage.buckets
   });
 }
+
+// Cloudflare Workers/Pages Functions Free plán: limit je DENNÍ (ne
+// měsíční), resetuje se o půlnoci UTC. Zdroj: developers.cloudflare.com/workers/platform/pricing
+const DAILY_LIMIT = 100000;
 
 async function getR2StorageUsage(env) {
   const buckets = [
@@ -78,10 +87,11 @@ async function getR2StorageUsage(env) {
 
 /* Sečte posledních `days` denních počítadel z KV (viz _middleware.js).
    Čtení jdou paralelně (Promise.all), aby to nebylo `days` pomalých
-   sekvenčních volání za sebou. */
+   sekvenčních volání za sebou. Vrací i "today" zvlášť, protože Cloudflare
+   limit je DENNÍ, ne měsíční — to je to důležité číslo k hlídání. */
 async function getRequestsUsageFromKV(env, days) {
   if (!env.USAGE_KV) {
-    return { used: null, limit: null, error: 'KV binding USAGE_KV chybí' };
+    return { today: null, used: null, limit: null, error: 'KV binding USAGE_KV chybí' };
   }
   try {
     const now = new Date();
@@ -93,8 +103,9 @@ async function getRequestsUsageFromKV(env, days) {
     }
     const values = await Promise.all(keys.map(k => env.USAGE_KV.get(k)));
     const used = values.reduce((sum, v) => sum + (v ? (parseInt(v, 10) || 0) : 0), 0);
-    return { used, limit: null, error: null };
+    const today = values[0] ? (parseInt(values[0], 10) || 0) : 0;
+    return { today, used, limit: null, error: null };
   } catch (e) {
-    return { used: null, limit: null, error: String(e) };
+    return { today: null, used: null, limit: null, error: String(e) };
   }
 }
