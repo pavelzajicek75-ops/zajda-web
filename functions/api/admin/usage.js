@@ -2,8 +2,8 @@
 //
 // GET /api/admin/usage → metriky pro admin dashboard
 //
-// Čte denní agregáty z KV. Zkouší nejprve nový formát (usage:YYYY-MM-DD,
-// JSON objekt), pak fallback na starý (reqcount:YYYY-MM-DD, plain číslo).
+// Čte denní agregáty z KV. Zkouší usage: (nový JSON), pak reqcount:
+// (starý plain číslo) jako fallback pro historická data.
 
 import { requireAdmin, json } from '../_auth-utils.js';
 
@@ -47,7 +47,6 @@ export async function onRequestGet(context) {
 
 const DAILY_LIMIT = 100000;
 
-/* === R2 STORAGE === */
 async function getR2StorageUsage(env) {
   const buckets = [
     { name: 'zajda-photos', binding: env.PHOTOS_R2 },
@@ -84,8 +83,6 @@ async function getR2StorageUsage(env) {
   return { buckets: results, totalBytes, limitBytes: FREE_TIER_BYTES };
 }
 
-/* === USAGE DATA Z KV === */
-// Zkouší usage: (nový JSON) i reqcount: (starý plain číslo) jako fallback.
 async function getUsageData(env, days) {
   if (!env.USAGE_KV) {
     return {
