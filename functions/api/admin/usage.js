@@ -2,14 +2,8 @@
 //
 // GET /api/admin/usage → metriky pro admin dashboard
 //
-// Čte denní JSON agregáty z KV (usage:YYYY-MM-DD), které zapisuje
-// _middleware.js. Vrací:
-//   - requestsToday, requestsUsed (30 dní), trend vs včera
-//   - errorsToday, errorsUsed, errorRate %
-//   - avgResponseMs (dnes + 30 dní)
-//   - topEndpoints (top 5 dnes)
-//   - hourlyDistribution (dnes, 0-23)
-//   - R2 storage (velikost + objekty per bucket)
+// Čte denní agregáty z KV. Zkouší nejprve nový formát (usage:YYYY-MM-DD,
+// JSON objekt), pak fallback na starý (reqcount:YYYY-MM-DD, plain číslo).
 
 import { requireAdmin, json } from '../_auth-utils.js';
 
@@ -26,7 +20,6 @@ export async function onRequestGet(context) {
   ]);
 
   return json({
-    // Požadavky
     requestsToday: usage.today.requests,
     requestsYesterday: usage.yesterday.requests,
     requestsTrend: usage.trend,
@@ -34,24 +27,18 @@ export async function onRequestGet(context) {
     requestsDailyLimit: DAILY_LIMIT,
     requestsError: usage.error,
 
-    // Chyby
     errorsToday: usage.today.errors,
     errorsUsed: usage.used30.errors,
     errorRate: usage.today.errorRate,
     errorsError: usage.error,
 
-    // Doba odpovědi
     avgResponseMsToday: usage.today.avgResponseMs,
     avgResponseMs30: usage.used30.avgResponseMs,
     responseError: usage.error,
 
-    // Top endpointy (dnes)
     topEndpoints: usage.today.topEndpoints,
-
-    // Rozdělení dle hodiny (dnes)
     hourlyDistribution: usage.today.hours,
 
-    // R2
     storageUsedBytes: storage.totalBytes,
     storageLimitBytes: storage.limitBytes,
     buckets: storage.buckets
@@ -98,6 +85,7 @@ async function getR2StorageUsage(env) {
 }
 
 /* === USAGE DATA Z KV === */
+// Zkouší usage: (nový JSON) i reqcount: (starý plain číslo) jako fallback.
 async function getUsageData(env, days) {
   if (!env.USAGE_KV) {
     return {
@@ -109,15 +97,37 @@ async function getUsageData(env, days) {
 
   try {
     const now = new Date();
-    const keys = [];
+    const dates = [];
     for (let i = 0; i < days; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      keys.push('usage:' + d.toISOString().slice(0, 10));
+      dates.push(d.toISOString().slice(0, 10));
     }
 
-    const values = await Promise.all(keys.map(k => env.USAGE_KV.get(k)));
-    const days30 = values.map(v => v ? JSON.parse(v) : null);
+    // Pro každý den načteme usage: i reqcount: (fallback)
+    const allKeys = [];
+    for (const date of dates) {
+      allKeys.push('usage:' + date);
+      allKeys.push('reqcount:' + date);
+    }
+
+    const allValues = await Promise.all(allKeys.map(k => env.USAGE_KV.get(k)));
+    const valMap = new Map();
+    allKeys.forEach((k, i) => valMap.set(k, allValues[i]));
+
+    // Parsujeme každý den — preferujeme usage: (JSON), fallback reqcount: (číslo)
+    const days30 = dates.map(date => {
+      const usageRaw = valMap.get('usage:' + date);
+      if (usageRaw) {
+        try { return JSON.parse(usageRaw); } catch { /* fall through */ }
+      }
+      const reqRaw = valMap.get('reqcount:' + date);
+      if (reqRaw) {
+        const n = parseInt(reqRaw, 10) || 0;
+        return { requests: n, errors: 0, responseMs: 0, endpoints: {}, hours: {} };
+      }
+      return null;
+    });
 
     const today = parseDay(days30[0]);
     const yesterday = parseDay(days30[1]);
