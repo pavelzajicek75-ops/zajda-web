@@ -1,22 +1,8 @@
 // functions/api/admin/usage.js
 //
-// GET /api/admin/usage → {
-//   requestsUsed,
-//   storageUsedBytes,
-//   storageLimitBytes,
-//   buckets: [...]
-// }
-//
-// ZMĚNA: počet požadavků se dřív tahal z Cloudflare GraphQL Analytics API
-// (potřeboval CF_API_TOKEN s oprávněním Account Analytics: Read) — to
-// dlouhodobě padalo na "GraphQL API 401 Authentication error" a řešení
-// oprávnění tokenu se ukázalo jako slepá ulička. Místo toho se teď
-// požadavky počítají VLASTNÍ cestou přes functions/_middleware.js, který
-// při každém /api/ volání připočítá +1 do KV (klíč "reqcount:YYYY-MM-DD").
-// Tady se těch posledních 30 denních počítadel jen sečte. Žádný
-// Cloudflare token, žádné oprávnění, žádný GraphQL.
+// GET /api/admin/usage → metriky pro admin dashboard
 
-import { requireAdmin, json } from '../_auth-utils.js';
+import { requireAdmin, json } from '../../_auth-utils.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -39,14 +25,13 @@ export async function onRequestGet(context) {
     requestsError: requests.error || null,
     errorsToday: errors.today,
     errorsUsed: errors.used,
+    errorsError: errors.error || null,
     storageUsedBytes: storage.totalBytes,
     storageLimitBytes: storage.limitBytes,
     buckets: storage.buckets
   });
 }
 
-// Cloudflare Workers/Pages Functions Free plán: limit je DENNÍ (ne
-// měsíční), resetuje se o půlnoci UTC. Zdroj: developers.cloudflare.com/workers/platform/pricing
 const DAILY_LIMIT = 100000;
 
 async function getR2StorageUsage(env) {
@@ -85,11 +70,15 @@ async function getR2StorageUsage(env) {
   return { buckets: results, totalBytes, limitBytes: FREE_TIER_BYTES };
 }
 
-/* Sečte posledních `days` denních počítadel z KV (viz _middleware.js).
-   Čtení jdou paralelně (Promise.all), aby to nebylo `days` pomalých
-   sekvenčních volání za sebou. Vrací i "today" zvlášť, protože Cloudflare
-   limit je DENNÍ, ne měsíční — to je to důležité číslo k hlídání. */
 async function getRequestsUsageFromKV(env, days) {
+  return readDailyCounters(env, days, 'reqcount:');
+}
+
+async function getErrorsUsageFromKV(env, days) {
+  return readDailyCounters(env, days, 'errcount:');
+}
+
+async function readDailyCounters(env, days, prefix) {
   if (!env.USAGE_KV) {
     return { today: null, used: null, limit: null, error: 'KV binding USAGE_KV chybí' };
   }
@@ -99,7 +88,7 @@ async function getRequestsUsageFromKV(env, days) {
     for (let i = 0; i < days; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      keys.push('reqcount:' + d.toISOString().slice(0, 10));
+      keys.push(prefix + d.toISOString().slice(0, 10));
     }
     const values = await Promise.all(keys.map(k => env.USAGE_KV.get(k)));
     const used = values.reduce((sum, v) => sum + (v ? (parseInt(v, 10) || 0) : 0), 0);
