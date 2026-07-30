@@ -1,84 +1,55 @@
 // functions/_middleware.js
 //
-// Počítá API požadavky (a jen ty) do vlastní KV — bez závislosti na
-// Cloudflare Analytics/GraphQL. Napsáno MAXIMÁLNĚ obranně: veškerá
-// logika počítání je obalená v try/catch a spouští se přes waitUntil
-// (na pozadí, nikdy neblokuje ani neovlivní skutečnou odpověď) a
-// nejcitlivější cesty (přihlášení) se přeskakují úplně, i kdyby v nich
-// KV binding nebo cokoliv jiného zlobilo.
+// Běží nad KAŽDÝM /api/ voláním (Pages Functions middleware). Dvě věci:
+//   1) připočítá +1 do KV "reqcount:YYYY-MM-DD" (denní počítadlo požadavků)
+//   2) pokud downstream odpoví statusem >= 500, připočítá +1 do
+//      "errcount:YYYY-MM-DD" (denní počítadlo chyb)
 //
-// Zápisy do KV jsou navíc DÁVKOVÉ (flush nejvýš jednou za 60 s), ne při
-// každém požadavku — Cloudflare KV má na free plánu limit jen 1000
-// ZÁPISŮ/den (na rozdíl od 100 000 čtení/den), takže zápis při každém
-// requestu by tenhle limit rychle vyčerpal.
+// Počítadla se čtou v functions/api/admin/usage.js a zobrazují se v admin
+// dashboardu. Žádný Cloudflare token, žádný GraphQL — vše vlastní cestou.
+//
+// Zápis do KV je "fire and forget" — neblokuje odpověď. Pokud KV není
+// nastavené (USAGE_KV chybí), middleware jen nechá request projít a nic
+// nepočítá (admin/usage.js to pozná a ukáže "KV binding USAGE_KV chybí").
 
-const FLUSH_INTERVAL_MS = 60000;
-
-// Cesty, které se NIKDY nepočítají a middleware se u nich chová, jako by
-// vůbec neexistoval — přihlašování je příliš citlivé na to, aby na něm
-// cokoliv experimentovalo.
-const SKIP_PREFIXES = ['/api/auth/', '/api/verify', '/api/login'];
-
-let buffer = {};
-let lastFlush = 0;
-let flushing = null;
+async function incrementCounter(env, key) {
+  if (!env.USAGE_KV) return;
+  try {
+    const current = parseInt(await env.USAGE_KV.get(key) || '0', 10);
+    await env.USAGE_KV.put(key, String(current + 1));
+  } catch (e) {
+    // Nechceme shodit request kvůli počítadlu — jen logujeme.
+    console.error('Chyba při zápisu do USAGE_KV (' + key + '):', e.message);
+  }
+}
 
 export async function onRequest(context) {
-  // next() se volá VŽDY jako první věc přes await, takže i kdyby cokoliv
-  // v countIfApplicable() spadlo, skutečná odpověď už je hotová a vrátí se.
-  const response = await context.next();
-  try {
-    countIfApplicable(context, response);
-  } catch (e) {
-    // tiše ignorovat — počítání nikdy nesmí ovlivnit skutečný požadavek
-  }
-  return response;
-}
+  const { request, env, next } = context;
 
-function countIfApplicable(context, response) {
-  const { request, env } = context;
-  if (!env || !env.USAGE_KV) return;
-
+  // Počítadlo požadavků — jen pro /api/ cesty
   const url = new URL(request.url);
-  if (!url.pathname.startsWith('/api/')) return;
-  if (SKIP_PREFIXES.some(p => url.pathname.startsWith(p))) return;
+  const isApi = url.pathname.startsWith('/api/');
 
-  const today = new Date().toISOString().slice(0, 10);
-  buffer['reqcount:' + today] = (buffer['reqcount:' + today] || 0) + 1;
-  if (response && response.status >= 400) {
-    buffer['errcount:' + today] = (buffer['errcount:' + today] || 0) + 1;
+  if (isApi) {
+    const today = new Date().toISOString().slice(0, 10);
+    const reqKey = 'reqcount:' + today;
+
+    // Pošleme request dál a počkáme na odpověď
+    const response = await next();
+
+    // Počítadlo chyb — jen pokud odpověď >= 500
+    if (response.status >= 500) {
+      const errKey = 'errcount:' + today;
+      // Fire and forget, neblokuje
+      context.waitUntil(incrementCounter(env, errKey));
+    }
+
+    // Počítadlo požadavků — fire and forget
+    context.waitUntil(incrementCounter(env, reqKey));
+
+    return response;
   }
 
-  context.waitUntil(maybeFlush(env));
-}
-
-async function maybeFlush(env) {
-  try {
-    const now = Date.now();
-    if (now - lastFlush < FLUSH_INTERVAL_MS) return;
-    if (flushing) return flushing;
-
-    const toFlush = buffer;
-    buffer = {};
-    lastFlush = now;
-
-    flushing = (async () => {
-      try {
-        for (const key of Object.keys(toFlush)) {
-          const current = await env.USAGE_KV.get(key);
-          const count = current ? (parseInt(current, 10) || 0) : 0;
-          await env.USAGE_KV.put(key, String(count + toFlush[key]), { expirationTtl: 60 * 60 * 24 * 220 });
-        }
-      } catch (e) {
-        // ztráta pár počtů při chybě zápisu je zanedbatelná, hlavní je
-        // že to nikdy nespadne skutečnému requestu
-      } finally {
-        flushing = null;
-      }
-    })();
-
-    return flushing;
-  } catch (e) {
-    // viz výše — tiché ignorování
-  }
+  // Ne-/api/ cesty jen propustíme
+  return next();
 }
