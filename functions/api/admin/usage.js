@@ -1,8 +1,13 @@
 // functions/api/admin/usage.js
 //
 // GET /api/admin/usage → metriky pro admin dashboard
+//
+// Počet požadavků se počítá přes functions/_middleware.js, který při
+// každém /api/ volání připočítá +1 do KV (reqcount:YYYY-MM-DD). Chyby
+// (status >= 500) do errcount:YYYY-MM-DD. Tady se posledních 30 denních
+// počítadel sečte. Žádný Cloudflare token, žádný GraphQL.
 
-import { requireAdmin, json } from '../../_auth-utils.js';
+import { requireAdmin, json } from '../_auth-utils.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -32,6 +37,8 @@ export async function onRequestGet(context) {
   });
 }
 
+// Cloudflare Workers/Pages Functions Free plán: limit je DENNÍ (ne
+// měsíční), resetuje se o půlnoci UTC.
 const DAILY_LIMIT = 100000;
 
 async function getR2StorageUsage(env) {
@@ -70,14 +77,18 @@ async function getR2StorageUsage(env) {
   return { buckets: results, totalBytes, limitBytes: FREE_TIER_BYTES };
 }
 
+/* Sečte posledních `days` denních počítadel z KV. Čtení jdou paralelně
+   (Promise.all). Vrací i "today" zvlášť — denní limit je to důležité číslo. */
 async function getRequestsUsageFromKV(env, days) {
   return readDailyCounters(env, days, 'reqcount:');
 }
 
+/* Stejné, ale pro chybová počítadla (errcount:YYYY-MM-DD). */
 async function getErrorsUsageFromKV(env, days) {
   return readDailyCounters(env, days, 'errcount:');
 }
 
+/* Společná implementace — liší se jen prefixem klíče. */
 async function readDailyCounters(env, days, prefix) {
   if (!env.USAGE_KV) {
     return { today: null, used: null, limit: null, error: 'KV binding USAGE_KV chybí' };
