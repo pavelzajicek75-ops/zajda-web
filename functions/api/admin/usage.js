@@ -2,10 +2,14 @@
 //
 // GET /api/admin/usage → metriky pro admin dashboard
 //
-// Počet požadavků se počítá přes functions/_middleware.js, který při
-// každém /api/ volání připočítá +1 do KV (reqcount:YYYY-MM-DD). Chyby
-// (status >= 500) do errcount:YYYY-MM-DD. Tady se posledních 30 denních
-// počítadel sečte. Žádný Cloudflare token, žádný GraphQL.
+// Čte denní JSON agregáty z KV (usage:YYYY-MM-DD), které zapisuje
+// _middleware.js. Vrací:
+//   - requestsToday, requestsUsed (30 dní), trend vs včera
+//   - errorsToday, errorsUsed, errorRate %
+//   - avgResponseMs (dnes + 30 dní)
+//   - topEndpoints (top 5 dnes)
+//   - hourlyDistribution (dnes, 0-23)
+//   - R2 storage (velikost + objekty per bucket)
 
 import { requireAdmin, json } from '../_auth-utils.js';
 
@@ -16,31 +20,47 @@ export async function onRequestGet(context) {
     return json({ error: 'Unauthorized' }, 401);
   }
 
-  const [storage, requests, errors] = await Promise.all([
+  const [storage, usage] = await Promise.all([
     getR2StorageUsage(env),
-    getRequestsUsageFromKV(env, 30),
-    getErrorsUsageFromKV(env, 30)
+    getUsageData(env, 30)
   ]);
 
   return json({
-    requestsToday: requests.today,
+    // Požadavky
+    requestsToday: usage.today.requests,
+    requestsYesterday: usage.yesterday.requests,
+    requestsTrend: usage.trend,
+    requestsUsed: usage.used30.requests,
     requestsDailyLimit: DAILY_LIMIT,
-    requestsUsed: requests.used,
-    requestsLimit: requests.limit,
-    requestsError: requests.error || null,
-    errorsToday: errors.today,
-    errorsUsed: errors.used,
-    errorsError: errors.error || null,
+    requestsError: usage.error,
+
+    // Chyby
+    errorsToday: usage.today.errors,
+    errorsUsed: usage.used30.errors,
+    errorRate: usage.today.errorRate,
+    errorsError: usage.error,
+
+    // Doba odpovědi
+    avgResponseMsToday: usage.today.avgResponseMs,
+    avgResponseMs30: usage.used30.avgResponseMs,
+    responseError: usage.error,
+
+    // Top endpointy (dnes)
+    topEndpoints: usage.today.topEndpoints,
+
+    // Rozdělení dle hodiny (dnes)
+    hourlyDistribution: usage.today.hours,
+
+    // R2
     storageUsedBytes: storage.totalBytes,
     storageLimitBytes: storage.limitBytes,
     buckets: storage.buckets
   });
 }
 
-// Cloudflare Workers/Pages Functions Free plán: limit je DENNÍ (ne
-// měsíční), resetuje se o půlnoci UTC.
 const DAILY_LIMIT = 100000;
 
+/* === R2 STORAGE === */
 async function getR2StorageUsage(env) {
   const buckets = [
     { name: 'zajda-photos', binding: env.PHOTOS_R2 },
@@ -77,35 +97,89 @@ async function getR2StorageUsage(env) {
   return { buckets: results, totalBytes, limitBytes: FREE_TIER_BYTES };
 }
 
-/* Sečte posledních `days` denních počítadel z KV. Čtení jdou paralelně
-   (Promise.all). Vrací i "today" zvlášť — denní limit je to důležité číslo. */
-async function getRequestsUsageFromKV(env, days) {
-  return readDailyCounters(env, days, 'reqcount:');
-}
-
-/* Stejné, ale pro chybová počítadla (errcount:YYYY-MM-DD). */
-async function getErrorsUsageFromKV(env, days) {
-  return readDailyCounters(env, days, 'errcount:');
-}
-
-/* Společná implementace — liší se jen prefixem klíče. */
-async function readDailyCounters(env, days, prefix) {
+/* === USAGE DATA Z KV === */
+async function getUsageData(env, days) {
   if (!env.USAGE_KV) {
-    return { today: null, used: null, limit: null, error: 'KV binding USAGE_KV chybí' };
+    return {
+      error: 'KV binding USAGE_KV chybí',
+      today: emptyDay(), yesterday: emptyDay(),
+      used30: emptyAgg(), trend: null
+    };
   }
+
   try {
     const now = new Date();
     const keys = [];
     for (let i = 0; i < days; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
-      keys.push(prefix + d.toISOString().slice(0, 10));
+      keys.push('usage:' + d.toISOString().slice(0, 10));
     }
+
     const values = await Promise.all(keys.map(k => env.USAGE_KV.get(k)));
-    const used = values.reduce((sum, v) => sum + (v ? (parseInt(v, 10) || 0) : 0), 0);
-    const today = values[0] ? (parseInt(values[0], 10) || 0) : 0;
-    return { today, used, limit: null, error: null };
+    const days30 = values.map(v => v ? JSON.parse(v) : null);
+
+    const today = parseDay(days30[0]);
+    const yesterday = parseDay(days30[1]);
+
+    let trend = null;
+    if (yesterday.requests > 0) {
+      trend = Math.round(((today.requests - yesterday.requests) / yesterday.requests) * 100);
+    }
+
+    const used30 = aggregateDays(days30);
+
+    return { today, yesterday, trend, used30, error: null };
   } catch (e) {
-    return { today: null, used: null, limit: null, error: String(e) };
+    return {
+      error: String(e),
+      today: emptyDay(), yesterday: emptyDay(),
+      used30: emptyAgg(), trend: null
+    };
   }
+}
+
+function parseDay(raw) {
+  if (!raw) return emptyDay();
+
+  const requests = raw.requests || 0;
+  const errors = raw.errors || 0;
+  const responseMs = raw.responseMs || 0;
+  const avgResponseMs = requests > 0 ? Math.round(responseMs / requests) : null;
+  const errorRate = requests > 0 ? Math.round((errors / requests) * 1000) / 10 : null;
+
+  const endpoints = raw.endpoints || {};
+  const topEndpoints = Object.entries(endpoints)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([endpoint, count]) => ({ endpoint, count }));
+
+  return {
+    requests, errors, errorRate,
+    avgResponseMs, topEndpoints,
+    hours: raw.hours || {}
+  };
+}
+
+function aggregateDays(days) {
+  let requests = 0, errors = 0, responseMs = 0;
+  for (const d of days) {
+    if (!d) continue;
+    requests += d.requests || 0;
+    errors += d.errors || 0;
+    responseMs += d.responseMs || 0;
+  }
+  const avgResponseMs = requests > 0 ? Math.round(responseMs / requests) : null;
+  return { requests, errors, avgResponseMs };
+}
+
+function emptyDay() {
+  return {
+    requests: 0, errors: 0, errorRate: null,
+    avgResponseMs: null, topEndpoints: [], hours: {}
+  };
+}
+
+function emptyAgg() {
+  return { requests: 0, errors: 0, avgResponseMs: null };
 }
