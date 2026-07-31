@@ -288,10 +288,22 @@ function closeEditor() {
 /* === EDITOR: zoom/rotace === */
 function editorSetZoom(v) { ED.scale = parseFloat(v); updatePreviewTransform(); }
 
+/* Velikost náhledu na obrazovce se teď VŽDY počítá z rozměrů originální
+   (plné) fotky (ED.img.naturalWidth/Height) × ED.scale, nastavena natvrdo
+   jako width/height v px. Dřív se spoléhalo na to, že <img> má "přirozenou"
+   velikost currently-loaded src a transform:scale() ji jen zvětší/zmenší —
+   jenže živý náhled tónové křivky (viz regenerateToneMappedImage) kvůli
+   výkonu nahrazuje src menším (max 1600px) obrázkem. Přirozená velikost se
+   tak změnila, ale scale ne → fotka se najednou zobrazila menší, než měla
+   (a ořezový rámeček pak odpovídal jiné oblasti, než bylo vidět). Explicitní
+   px rozměry z ORIGINÁLU tohle úplně odstraní bez ohledu na to, jaký
+   (případně zmenšený) obrázek je zrovna v src. */
 function updatePreviewTransform() {
   const img = $('editImg');
-  if (!img) return;
-  img.style.transform = `translate(${ED.panX}px, ${ED.panY}px) scale(${ED.scale}) rotate(${ED.rotate + ED.straighten}deg)`;
+  if (!img || !ED.img) return;
+  img.style.width = (ED.img.naturalWidth * ED.scale) + 'px';
+  img.style.height = (ED.img.naturalHeight * ED.scale) + 'px';
+  img.style.transform = `translate(${ED.panX}px, ${ED.panY}px) rotate(${ED.rotate + ED.straighten}deg)`;
   applyFilters();
 }
 
@@ -331,6 +343,7 @@ function applyFilters() {
    (applyToneLUT), aby náhled = realita na 100 %. Debounce 120ms kvůli
    plynulému tažení posuvníku. */
 let toneRegenTimer = null;
+let toneRegenToken = 0;
 function scheduleToneRegeneration() {
   clearTimeout(toneRegenTimer);
   toneRegenTimer = setTimeout(regenerateToneMappedImage, 120);
@@ -348,6 +361,12 @@ async function regenerateToneMappedImage() {
     return;
   }
 
+  /* Token proti "race condition" — pokud uživatel rychle táhne slider,
+     může se stát, že starší (pomalejší) výpočet dokončí PO novějším a
+     přepíše náhled zastaralým výsledkem. Použije se jen výsledek
+     poslední spuštěné regenerace. */
+  const myToken = ++toneRegenToken;
+
   const maxSide = 1600; // strop pro plynulý živý náhled, export používá plné rozlišení
   let w = ED.img.naturalWidth, h = ED.img.naturalHeight;
   if (Math.max(w, h) > maxSide) {
@@ -361,11 +380,13 @@ async function regenerateToneMappedImage() {
   applyToneLUT(ctx, w, h, f.shadows, f.highlights, f.blackPoint, f.whitePoint);
 
   const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
-  if (!blob) return;
+  if (!blob || myToken !== toneRegenToken) return; // zastaralý výsledek, zahodit
   const url = URL.createObjectURL(blob);
   if (ED.toneBaseUrl) URL.revokeObjectURL(ED.toneBaseUrl);
   ED.toneBaseUrl = url;
   el.src = url;
+  // Velikost na obrazovce zůstává svázaná s ED.img (originálem), takže
+  // zmenšený náhled se nezobrazí menší — viz updatePreviewTransform().
 }
 
 function updateFilterLabels() {
@@ -614,6 +635,21 @@ function autoStraighten() {
   if (label) label.textContent = ED.straighten + '°';
   updatePreviewTransform();
   showToast('Horizont narovnán o ' + ED.straighten + '°', 'success');
+}
+
+/* === AUTO VŠECHNO NAJEDNOU ===
+   Jedno tlačítko, co spustí všechny čtyři automatické korekce v rozumném
+   pořadí (nejdřív narovnání a expozice, pak kontrast a bílá, nakonec
+   doostření podle výsledné ostrosti). Pohodlné pro rychlé "hodit fotku
+   do prezentovatelného stavu" bez ručního doťukávání posuvníků. */
+function autoEnhanceAll() {
+  if (!ED.img) return;
+  autoStraighten();
+  autoExposure();
+  autoContrast();
+  autoWhiteBalance();
+  autoSharpen();
+  showToast('Automatické vylepšení hotovo — zkontroluj výsledek a doladˇ dle chuti', 'success');
 }
 
 function applyPreset(name) {
