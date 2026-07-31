@@ -434,46 +434,14 @@ async function loadAdminPanel() {
 async function loadAdminUsage() {
   const box = $('adminUsageCards');
   if (!box) return;
-  box.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Načítám…</div>';
+  box.className = 'usage-cards';
+  box.innerHTML = '<div style="color:var(--text-muted);padding:1rem;grid-column:1/-1">Načítám…</div>';
   try {
     const r = await fetch('/api/admin/usage');
     const bodyText = await r.clone().text().catch(() => '');
     if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
     const d = JSON.parse(bodyText);
-    const dailyLimit = d.requestsDailyLimit || 100000;
-    const todayPct = d.requestsToday != null ? Math.round((d.requestsToday / dailyLimit) * 100) : null;
-    const cards = [
-      {
-        label: 'Dnes (limit je denní, ne měsíční)',
-        value: d.requestsToday != null ? d.requestsToday.toLocaleString('cs') : '⚠️',
-        sub: d.requestsToday != null ? `${todayPct}% z denního limitu ${dailyLimit.toLocaleString('cs')}` : (d.requestsError ? 'chyba: ' + d.requestsError.slice(0, 60) : '')
-      },
-      {
-        label: 'Požadavky (posledních 30 dní celkem)',
-        value: d.requestsUsed != null ? d.requestsUsed.toLocaleString('cs') : '⚠️',
-        sub: d.requestsUsed != null ? `Ø ${Math.round(d.requestsUsed / 30).toLocaleString('cs')}/den` : ''
-      },
-      { label: 'Využité místo', value: fmtBytes(d.storageUsedBytes || 0), sub: '' },
-      { label: 'Zbývá volného místa', value: d.storageLimitBytes ? fmtBytes(Math.max(0, d.storageLimitBytes - (d.storageUsedBytes || 0))) : '?', sub: '' }
-    ];
-    let html = cards.map(c => `
-      <div class="form-card" style="text-align:center;margin-bottom:0">
-        <div style="font-family:var(--font-mono);font-size:1.6rem;font-weight:600;color:var(--gold)">${c.value}</div>
-        <div style="color:var(--text-muted);font-size:12.5px;margin-top:0.3rem">${c.label}</div>
-        ${c.sub ? `<div style="color:var(--text-faint);font-size:11px;margin-top:0.15rem;word-break:break-word">${escapeHtml(c.sub)}</div>` : ''}
-      </div>`).join('');
-
-    if (Array.isArray(d.buckets) && d.buckets.length) {
-      html += `<div class="form-card" style="grid-column:1/-1;margin-bottom:0">
-        <div style="color:var(--text-muted);font-size:12px;margin-bottom:0.5rem">📦 Podle bucketu</div>
-        ${d.buckets.map(b => `
-          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:12.5px;padding:0.25rem 0;border-bottom:1px solid var(--border-soft)">
-            <span>${escapeHtml(b.name)}${b.error ? ' ⚠️' : ''}</span>
-            <span>${b.error ? escapeHtml(b.error.slice(0, 40)) : fmtBytes(b.bytes) + ' · ' + b.objects + ' souborů'}</span>
-          </div>`).join('')}
-      </div>`;
-    }
-    box.innerHTML = html;
+    renderAdminUsageCards(d);
   } catch (e) {
     console.error('/api/admin/usage selhalo:', e);
     box.innerHTML = `
@@ -488,11 +456,174 @@ async function loadAdminUsage() {
   loadAdminMetricsHistory();
 }
 
-/* === ADMIN METRIKY V ČASE (týdny / měsíce) ===
-   Aktuální /api/admin/usage vrací jen okamžitý stav. Pro graf podle týdnů
-   nebo měsíců je potřeba nový backendový endpoint s historií — viz komentář
-   výše u loadAdminPanel(). Dokud neexistuje, zobrazí se srozumitelný fallback
-   místo prázdného/vymyšleného grafu. */
+function usagePct(used, limit) {
+  if (!limit) return null;
+  return Math.min(100, Math.round((used / limit) * 1000) / 10);
+}
+
+/* === KARTY: požadavky, chyby, odezva, R2 úložiště ===
+   Dřív se tu ručně skládaly .form-card bloky s inline styly. style.css
+   přitom už dávno má hotový design (.usage-card, .usage-bar, ...) — jen
+   ho nikdo nepoužíval. Teď se konečně zapojí, včetně progres barů a
+   varovné červené barvy při překročení 80 % limitu. */
+function renderAdminUsageCards(d) {
+  const box = $('adminUsageCards');
+  if (!box) return;
+  box.className = 'usage-cards';
+
+  const dailyLimit = d.requestsDailyLimit || 100000;
+  const todayPct = d.requestsToday != null ? usagePct(d.requestsToday, dailyLimit) : null;
+  const storageUsed = d.storageUsedBytes || 0;
+  const storageLimit = d.storageLimitBytes || 0;
+  const storagePct = storageLimit ? usagePct(storageUsed, storageLimit) : null;
+  const trendUp = d.requestsTrend != null && d.requestsTrend > 0;
+  const trendTxt = d.requestsTrend != null
+    ? (trendUp ? '▲ +' : (d.requestsTrend < 0 ? '▼ ' : '– ')) + Math.abs(d.requestsTrend) + '% oproti včerejšku'
+    : '';
+
+  const cards = [
+    {
+      label: '📈 Požadavky dnes',
+      value: d.requestsToday != null ? d.requestsToday.toLocaleString('cs') : '⚠️',
+      sub: [todayPct != null ? todayPct + '% z limitu ' + dailyLimit.toLocaleString('cs') + '/den' : '', trendTxt].filter(Boolean).join(' · '),
+      bar: todayPct,
+      warn: todayPct != null && todayPct > 80,
+      error: d.requestsError
+    },
+    {
+      label: '🗓️ Požadavky (30 dní)',
+      value: d.requestsUsed != null ? d.requestsUsed.toLocaleString('cs') : '⚠️',
+      sub: d.requestsUsed != null ? `Ø ${Math.round(d.requestsUsed / 30).toLocaleString('cs')} / den` : ''
+    },
+    {
+      label: '⚠️ Chybovost dnes',
+      value: d.errorRate != null ? d.errorRate + ' %' : '—',
+      sub: d.errorsToday != null ? `${d.errorsToday.toLocaleString('cs')} chyb dnes · ${(d.errorsUsed || 0).toLocaleString('cs')} za 30 dní` : '',
+      warn: d.errorRate != null && d.errorRate > 5,
+      error: d.errorsError
+    },
+    {
+      label: '⏱️ Průměrná odezva',
+      value: d.avgResponseMsToday != null ? d.avgResponseMsToday + ' ms' : '—',
+      sub: d.avgResponseMs30 != null ? `Ø ${d.avgResponseMs30} ms za 30 dní` : '',
+      error: d.responseError
+    },
+    {
+      label: '💾 Využité úložiště (R2)',
+      value: fmtBytes(storageUsed),
+      sub: storageLimit ? `z ${fmtBytes(storageLimit)} volného limitu` : '',
+      bar: storagePct,
+      warn: storagePct != null && storagePct > 80
+    },
+    {
+      label: '📭 Zbývá volného místa',
+      value: storageLimit ? fmtBytes(Math.max(0, storageLimit - storageUsed)) : '?',
+      sub: ''
+    }
+  ];
+
+  box.innerHTML = cards.map(c => `
+    <div class="usage-card${c.warn ? ' usage-card-warn' : ''}">
+      <div class="usage-card-label">${c.label}</div>
+      <div class="usage-card-value">${c.value}</div>
+      ${c.sub ? `<div class="usage-card-sub">${escapeHtml(c.sub)}</div>` : ''}
+      ${c.bar != null ? `<div class="usage-bar"><div class="usage-bar-fill" style="width:${c.bar}%${c.warn ? ';background:linear-gradient(90deg,var(--red),#ff8a8a)' : ''}"></div></div>` : ''}
+      ${c.error ? `<div class="usage-card-error">⚠️ ${escapeHtml(String(c.error).slice(0, 80))}</div>` : ''}
+    </div>`).join('');
+
+  renderTopEndpoints(d.topEndpoints);
+  renderHourlyDistribution(d.hourlyDistribution);
+  renderBucketsBreakdown(d.buckets);
+}
+
+/* === NEJVYTÍŽENĚJŠÍ ENDPOINTY (dnes) ===
+   /api/admin/usage tohle už dávno posílá (d.topEndpoints), ale frontend
+   to dosud zahazoval. Používá hotové .usage-endpoints/.usage-ep-* třídy. */
+function renderTopEndpoints(list) {
+  let host = $('adminTopEndpoints');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'adminTopEndpoints';
+    host.className = 'usage-section form-card';
+    $('adminUsageCards').after(host);
+  }
+  if (!Array.isArray(list) || !list.length) {
+    host.innerHTML = '<h4>🔝 Nejvytíženější endpointy (dnes)</h4><div style="color:var(--text-faint);font-size:12.5px">Zatím žádná data.</div>';
+    return;
+  }
+  const max = Math.max(...list.map(e => e.count || 0), 1);
+  host.innerHTML = `
+    <h4>🔝 Nejvytíženější endpointy (dnes)</h4>
+    <div class="usage-endpoints">
+      ${list.map(e => `
+        <div class="usage-ep-row">
+          <span class="usage-ep-name" title="${escapeHtml(e.endpoint)}">${escapeHtml(e.endpoint)}</span>
+          <div class="usage-ep-bar"><div class="usage-ep-fill" style="width:${Math.max(4, Math.round((e.count || 0) / max * 100))}%"></div></div>
+          <span class="usage-ep-count">${(e.count || 0).toLocaleString('cs')}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+/* === ROZLOŽENÍ POŽADAVKŮ PODLE HODINY (dnes) ===
+   Stejná situace — d.hourlyDistribution backend posílal, frontend
+   nevykresloval. Používá hotové .usage-hours/.usage-hour-* třídy. */
+function renderHourlyDistribution(hours) {
+  let host = $('adminHourlyDist');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'adminHourlyDist';
+    host.className = 'usage-section form-card';
+    ($('adminTopEndpoints') || $('adminUsageCards')).after(host);
+  }
+  const map = hours && typeof hours === 'object' ? hours : {};
+  const vals = [];
+  for (let h = 0; h < 24; h++) vals.push(map[h] || map[String(h)] || 0);
+  const max = Math.max(...vals, 1);
+  const total = vals.reduce((a, b) => a + b, 0);
+  if (!total) {
+    host.innerHTML = '<h4>🕐 Rozložení požadavků podle hodiny (dnes)</h4><div style="color:var(--text-faint);font-size:12.5px">Zatím žádná data.</div>';
+    return;
+  }
+  host.innerHTML = `
+    <h4>🕐 Rozložení požadavků podle hodiny (dnes)</h4>
+    <div class="usage-hours">
+      ${vals.map((v, h) => `
+        <div class="usage-hour-col" title="${h}:00 — ${v.toLocaleString('cs')} požadavků">
+          <div class="usage-hour-bar" style="height:${Math.max(2, Math.round(v / max * 100))}%"></div>
+          ${h % 3 === 0 ? `<div class="usage-hour-label">${h}</div>` : ''}
+        </div>`).join('')}
+    </div>`;
+}
+
+/* === ÚLOŽIŠTĚ PODLE BUCKETU (R2) === */
+function renderBucketsBreakdown(buckets) {
+  let host = $('adminBuckets');
+  if (!Array.isArray(buckets) || !buckets.length) {
+    if (host) host.remove();
+    return;
+  }
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'adminBuckets';
+    host.className = 'usage-section form-card';
+    ($('adminHourlyDist') || $('adminTopEndpoints') || $('adminUsageCards')).after(host);
+  }
+  host.innerHTML = `
+    <h4>📦 Úložiště podle bucketu</h4>
+    <table class="usage-table">
+      <thead><tr><th>Bucket</th><th>Velikost</th><th>Objektů</th></tr></thead>
+      <tbody>
+        ${buckets.map(b => `
+          <tr>
+            <td>${escapeHtml(b.name)}${b.error ? ' ⚠️' : ''}</td>
+            <td style="font-family:var(--font-mono)">${b.error ? '—' : fmtBytes(b.bytes)}</td>
+            <td style="font-family:var(--font-mono)">${b.error ? escapeHtml(b.error.slice(0, 60)) : b.objects}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+/* === VÝVOJ V ČASE (týdny / měsíce) === */
 let adminMetricsPeriod = 'week';
 
 function setAdminMetricsPeriod(period) {
@@ -502,23 +633,22 @@ function setAdminMetricsPeriod(period) {
 }
 
 function injectAdminMetricsUI() {
-  const usageBox = $('adminUsageCards');
-  if (!usageBox || $('adminMetricsSection')) return;
+  if ($('adminMetricsSection')) return;
+  const anchor = $('adminBuckets') || $('adminHourlyDist') || $('adminTopEndpoints') || $('adminUsageCards');
+  if (!anchor) return;
   const section = document.createElement('div');
   section.id = 'adminMetricsSection';
-  section.style.cssText = 'grid-column:1/-1;margin-top:1rem';
+  section.className = 'usage-section form-card';
   section.innerHTML = `
-    <div class="form-card" style="margin-bottom:0">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.5rem">
-        <h3 style="margin:0;font-size:0.95rem">📈 Vývoj v čase</h3>
-        <div style="display:flex;gap:0.4rem">
-          <button class="btn btn-sm admin-metrics-period-btn btn-blue" data-period="week" onclick="setAdminMetricsPeriod('week')">Týdny</button>
-          <button class="btn btn-sm admin-metrics-period-btn" data-period="month" onclick="setAdminMetricsPeriod('month')">Měsíce</button>
-        </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem">
+      <h4 style="margin:0">📊 Vývoj v čase</h4>
+      <div style="display:flex;gap:0.4rem">
+        <button class="btn btn-sm admin-metrics-period-btn btn-blue" data-period="week" onclick="setAdminMetricsPeriod('week')">Týdny</button>
+        <button class="btn btn-sm admin-metrics-period-btn" data-period="month" onclick="setAdminMetricsPeriod('month')">Měsíce</button>
       </div>
-      <div id="adminMetricsHistory"></div>
-    </div>`;
-  usageBox.parentElement.insertBefore(section, usageBox.nextSibling);
+    </div>
+    <div id="adminMetricsHistory"></div>`;
+  anchor.after(section);
 }
 
 async function loadAdminMetricsHistory() {
@@ -526,7 +656,7 @@ async function loadAdminMetricsHistory() {
   if (!box) return;
   box.innerHTML = '<div style="color:var(--text-muted);padding:1rem">Načítám…</div>';
   try {
-    const r = await fetch('/api/admin/usage/history?period=' + adminMetricsPeriod);
+    const r = await fetch('/api/admin/usage-history?period=' + adminMetricsPeriod);
     const bodyText = await r.clone().text().catch(() => '');
     if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
     const data = JSON.parse(bodyText);
@@ -535,27 +665,58 @@ async function loadAdminMetricsHistory() {
       box.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center">Zatím žádná data.</div>';
       return;
     }
-    const maxReq = Math.max(...points.map(p => p.requests || 0), 1);
-    box.innerHTML = `
-      <div style="display:flex;align-items:flex-end;gap:6px;height:160px;padding:0.5rem 0 0.25rem">
-        ${points.map(p => `
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px" title="${escapeHtml(p.label)}: ${(p.requests || 0).toLocaleString('cs')} požadavků">
-            <div style="width:100%;background:var(--accent);border-radius:4px 4px 0 0;height:${Math.max(4, Math.round((p.requests || 0) / maxReq * 140))}px"></div>
-            <div style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono);white-space:nowrap">${escapeHtml(p.label)}</div>
-          </div>`).join('')}
-      </div>
-      <table class="data-table" style="margin-top:0.75rem">
-        <thead><tr><th>${adminMetricsPeriod === 'week' ? 'Týden' : 'Měsíc'}</th><th>Požadavky</th><th>Úložiště</th></tr></thead>
-        <tbody>${points.map(p => `<tr><td>${escapeHtml(p.label)}</td><td style="font-family:var(--font-mono)">${(p.requests || 0).toLocaleString('cs')}</td><td style="font-family:var(--font-mono)">${p.storageBytes != null ? fmtBytes(p.storageBytes) : '—'}</td></tr>`).join('')}</tbody>
-      </table>`;
+    renderMetricsHistoryChart(box, points);
   } catch (e) {
-    console.error('/api/admin/usage/history selhalo:', e);
+    console.error('/api/admin/usage-history selhalo:', e);
     box.innerHTML = `
       <div style="text-align:center;color:var(--text-muted);font-size:13px;padding:1.25rem;line-height:1.6">
         📡 Historie se nepodařilo načíst.<br>
         <code style="color:var(--red);word-break:break-word;display:inline-block;margin-top:0.4rem;font-size:11.5px">${escapeHtml(e.message)}</code>
       </div>`;
   }
+}
+
+/* Sloupcový graf s gradientem, hover tooltipem (přesný obsah, ne jen
+   title atribut), čárou průměru a vyznačením ještě neuzavřeného období
+   (týdne/měsíce) — to teď backend posílá jako p.isCurrent. Chyby se
+   ukazují jako červený segment nahoře v každém sloupci. */
+function renderMetricsHistoryChart(box, points) {
+  const maxReq = Math.max(...points.map(p => p.requests || 0), 1);
+  const avgReq = Math.round(points.reduce((s, p) => s + (p.requests || 0), 0) / points.length);
+  const avgLinePx = Math.min(140, Math.round(avgReq / maxReq * 140));
+
+  box.innerHTML = `
+    <div class="usage-history-chart">
+      <div class="usage-history-avgline" style="bottom:${avgLinePx}px"><span>Ø ${avgReq.toLocaleString('cs')}</span></div>
+      ${points.map(p => {
+        const total = p.requests || 0;
+        const errPct = total > 0 ? Math.min(100, Math.round((p.errors || 0) / total * 100)) : 0;
+        const h = Math.max(4, Math.round(total / maxReq * 140));
+        const isCurrent = !!p.isCurrent;
+        return `
+        <div class="usage-history-col${isCurrent ? ' current' : ''}" tabindex="0">
+          <div class="usage-history-tooltip">
+            <b>${escapeHtml(p.label)}</b>${isCurrent ? ' <span style="color:var(--gold)">(dosud)</span>' : ''}<br>
+            ${total.toLocaleString('cs')} požadavků${p.errors ? ' · ' + p.errors.toLocaleString('cs') + ' chyb' : ''}
+            ${p.avgResponseMs != null ? '<br>Ø odezva ' + p.avgResponseMs + ' ms' : ''}
+          </div>
+          <div class="usage-history-bar" style="height:${h}px">
+            ${errPct > 0 ? `<div class="usage-history-bar-err" style="height:${errPct}%"></div>` : ''}
+          </div>
+          <div class="usage-history-label">${escapeHtml(p.label)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <table class="usage-table" style="margin-top:1rem">
+      <thead><tr><th>${adminMetricsPeriod === 'week' ? 'Týden' : 'Měsíc'}</th><th>Požadavky</th><th>Chyby</th><th>Ø odezva</th></tr></thead>
+      <tbody>${points.map(p => `
+        <tr>
+          <td>${escapeHtml(p.label)}${p.isCurrent ? ' <span style="color:var(--gold);font-size:11px">(dosud)</span>' : ''}</td>
+          <td style="font-family:var(--font-mono)">${(p.requests || 0).toLocaleString('cs')}</td>
+          <td style="font-family:var(--font-mono)">${(p.errors || 0).toLocaleString('cs')}</td>
+          <td style="font-family:var(--font-mono)">${p.avgResponseMs != null ? p.avgResponseMs + ' ms' : '—'}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
 }
 
 async function loadAdminUsers() {
