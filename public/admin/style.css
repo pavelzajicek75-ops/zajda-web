@@ -1026,4 +1026,98 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   .usage-ep-name { min-width: 100px; font-size: 11px; }
   .usage-hours { height: 60px; }
   .usage-hour-label { font-size: 7px; }
+/* =========================================================
+   DOPLNĚK KE style.css — graf "Vývoj v čase" v admin sekci
+   Vlož na konec style.css (pod stávající @media pravidla).
+   ========================================================= */
+
+.usage-history-chart {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 180px;
+  padding: 0.5rem 0 0.25rem;
+}
+.usage-history-avgline {
+  position: absolute;
+  left: 0; right: 0;
+  border-top: 1px dashed var(--text-faint);
+  pointer-events: none;
+}
+.usage-history-avgline span {
+  position: absolute; right: 0; top: -15px;
+  background: var(--surface);
+  padding: 0 4px;
+  font-size: 10px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+.usage-history-col {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  outline: none;
+}
+.usage-history-bar {
+  width: 100%;
+  max-width: 34px;
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  border-radius: 5px 5px 2px 2px;
+  position: relative;
+  overflow: hidden;
+  transition: filter 0.15s var(--ease), transform 0.15s var(--ease);
+}
+.usage-history-col:hover .usage-history-bar,
+.usage-history-col:focus .usage-history-bar {
+  filter: brightness(1.15);
+  transform: scaleY(1.02);
+}
+.usage-history-bar-err {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, #ff8a8a, var(--red));
+}
+.usage-history-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.usage-history-col.current .usage-history-bar {
+  outline: 1px dashed var(--gold);
+  outline-offset: 2px;
+}
+.usage-history-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.65rem;
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s var(--ease), transform 0.15s var(--ease);
+  z-index: 10;
+}
+.usage-history-col:hover .usage-history-tooltip,
+.usage-history-col:focus .usage-history-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+@media (max-width: 480px) {
+  .usage-history-chart { height: 140px; gap: 3px; }
+  .usage-history-bar { max-width: 22px; }
+  .usage-history-label { font-size: 8.5px; }
+  .usage-history-tooltip { font-size: 10.5px; padding: 0.4rem 0.55rem; }
 }
