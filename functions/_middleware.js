@@ -1,7 +1,7 @@
 // functions/_middleware.js
 //
 // Počítá /api/ requesty do KV (reqcount:YYYY-MM-DD).
-// Minimalistické — nic co by mohlo shodit request.
+// Zapisuje jen každý 5. request — 5x méně zápisů, šetří KV limit.
 
 export async function onRequest(context) {
   const { request, env, next } = context;
@@ -15,15 +15,18 @@ export async function onRequest(context) {
     return next();
   }
 
-  // Nejdřív zavoláme next() — to je nejdůležitější
   const response = await next();
 
-  // Počítadlo — v try/catch, nikdy nesmí shodit request
   try {
     const today = new Date().toISOString().slice(0, 10);
     const key = 'reqcount:' + today;
     const current = parseInt(await env.USAGE_KV.get(key) || '0', 10);
-    await env.USAGE_KV.put(key, String(current + 1));
+    const newCount = current + 1;
+
+    // Zapisuj jen každý 5. request — 5x méně zápisů do KV
+    if (newCount % 5 === 0) {
+      await env.USAGE_KV.put(key, String(newCount));
+    }
   } catch (e) {
     console.error('USAGE_KV write failed:', e.message);
   }
