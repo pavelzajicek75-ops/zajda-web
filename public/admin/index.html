@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260730">
+<link rel="stylesheet" href="style.css?v=20260731">
 </head>
 <body>
 
@@ -34,80 +34,70 @@
 <!-- ============ RIBBON TOOLBAR ============ -->
 <div class="ribbon-toolbar" id="ribbonToolbar">
 
-  <button class="btn btn-sm ribbon-reorder-toggle" id="reorderToggleBtn" onclick="toggleRibbonReorderMode()" title="Přeuspořádat tlačítka v této liště tažením myší (v rámci skupiny), nebo je skrýt">↕️ Uspořádat</button>
+  <button class="btn btn-sm ribbon-reorder-toggle" id="reorderToggleBtn" onclick="toggleRibbonReorderMode()" title="Přeuspořádat tlačítka v této liště tažením myší, nebo je skrýt">↕️ Uspořádat</button>
   <button class="btn btn-sm ribbon-reorder-toggle" onclick="restoreAllRibbonItems()" title="Vrátit všechny skryté prvky v této liště">↺ Obnovit vše</button>
 
   <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
+    <!-- Zobrazení a hledání -->
+    <select id="viewMode" class="ribbon-select" data-key="viewMode" onchange="renderGallery()">
+      <option value="grid">Mřížka</option>
+      <option value="small">Malé náhledy</option>
+      <option value="list">Seznam</option>
+    </select>
+    <select id="sortMode" class="ribbon-select" data-key="sortMode" onchange="renderGallery()">
+      <option value="newest">Nejnovější</option>
+      <option value="oldest">Nejstarší</option>
+      <option value="name">Podle názvu</option>
+      <option value="size">Podle velikosti</option>
+      <option value="resolution">Podle rozlišení</option>
+    </select>
+    <input type="text" id="gallerySearch" class="form-input" data-key="gallerySearch" placeholder="🔎 Hledat podle názvu…" oninput="renderGallery()" style="max-width:180px;flex:0 1 180px">
+    <label class="ribbon-label" data-key="exifToggleLabel" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
+      <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
+    </label>
 
-    <div class="ribbon-section">
-      <div class="ribbon-section-items">
-        <select id="viewMode" class="ribbon-select" data-key="viewMode" onchange="renderGallery()">
-          <option value="grid">Mřížka</option>
-          <option value="small">Malé náhledy</option>
-          <option value="list">Seznam</option>
-        </select>
-        <select id="sortMode" class="ribbon-select" data-key="sortMode" onchange="renderGallery()">
-          <option value="newest">Nejnovější</option>
-          <option value="oldest">Nejstarší</option>
-          <option value="name">Podle názvu</option>
-          <option value="size">Podle velikosti</option>
-          <option value="resolution">Podle rozlišení</option>
-        </select>
-        <input type="text" id="gallerySearch" class="form-input" data-key="gallerySearch" placeholder="🔎 Hledat podle názvu…" oninput="renderGallery()" style="max-width:170px;flex:0 1 170px">
-        <label class="ribbon-label" data-key="exifToggleLabel" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
-          <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
-        </label>
-      </div>
-      <span class="ribbon-section-label">Zobrazení</span>
-    </div>
+    <div class="ribbon-sep" data-key="sep1"></div>
 
-    <div class="ribbon-section">
-      <div class="ribbon-section-items">
-        <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
-          <option value="">📁 Všechny složky</option>
-        </select>
-        <button class="btn btn-sm" data-key="newFolder" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová</button>
-        <button class="btn btn-sm" data-key="deleteFolder" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou</button>
-        <button class="btn btn-sm" data-key="moveToFolder" onclick="openMoveToFolderModal()" title="Přesunout vybrané fotky do složky">📁 Přesunout</button>
-      </div>
-      <span class="ribbon-section-label">Složky</span>
-    </div>
+    <!-- Složky -->
+    <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
+      <option value="">📁 Všechny složky</option>
+    </select>
+    <button class="btn btn-sm" data-key="newFolder" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová složka</button>
+    <button class="btn btn-sm" data-key="deleteFolder" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou složku</button>
+    <button class="btn btn-sm" data-key="moveToFolder" onclick="openMoveToFolderModal()" title="Přesunout vybrané fotky do složky">📁 Přesunout do složky</button>
 
-    <div class="ribbon-section">
-      <div class="ribbon-section-items">
-        <select id="upResSelect" class="ribbon-select" data-key="upRes" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
-          <option value="1000">1000 px</option>
-          <option value="2000">2000 px</option>
-          <option value="4000">4000 px</option>
-          <option value="0">Originál</option>
-        </select>
-        <select id="upQualitySelect" class="ribbon-select" data-key="upQuality" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
-          <option value="0.7">70 %</option>
-          <option value="0.85">85 %</option>
-          <option value="0.95">95 %</option>
-          <option value="0.99">99 %</option>
-        </select>
-        <input type="text" id="uploadFolderInput" class="form-input" data-key="uploadFolderInput" list="folderSuggestions" placeholder="📁 Do složky" style="max-width:150px;flex:0 1 150px">
-        <datalist id="folderSuggestions"></datalist>
-        <button class="btn btn-blue btn-sm" data-key="upload" onclick="$('fileInput').click()">⬆️ Nahrát</button>
-        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
-        <button class="btn btn-sm" data-key="uploadSettings" onclick="openUploadSettings()">⚙️</button>
-      </div>
-      <span class="ribbon-section-label">Nahrávání</span>
-    </div>
+    <div class="ribbon-sep" data-key="sep2"></div>
 
-    <div class="ribbon-section">
-      <div class="ribbon-section-items">
-        <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit</button>
-        <button class="btn btn-sm" data-key="findDupes" onclick="findDuplicatePhotos()">🔍 Duplicity</button>
-        <button class="btn btn-sm" data-key="downloadZip" onclick="downloadSelectedAsZip()">⬇️ ZIP</button>
-        <button class="btn btn-red btn-sm" data-key="bulkDelete" onclick="bulkDelete()">🗑 Smazat</button>
-      </div>
-      <span class="ribbon-section-label">Vybrané fotky</span>
-    </div>
+    <!-- Nahrávání -->
+    <select id="upResSelect" class="ribbon-select" data-key="upRes" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
+      <option value="1000">1000 px</option>
+      <option value="2000">2000 px</option>
+      <option value="4000">4000 px</option>
+      <option value="0">Originál</option>
+    </select>
+    <select id="upQualitySelect" class="ribbon-select" data-key="upQuality" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
+      <option value="0.7">70 %</option>
+      <option value="0.85">85 %</option>
+      <option value="0.95">95 %</option>
+      <option value="0.99">99 %</option>
+    </select>
+    <input type="text" id="uploadFolderInput" class="form-input" data-key="uploadFolderInput" list="folderSuggestions" placeholder="📁 Do složky (volitelné)" style="max-width:180px;flex:0 1 180px">
+    <datalist id="folderSuggestions"></datalist>
+    <button class="btn btn-blue btn-sm" data-key="upload" onclick="$('fileInput').click()">⬆️ Nahrát</button>
+    <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
+    <button class="btn btn-sm" data-key="uploadSettings" onclick="openUploadSettings()">⚙️ Nastavení</button>
 
-    <span class="pill" id="galleryCountPill" data-key="countPill" style="align-self:center">0 fotek</span>
+    <div class="ribbon-sep" data-key="sep3"></div>
+
+    <!-- Hromadné akce s vybranými fotkami -->
+    <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
+    <button class="btn btn-sm" data-key="findDupes" onclick="findDuplicatePhotos()">🔍 Najít duplicity</button>
+    <button class="btn btn-sm" data-key="downloadZip" onclick="downloadSelectedAsZip()">⬇️ Stáhnout vybrané (ZIP)</button>
+    <button class="btn btn-red btn-sm" data-key="bulkDelete" onclick="bulkDelete()">🗑 Smazat</button>
+
+    <div class="ribbon-sep" data-key="sep4"></div>
+    <span class="pill" id="galleryCountPill" data-key="countPill">0 fotek</span>
   </div>
 
   <!-- Články -->
@@ -171,85 +161,59 @@
         <input type="text" id="artPlace" class="form-input" placeholder="Místo">
       </div>
 
-      <!-- WYSIWYG lišta seskupená podle oblasti, jako ve Wordu -->
-      <div class="editor-toolbar" data-for="wysiwyg">
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
-            <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
-            <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
-            <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
-            <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
-              <option value="">Velikost</option>
-              <option value="1">Malé</option>
-              <option value="3">Normální</option>
-              <option value="5">Velké</option>
-              <option value="7">Obří</option>
-            </select>
-            <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
-              <option value="">Formát</option>
-              <option value="P">Odstavec</option>
-              <option value="H1">Nadpis 1</option>
-              <option value="H2">Nadpis 2</option>
-              <option value="H3">Nadpis 3</option>
-              <option value="BLOCKQUOTE">Citace</option>
-              <option value="PRE">Kód</option>
-            </select>
-            <input type="color" data-key="foreColor" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
-            <input type="color" data-key="backColor" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
-          </div>
-          <span class="toolbar-group-label">Písmo</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
-            <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
-            <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
-            <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
-            <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
-            <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
-            <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
-            <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
-          </div>
-          <span class="toolbar-group-label">Odstavec</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="imgLeft" onclick="insertImgTo('artEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
-            <button data-key="imgCenter" onclick="insertImgTo('artEditor','center')" title="Obrázek na střed">🖼️↔</button>
-            <button data-key="imgRight" onclick="insertImgTo('artEditor','right')" title="Obrázek vpravo">🖼️➡</button>
-            <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
-            <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
-            <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
-          </div>
-          <span class="toolbar-group-label">Obrázky</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
-            <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
-            <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
-            <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
-          </div>
-          <span class="toolbar-group-label">Vložit</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
-            <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
-          </div>
-          <span class="toolbar-group-label">Historie</span>
-        </div>
-
-        <div class="toolbar-utility">
-          <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat (v rámci skupiny) nebo skrýt tlačítka">↕️</button>
-          <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺</button>
-        </div>
+      <div class="editor-toolbar" data-for="wysiwyg" data-for="wysiwyg">
+        <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+        <div class="sep"></div>
+        <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
+          <option value="">Velikost</option>
+          <option value="1">Malé</option>
+          <option value="3">Normální</option>
+          <option value="5">Velké</option>
+          <option value="7">Obří</option>
+        </select>
+        <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
+          <option value="">Formát</option>
+          <option value="P">Odstavec</option>
+          <option value="H1">Nadpis 1</option>
+          <option value="H2">Nadpis 2</option>
+          <option value="H3">Nadpis 3</option>
+          <option value="BLOCKQUOTE">Citace</option>
+          <option value="PRE">Kód</option>
+        </select>
+        <div class="sep"></div>
+        <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
+        <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
+        <div class="sep"></div>
+        <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
+        <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
+        <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
+        <div class="sep"></div>
+        <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
+        <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <div class="sep"></div>
+        <button data-key="imgLeft" onclick="insertImgTo('artEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button data-key="imgCenter" onclick="insertImgTo('artEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button data-key="imgRight" onclick="insertImgTo('artEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <div class="sep"></div>
+        <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <div class="sep"></div>
+        <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
+        <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
+        <div class="sep"></div>
+        <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat nebo skrýt tlačítka">↕️ Uspořádat</button>
+        <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺ Obnovit</button>
       </div>
       <div id="artEditor" contenteditable="true"></div>
 
@@ -317,83 +281,58 @@
       </div>
 
       <div class="editor-toolbar" data-for="wysiwyg">
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
-            <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
-            <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
-            <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
-            <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
-              <option value="">Velikost</option>
-              <option value="1">Malé</option>
-              <option value="3">Normální</option>
-              <option value="5">Velké</option>
-              <option value="7">Obří</option>
-            </select>
-            <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
-              <option value="">Formát</option>
-              <option value="P">Odstavec</option>
-              <option value="H1">Nadpis 1</option>
-              <option value="H2">Nadpis 2</option>
-              <option value="H3">Nadpis 3</option>
-              <option value="BLOCKQUOTE">Citace</option>
-              <option value="PRE">Kód</option>
-            </select>
-            <input type="color" data-key="foreColor" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
-            <input type="color" data-key="backColor" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
-          </div>
-          <span class="toolbar-group-label">Písmo</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
-            <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
-            <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
-            <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
-            <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
-            <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
-            <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
-            <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
-          </div>
-          <span class="toolbar-group-label">Odstavec</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="imgLeft" onclick="insertImgTo('aboutEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
-            <button data-key="imgCenter" onclick="insertImgTo('aboutEditor','center')" title="Obrázek na střed">🖼️↔</button>
-            <button data-key="imgRight" onclick="insertImgTo('aboutEditor','right')" title="Obrázek vpravo">🖼️➡</button>
-            <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
-            <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
-            <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
-          </div>
-          <span class="toolbar-group-label">Obrázky</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
-            <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
-            <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
-            <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
-          </div>
-          <span class="toolbar-group-label">Vložit</span>
-        </div>
-
-        <div class="toolbar-group">
-          <div class="toolbar-group-items">
-            <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
-            <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
-          </div>
-          <span class="toolbar-group-label">Historie</span>
-        </div>
-
-        <div class="toolbar-utility">
-          <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat (v rámci skupiny) nebo skrýt tlačítka">↕️</button>
-          <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺</button>
-        </div>
+        <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+        <div class="sep"></div>
+        <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
+          <option value="">Velikost</option>
+          <option value="1">Malé</option>
+          <option value="3">Normální</option>
+          <option value="5">Velké</option>
+          <option value="7">Obří</option>
+        </select>
+        <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
+          <option value="">Formát</option>
+          <option value="P">Odstavec</option>
+          <option value="H1">Nadpis 1</option>
+          <option value="H2">Nadpis 2</option>
+          <option value="H3">Nadpis 3</option>
+          <option value="BLOCKQUOTE">Citace</option>
+          <option value="PRE">Kód</option>
+        </select>
+        <div class="sep"></div>
+        <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
+        <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
+        <div class="sep"></div>
+        <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
+        <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
+        <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
+        <div class="sep"></div>
+        <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
+        <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <div class="sep"></div>
+        <button data-key="imgLeft" onclick="insertImgTo('aboutEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button data-key="imgCenter" onclick="insertImgTo('aboutEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button data-key="imgRight" onclick="insertImgTo('aboutEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <div class="sep"></div>
+        <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <div class="sep"></div>
+        <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
+        <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
+        <div class="sep"></div>
+        <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat nebo skrýt tlačítka">↕️ Uspořádat</button>
+        <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺ Obnovit</button>
       </div>
       <div id="aboutEditor" contenteditable="true"></div>
     </div>
@@ -405,7 +344,7 @@
   <!-- ---------- ADMIN ---------- -->
   <section id="admin" class="section">
     <h3 style="margin-bottom:0.75rem">📊 Využití (Cloudflare)</h3>
-    <div id="adminUsageCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.75rem"></div>
+    <div id="adminUsageCards" class="usage-cards"></div>
 
     <h3 style="margin-bottom:0.75rem">👥 Přístupy dalších lidí</h3>
     <div class="form-card">
@@ -568,151 +507,125 @@
   </div>
 </div>
 
-<!-- ============ FOTO EDITOR MODAL — postranní panel jako ve Photoshopu ============ -->
+<!-- ============ FOTO EDITOR MODAL (beze změny, používá dashboard-editor.js) ============ -->
 <div id="editorModal" class="modal hidden">
   <div class="editor-box">
     <div class="editor-body">
 
       <div class="editor-sidebar">
 
-        <details class="editor-panel" open>
-          <summary>🎨 Předvolby</summary>
-          <div class="editor-panel-body">
-            <div class="tool-row">
-              <div id="presetSwatches" class="preset-swatches"></div>
-            </div>
-          </div>
-        </details>
+        <div class="tool-row">
+          <label style="width:100%">🎨 Předvolby</label>
+        </div>
+        <div class="tool-row">
+          <select id="presetSelect" class="ribbon-select" style="width:100%" onchange="applyPreset(this.value)">
+            <option value="">— Vyber styl —</option>
+            <option value="none">↺ Bez efektu (reset)</option>
+            <option value="bw">Černobílá</option>
+            <option value="vintage">Vintage</option>
+            <option value="warm">Teplý tón</option>
+            <option value="cold">Studený tón</option>
+            <option value="highContrast">Vysoký kontrast</option>
+            <option value="vivid">Živé barvy</option>
+            <option value="filmNoir">Film Noir</option>
+            <option value="pastel">Pastelové</option>
+            <option value="drama">Dramatický</option>
+            <option value="sepia">Sépie</option>
+            <option value="clean">Čistý/Jasný</option>
+            <option value="matte">Matný</option>
+            <option value="sunset">Západ slunce</option>
+            <option value="night">Noční</option>
+          </select>
+        </div>
 
-        <details class="editor-panel">
-          <summary>✂️ Ořez</summary>
-          <div class="editor-panel-body">
-            <div class="tool-row crop-mode-row">
-              <button class="btn btn-sm btn-blue" onclick="setCrop('free')">Volný</button>
-              <button class="btn btn-sm" onclick="setCrop('1:1')">1:1</button>
-              <button class="btn btn-sm" onclick="setCrop('4:3')">4:3</button>
-              <button class="btn btn-sm" onclick="setCrop('3:4')">3:4</button>
-              <button class="btn btn-sm" onclick="setCrop('16:9')">16:9</button>
-            </div>
-            <div class="tool-row">
-              <button class="btn btn-sm" onclick="applyCrop()">✂️ Použít ořez</button>
-            </div>
-          </div>
-        </details>
+        <div class="tool-row crop-mode-row">
+          <button class="btn btn-sm btn-blue" onclick="setCrop('free')">Volný</button>
+          <button class="btn btn-sm" onclick="setCrop('1:1')">1:1</button>
+          <button class="btn btn-sm" onclick="setCrop('4:3')">4:3</button>
+          <button class="btn btn-sm" onclick="setCrop('3:4')">3:4</button>
+          <button class="btn btn-sm" onclick="setCrop('16:9')">16:9</button>
+        </div>
+        <div class="tool-row">
+          <button class="btn btn-sm" onclick="applyCrop()">✂️ Použít ořez</button>
+        </div>
 
-        <details class="editor-panel">
-          <summary>🔄 Transformace</summary>
-          <div class="editor-panel-body">
-            <div class="tool-row">
-              <button class="btn btn-sm" onclick="rotateEditor(-90)">⟲ 90°</button>
-              <button class="btn btn-sm" onclick="rotateEditor(90)">⟳ 90°</button>
-            </div>
-            <div class="tool-row filter-row">
-              <label>🌅 Narovnat horizont <span id="fval-straighten">0°</span></label>
-              <input type="range" id="fslider-straighten" min="-45" max="45" step="0.5" value="0" oninput="setStraighten(this.value)">
-            </div>
-            <div class="tool-row">
-              <label style="width:100%;display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-family:var(--font-mono)">
-                <input type="checkbox" id="gridToggle" onchange="toggleStraightenGrid(this.checked)"> Vodicí mřížka
-              </label>
-            </div>
-            <div class="tool-row">
-              <label>Zoom</label>
-              <input type="range" id="zoomSlider" min="0.1" max="4" step="0.01" value="1" oninput="editorSetZoom(this.value)">
-            </div>
-          </div>
-        </details>
+        <div class="tool-row">
+          <button class="btn btn-sm" onclick="rotateEditor(-90)">⟲ 90°</button>
+          <button class="btn btn-sm" onclick="rotateEditor(90)">⟳ 90°</button>
+        </div>
 
-        <details class="editor-panel">
-          <summary>☀️ Světlo</summary>
-          <div class="editor-panel-body">
-            <div class="tool-row filter-row">
-              <label>Expozice <span id="fval-exposure">0</span></label>
-              <input type="range" id="fslider-exposure" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Kontrast <span id="fval-contrast">0</span></label>
-              <input type="range" id="fslider-contrast" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Stíny <span id="fval-shadows">0</span></label>
-              <input type="range" id="fslider-shadows" min="-100" max="100" value="0" oninput="setFilter('shadows', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Světla <span id="fval-highlights">0</span></label>
-              <input type="range" id="fslider-highlights" min="-100" max="100" value="0" oninput="setFilter('highlights', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Černý bod <span id="fval-blackPoint">0</span></label>
-              <input type="range" id="fslider-blackPoint" min="0" max="120" value="0" oninput="setFilter('blackPoint', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Bílý bod <span id="fval-whitePoint">255</span></label>
-              <input type="range" id="fslider-whitePoint" min="135" max="255" value="255" oninput="setFilter('whitePoint', this.value)">
-            </div>
-          </div>
-        </details>
+        <div class="tool-row filter-row">
+          <label>🌅 Narovnat horizont <span id="fval-straighten">0°</span></label>
+          <input type="range" id="fslider-straighten" min="-45" max="45" step="0.5" value="0" oninput="setStraighten(this.value)">
+        </div>
+        <div class="tool-row">
+          <label style="width:100%;display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-family:var(--font-mono)">
+            <input type="checkbox" id="gridToggle" onchange="toggleStraightenGrid(this.checked)"> Vodicí mřížka
+          </label>
+        </div>
 
-        <details class="editor-panel">
-          <summary>🎨 Barva</summary>
-          <div class="editor-panel-body">
-            <div class="tool-row filter-row">
-              <label>Sytost <span id="fval-saturation">0</span></label>
-              <input type="range" id="fslider-saturation" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Živost <span id="fval-vibrance">0</span></label>
-              <input type="range" id="fslider-vibrance" min="-100" max="100" value="0" oninput="setFilter('vibrance', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Teplota <span id="fval-temp">0</span></label>
-              <input type="range" id="fslider-temp" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
-            </div>
-          </div>
-        </details>
+        <div class="tool-row">
+          <label>Zoom</label>
+          <input type="range" id="zoomSlider" min="0.1" max="4" step="0.01" value="1" oninput="editorSetZoom(this.value)">
+        </div>
 
-        <details class="editor-panel">
-          <summary>✨ Efekty</summary>
-          <div class="editor-panel-body">
-            <div class="tool-row filter-row">
-              <label>Vinětace <span id="fval-vignette">0</span></label>
-              <input type="range" id="fslider-vignette" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Doostření <span id="fval-sharpen">0</span></label>
-              <input type="range" id="fslider-sharpen" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
-            </div>
-            <div class="tool-row filter-row">
-              <label>Odšumění <span id="fval-denoise">0</span></label>
-              <input type="range" id="fslider-denoise" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
-            </div>
-          </div>
-        </details>
+        <div class="tool-row filter-row">
+          <label>Expozice <span id="fval-exposure">0</span></label>
+          <input type="range" id="fslider-exposure" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Kontrast <span id="fval-contrast">0</span></label>
+          <input type="range" id="fslider-contrast" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Stíny <span id="fval-shadows">0</span></label>
+          <input type="range" id="fslider-shadows" min="-100" max="100" value="0" oninput="setFilter('shadows', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Světla <span id="fval-highlights">0</span></label>
+          <input type="range" id="fslider-highlights" min="-100" max="100" value="0" oninput="setFilter('highlights', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Černý bod <span id="fval-blackPoint">0</span></label>
+          <input type="range" id="fslider-blackPoint" min="0" max="120" value="0" oninput="setFilter('blackPoint', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Bílý bod <span id="fval-whitePoint">255</span></label>
+          <input type="range" id="fslider-whitePoint" min="135" max="255" value="255" oninput="setFilter('whitePoint', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Sytost <span id="fval-saturation">0</span></label>
+          <input type="range" id="fslider-saturation" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Živost <span id="fval-vibrance">0</span></label>
+          <input type="range" id="fslider-vibrance" min="-100" max="100" value="0" oninput="setFilter('vibrance', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Teplota <span id="fval-temp">0</span></label>
+          <input type="range" id="fslider-temp" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Vinětace <span id="fval-vignette">0</span></label>
+          <input type="range" id="fslider-vignette" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Doostření <span id="fval-sharpen">0</span></label>
+          <input type="range" id="fslider-sharpen" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
+        </div>
+        <div class="tool-row filter-row">
+          <label>Odšumění <span id="fval-denoise">0</span></label>
+          <input type="range" id="fslider-denoise" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
+        </div>
+        <div class="tool-row">
+          <label><input type="checkbox" id="aiCheck" onchange="setFilter('ai', this.checked ? 1 : 0)"> ✨ AI vylepšení</label>
+        </div>
 
-        <details class="editor-panel">
-          <summary>✨ Auto vylepšení</summary>
-          <div class="editor-panel-body">
-            <p style="color:var(--text-faint);font-size:11px;margin:-0.2rem 0 0;line-height:1.5">Rozebere TUTO fotku (histogram jasu/barev, ostrost, náklon linií) a podle toho nastaví posuvníky výše.</p>
-            <div class="tool-row">
-              <button class="btn btn-sm" onclick="autoContrast()">🌗 Kontrast</button>
-              <button class="btn btn-sm" onclick="autoExposure()">💡 Expozice</button>
-              <button class="btn btn-sm" onclick="autoWhiteBalance()">🎨 Bílá</button>
-              <button class="btn btn-sm" onclick="autoSharpen()">🔎 Doostření</button>
-              <button class="btn btn-sm" onclick="autoStraighten()">📐 Horizont</button>
-            </div>
-          </div>
-        </details>
-
-        <details class="editor-panel">
-          <summary>📤 Export</summary>
-          <div class="editor-panel-body">
-            <div class="tool-row">
-              <button class="btn btn-sm btn-blue" id="ex-max" onclick="setExport('max')">Max</button>
-              <button class="btn btn-sm" id="ex-2000" onclick="setExport('2000')">2000 px</button>
-              <button class="btn btn-sm" id="ex-fullhd" onclick="setExport('fullhd')">Full HD</button>
-            </div>
-          </div>
-        </details>
+        <div class="tool-row">
+          <button class="btn btn-sm btn-blue" id="ex-max" onclick="setExport('max')">Max</button>
+          <button class="btn btn-sm" id="ex-2000" onclick="setExport('2000')">2000 px</button>
+          <button class="btn btn-sm" id="ex-fullhd" onclick="setExport('fullhd')">Full HD</button>
+        </div>
 
       </div>
 
@@ -747,7 +660,7 @@
   </div>
 </div>
 
-<script src="dashboard-core.js?v=20260730"></script>
-<script src="dashboard-editor.js?v=20260730"></script>
+<script src="dashboard-core.js?v=20260731"></script>
+<script src="dashboard-editor.js?v=20260731"></script>
 </body>
 </html>
