@@ -1026,6 +1026,7 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   .usage-ep-name { min-width: 100px; font-size: 11px; }
   .usage-hours { height: 60px; }
   .usage-hour-label { font-size: 7px; }
+}
 /* =========================================================
    DOPLNĚK KE style.css — graf "Vývoj v čase" v admin sekci
    Vlož na konec style.css (pod stávající @media pravidla).
