@@ -43,30 +43,58 @@ async function readDay(env, date) {
   return null;
 }
 
+/* Pondělí týdne, do kterého spadá zadané datum (00:00, ISO týden Po–Ne).
+   Předchozí verze počítala "týdny" jako rolující 7denní okno couvající
+   od aktuálního okamžiku (dnes, dnes-7, dnes-14, ...) — hranice týdne se
+   tak každý den posunula a popisek běžně přeskakoval přes měsíc uprostřed
+   týdne (např. "29.7.–4.8."), což na první pohled vypadalo jako špatně
+   spočítané datum. Týdny teď místo toho vždy sedí na skutečný kalendářní
+   týden Pondělí–Neděle, takže popisek je stabilní a dá se srovnat s
+   běžným kalendářem. */
+function mondayOf(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0=Ne,1=Po,...,6=So
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+function fmtDayMonth(d) {
+  return d.getDate() + '.' + (d.getMonth() + 1) + '.';
+}
+
 async function getWeeklyPoints(env) {
   const WEEKS = 8;
   const now = new Date();
+  const thisMonday = mondayOf(now);
   const buckets = [];
 
-  // buckets[0] = nejstarší týden, buckets[7] = aktuální týden
+  // buckets[0] = nejstarší týden, buckets[WEEKS-1] = aktuální (možná ještě neúplný) týden
   for (let w = WEEKS - 1; w >= 0; w--) {
+    const monday = new Date(thisMonday);
+    monday.setDate(monday.getDate() - w * 7);
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+
     const days = [];
     for (let d = 0; d < 7; d++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() - (w * 7 + d));
+      const date = new Date(monday);
+      date.setDate(date.getDate() + d);
+      if (date > now) break; // dny, co ještě nenastaly, do týdne nepočítat
       days.push(date.toISOString().slice(0, 10));
     }
-    buckets.push(days);
+    buckets.push({ days, monday, sunday, isCurrent: w === 0 });
   }
 
-  const allDates = buckets.flat();
+  const allDates = buckets.map(b => b.days).flat();
   const allData = await Promise.all(allDates.map(d => readDay(env, d)));
   const valMap = new Map();
   allDates.forEach((d, i) => valMap.set(d, allData[i]));
 
-  return buckets.map((days, i) => {
+  return buckets.map(b => {
     let requests = 0, errors = 0, responseMs = 0;
-    for (const d of days) {
+    for (const d of b.days) {
       const data = valMap.get(d);
       if (!data) continue;
       requests += data.requests || 0;
@@ -74,16 +102,11 @@ async function getWeeklyPoints(env) {
       responseMs += data.responseMs || 0;
     }
     const avgResponseMs = requests > 0 ? Math.round(responseMs / requests) : null;
-
-    // i=0 je nejstarší týden (w=7), i=7 je aktuální (w=0)
-    const w = WEEKS - 1 - i;
-    const oldest = new Date(now);
-    oldest.setDate(oldest.getDate() - (w * 7 + 6));
-    const newest = new Date(now);
-    newest.setDate(newest.getDate() - (w * 7));
-    const label = oldest.getDate() + '.' + (oldest.getMonth() + 1) + '.–' +
-                  newest.getDate() + '.' + (newest.getMonth() + 1) + '.';
-    return { label, requests, errors, avgResponseMs, storageBytes: null };
+    const label = fmtDayMonth(b.monday) + '–' + fmtDayMonth(b.sunday);
+    return {
+      label, requests, errors, avgResponseMs, storageBytes: null,
+      isCurrent: b.isCurrent, daysCounted: b.days.length
+    };
   });
 }
 
@@ -106,7 +129,8 @@ async function getMonthlyPoints(env) {
       days.push(d.toISOString().slice(0, 10));
     }
 
-    buckets.push({ days, label: monthLabels[month] + ' ' + year });
+    const isCurrent = month === now.getMonth() && year === now.getFullYear();
+    buckets.push({ days, label: monthLabels[month] + ' ' + year, isCurrent });
   }
 
   const allDates = buckets.map(b => b.days).flat();
@@ -124,6 +148,6 @@ async function getMonthlyPoints(env) {
       responseMs += data.responseMs || 0;
     }
     const avgResponseMs = requests > 0 ? Math.round(responseMs / requests) : null;
-    return { label: b.label, requests, errors, avgResponseMs, storageBytes: null };
+    return { label: b.label, requests, errors, avgResponseMs, storageBytes: null, isCurrent: b.isCurrent, daysCounted: b.days.length };
   });
 }
