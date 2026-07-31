@@ -1,13 +1,9 @@
-// functions/api/admin/usage/history.js
+// functions/api/admin/usage-history.js
 //
-// GET /api/admin/usage/history?period=week|month
+// GET /api/admin/usage-history?period=week|month
 // → [{ label, requests, errors, avgResponseMs, storageBytes }, ...]
-//
-// Vrací denní agregáty z KV (usage:YYYY-MM-DD) seskupené po týdnech
-// (period=week, posledních 8) nebo měsících (period=month, posledních 6).
-// storageBytes je null — historii úložiště v KV netvoříme.
 
-import { requireAdmin, json } from '../../_auth-utils.js';
+import { requireAdmin, json } from '../_auth-utils.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -33,88 +29,100 @@ export async function onRequestGet(context) {
   }
 }
 
-/* Týdny: posledních 8 týdnů (56 dní), každý týden = 7 dní zpět. */
+/* Načte hodnotu pro jeden den — usage: (JSON) nebo reqcount: (číslo) */
+async function readDay(env, date) {
+  const usageRaw = await env.USAGE_KV.get('usage:' + date);
+  if (usageRaw) {
+    try { return JSON.parse(usageRaw); } catch { /* fall through */ }
+  }
+  const reqRaw = await env.USAGE_KV.get('reqcount:' + date);
+  if (reqRaw) {
+    const n = parseInt(reqRaw, 10) || 0;
+    return { requests: n, errors: 0, responseMs: 0 };
+  }
+  return null;
+}
+
 async function getWeeklyPoints(env) {
   const WEEKS = 8;
   const now = new Date();
-  const keys = [];
   const buckets = [];
 
+  // buckets[0] = nejstarší týden, buckets[7] = aktuální týden
   for (let w = WEEKS - 1; w >= 0; w--) {
-    const bucket = [];
+    const days = [];
     for (let d = 0; d < 7; d++) {
       const date = new Date(now);
       date.setDate(date.getDate() - (w * 7 + d));
-      const key = 'usage:' + date.toISOString().slice(0, 10);
-      keys.push(key);
-      bucket.push(key);
+      days.push(date.toISOString().slice(0, 10));
     }
-    buckets.push(bucket);
+    buckets.push(days);
   }
 
-  const values = await Promise.all(keys.map(k => env.USAGE_KV.get(k)));
+  const allDates = buckets.flat();
+  const allData = await Promise.all(allDates.map(d => readDay(env, d)));
   const valMap = new Map();
-  keys.forEach((k, i) => {
-    valMap.set(k, values[i] ? JSON.parse(values[i]) : null);
-  });
+  allDates.forEach((d, i) => valMap.set(d, allData[i]));
 
-  return buckets.map((bucket, i) => {
+  return buckets.map((days, i) => {
     let requests = 0, errors = 0, responseMs = 0;
-    for (const k of bucket) {
-      const d = valMap.get(k);
-      if (!d) continue;
-      requests += d.requests || 0;
-      errors += d.errors || 0;
-      responseMs += d.responseMs || 0;
+    for (const d of days) {
+      const data = valMap.get(d);
+      if (!data) continue;
+      requests += data.requests || 0;
+      errors += data.errors || 0;
+      responseMs += data.responseMs || 0;
     }
     const avgResponseMs = requests > 0 ? Math.round(responseMs / requests) : null;
+
+    // OPRAVA: i=0 je nejstarší týden (w=7), i=7 je aktuální (w=0)
+    // Nejstarší den v týdnu = now - (w * 7 + 6), kde w = WEEKS - 1 - i
+    const w = WEEKS - 1 - i;
     const oldest = new Date(now);
-    oldest.setDate(oldest.getDate() - (i * 7 + 6));
-    const label = oldest.getDate() + '.' + (oldest.getMonth() + 1) + '.';
+    oldest.setDate(oldest.getDate() - (w * 7 + 6));
+    const newest = new Date(now);
+    newest.setDate(newest.getDate() - (w * 7));
+    const label = oldest.getDate() + '.' + (oldest.getMonth() + 1) + '.–' +
+                  newest.getDate() + '.' + (newest.getMonth() + 1) + '.';
     return { label, requests, errors, avgResponseMs, storageBytes: null };
   });
 }
 
-/* Měsíce: posledních 6 kalendářních měsíců. */
 async function getMonthlyPoints(env) {
   const MONTHS = 6;
   const now = new Date();
   const monthLabels = ['Led', 'Úno', 'Bře', 'Dub', 'Kvě', 'Čvn', 'Čvc', 'Srp', 'Zář', 'Říj', 'Lis', 'Pro'];
   const buckets = [];
-  const keys = [];
 
   for (let m = MONTHS - 1; m >= 0; m--) {
     const ref = new Date(now.getFullYear(), now.getMonth() - m, 1);
     const year = ref.getFullYear();
     const month = ref.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const bucket = [];
+    const days = [];
 
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(year, month, day);
       if (d > now) break;
-      const key = 'usage:' + d.toISOString().slice(0, 10);
-      keys.push(key);
-      bucket.push(key);
+      days.push(d.toISOString().slice(0, 10));
     }
 
-    buckets.push({ bucket, label: monthLabels[month] + ' ' + year });
+    buckets.push({ days, label: monthLabels[month] + ' ' + year });
   }
 
-  const values = await Promise.all(keys.map(k => env.USAGE_KV.get(k)));
+  const allDates = buckets.map(b => b.days).flat();
+  const allData = await Promise.all(allDates.map(d => readDay(env, d)));
   const valMap = new Map();
-  keys.forEach((k, i) => {
-    valMap.set(k, values[i] ? JSON.parse(values[i]) : null);
-  });
+  allDates.forEach((d, i) => valMap.set(d, allData[i]));
 
   return buckets.map(b => {
     let requests = 0, errors = 0, responseMs = 0;
-    for (const k of b.bucket) {
-      const d = valMap.get(k);
-      if (!d) continue;
-      requests += d.requests || 0;
-      errors += d.errors || 0;
-      responseMs += d.responseMs || 0;
+    for (const d of b.days) {
+      const data = valMap.get(d);
+      if (!data) continue;
+      requests += data.requests || 0;
+      errors += data.errors || 0;
+      responseMs += data.responseMs || 0;
     }
     const avgResponseMs = requests > 0 ? Math.round(responseMs / requests) : null;
     return { label: b.label, requests, errors, avgResponseMs, storageBytes: null };
