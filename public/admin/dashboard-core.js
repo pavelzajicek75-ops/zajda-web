@@ -1730,7 +1730,11 @@ async function resizeExistingPhoto(photo, maxRes, quality) {
   const blob = await r.blob();
   let bitmap;
   try {
-    bitmap = await createImageBitmap(blob);
+    // imageOrientation: 'from-image' — beze změny by mobilní fotky na výšku
+    // (s EXIF rotací) mohly po hromadné úpravě vyjít položené na bok. Stejná
+    // volba se používá i při běžném uploadu (compressImage), teď je to
+    // sjednocené na obou cestách.
+    bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   } catch {
     bitmap = await new Promise((resolve, reject) => {
       const img = new Image();
