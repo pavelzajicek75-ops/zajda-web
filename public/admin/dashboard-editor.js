@@ -188,7 +188,8 @@ let ED = {
   lastX: 0,
   lastY: 0,
   stats: null,
-  activePreset: ''
+  activePreset: '',
+  presetIntensity: 100
 };
 
 /* === GALERIE === */
@@ -216,6 +217,11 @@ async function openEditor(id) {
   ED.crop = 'free'; ED.export = 'max'; ED.cropRect = null;
   ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0 };
   ED.stats = null;
+  ED.presetIntensity = 100;
+  const intensitySlider = $('presetIntensitySlider');
+  if (intensitySlider) intensitySlider.value = 100;
+  const intensityLabel = $('presetIntensityVal');
+  if (intensityLabel) intensityLabel.textContent = '100%';
   if (ED.blobUrl) { URL.revokeObjectURL(ED.blobUrl); ED.blobUrl = null; }
   if (ED.toneBaseUrl) { URL.revokeObjectURL(ED.toneBaseUrl); ED.toneBaseUrl = null; }
   const straightSlider = $('fslider-straighten');
@@ -420,13 +426,22 @@ function setFilter(key, val) {
 const FILTER_PRESETS = {
   none:         { exposure: 0,   contrast: 0,   saturation: 0,   vibrance: 0,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 0,   vignette: 0,  sharpen: 0,  denoise: 0 },
   bw:           { exposure: 0,   contrast: 15,  saturation: -100, vibrance: 0,  shadows: 5,   highlights: -10, blackPoint: 5,  whitePoint: 250, temp: 0,   vignette: 15, sharpen: 15, denoise: 0 },
+  highKeyBW:    { exposure: 15,  contrast: -5,  saturation: -100, vibrance: 0,  shadows: 25,  highlights: 5,   blackPoint: 0,  whitePoint: 255, temp: 0,   vignette: 0,  sharpen: 10, denoise: 0 },
   vintage:      { exposure: -5,  contrast: -10, saturation: -25, vibrance: -10, shadows: 10,  highlights: -15, blackPoint: 15, whitePoint: 235, temp: 25,  vignette: 35, sharpen: 0,  denoise: 5 },
+  fadedFilm:    { exposure: 3,   contrast: -25, saturation: -15, vibrance: -5,  shadows: 30,  highlights: -20, blackPoint: 25, whitePoint: 230, temp: 12,  vignette: 10, sharpen: 0,  denoise: 8 },
+  crossProcess: { exposure: 2,   contrast: 30,  saturation: 20,  vibrance: 15,  shadows: -15, highlights: 10,  blackPoint: 15, whitePoint: 245, temp: -8,  vignette: 20, sharpen: 10, denoise: 0 },
   warm:         { exposure: 5,   contrast: 5,   saturation: 5,   vibrance: 15,  shadows: 5,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: 30,  vignette: 0,  sharpen: 0,  denoise: 0 },
+  goldenHour:   { exposure: 8,   contrast: 8,   saturation: 10,  vibrance: 25,  shadows: 10,  highlights: -12, blackPoint: 5,  whitePoint: 248, temp: 35,  vignette: 15, sharpen: 5,  denoise: 0 },
+  autumnGlow:   { exposure: 3,   contrast: 12,  saturation: 18,  vibrance: 20,  shadows: 0,   highlights: -8,  blackPoint: 8,  whitePoint: 248, temp: 22,  vignette: 12, sharpen: 5,  denoise: 0 },
   cold:         { exposure: 0,   contrast: 8,   saturation: -5,  vibrance: 5,   shadows: 0,   highlights: 0,   blackPoint: 0,  whitePoint: 255, temp: -30, vignette: 0,  sharpen: 0,  denoise: 0 },
+  arcticBlue:   { exposure: 5,   contrast: 5,   saturation: -10, vibrance: 10,  shadows: 15,  highlights: 5,   blackPoint: 0,  whitePoint: 255, temp: -35, vignette: 0,  sharpen: 5,  denoise: 0 },
+  blueHour:     { exposure: -5,  contrast: 15,  saturation: 5,   vibrance: 15,  shadows: -10, highlights: 0,   blackPoint: 5,  whitePoint: 250, temp: -25, vignette: 25, sharpen: 5,  denoise: 0 },
   highContrast: { exposure: 0,   contrast: 35,  saturation: 10,  vibrance: 10,  shadows: -20, highlights: 20,  blackPoint: 12, whitePoint: 245, temp: 0,   vignette: 15, sharpen: 25, denoise: 0 },
   vivid:        { exposure: 5,   contrast: 12,  saturation: 15,  vibrance: 40,  shadows: 5,   highlights: -5,  blackPoint: 0,  whitePoint: 255, temp: 5,   vignette: 0,  sharpen: 15, denoise: 0 },
+  neonNight:    { exposure: -5,  contrast: 30,  saturation: 25,  vibrance: 35,  shadows: -25, highlights: 10,  blackPoint: 15, whitePoint: 245, temp: -15, vignette: 20, sharpen: 15, denoise: 0 },
   filmNoir:     { exposure: -10, contrast: 25,  saturation: -60, vibrance: 0,   shadows: -15, highlights: 15,  blackPoint: 20, whitePoint: 240, temp: -10, vignette: 45, sharpen: 10, denoise: 0 },
   pastel:       { exposure: 8,   contrast: -15, saturation: -20, vibrance: 25,  shadows: 20,  highlights: -10, blackPoint: 15, whitePoint: 245, temp: 10,  vignette: 0,  sharpen: 0,  denoise: 5 },
+  softPortrait: { exposure: 8,   contrast: -8,  saturation: -5,  vibrance: 15,  shadows: 20,  highlights: -15, blackPoint: 5,  whitePoint: 248, temp: 12,  vignette: 8,  sharpen: 0,  denoise: 8 },
   drama:        { exposure: -8,  contrast: 40,  saturation: -10, vibrance: 20,  shadows: -30, highlights: 25,  blackPoint: 10, whitePoint: 248, temp: 0,   vignette: 30, sharpen: 20, denoise: 0 },
   sepia:        { exposure: 0,   contrast: 8,   saturation: -80, vibrance: 0,   shadows: 12,  highlights: -8,  blackPoint: 10, whitePoint: 235, temp: 45,  vignette: 25, sharpen: 0,  denoise: 3 },
   clean:        { exposure: 10,  contrast: 8,   saturation: 5,   vibrance: 10,  shadows: 15,  highlights: -15, blackPoint: 0,  whitePoint: 255, temp: -5,  vignette: 0,  sharpen: 10, denoise: 0 },
@@ -652,11 +667,43 @@ function autoEnhanceAll() {
   showToast('Automatické vylepšení hotovo — zkontroluj výsledek a doladˇ dle chuti', 'success');
 }
 
+/* === SÍLA PŘEDVOLBY (jako "Amount" u Lightroom presetů) ===
+   Místo binárního zapnuto/vypnuto jde intenzita stylu doladit 0–150 %.
+   Většina hodnot v předvolbě je "delta" od neutrálu (0), ty se prostě
+   násobí. blackPoint/whitePoint ale mají neutrál 0 / 255, ne 0 — takže
+   se škáluje jejich VZDÁLENOST od neutrálu, ne hodnota samotná. */
+function scalePreset(preset, intensity) {
+  const k = intensity / 100;
+  const scaled = {};
+  for (const key of ['exposure', 'contrast', 'saturation', 'vibrance', 'shadows', 'highlights', 'temp', 'vignette', 'sharpen', 'denoise']) {
+    scaled[key] = Math.round((preset[key] || 0) * k);
+  }
+  scaled.blackPoint = Math.max(0, Math.round((preset.blackPoint || 0) * k));
+  scaled.whitePoint = Math.min(255, Math.round(255 - (255 - (preset.whitePoint ?? 255)) * k));
+  scaled.vignette = Math.max(0, scaled.vignette);
+  scaled.sharpen = Math.max(0, scaled.sharpen);
+  scaled.denoise = Math.max(0, scaled.denoise);
+  return scaled;
+}
+
+function setPresetIntensity(val) {
+  ED.presetIntensity = parseInt(val);
+  const label = $('presetIntensityVal');
+  if (label) label.textContent = val + '%';
+  if (ED.activePreset && FILTER_PRESETS[ED.activePreset]) {
+    ED.filters = scalePreset(FILTER_PRESETS[ED.activePreset], ED.presetIntensity);
+    syncFilterSlidersFromState();
+    updateSharpenFilter(ED.filters.sharpen);
+    scheduleToneRegeneration();
+    applyFilters();
+  }
+}
+
 function applyPreset(name) {
   const preset = FILTER_PRESETS[name];
   if (!preset) return;
-  ED.filters = { ...preset };
   ED.activePreset = name;
+  ED.filters = scalePreset(preset, ED.presetIntensity);
   syncFilterSlidersFromState();
   updateSharpenFilter(ED.filters.sharpen);
   scheduleToneRegeneration();
@@ -665,9 +712,12 @@ function applyPreset(name) {
 }
 
 const PRESET_LABELS = {
-  none: '↺ Bez efektu', bw: 'Černobílá', vintage: 'Vintage', warm: 'Teplý tón', cold: 'Studený tón',
-  highContrast: 'Vysoký kontrast', vivid: 'Živé barvy', filmNoir: 'Film Noir', pastel: 'Pastelové',
-  drama: 'Dramatický', sepia: 'Sépie', clean: 'Čistý/Jasný', matte: 'Matný', sunset: 'Západ slunce', night: 'Noční'
+  none: '↺ Bez efektu', bw: 'Černobílá', highKeyBW: 'Světlá ČB', vintage: 'Vintage', fadedFilm: 'Vybledlý film',
+  crossProcess: 'Cross process', warm: 'Teplý tón', goldenHour: 'Zlatá hodinka', autumnGlow: 'Podzimní záře',
+  cold: 'Studený tón', arcticBlue: 'Arktická modrá', blueHour: 'Modrá hodinka',
+  highContrast: 'Vysoký kontrast', vivid: 'Živé barvy', neonNight: 'Neonová noc', filmNoir: 'Film Noir', pastel: 'Pastelové',
+  softPortrait: 'Jemný portrét', drama: 'Dramatický', sepia: 'Sépie', clean: 'Čistý/Jasný', matte: 'Matný',
+  sunset: 'Západ slunce', night: 'Noční'
 };
 
 /* Přibližný CSS filtr pro RYCHLÝ náhled stylu na malé miniatuře (jen
