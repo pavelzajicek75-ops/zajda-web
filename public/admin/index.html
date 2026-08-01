@@ -518,6 +518,10 @@
           <summary>🎨 Předvolby</summary>
           <div class="editor-panel-body">
             <div id="presetSwatches" class="preset-swatches"></div>
+            <div class="tool-row filter-row">
+              <label>Síla stylu <span id="presetIntensityVal">100%</span></label>
+              <input type="range" id="presetIntensitySlider" min="0" max="150" value="100" oninput="setPresetIntensity(this.value)">
+            </div>
           </div>
         </details>
 
