@@ -514,118 +514,148 @@
 
       <div class="editor-sidebar">
 
-        <div class="tool-row">
-          <label style="width:100%">🎨 Předvolby</label>
-        </div>
-        <div class="tool-row">
-          <select id="presetSelect" class="ribbon-select" style="width:100%" onchange="applyPreset(this.value)">
-            <option value="">— Vyber styl —</option>
-            <option value="none">↺ Bez efektu (reset)</option>
-            <option value="bw">Černobílá</option>
-            <option value="vintage">Vintage</option>
-            <option value="warm">Teplý tón</option>
-            <option value="cold">Studený tón</option>
-            <option value="highContrast">Vysoký kontrast</option>
-            <option value="vivid">Živé barvy</option>
-            <option value="filmNoir">Film Noir</option>
-            <option value="pastel">Pastelové</option>
-            <option value="drama">Dramatický</option>
-            <option value="sepia">Sépie</option>
-            <option value="clean">Čistý/Jasný</option>
-            <option value="matte">Matný</option>
-            <option value="sunset">Západ slunce</option>
-            <option value="night">Noční</option>
-          </select>
-        </div>
+        <details class="editor-panel" open>
+          <summary>🎨 Předvolby</summary>
+          <div class="editor-panel-body">
+            <div id="presetSwatches" class="preset-swatches"></div>
+          </div>
+        </details>
 
-        <div class="tool-row crop-mode-row">
-          <button class="btn btn-sm btn-blue" onclick="setCrop('free')">Volný</button>
-          <button class="btn btn-sm" onclick="setCrop('1:1')">1:1</button>
-          <button class="btn btn-sm" onclick="setCrop('4:3')">4:3</button>
-          <button class="btn btn-sm" onclick="setCrop('3:4')">3:4</button>
-          <button class="btn btn-sm" onclick="setCrop('16:9')">16:9</button>
-        </div>
-        <div class="tool-row">
-          <button class="btn btn-sm" onclick="applyCrop()">✂️ Použít ořez</button>
-        </div>
+        <details class="editor-panel">
+          <summary>✂️ Ořez</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row crop-mode-row">
+              <button class="btn btn-sm btn-blue" onclick="setCrop('free')">Volný</button>
+              <button class="btn btn-sm" onclick="setCrop('1:1')">1:1</button>
+              <button class="btn btn-sm" onclick="setCrop('4:3')">4:3</button>
+              <button class="btn btn-sm" onclick="setCrop('3:4')">3:4</button>
+              <button class="btn btn-sm" onclick="setCrop('16:9')">16:9</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="applyCrop()">✂️ Použít ořez</button>
+            </div>
+            <p style="font-size:11px;color:var(--text-faint);margin:0">Pro ořez musí být rotace i narovnání horizontu na 0°.</p>
+          </div>
+        </details>
 
-        <div class="tool-row">
-          <button class="btn btn-sm" onclick="rotateEditor(-90)">⟲ 90°</button>
-          <button class="btn btn-sm" onclick="rotateEditor(90)">⟳ 90°</button>
-        </div>
+        <details class="editor-panel">
+          <summary>🔄 Transformace</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="rotateEditor(-90)">⟲ 90°</button>
+              <button class="btn btn-sm" onclick="rotateEditor(90)">⟳ 90°</button>
+            </div>
+            <div class="tool-row filter-row">
+              <label>🌅 Narovnat horizont <span id="fval-straighten">0°</span></label>
+              <input type="range" id="fslider-straighten" min="-45" max="45" step="0.5" value="0" oninput="setStraighten(this.value)">
+            </div>
+            <div class="tool-row">
+              <label style="width:100%;display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-family:var(--font-mono)">
+                <input type="checkbox" id="gridToggle" onchange="toggleStraightenGrid(this.checked)"> Vodicí mřížka
+              </label>
+            </div>
+            <div class="tool-row filter-row">
+              <label>Zoom</label>
+              <input type="range" id="zoomSlider" min="0.1" max="4" step="0.01" value="1" oninput="editorSetZoom(this.value)">
+            </div>
+          </div>
+        </details>
 
-        <div class="tool-row filter-row">
-          <label>🌅 Narovnat horizont <span id="fval-straighten">0°</span></label>
-          <input type="range" id="fslider-straighten" min="-45" max="45" step="0.5" value="0" oninput="setStraighten(this.value)">
-        </div>
-        <div class="tool-row">
-          <label style="width:100%;display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-family:var(--font-mono)">
-            <input type="checkbox" id="gridToggle" onchange="toggleStraightenGrid(this.checked)"> Vodicí mřížka
-          </label>
-        </div>
+        <details class="editor-panel" open>
+          <summary>✨ Automaticky</summary>
+          <div class="editor-panel-body">
+            <p style="font-size:11px;color:var(--text-faint);margin:0 0 0.2rem">Skutečná analýza fotky (histogram, ostrost, horizont) — ne pevný filtr.</p>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoStraighten()" title="Najde vodorovnou linii a narovná horizont">📐 Horizont</button>
+              <button class="btn btn-sm" onclick="autoExposure()" title="Posune jas ke střední šedé">☀️ Expozice</button>
+              <button class="btn btn-sm" onclick="autoContrast()" title="Natáhne histogram (auto levels)">◐ Kontrast</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoWhiteBalance()" title="Gray-world vyvážení bílé">⚪ Bílá</button>
+              <button class="btn btn-sm" onclick="autoSharpen()" title="Podle míry rozostření fotky">🔍 Doostření</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm btn-blue" style="width:100%;justify-content:center" onclick="autoEnhanceAll()">✨ Vylepšit vše najednou</button>
+            </div>
+          </div>
+        </details>
 
-        <div class="tool-row">
-          <label>Zoom</label>
-          <input type="range" id="zoomSlider" min="0.1" max="4" step="0.01" value="1" oninput="editorSetZoom(this.value)">
-        </div>
+        <details class="editor-panel" open>
+          <summary>☀️ Světlo</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row filter-row">
+              <label>Expozice <span id="fval-exposure">0</span></label>
+              <input type="range" id="fslider-exposure" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Kontrast <span id="fval-contrast">0</span></label>
+              <input type="range" id="fslider-contrast" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Stíny <span id="fval-shadows">0</span></label>
+              <input type="range" id="fslider-shadows" min="-100" max="100" value="0" oninput="setFilter('shadows', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Světla <span id="fval-highlights">0</span></label>
+              <input type="range" id="fslider-highlights" min="-100" max="100" value="0" oninput="setFilter('highlights', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Černý bod <span id="fval-blackPoint">0</span></label>
+              <input type="range" id="fslider-blackPoint" min="0" max="120" value="0" oninput="setFilter('blackPoint', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Bílý bod <span id="fval-whitePoint">255</span></label>
+              <input type="range" id="fslider-whitePoint" min="135" max="255" value="255" oninput="setFilter('whitePoint', this.value)">
+            </div>
+          </div>
+        </details>
 
-        <div class="tool-row filter-row">
-          <label>Expozice <span id="fval-exposure">0</span></label>
-          <input type="range" id="fslider-exposure" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Kontrast <span id="fval-contrast">0</span></label>
-          <input type="range" id="fslider-contrast" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Stíny <span id="fval-shadows">0</span></label>
-          <input type="range" id="fslider-shadows" min="-100" max="100" value="0" oninput="setFilter('shadows', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Světla <span id="fval-highlights">0</span></label>
-          <input type="range" id="fslider-highlights" min="-100" max="100" value="0" oninput="setFilter('highlights', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Černý bod <span id="fval-blackPoint">0</span></label>
-          <input type="range" id="fslider-blackPoint" min="0" max="120" value="0" oninput="setFilter('blackPoint', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Bílý bod <span id="fval-whitePoint">255</span></label>
-          <input type="range" id="fslider-whitePoint" min="135" max="255" value="255" oninput="setFilter('whitePoint', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Sytost <span id="fval-saturation">0</span></label>
-          <input type="range" id="fslider-saturation" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Živost <span id="fval-vibrance">0</span></label>
-          <input type="range" id="fslider-vibrance" min="-100" max="100" value="0" oninput="setFilter('vibrance', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Teplota <span id="fval-temp">0</span></label>
-          <input type="range" id="fslider-temp" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Vinětace <span id="fval-vignette">0</span></label>
-          <input type="range" id="fslider-vignette" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Doostření <span id="fval-sharpen">0</span></label>
-          <input type="range" id="fslider-sharpen" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
-        </div>
-        <div class="tool-row filter-row">
-          <label>Odšumění <span id="fval-denoise">0</span></label>
-          <input type="range" id="fslider-denoise" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
-        </div>
-        <div class="tool-row">
-          <label><input type="checkbox" id="aiCheck" onchange="setFilter('ai', this.checked ? 1 : 0)"> ✨ AI vylepšení</label>
-        </div>
+        <details class="editor-panel">
+          <summary>🎨 Barva</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row filter-row">
+              <label>Sytost <span id="fval-saturation">0</span></label>
+              <input type="range" id="fslider-saturation" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Živost <span id="fval-vibrance">0</span></label>
+              <input type="range" id="fslider-vibrance" min="-100" max="100" value="0" oninput="setFilter('vibrance', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Teplota <span id="fval-temp">0</span></label>
+              <input type="range" id="fslider-temp" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
+            </div>
+          </div>
+        </details>
 
-        <div class="tool-row">
-          <button class="btn btn-sm btn-blue" id="ex-max" onclick="setExport('max')">Max</button>
-          <button class="btn btn-sm" id="ex-2000" onclick="setExport('2000')">2000 px</button>
-          <button class="btn btn-sm" id="ex-fullhd" onclick="setExport('fullhd')">Full HD</button>
-        </div>
+        <details class="editor-panel">
+          <summary>💫 Efekty</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row filter-row">
+              <label>Vinětace <span id="fval-vignette">0</span></label>
+              <input type="range" id="fslider-vignette" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Doostření <span id="fval-sharpen">0</span></label>
+              <input type="range" id="fslider-sharpen" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Odšumění <span id="fval-denoise">0</span></label>
+              <input type="range" id="fslider-denoise" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-panel">
+          <summary>📤 Export</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row">
+              <button class="btn btn-sm btn-blue" id="ex-max" onclick="setExport('max')">Max</button>
+              <button class="btn btn-sm" id="ex-2000" onclick="setExport('2000')">2000 px</button>
+              <button class="btn btn-sm" id="ex-fullhd" onclick="setExport('fullhd')">Full HD</button>
+            </div>
+          </div>
+        </details>
 
       </div>
 
