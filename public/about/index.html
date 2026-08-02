@@ -376,6 +376,14 @@
       overlay.classList.add('open');
     }
 
+    // Escape zavře lightbox — dřív šlo jen kliknout mimo obrázek, klávesnicoví
+    // uživatelé neměli jak se dostat zpátky bez myši.
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      var overlay = document.getElementById('lightboxOverlay');
+      if (overlay && overlay.classList.contains('open')) overlay.classList.remove('open');
+    });
+
     async function loadQuotes() {
       try { var r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
       catch(e) { return []; }
@@ -516,6 +524,7 @@
         var aboutRes = await fetch('/api/about/get');
         var data = await aboutRes.json();
         document.getElementById('pageTitle').textContent = data.title || 'O Zajdovi';
+        document.title = (data.title || 'O Zajdovi') + ' — Moje diagnóza, můj vesmír';
         var content = document.getElementById('content');
         content.classList.remove('loading');
         if (!data.text) {
@@ -561,7 +570,11 @@
         var a = sorted[i];
         var title = a.title || 'Bez názvu';
         var dateStr = formatDate(a.date || a.created);
-        html += '<a class="article-link" href="/article.html?id=' + encodeURIComponent(a.id) + '">' +
+        // POZOR: dřív tu bylo "/article.html?id=..." — na zbytku webu
+        // (homepage, samotná stránka článku) se ale všude používá čisté
+        // "/article?id=..." bez přípony. Ten nesoulad dělal ze všech
+        // odkazů na téhle stránce mrtvé 404 odkazy.
+        html += '<a class="article-link" href="/article?id=' + encodeURIComponent(a.id) + '">' +
           escapeHtml(title) +
           (dateStr ? '<span class="art-date">' + dateStr + '</span>' : '') +
           '</a>';
@@ -613,14 +626,15 @@
         if (!sorted.length) return;
         document.getElementById('newsSection').style.display = 'block';
         document.getElementById('newsGrid').innerHTML = sorted.map(function(a) {
-          var excerpt = a.content
-            ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...'
-            : '';
+          var excerpt = a.excerpt
+            ? a.excerpt
+            : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '');
           var date = formatDate(a.date || a.created);
           var cover = a.coverUrl
             ? '<img src="' + a.coverUrl + '" alt="">'
             : '<div class="card-placeholder">📷</div>';
-          return '<a class="news-card" href="/article.html?id=' + encodeURIComponent(a.id) + '">' +
+          // POZOR: dřív "/article.html?id=..." — opraveno na "/article?id=..."
+          return '<a class="news-card" href="/article?id=' + encodeURIComponent(a.id) + '">' +
             cover +
             '<div class="card-body">' +
             '<h3>' + escapeHtml(a.title) + '</h3>' +
