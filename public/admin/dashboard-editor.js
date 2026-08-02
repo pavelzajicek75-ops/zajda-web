@@ -189,7 +189,9 @@ let ED = {
   lastY: 0,
   stats: null,
   activePreset: '',
-  presetIntensity: 100
+  presetIntensity: 100,
+  filterHistory: [],
+  _suppressSnapshot: false
 };
 
 /* === GALERIE === */
@@ -218,6 +220,7 @@ async function openEditor(id) {
   ED.filters = { exposure: 0, contrast: 0, saturation: 0, vibrance: 0, shadows: 0, highlights: 0, blackPoint: 0, whitePoint: 255, temp: 0, vignette: 0, sharpen: 0, denoise: 0 };
   ED.stats = null;
   ED.presetIntensity = 100;
+  ED.filterHistory = [];
   const intensitySlider = $('presetIntensitySlider');
   if (intensitySlider) intensitySlider.value = 100;
   const intensityLabel = $('presetIntensityVal');
@@ -315,6 +318,31 @@ function updatePreviewTransform() {
 
 function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewTransform(); }
 
+/* === PŘED/PO NÁHLED ===
+   Podržením tlačítka se na chvíli ukáže needitovaná fotka (bez CSS
+   filtrů, tónové křivky i vinětace) — jako v Lightroomu/Photoshopu.
+   Netýká se ořezu/rotace (to jsou už "trvalé" změny geometrie, ne
+   filtr), jen barevných/světelných úprav a stylů. */
+let beforeAfterState = null;
+function showBeforePreview(show) {
+  const img = $('editImg');
+  const vig = document.querySelector('.vignette-overlay');
+  if (!img) return;
+  if (show) {
+    if (beforeAfterState) return; // už drženo
+    beforeAfterState = { filter: img.style.filter, src: img.src, vigOpacity: vig ? vig.style.opacity : null };
+    img.style.filter = 'none';
+    if (ED.blobUrl) img.src = ED.blobUrl;
+    if (vig) vig.style.opacity = 0;
+  } else {
+    if (!beforeAfterState) return;
+    img.style.filter = beforeAfterState.filter;
+    img.src = beforeAfterState.src;
+    if (vig && beforeAfterState.vigOpacity != null) vig.style.opacity = beforeAfterState.vigOpacity;
+    beforeAfterState = null;
+  }
+}
+
 /* === EDITOR: filtry === */
 function applyFilters() {
   const img = $('editImg');
@@ -410,6 +438,7 @@ function syncFilterSlidersFromState() {
 }
 
 function setFilter(key, val) {
+  if (!ED._suppressSnapshot) snapshotFilters();
   ED.filters[key] = parseInt(val);
   const el = $('fval-' + key);
   if (el) el.textContent = val;
@@ -420,6 +449,31 @@ function setFilter(key, val) {
   ED.activePreset = '';
   document.querySelectorAll('.preset-swatch.active').forEach(b => b.classList.remove('active'));
   applyFilters();
+}
+
+/* === HISTORIE ÚPRAV (Zpět) ===
+   Posuvníky (expozice, kontrast, stíny...) a předvolby/auto-tlačítka
+   dřív neměly žádné "zpět" — jen textový WYSIWYG editor článku. Tohle
+   ukládá otisk ED.filters PŘED každou změnou (max 25 kroků), takže
+   "↶ Zpět (styl)" vrátí poslední úpravu. Neřeší ořez/rotaci (to jsou
+   geometrické, ne filtrové změny) — na ty pořád slouží vlastní
+   ⟲⟳90° tlačítka a posuvník narovnání. */
+function snapshotFilters() {
+  ED.filterHistory = ED.filterHistory || [];
+  ED.filterHistory.push(JSON.stringify({ filters: ED.filters, preset: ED.activePreset }));
+  if (ED.filterHistory.length > 25) ED.filterHistory.shift();
+}
+
+function undoFilterChange() {
+  if (!ED.filterHistory || !ED.filterHistory.length) { showToast('Není co vrátit zpět.', 'info'); return; }
+  const prev = JSON.parse(ED.filterHistory.pop());
+  ED.filters = prev.filters;
+  ED.activePreset = prev.preset || '';
+  syncFilterSlidersFromState();
+  updateSharpenFilter(ED.filters.sharpen);
+  scheduleToneRegeneration();
+  applyFilters();
+  document.querySelectorAll('.preset-swatch').forEach(b => b.classList.toggle('active', b.dataset.preset === ED.activePreset));
 }
 
 /* === PŘEDVOLBY (jako styly ve Photoshopu) === */
@@ -495,6 +549,7 @@ function getImageStats() {
 function autoContrast() {
   const s = getImageStats();
   if (!s) return;
+  if (!ED._suppressSnapshot) snapshotFilters();
   ED.filters.blackPoint = Math.max(0, Math.min(60, Math.round(s.lumMin)));
   ED.filters.whitePoint = Math.min(255, Math.max(195, Math.round(s.lumMax)));
   syncFilterSlidersFromState();
@@ -507,6 +562,7 @@ function autoContrast() {
 function autoExposure() {
   const s = getImageStats();
   if (!s) return;
+  if (!ED._suppressSnapshot) snapshotFilters();
   const avgLum = (s.rAvg + s.gAvg + s.bAvg) / 3;
   ED.filters.exposure = Math.max(-60, Math.min(60, Math.round((128 - avgLum) * 0.5)));
   syncFilterSlidersFromState();
@@ -519,6 +575,7 @@ function autoExposure() {
 function autoWhiteBalance() {
   const s = getImageStats();
   if (!s) return;
+  if (!ED._suppressSnapshot) snapshotFilters();
   const rbDiff = s.rAvg - s.bAvg;
   ED.filters.temp = Math.max(-45, Math.min(45, Math.round(-rbDiff * 0.85)));
   syncFilterSlidersFromState();
@@ -571,6 +628,7 @@ function computeBlurAndNoiseScores(img) {
 
 function autoSharpen() {
   if (!ED.img) return;
+  if (!ED._suppressSnapshot) snapshotFilters();
   const { sharpnessVariance } = computeBlurAndNoiseScores(ED.img);
   // Nízká variance Laplaciánu = rozmazaná fotka → potřebuje víc doostřit.
   let amount;
@@ -659,11 +717,14 @@ function autoStraighten() {
    do prezentovatelného stavu" bez ručního doťukávání posuvníků. */
 function autoEnhanceAll() {
   if (!ED.img) return;
+  snapshotFilters();
+  ED._suppressSnapshot = true;
   autoStraighten();
   autoExposure();
   autoContrast();
   autoWhiteBalance();
   autoSharpen();
+  ED._suppressSnapshot = false;
   showToast('Automatické vylepšení hotovo — zkontroluj výsledek a doladˇ dle chuti', 'success');
 }
 
@@ -702,6 +763,7 @@ function setPresetIntensity(val) {
 function applyPreset(name) {
   const preset = FILTER_PRESETS[name];
   if (!preset) return;
+  if (!ED._suppressSnapshot) snapshotFilters();
   ED.activePreset = name;
   ED.filters = scalePreset(preset, ED.presetIntensity);
   syncFilterSlidersFromState();
@@ -872,6 +934,7 @@ function applyCrop() {
     newImg.onload = () => {
       ED.img = newImg; ED.crop = 'free'; ED.panX = 0; ED.panY = 0; ED.rotate = 0; ED.scale = 1;
       ED.stats = null;
+      ED.filterHistory = [];
       const zs = $('zoomSlider'); if (zs) zs.value = 1;
       const el = $('editImg'); if (el) el.src = url;
       fitImageToPreview();
@@ -1106,6 +1169,8 @@ function saveArticleDraft() {
   }
   const draft = {
     title, content,
+    excerpt: $('artExcerpt')?.value || '',
+    coverUrl: $('artCoverUrl')?.value || '',
     date: $('artDate')?.value || '',
     place: $('artPlace')?.value || '',
     sectionId: $('artSection')?.value || '',
@@ -1114,6 +1179,7 @@ function saveArticleDraft() {
   };
   localStorage.setItem(articleDraftKey(), JSON.stringify(draft));
   updateArticleDraftStatus('💾 Koncept uložen ' + new Date(draft.savedAt).toLocaleTimeString('cs', { hour: '2-digit', minute: '2-digit' }));
+  scheduleServerDraftSave();
 }
 
 function scheduleArticleDraftSave() {
@@ -1121,9 +1187,67 @@ function scheduleArticleDraftSave() {
   articleDraftTimer = setTimeout(saveArticleDraft, 1200);
 }
 
+/* === SERVEROVÁ ZÁLOHA KONCEPTU ===
+   localStorage koncept (výše) žije jen v TOMHLE prohlížeči/zařízení —
+   po smazání keší nebo na jiném počítači je nenávratně pryč. Tohle ho
+   navíc (s větším zpožděním, ať to zbytečně nemlátí do API při každém
+   písmenku) zazálohuje na server přes /api/data/article-draft — stejný
+   princip jako existující /api/data/folders pro složky fotek. Lokální
+   koncept zůstává primární a okamžitý; server je jen pojistka navíc. */
+let serverDraftTimer = null;
+function scheduleServerDraftSave() {
+  clearTimeout(serverDraftTimer);
+  serverDraftTimer = setTimeout(syncDraftToServer, 8000);
+}
+
+async function syncDraftToServer() {
+  const titleEl = $('artTitle'), editorEl = $('artEditor');
+  if (!titleEl || !editorEl) return;
+  const title = titleEl.value || '';
+  const content = editorEl.innerHTML || '';
+  if (!title.trim() && !content.replace(/<[^>]+>/g, '').trim()) return;
+  const draft = {
+    title, content,
+    excerpt: $('artExcerpt')?.value || '',
+    coverUrl: $('artCoverUrl')?.value || '',
+    date: $('artDate')?.value || '',
+    place: $('artPlace')?.value || '',
+    sectionId: $('artSection')?.value || '',
+    subsectionId: $('artSubsection')?.value || '',
+    savedAt: Date.now()
+  };
+  try {
+    const r = await fetch('/api/data/article-draft?key=' + encodeURIComponent(articleDraftKey()), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(draft)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    updateArticleDraftStatus('☁️ Zálohováno na server ' + new Date(draft.savedAt).toLocaleTimeString('cs', { hour: '2-digit', minute: '2-digit' }));
+  } catch (e) {
+    console.error('/api/data/article-draft (POST) selhalo:', e);
+    // Tichý fail — lokální koncept (localStorage) je pořád v bezpečí,
+    // server je jen záloha navíc pro případ jiného zařízení.
+  }
+}
+
+async function fetchServerDraft(key) {
+  try {
+    const r = await fetch('/api/data/article-draft?key=' + encodeURIComponent(key));
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && (d.title || d.content) ? d : null;
+  } catch (e) {
+    console.error('/api/data/article-draft (GET) selhalo:', e);
+    return null;
+  }
+}
+
 function clearArticleDraft(key) {
-  localStorage.removeItem(key || articleDraftKey());
+  const k = key || articleDraftKey();
+  localStorage.removeItem(k);
   updateArticleDraftStatus('');
+  fetch('/api/data/article-draft?key=' + encodeURIComponent(k), { method: 'DELETE' }).catch(() => {});
 }
 
 function injectArticleDraftStatus() {
@@ -1143,9 +1267,26 @@ function updateArticleDraftStatus(text) {
   if (el) el.textContent = text;
 }
 
+/* === POČET SLOV + ODHAD DOBY ČTENÍ ===
+   Počítá se z čistého textu (bez HTML značek), rychlost čtení ~200 slov/min
+   je běžný odhad pro češtinu i angličtinu u online článků. */
+function updateArticleWordCount() {
+  const editorEl = $('artEditor');
+  const el = $('articleWordCount');
+  if (!editorEl || !el) return;
+  const text = editorEl.innerText || editorEl.textContent || '';
+  const words = (text.trim().match(/\S+/g) || []).length;
+  if (!words) { el.textContent = ''; return; }
+  const minutes = Math.max(1, Math.round(words / 200));
+  el.textContent = `📝 ${words.toLocaleString('cs')} ${words === 1 ? 'slovo' : (words >= 2 && words <= 4 ? 'slova' : 'slov')} · ~${minutes} min čtení`;
+}
+
 async function offerDraftRestore(key) {
   let draft;
   try { draft = JSON.parse(localStorage.getItem(key) || 'null'); } catch { draft = null; }
+  // Lokální koncept nenalezen (jiné zařízení / vymazaná keš) — zkusit
+  // ještě serverovou zálohu, než se vzdáme.
+  if (!draft) draft = await fetchServerDraft(key);
   if (!draft) return;
   const when = new Date(draft.savedAt).toLocaleString('cs');
   const preview = (draft.title || '(bez nadpisu)').slice(0, 60);
@@ -1153,14 +1294,18 @@ async function offerDraftRestore(key) {
   if (ok) {
     if ($('artTitle')) $('artTitle').value = draft.title || '';
     if ($('artEditor')) $('artEditor').innerHTML = draft.content || '';
+    if ($('artExcerpt')) $('artExcerpt').value = draft.excerpt || '';
+    if ($('artCoverUrl')) $('artCoverUrl').value = draft.coverUrl || '';
+    if ($('artCoverPreview')) $('artCoverPreview').style.backgroundImage = draft.coverUrl ? `url('${draft.coverUrl}')` : '';
     if ($('artDate')) $('artDate').value = draft.date || '';
     if ($('artPlace')) $('artPlace').value = draft.place || '';
     if ($('artSection') && draft.sectionId) { $('artSection').value = draft.sectionId; await loadArtSubsections(); }
     if ($('artSubsection') && draft.subsectionId) $('artSubsection').value = draft.subsectionId;
-    setTimeout(() => setupArticleEditors(), 50);
+    setTimeout(() => { setupArticleEditors(); updateArticleWordCount(); }, 50);
     updateArticleDraftStatus('Koncept obnoven — nezapomeň uložit');
   } else {
     localStorage.removeItem(key);
+    fetch('/api/data/article-draft?key=' + encodeURIComponent(key), { method: 'DELETE' }).catch(() => {});
   }
 }
 
@@ -1175,8 +1320,9 @@ function initArticleAutosave() {
   }
   if (!editorEl.dataset.draftReady) {
     editorEl.dataset.draftReady = '1';
-    editorEl.addEventListener('input', scheduleArticleDraftSave);
+    editorEl.addEventListener('input', () => { scheduleArticleDraftSave(); updateArticleWordCount(); });
   }
+  updateArticleWordCount();
   // Nabídku obnovy zkontrolovat pokaždé, když se změní kontext (jiný
   // editovaný článek / nový článek) — ne jen při úplně prvním spuštění.
   const key = articleDraftKey();
@@ -1522,10 +1668,10 @@ function insertImgTo(editorId, align) {
   m.className = 'modal';
   const folders = typeof getAllFolders === 'function' ? getAllFolders() : [];
   m.innerHTML = `
-    <div style="background:#131a2c;border-radius:12px;max-width:90vw;width:700px;max-height:82vh;display:flex;flex-direction:column;border:1px solid #263252;padding:0">
+    <div style="background:var(--surface);border-radius:var(--r-lg);max-width:90vw;width:700px;max-height:82vh;display:flex;flex-direction:column;border:1px solid var(--border-soft);padding:0">
       <div style="padding:1.5rem 1.5rem 0.75rem;flex-shrink:0">
-        <h3 style="margin-bottom:0.3rem;color:#eef1f8">Vložit fotky</h3>
-        <p style="color:#8d96ac;font-size:12px;margin:0 0 0.75rem">Klikni na jednu, nebo zaškrtni víc a vlož je najednou (ve zvoleném pořadí).</p>
+        <h3 style="margin-bottom:0.3rem;color:var(--text)">Vložit fotky</h3>
+        <p style="color:var(--text-muted);font-size:12px;margin:0 0 0.75rem">Klikni na jednu, nebo zaškrtni víc a vlož je najednou (ve zvoleném pořadí).</p>
         <select id="imgPickerFolder" class="form-select" style="max-width:220px" onchange="renderImgPickerGrid('${editorId}','${align}')">
           <option value="">📁 Všechny složky</option>
           <option value="__none__">— Bez složky —</option>
@@ -1535,7 +1681,7 @@ function insertImgTo(editorId, align) {
       <div style="flex:1;overflow-y:auto;padding:0 1.5rem">
         <div id="imgPickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem"></div>
       </div>
-      <div style="padding:1rem 1.5rem;flex-shrink:0;border-top:1px solid #263252;display:flex;gap:0.5rem;justify-content:center">
+      <div style="padding:1rem 1.5rem;flex-shrink:0;border-top:1px solid var(--border-soft);display:flex;gap:0.5rem;justify-content:center">
         <button onclick="insertSelectedImages('${editorId}','${align}')" class="btn btn-blue">✅ Vložit vybrané</button>
         <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
       </div>
@@ -1555,7 +1701,7 @@ function renderImgPickerGrid(editorId, align) {
     else if (folderSel) photos = photos.filter(p => getPhotoFolder(p) === folderSel);
   }
   if (!photos.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8d96ac;padding:1.5rem;font-size:13px">V téhle složce nejsou žádné fotky.</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px">V téhle složce nejsou žádné fotky.</div>';
     return;
   }
 
@@ -1610,15 +1756,15 @@ function insertSelectedImages(editorId, align) {
 function insertImgUrl(editorId, url, align, closeModal = true) {
   const ed = $(editorId);
   if (!ed) return;
-  let style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:grab;';
-  if (align === 'left') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 1rem 0.5rem 0;float:left;display:block;cursor:grab;';
-  else if (align === 'right') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 0 0.5rem 1rem;float:right;display:block;cursor:grab;';
   ed.focus();
 
   const photoObj = (window.G?.photos || []).find(ph => ph.url === url);
   const caption = photoObj && typeof getPhotoCaption === 'function' ? getPhotoCaption(photoObj) : '';
+  // Dočasný identifikátor jen na to, abychom po vložení přesně našli,
+  // který <img>/wrapper to byl (insertHTML nevrací referenci na uzel).
+  const tmpId = 'tmp-ins-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
 
-  const wrapper = document.createElement('div');
+  let html;
   if (caption) {
     /* Obrázek s popiskem se vkládá jako blok (div.editor-img-wrap) — layout
        (obtékání/margin) nese tenhle obal, ne samotný <img>, aby popisek
@@ -1626,48 +1772,82 @@ function insertImgUrl(editorId, url, align, closeModal = true) {
     let wrapStyle = 'display:block;margin:0.5rem auto;cursor:grab;';
     if (align === 'left') wrapStyle = 'display:block;float:left;margin:0.5rem 1rem 0.5rem 0;cursor:grab;';
     else if (align === 'right') wrapStyle = 'display:block;float:right;margin:0.5rem 0 0.5rem 1rem;cursor:grab;';
-    wrapper.innerHTML = `<div class="editor-img-wrap" style="${wrapStyle}max-width:300px;width:100%">
+    html = `<div class="editor-img-wrap" data-tmp-ins="${tmpId}" style="${wrapStyle}max-width:300px;width:100%">
       <img src="${url}" style="width:100%;height:auto;border-radius:6px;display:block;" class="editor-img" draggable="false">
       <div class="editor-img-caption" style="font-size:12.5px;color:var(--text-faint);text-align:center;margin-top:0.3rem;font-style:italic">${escapeHtml(caption)}</div>
     </div>`;
   } else {
-    wrapper.innerHTML = `<img src="${url}" style="${style}" class="editor-img" draggable="false">`;
-  }
-  const imgNode = wrapper.firstElementChild;
-
-  /* Obrázek vždy vložíme jako VLASTNÍ blok (přímé dítě editoru), hned za
-     odstavec, ve kterém je kurzor — ne doprostřed textu. Díky tomu jde
-     obrázek přesouvat myší nezávisle na okolním textu (viz blok drag&drop),
-     a přitom dál obtéká přes zarovnání vlevo/vpravo. */
-  const sel = window.getSelection();
-  let refBlock = null;
-  if (sel.rangeCount > 0) {
-    const range = sel.getRangeAt(0);
-    let node = range.commonAncestorContainer;
-    if (ed.contains(node)) {
-      while (node && node !== ed && node.parentElement !== ed) node = node.parentElement;
-      if (node && node !== ed && ed.contains(node)) refBlock = node;
-    }
+    let style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem auto;display:block;cursor:grab;';
+    if (align === 'left') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 1rem 0.5rem 0;float:left;display:block;cursor:grab;';
+    else if (align === 'right') style = 'max-width:300px;width:100%;height:auto;border-radius:6px;margin:0.5rem 0 0.5rem 1rem;float:right;display:block;cursor:grab;';
+    html = `<img src="${url}" data-tmp-ins="${tmpId}" style="${style}" class="editor-img" draggable="false">`;
   }
 
-  if (refBlock) {
-    refBlock.after(imgNode);
-  } else {
-    ed.appendChild(imgNode);
-  }
+  /* Vkládá se přes execCommand('insertHTML') — ne ručním ed.appendChild/
+     range.insertNode jako dřív. Ruční DOM zásah obchází vnitřní historii
+     prohlížeče pro contenteditable, takže Ctrl+Z po vložení obrázku buď
+     obrázek nevzalo zpět vůbec, nebo rozhodilo zbytek historie Zpět/Vpřed.
+     execCommand je "oficiální" cesta, kterou jede i zbytek toolbaru
+     (Tučně, Zarovnání...), takže se do stejné historie zapíše správně. */
+  const ok = document.execCommand('insertHTML', false, html);
+  if (!ok) ed.insertAdjacentHTML('beforeend', html); // záložní cesta pro výjimečné prohlížeče
 
-  // Kurzor za obrázek, ať se dá plynule pokračovat v psaní/dalším vkládání
-  const newRange = document.createRange();
-  newRange.setStartAfter(imgNode);
-  newRange.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
+  const inserted = ed.querySelector(`[data-tmp-ins="${tmpId}"]`);
+  if (inserted) {
+    inserted.removeAttribute('data-tmp-ins');
+    const newRange = document.createRange();
+    newRange.setStartAfter(inserted);
+    newRange.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+  }
 
   if (closeModal) {
     const modal = document.querySelector('.modal');
     if (modal) modal.remove();
-    setTimeout(() => setupArticleEditors(), 50);
   }
+  // promoteNestedImages (uvnitř setupArticleEditors) obrázek případně
+  // vytáhne ven jako vlastní top-level blok, stejně jako u starých fotek.
+  setTimeout(() => setupArticleEditors(), 50);
+}
+
+/* === TITULNÍ FOTKA ČLÁNKU ===
+   Stejný princip jako cover sekce/podsekce (výběr z galerie), jen se
+   místo okamžitého uložení na server zapíše URL do skrytého pole a
+   pošle se až spolu s celým článkem (Vytvořit/Uložit změny). */
+function pickArticleCover() {
+  if (!G.photos || !G.photos.length) { showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info'); return; }
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.setAttribute('role', 'dialog');
+  m.setAttribute('aria-modal', 'true');
+  m.setAttribute('aria-label', 'Vybrat titulní fotku článku');
+  m.innerHTML = `
+    <div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)">
+      <h3 style="margin-bottom:1rem;color:var(--text)">Titulní fotka článku</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">
+        ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="setArticleCover('${p.url}')">`).join('')}
+      </div>
+      <div style="text-align:center;margin-top:1rem">
+        <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
+      </div>
+    </div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
+}
+
+function setArticleCover(url) {
+  if ($('artCoverUrl')) $('artCoverUrl').value = url;
+  const prev = $('artCoverPreview');
+  if (prev) prev.style.backgroundImage = `url('${url}')`;
+  document.querySelector('.modal')?.remove();
+}
+
+function clearArticleCover() {
+  if ($('artCoverUrl')) $('artCoverUrl').value = '';
+  const prev = $('artCoverPreview');
+  if (prev) prev.style.backgroundImage = '';
 }
 
 /* === PODSEKCE FORMULÁŘ === */
@@ -1805,6 +1985,20 @@ function injectArticleBulkBar() {
   box.parentElement.insertBefore(bar, box);
 }
 
+/* Vybere/zruší výběr všech AKTUÁLNĚ ZOBRAZENÝCH článků (respektuje
+   filtr hledání/sekce/stavu) — stejný princip jako u galerie. */
+function selectAllArticles() {
+  const checks = document.querySelectorAll('#articleList .article-check');
+  if (!checks.length) { showToast('Podle aktuálního filtru nejsou vidět žádné články.', 'info'); return; }
+  checks.forEach(c => { c.checked = true; });
+  updateArticleBulkBar();
+}
+
+function clearArticleSelection() {
+  document.querySelectorAll('#articleList .article-check:checked').forEach(c => { c.checked = false; });
+  updateArticleBulkBar();
+}
+
 /* Vloží panel hledání/filtrování nad seznam článků. */
 function injectArticleFilterBar() {
   if ($('articleFilterBar')) return;
@@ -1890,7 +2084,12 @@ function renderArticleList(arr) {
     return;
   }
   box.innerHTML = arr.map(a => {
-    const excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '';
+    const excerpt = a.excerpt
+      ? a.excerpt
+      : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '');
+    const coverThumb = a.coverUrl
+      ? `<img src="${a.coverUrl}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">`
+      : '';
     const pubStatus = a.published
       ? '<span style="color:#22c55e;font-size:12px">✅ Publikováno</span>'
       : '<span style="color:#ef4444;font-size:12px">⏸ Skryto</span>';
@@ -1900,20 +2099,25 @@ function renderArticleList(arr) {
     return `
     <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px;position:relative">
       <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem;padding-left:1.75rem">
-        <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
-        ${pubStatus}
-      </div>
-      <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem;padding-left:1.75rem">
-        ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
-      </p>
-      ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5;padding-left:1.75rem">${escapeHtml(excerpt)}</p>` : ''}
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding-left:1.75rem">
+      <div style="display:flex;gap:0.9rem;padding-left:1.75rem">
+        ${coverThumb}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem">
+            <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
+            ${pubStatus}
+          </div>
+          <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem">
+            ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
+          </p>
+          ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5">${escapeHtml(excerpt)}</p>` : ''}
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
         <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
         <button onclick="shareArticle('${a.id}')" class="btn btn-blue btn-sm">🔗 Sdílet</button>
         <button onclick="duplicateArticle('${a.id}')" class="btn btn-sm">📋 Duplikovat</button>
         ${toggleBtn}
         <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">🗑 Smazat</button>
+          </div>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1934,6 +2138,9 @@ async function editArticle(id) {
     }
     if ($('artDate')) $('artDate').value = a.date ? a.date.split('T')[0] : '';
     if ($('artPlace')) $('artPlace').value = a.place || '';
+    if ($('artExcerpt')) $('artExcerpt').value = a.excerpt || '';
+    if ($('artCoverUrl')) $('artCoverUrl').value = a.coverUrl || '';
+    if ($('artCoverPreview')) $('artCoverPreview').style.backgroundImage = a.coverUrl ? `url('${a.coverUrl}')` : '';
     if ($('artSection')) {
       $('artSection').value = a.sectionId || a.section || '';
       await loadArtSubsections();
@@ -1951,7 +2158,7 @@ async function editArticle(id) {
       btn.setAttribute('onclick', 'updateArticle()');
       btn.onclick = updateArticle;
     }
-    setTimeout(() => setupArticleEditors(), 100);
+    setTimeout(() => { setupArticleEditors(); updateArticleWordCount(); }, 100);
   } catch (e) {
     showToast('Nepodařilo se načíst článek pro úpravu', 'error');
     console.error(e);
@@ -1999,6 +2206,8 @@ async function createArticle() {
   if (!title || !content) return showToast('Vyplň nadpis a obsah', 'info');
   const payload = {
     title, content,
+    excerpt: $('artExcerpt')?.value.trim() || '',
+    coverUrl: $('artCoverUrl')?.value || '',
     slug: generateSlug(title),
     sectionId: $('artSection')?.value || null,
     subsectionId: $('artSubsection')?.value || null,
@@ -2045,6 +2254,8 @@ async function updateArticle() {
   if (!title || !content) return showToast('Vyplň nadpis a obsah', 'info');
   const payload = {
     id, title, content,
+    excerpt: $('artExcerpt')?.value.trim() || '',
+    coverUrl: $('artCoverUrl')?.value || '',
     slug: generateSlug(title),
     sectionId: $('artSection')?.value || null,
     subsectionId: $('artSubsection')?.value || null,
@@ -2110,6 +2321,8 @@ function resetArticleForm() {
   }
   if ($('artDate')) $('artDate').value = '';
   if ($('artPlace')) $('artPlace').value = '';
+  if ($('artExcerpt')) $('artExcerpt').value = '';
+  clearArticleCover();
   if ($('artSection')) $('artSection').value = '';
   if ($('artSubsection')) $('artSubsection').innerHTML = '<option value="">— Podsekce —</option>';
   const btn = $('artSubmitBtn')
@@ -2122,6 +2335,7 @@ function resetArticleForm() {
     btn.onclick = createArticle;
   }
   hideImgToolbar();
+  updateArticleWordCount();
 }
 
 /* === ČLÁNKY: smazání === */
@@ -2176,6 +2390,8 @@ async function duplicateArticle(id) {
     const payload = {
       title: (a.title || '') + ' (kopie)',
       content: a.content || '',
+      excerpt: a.excerpt || '',
+      coverUrl: a.coverUrl || '',
       slug: generateSlug((a.title || '') + '-kopie-' + Date.now()),
       sectionId: a.sectionId || a.section || null,
       subsectionId: a.subsectionId || a.subsection || null,
@@ -2339,8 +2555,8 @@ async function pickSubsectionCover(id) {
   const m = document.createElement('div');
   m.className = 'modal';
   m.innerHTML = `
-    <div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252">
-      <h3 style="margin-bottom:1rem;color:#eef1f8">Cover podsekce</h3>
+    <div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)">
+      <h3 style="margin-bottom:1rem;color:var(--text)">Cover podsekce</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">
         ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSubsectionCover('${id}','${p.url}')">`).join('')}
       </div>
@@ -2400,7 +2616,7 @@ function pickSectionCover(sectionId) {
   if (!G.photos || !G.photos.length) { showToast('Galerie je prázdná.', 'info'); return; }
   const m = document.createElement('div');
   m.className = 'modal';
-  m.innerHTML = '<div style="background:#131a2c;padding:1.5rem;border-radius:12px;max-width:90vw;max-height:80vh;overflow:auto;border:1px solid #263252"><h3 style="margin-bottom:1rem;color:#eef1f8">Cover sekce: ' + escapeHtml(sectionId) + '</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' + G.photos.map(function(p) { return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover(\'' + sectionId + '\',\'' + p.url + '\')">'; }).join('') + '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
+  m.innerHTML = '<div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)"><h3 style="margin-bottom:1rem;color:var(--text)">Cover sekce: ' + escapeHtml(sectionId) + '</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' + G.photos.map(function(p) { return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover(\'' + sectionId + '\',\'' + p.url + '\')">'; }).join('') + '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
   m.onclick = function(e) { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
 }
