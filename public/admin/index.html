@@ -91,6 +91,8 @@
     <div class="ribbon-sep" data-key="sep3"></div>
 
     <!-- Hromadné akce s vybranými fotkami -->
+    <button class="btn btn-sm" data-key="selectAll" onclick="selectAllVisiblePhotos()" title="Vybere všechny fotky podle aktuálního filtru">☑️ Vybrat vše</button>
+    <button class="btn btn-sm" data-key="selectNone" onclick="clearPhotoSelection()">◻️ Zrušit výběr</button>
     <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
     <button class="btn btn-sm" data-key="findDupes" onclick="findDuplicatePhotos()">🔍 Najít duplicity</button>
     <button class="btn btn-sm" data-key="downloadZip" onclick="downloadSelectedAsZip()">⬇️ Stáhnout vybrané (ZIP)</button>
@@ -104,6 +106,8 @@
   <div class="ribbon-group" data-for="articles">
     <button class="btn btn-blue btn-sm" data-key="newArticle" onclick="resetArticleForm()">➕ Nový článek</button>
     <button class="btn btn-sm" data-key="previewArticle" onclick="previewArticle()">👁 Náhled</button>
+    <button class="btn btn-sm" data-key="selectAllArticles" onclick="selectAllArticles()">☑️ Vybrat vše</button>
+    <button class="btn btn-sm" data-key="selectNoneArticles" onclick="clearArticleSelection()">◻️ Zrušit výběr</button>
   </div>
 
   <!-- Citáty -->
@@ -159,6 +163,16 @@
         </select>
         <input type="date" id="artDate" class="form-input">
         <input type="text" id="artPlace" class="form-input" placeholder="Místo">
+      </div>
+      <div class="form-row">
+        <textarea id="artExcerpt" class="form-input" rows="2" placeholder="Krátký popis (pro seznam článků, sdílení a vyhledávače — nepovinné, jinak se použije začátek textu)" style="resize:vertical;flex:1"></textarea>
+      </div>
+      <div class="form-row" style="align-items:center">
+        <label style="min-width:110px">Titulní fotka</label>
+        <div id="artCoverPreview" style="width:90px;height:60px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border-soft);background-size:cover;background-position:center;flex-shrink:0"></div>
+        <button type="button" class="btn btn-sm" onclick="pickArticleCover()">🖼️ Vybrat z galerie</button>
+        <button type="button" class="btn btn-sm" onclick="clearArticleCover()">✖ Zrušit</button>
+        <input type="hidden" id="artCoverUrl" value="">
       </div>
 
       <div class="editor-toolbar" data-for="wysiwyg" data-for="wysiwyg">
@@ -216,6 +230,7 @@
         <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺ Obnovit</button>
       </div>
       <div id="artEditor" contenteditable="true"></div>
+      <div id="articleWordCount" style="font-size:11.5px;color:var(--text-faint);font-family:var(--font-mono);margin:0.4rem 0 0 2px"></div>
 
       <div class="form-row" style="margin-top:1rem">
         <button id="artSubmitBtn" class="btn btn-blue" onclick="createArticle()">Vytvořit článek</button>
@@ -389,7 +404,7 @@
 </main>
 
 <!-- ============ IMPORT SLOŽEK ============ -->
-<div id="importFolderModal" class="modal hidden">
+<div id="importFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Importovat kód složek">
   <div class="modal-box">
     <h3>⬆️ Importovat kód složek</h3>
     <div class="form-row">
@@ -408,7 +423,7 @@
 </div>
 
 <!-- ============ UPLOAD SETTINGS MODAL ============ -->
-<div id="uploadSettingsModal" class="modal hidden">
+<div id="uploadSettingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Nastavení nahrávání">
   <div class="modal-box">
     <h3>⚙️ Nastavení nahrávání</h3>
     <div class="form-row">
@@ -444,7 +459,7 @@
 </div>
 
 <!-- ============ NOVÁ SLOŽKA ============ -->
-<div id="newFolderModal" class="modal hidden">
+<div id="newFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Nová složka">
   <div class="modal-box">
     <h3>➕ Nová složka</h3>
     <div class="form-row">
@@ -459,7 +474,7 @@
 </div>
 
 <!-- ============ PŘESUN DO SLOŽKY ============ -->
-<div id="moveToFolderModal" class="modal hidden">
+<div id="moveToFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Přesunout do složky">
   <div class="modal-box">
     <h3>📁 Přesunout do složky</h3>
     <p id="moveFolderCount" style="color:var(--text-muted);font-size:13px;margin-bottom:0.75rem"></p>
@@ -475,7 +490,7 @@
 </div>
 
 <!-- ============ HROMADNÁ ÚPRAVA VYBRANÝCH FOTEK ============ -->
-<div id="bulkEditModal" class="modal hidden">
+<div id="bulkEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Hromadná úprava vybraných fotek">
   <div class="modal-box">
     <h3>🔧 Hromadná úprava vybraných fotek</h3>
     <p id="bulkEditCount" style="color:#94a3b8;font-size:13px;margin-bottom:0.75rem"></p>
@@ -508,7 +523,7 @@
 </div>
 
 <!-- ============ FOTO EDITOR MODAL (beze změny, používá dashboard-editor.js) ============ -->
-<div id="editorModal" class="modal hidden">
+<div id="editorModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Editor fotografie">
   <div class="editor-box">
     <div class="editor-body">
 
@@ -580,6 +595,9 @@
             </div>
             <div class="tool-row">
               <button class="btn btn-sm btn-blue" style="width:100%;justify-content:center" onclick="autoEnhanceAll()">✨ Vylepšit vše najednou</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="undoFilterChange()">↶ Zpět (styl)</button>
             </div>
           </div>
         </details>
@@ -687,6 +705,7 @@
     </div>
 
     <div class="editor-footer">
+      <button class="btn" style="margin-right:auto" onmousedown="showBeforePreview(true)" onmouseup="showBeforePreview(false)" onmouseleave="showBeforePreview(false)" ontouchstart="showBeforePreview(true)" ontouchend="showBeforePreview(false)" title="Podrž pro zobrazení originálu bez úprav">👁 Podržet = Před</button>
       <button class="btn btn-green" onclick="saveEditor('replace')">💾 Přepsat originál</button>
       <button class="btn btn-blue" onclick="saveEditor('new')">💾 Uložit jako novou</button>
       <button class="btn btn-red" onclick="closeEditor()">Zavřít</button>
