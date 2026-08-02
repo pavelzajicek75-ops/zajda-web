@@ -40,6 +40,8 @@ function showToast(message, type = 'info') {
     host = document.createElement('div');
     host.id = 'toastHost';
     host.className = 'toast-host';
+    host.setAttribute('aria-live', 'polite');
+    host.setAttribute('role', 'status');
     document.body.appendChild(host);
   }
   const icons = { info: 'ℹ️', success: '✅', error: '⚠️' };
@@ -104,6 +106,9 @@ function showConfirm(message, { danger = false, confirmText = 'Potvrdit', cancel
   return new Promise(resolve => {
     const m = document.createElement('div');
     m.className = 'modal';
+    m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+    m.setAttribute('aria-label', danger ? 'Potvrzení nevratné akce' : 'Potvrzení');
     m.innerHTML = `
       <div class="modal-box" style="max-width:380px">
         <h3>${danger ? '⚠️ Potvrzení' : '❓ Potvrzení'}</h3>
@@ -124,6 +129,10 @@ function showConfirm(message, { danger = false, confirmText = 'Potvrdit', cancel
       if (e.key === 'Escape') { document.removeEventListener('keydown', esc); finish(false); }
     });
     document.body.appendChild(m);
+    // Focus rovnou na potvrzovací tlačítko — Enter/mezerník tak jde stisknout
+    // bez nutnosti nejdřív myší/Tabem najet na modal (čtečky obrazovky i
+    // klávesnicoví uživatelé to ocení).
+    m.querySelector('[data-act="yes"]')?.focus();
   });
 }
 
@@ -1546,6 +1555,23 @@ function toggleSel(id) {
   else G.selected.add(id);
   const el = document.querySelector(`.gallery-item[data-id="${id}"]`);
   if (el) el.classList.toggle('selected', G.selected.has(id));
+}
+
+/* Vybere/zruší výběr všech AKTUÁLNĚ ZOBRAZENÝCH fotek (respektuje filtr
+   složky, hledání i to, jestli je otevřený Koš) — ne úplně všechny fotky
+   v galerii bez ohledu na filtr, to by bylo matoucí. */
+function selectAllVisiblePhotos() {
+  const arr = viewingTrash ? getTrashedPhotos() : sortedPhotos();
+  if (!arr.length) { showToast('Nic k výběru — podle aktuálního filtru nejsou vidět žádné fotky.', 'info'); return; }
+  arr.forEach(p => G.selected.add(p.id));
+  renderGallery();
+  showToast(`Vybráno ${arr.length} fotek`, 'success');
+}
+
+function clearPhotoSelection() {
+  if (!G.selected.size) return;
+  G.selected.clear();
+  renderGallery();
 }
 
 /* Mazání z hlavní galerie teď NEMAŽE rovnou na serveru — jen přesune
