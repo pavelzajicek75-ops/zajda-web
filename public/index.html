@@ -424,6 +424,13 @@
     overlay.classList.add('open');
   }
 
+  // Escape zavře lightbox — dřív šlo jen kliknout mimo obrázek.
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    var overlay = document.getElementById('lightboxOverlay');
+    if (overlay && overlay.classList.contains('open')) overlay.classList.remove('open');
+  });
+
   document.addEventListener('DOMContentLoaded', function() {
     var starsBox = document.getElementById('stars');
     if (starsBox) {
@@ -596,7 +603,14 @@
         var r = await fetch('/api/articles/list');
         if (!r.ok) return [];
         var data = await r.json();
-        cachedArticles = Array.isArray(data) ? data : [];
+        var arr = Array.isArray(data) ? data : [];
+        /* Bezpečnostní pojistka NAVÍC (nezávisle na tom, jestli API sama
+           filtruje) — veřejný web nikdy nemá ukázat skryté/nepublikované
+           koncepty, ani kdyby se z nějakého důvodu objevily v odpovědi
+           /api/articles/list. Jen a.published === false znamená skrytý;
+           chybějící pole (starší články bez příznaku) se bere jako
+           publikováno, ať se nic staršího neschová omylem. */
+        cachedArticles = arr.filter(function(a) { return a && a.published !== false; });
         return cachedArticles;
       } catch(e) { return []; }
     }
@@ -702,7 +716,9 @@
         var title = a.title || 'Bez názvu';
         var date = a.date || a.created || '';
         var dateStr = formatDate(date);
-        var excerpt = a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '';
+        var excerpt = a.excerpt
+          ? a.excerpt
+          : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '');
         html += '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
           '<span class="art-title">' + escapeHtml(title) + '</span>' +
           (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
