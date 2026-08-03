@@ -7,51 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --void: #08080f;
-      --panel: rgba(20, 21, 38, 0.55);
-      --panel-solid: rgba(28, 29, 48, 0.92);
-      --panel-border: rgba(140, 150, 255, 0.18);
-      --panel-border-hover: rgba(255, 122, 69, 0.55);
-      --aurora: #8f6bff;
-      --aurora-dim: rgba(143, 107, 255, 0.4);
-      --ember: #ff7a45;
-      --ember-dim: rgba(255, 122, 69, 0.4);
-      --nova: #2fe6c9;
-      --nova-dim: rgba(47, 230, 201, 0.35);
-      --parchment: #f8f5ef;
-      --mist: #b3b6da;
-      --mist-dim: #6a6d90;
-    }
-
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: var(--void); color: var(--parchment);
-      overflow-x: hidden; min-height: 100vh; position: relative; font-weight: 400;
-    }
-
-    .bg {
-      position: fixed; inset: 0; z-index: 0;
-      background:
-        radial-gradient(ellipse 900px 600px at 50% 5%, rgba(255,122,69,0.14), transparent 60%),
-        radial-gradient(circle at 85% 85%, rgba(47,230,201,0.12), transparent 55%),
-        radial-gradient(circle at 12% 75%, rgba(143,107,255,0.08), transparent 55%),
-        linear-gradient(180deg, #06060c 0%, #0a0a16 45%, #08080f 100%);
-    }
-
-    .stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
-    .star {
-      position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%;
-      opacity: 0; animation: twinkle var(--dur) ease-in-out infinite; animation-delay: var(--del);
-      box-shadow: 0 0 4px rgba(255,255,255,0.6);
-    }
-    .star:nth-of-type(7n) { background: var(--ember); box-shadow: 0 0 6px var(--ember-dim); width: 3px; height: 3px; }
-    .star:nth-of-type(11n) { background: var(--nova); box-shadow: 0 0 6px var(--nova-dim); }
-    .star:nth-of-type(17n) { background: var(--aurora); box-shadow: 0 0 6px var(--aurora-dim); }
-    @keyframes twinkle { 0%,100% { opacity: 0.08; transform: scale(0.5); } 50% { opacity: 0.9; transform: scale(1); } }
 
     .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
     .back-btn {
@@ -191,10 +149,7 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
 
-    :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
-
     @media (prefers-reduced-motion: reduce) {
-      .star { animation: none !important; opacity: 0.5; }
       .back-btn, .share-btn, .article-body img { transition: none !important; }
     }
 
@@ -230,6 +185,7 @@
       <div>Načítání článku…</div>
     </div>
   </div>
+  <script src="/shared.js"></script>
   <script>
   // --- Lightbox s galerií ---
   var galleryImages = [];
@@ -381,11 +337,6 @@
     });
   });
 
-  function escapeHtml(t) {
-    if (t == null) return '';
-    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
   function getArticleId() {
     var params = new URLSearchParams(window.location.search);
     var id = params.get('id');
@@ -403,20 +354,7 @@
   };
 
   document.addEventListener('DOMContentLoaded', async function() {
-    var starsBox = document.getElementById('stars');
-    if (starsBox) {
-      var frag = document.createDocumentFragment();
-      for (var i = 0; i < 150; i++) {
-        var s = document.createElement('div');
-        s.className = 'star';
-        s.style.left = Math.random() * 100 + '%';
-        s.style.top = Math.random() * 100 + '%';
-        s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
-        s.style.setProperty('--del', (Math.random() * 5) + 's');
-        frag.appendChild(s);
-      }
-      starsBox.appendChild(frag);
-    }
+    initStarfield(150);
 
     var container = document.getElementById('articleContainer');
     var articleId = getArticleId();
