@@ -432,7 +432,10 @@
       var allArticles = await r.json();
       if (!Array.isArray(allArticles)) throw new Error('Neplatná data');
       var article = allArticles.find(function(a) {
-        return a.id != null && String(a.id) === String(articleId);
+        // Bezpečnostní pojistka NAVÍC (nezávisle na API) — skrytý/
+        // nepublikovaný koncept (a.published === false) se nemá dát
+        // otevřít ani přímým odkazem, natožpak se objevit v seznamu.
+        return a.id != null && String(a.id) === String(articleId) && a.published !== false;
       });
       if (!article) {
         container.innerHTML = '<div class="article-notfound"><h2>Článek nenalezen</h2><p>Tento článek neexistuje nebo byl smazán.</p></div>';
@@ -457,6 +460,13 @@
     var dateStr = '';
     if (date) { try { dateStr = new Date(date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) {} }
     var sectionName = SECTION_NAMES[article.sectionId] || article.sectionId || '';
+
+    // Titulek karty prohlížeče (dřív zůstával navždy jen generický
+    // "Článek — Moje diagnóza, můj vesmír" bez ohledu na obsah). Pro
+    // scrapery sociálních sítí (WhatsApp/FB/X) tohle nestačí — ty JS
+    // nespouští, viz functions/article.js, který vkládá meta tagy
+    // ještě před odesláním HTML.
+    document.title = title + ' — Moje diagnóza, můj vesmír';
 
     var html = '';
     html += '<div class="article-header">';
