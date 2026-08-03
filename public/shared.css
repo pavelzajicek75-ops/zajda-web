@@ -1,0 +1,142 @@
+/* =========================================================
+   shared.css — společné pro index.html, article.html, about.html
+   =========================================================
+   Sem patří JEN to, co je na všech 3 stránkách identické: barevné
+   proměnné, hvězdné pozadí, systém "plovoucích citátů" a souhvězdí
+   mezi nimi, a základní focus-visible. Rozvržení jednotlivých stránek
+   (panely sekcí, tělo článku, obsah "O Zajdovi"...) zůstává v jejich
+   vlastních <style> blocích — to sdílené není a nemělo by být.
+   ========================================================= */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --void: #08080f;
+  --void-2: #0e0f1c;
+  --panel: rgba(20, 21, 38, 0.55);
+  --panel-solid: rgba(28, 29, 48, 0.92);
+  --panel-border: rgba(140, 150, 255, 0.18);
+  --panel-border-hover: rgba(255, 122, 69, 0.55);
+  --aurora: #8f6bff;
+  --aurora-dim: rgba(143, 107, 255, 0.4);
+  --ember: #ff7a45;
+  --ember-dim: rgba(255, 122, 69, 0.4);
+  --nova: #2fe6c9;
+  --nova-dim: rgba(47, 230, 201, 0.35);
+  --parchment: #f8f5ef;
+  --mist: #b3b6da;
+  --mist-dim: #6a6d90;
+  --hairline: linear-gradient(90deg, var(--aurora), var(--ember));
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--void);
+  color: var(--parchment);
+  overflow-x: hidden;
+  min-height: 100vh;
+  position: relative;
+  font-weight: 400;
+}
+
+.bg {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 900px 600px at 50% 8%, rgba(255,122,69,0.15), transparent 60%),
+    radial-gradient(circle at 85% 85%, rgba(47,230,201,0.13), transparent 55%),
+    radial-gradient(circle at 12% 75%, rgba(143,107,255,0.08), transparent 55%),
+    linear-gradient(180deg, #06060c 0%, #0a0a16 45%, #08080f 100%);
+}
+
+/* === HVĚZDNÉ POZADÍ === */
+.stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+.star {
+  position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%;
+  opacity: 0; animation: twinkle var(--dur) ease-in-out infinite; animation-delay: var(--del);
+  box-shadow: 0 0 4px rgba(255,255,255,0.6);
+}
+.star:nth-of-type(7n) { background: var(--ember); box-shadow: 0 0 6px var(--ember-dim); width: 3px; height: 3px; }
+.star:nth-of-type(11n) { background: var(--nova); box-shadow: 0 0 6px var(--nova-dim); }
+.star:nth-of-type(17n) { background: var(--aurora); box-shadow: 0 0 6px var(--aurora-dim); }
+@keyframes twinkle { 0%,100% { opacity: 0.08; transform: scale(0.5); } 50% { opacity: 0.9; transform: scale(1); } }
+
+/* === SOUHVĚZDÍ MEZI CITÁTY === */
+.constellation-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; width: 100%; height: 100%; }
+.constellation-line { stroke: var(--nova); stroke-width: 1; transition: stroke-opacity 0.3s ease; }
+.constellation-line.active { stroke: #fff; }
+
+/* === PLOVOUCÍ CITÁTY === */
+.quote-star { position: absolute; max-width: 300px; pointer-events: auto; z-index: 5; animation: drift linear infinite; }
+.quote-star:hover, .quote-star.hover-active { animation-play-state: paused !important; z-index: 6; }
+
+.signal-dot {
+  position: absolute; top: 8px; left: -12px; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--nova); box-shadow: 0 0 10px var(--nova), 0 0 22px var(--nova-dim);
+  animation: signal-pulse 1.15s ease-in-out infinite;
+}
+.quote-star.revealed .signal-dot { opacity: 0; transition: opacity 0.4s ease; }
+@keyframes signal-pulse { 0%,100% { opacity: 0.3; transform: scale(0.75); } 50% { opacity: 1; transform: scale(1.35); } }
+
+.comet-tail {
+  position: absolute; top: 8px; left: -12px; width: 100px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--nova-dim) 65%, transparent);
+  transform-origin: left center;
+  transform: translateY(-50%) rotate(var(--tail-angle));
+  filter: blur(2px); opacity: 0.5; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.quote-star:hover .comet-tail, .quote-star.hover-active .comet-tail { opacity: 0; }
+
+.quote-star::after {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+  transform: translate(-50%, -50%) scale(0); border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--ember) 35%, transparent 72%);
+  box-shadow: 0 0 0 rgba(255,255,255,0);
+  opacity: 0; pointer-events: none; z-index: -1;
+  transition: transform 0.55s cubic-bezier(.22,1,.36,1), opacity 0.4s ease, box-shadow 0.55s ease;
+}
+.quote-star:hover::after, .quote-star.hover-active::after {
+  transform: translate(-50%, -50%) scale(46);
+  opacity: 0.16;
+  box-shadow: 0 0 60px 20px rgba(255,255,255,0.25);
+}
+
+.quote-inner {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 300;
+  color: rgba(244,241,234,0.7); font-size: 15px;
+  text-shadow: 0 0 12px rgba(255,255,255,0.15); line-height: 1.5;
+  opacity: 0; transform: translateY(6px) scale(0.94);
+  transition: transform 0.45s cubic-bezier(.34,1.56,.64,1), opacity 0.6s ease, text-shadow 0.4s ease, color 0.3s ease;
+}
+.quote-star.revealed .quote-inner { opacity: 1; transform: translateY(0) scale(1); }
+.quote-text { font-variant-ligatures: none; }
+.quote-star:hover .quote-inner,
+.quote-star.hover-active .quote-inner {
+  transform: scale(1.3); color: #fff; font-weight: 400;
+  text-shadow: 0 0 16px #fff, 0 0 34px #fff, 0 0 60px var(--ember), 0 0 90px var(--nova-dim);
+}
+.quote-author {
+  font-family: 'Inter', sans-serif; color: var(--ember); font-size: 0.62em;
+  opacity: 0; display: block; margin-top: 5px; font-style: normal; letter-spacing: 0.3px;
+  transition: opacity 0.5s ease, color 0.3s ease;
+}
+.quote-author.shown { opacity: 0.85; }
+.quote-star:hover .quote-author, .quote-star.hover-active .quote-author { color: var(--nova); opacity: 1; }
+@keyframes drift { from { transform: translate(var(--sx), var(--sy)); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } to { transform: translate(var(--ex), var(--ey)); opacity: 0; } }
+
+/* === ZÁKLADNÍ LIGHTBOX (jednoduchá verze — index.html a about.html;
+   article.html má vlastní rozšířenou verzi s listováním/fullscreen,
+   tu si definuje sama, protože je funkčně jiná, ne jen jinak stylovaná) === */
+.lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(4,4,10,0.92); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+.lightbox-overlay.open { display: flex; }
+.lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 0 50px rgba(140,150,255,0.25); }
+
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .star, .quote-star { animation: none !important; opacity: 0.6; }
+  .signal-dot, .comet-tail { display: none; }
+  .quote-inner { opacity: 1 !important; transform: none !important; }
+  .constellation-layer { display: none; }
+  .quote-star::after { display: none; }
+}
