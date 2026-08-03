@@ -7,61 +7,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    :root {
-      --void: #08080f;
-      --panel: rgba(20, 21, 38, 0.55);
-      --panel-border: rgba(140, 150, 255, 0.18);
-      --panel-border-hover: rgba(255, 122, 69, 0.55);
-      --aurora: #8f6bff;
-      --aurora-dim: rgba(143, 107, 255, 0.4);
-      --ember: #ff7a45;
-      --ember-dim: rgba(255, 122, 69, 0.4);
-      --nova: #2fe6c9;
-      --nova-dim: rgba(47, 230, 201, 0.35);
-      --parchment: #f8f5ef;
-      --mist: #b3b6da;
-      --mist-dim: #6a6d90;
-    }
-
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: var(--void);
       color: #dcdce8;
-      min-height: 100vh;
       line-height: 1.7;
-      overflow-x: hidden;
-      position: relative;
     }
-    .bg {
-      position: fixed; inset: 0; z-index: 0;
-      background:
-        radial-gradient(ellipse 900px 600px at 50% 8%, rgba(255,122,69,0.14), transparent 60%),
-        radial-gradient(circle at 85% 85%, rgba(47,230,201,0.12), transparent 55%),
-        radial-gradient(circle at 12% 75%, rgba(143,107,255,0.08), transparent 55%),
-        linear-gradient(180deg, #06060c 0%, #0a0a16 45%, #08080f 100%);
-    }
-
-    .stars { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
-    .star {
-      position: absolute; width: 2px; height: 2px; background: #fff; border-radius: 50%;
-      opacity: 0; animation: twinkle var(--dur) ease-in-out infinite; animation-delay: var(--del);
-      box-shadow: 0 0 4px rgba(255,255,255,0.6);
-    }
-    .star:nth-of-type(7n) { background: var(--ember); box-shadow: 0 0 6px var(--ember-dim); width: 3px; height: 3px; }
-    .star:nth-of-type(11n) { background: var(--nova); box-shadow: 0 0 6px var(--nova-dim); }
-    .star:nth-of-type(17n) { background: var(--aurora); box-shadow: 0 0 6px var(--aurora-dim); }
-    @keyframes twinkle { 0%,100% { opacity: 0.08; transform: scale(0.5); } 50% { opacity: 0.9; transform: scale(1); } }
-
-    .constellation-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; width: 100%; height: 100%; }
-    .constellation-line { stroke: var(--nova); stroke-width: 1; transition: stroke-opacity 0.3s ease; }
-    .constellation-line.active { stroke: #fff; }
-
-    .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(4,4,10,0.94); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
-    .lightbox-overlay.open { display: flex; }
-    .lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 50px rgba(255,122,69,0.25); }
 
     .back-link {
       position: relative; z-index: 10; pointer-events: none;
@@ -234,72 +188,9 @@
       font-size: 2rem;
     }
 
-    /* Citáty */
-    .quote-star { position: absolute; max-width: 300px; pointer-events: auto; z-index: 5; animation: drift linear infinite; }
-    .quote-star:hover, .quote-star.hover-active { animation-play-state: paused !important; z-index: 6; }
-
-    .signal-dot {
-      position: absolute; top: 8px; left: -12px; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--nova); box-shadow: 0 0 10px var(--nova), 0 0 22px var(--nova-dim);
-      animation: signal-pulse 1.15s ease-in-out infinite;
-    }
-    .quote-star.revealed .signal-dot { opacity: 0; transition: opacity 0.4s ease; }
-    @keyframes signal-pulse { 0%,100% { opacity: 0.3; transform: scale(0.75); } 50% { opacity: 1; transform: scale(1.35); } }
-
-    .comet-tail {
-      position: absolute; top: 8px; left: -12px; width: 100px; height: 2px;
-      background: linear-gradient(90deg, transparent, var(--nova-dim) 65%, transparent);
-      transform-origin: left center;
-      transform: translateY(-50%) rotate(var(--tail-angle));
-      filter: blur(2px); opacity: 0.5; pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-    .quote-star:hover .comet-tail, .quote-star.hover-active .comet-tail { opacity: 0; }
-
-    .quote-star::after {
-      content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
-      transform: translate(-50%, -50%) scale(0); border-radius: 50%;
-      background: radial-gradient(circle, #fff 0%, var(--ember) 35%, transparent 72%);
-      opacity: 0; pointer-events: none; z-index: -1;
-      transition: transform 0.55s cubic-bezier(.22,1,.36,1), opacity 0.4s ease;
-    }
-    .quote-star:hover::after, .quote-star.hover-active::after {
-      transform: translate(-50%, -50%) scale(46);
-      opacity: 0.16;
-    }
-
-    .quote-inner {
-      font-family: 'Space Grotesk', sans-serif; font-weight: 300;
-      color: rgba(244,241,234,0.7); font-size: 14px;
-      text-shadow: 0 0 12px rgba(255,255,255,0.15); line-height: 1.45;
-      opacity: 0; transform: translateY(6px) scale(0.94);
-      transition: transform 0.45s cubic-bezier(.34,1.56,.64,1), opacity 0.6s ease, text-shadow 0.4s ease, color 0.3s ease;
-    }
-    .quote-star.revealed .quote-inner { opacity: 1; transform: translateY(0) scale(1); }
-    .quote-text { font-variant-ligatures: none; }
-    .quote-star:hover .quote-inner,
-    .quote-star.hover-active .quote-inner {
-      transform: scale(1.3); color: #fff; font-weight: 400;
-      text-shadow: 0 0 16px #fff, 0 0 34px #fff, 0 0 60px var(--ember), 0 0 90px var(--nova-dim);
-    }
-    .quote-author {
-      color: var(--ember); font-size: 0.65em; opacity: 0; display: block; margin-top: 4px;
-      transition: opacity 0.5s ease, color 0.3s ease;
-    }
-    .quote-author.shown { opacity: 0.85; }
-    .quote-star:hover .quote-author, .quote-star.hover-active .quote-author { color: var(--nova); opacity: 1; }
-    @keyframes drift { from { transform: translate(var(--sx), var(--sy)); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } to { transform: translate(var(--ex), var(--ey)); opacity: 0; } }
-
     .loading { color: var(--mist-dim); text-align: center; padding: 4rem; }
 
-    :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
-
     @media (prefers-reduced-motion: reduce) {
-      .star, .quote-star { animation: none !important; opacity: 0.7; }
-      .signal-dot, .comet-tail { display: none; }
-      .quote-inner { opacity: 1 !important; transform: none !important; }
-      .constellation-layer { display: none; }
-      .quote-star::after { display: none; }
       .title-block h1 { animation: none !important; }
     }
 
@@ -337,37 +228,8 @@
     <div class="news-grid" id="newsGrid"></div>
   </div>
 
+  <script src="/shared.js"></script>
   <script>
-    function escapeHtml(text) {
-      var div = document.createElement('div');
-      div.textContent = text || '';
-      return div.innerHTML;
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr) return '';
-      try {
-        var d = new Date(dateStr);
-        if (isNaN(d.getTime())) return '';
-        return d.toLocaleDateString('cs', { year: 'numeric', month: 'numeric', day: 'numeric' });
-      } catch(e) { return ''; }
-    }
-
-    (function() {
-      var starsBox = document.getElementById('stars');
-      if (!starsBox) return;
-      var frag = document.createDocumentFragment();
-      for (var i = 0; i < 200; i++) {
-        var s = document.createElement('div');
-        s.className = 'star';
-        s.style.left = Math.random() * 100 + '%';
-        s.style.top = Math.random() * 100 + '%';
-        s.style.setProperty('--dur', (3 + Math.random() * 4) + 's');
-        s.style.setProperty('--del', (Math.random() * 5) + 's');
-        frag.appendChild(s);
-      }
-      starsBox.appendChild(frag);
-    })();
 
     function openLightbox(src) {
       var overlay = document.getElementById('lightboxOverlay');
@@ -376,148 +238,11 @@
       overlay.classList.add('open');
     }
 
-    // Escape zavře lightbox — dřív šlo jen kliknout mimo obrázek, klávesnicoví
-    // uživatelé neměli jak se dostat zpátky bez myši.
     document.addEventListener('keydown', function(e) {
       if (e.key !== 'Escape') return;
       var overlay = document.getElementById('lightboxOverlay');
       if (overlay && overlay.classList.contains('open')) overlay.classList.remove('open');
     });
-
-    async function loadQuotes() {
-      try { var r = await fetch('/api/quotes/list'); if (!r.ok) return []; return await r.json(); }
-      catch(e) { return []; }
-    }
-
-    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var activeQuotes = []; // { el }
-    var constellationSvg = document.getElementById('constellationLayer');
-    var constellationRunning = false;
-    var DECODE_CHARS = '#*+·˚✦✧⋆°ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzáčďéěíňóřšťúůýž';
-
-    function decodeText(el, finalText, duration) {
-      if (reduceMotion || !finalText) { el.textContent = finalText || ''; return; }
-      var len = finalText.length;
-      var start = null;
-      function frame(ts) {
-        if (!start) start = ts;
-        var progress = Math.min(1, (ts - start) / duration);
-        var revealCount = Math.floor(progress * len);
-        var out = '';
-        for (var i = 0; i < len; i++) {
-          var ch = finalText[i];
-          if (i < revealCount || ch === ' ') out += ch;
-          else out += DECODE_CHARS[Math.floor(Math.random() * DECODE_CHARS.length)];
-        }
-        el.textContent = out;
-        if (progress < 1) requestAnimationFrame(frame);
-        else el.textContent = finalText;
-      }
-      requestAnimationFrame(frame);
-    }
-
-    function updateConstellation(ts) {
-      if (!constellationSvg) return;
-      var w = window.innerWidth, h = window.innerHeight;
-      constellationSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-      var centers = activeQuotes.map(function(entry) {
-        var r = entry.el.getBoundingClientRect();
-        return { x: r.left + r.width / 2, y: r.top + r.height / 2, hover: entry.el.classList.contains('hover-active') };
-      });
-      var svgns = 'http://www.w3.org/2000/svg';
-      var frag = document.createDocumentFragment();
-      var maxDist = 380;
-      for (var i = 0; i < centers.length; i++) {
-        for (var j = i + 1; j < centers.length; j++) {
-          var a = centers[i], b = centers[j];
-          var dx = a.x - b.x, dy = a.y - b.y;
-          var dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < maxDist) {
-            var line = document.createElementNS(svgns, 'line');
-            line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
-            line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
-            var highlight = a.hover || b.hover;
-            var baseOpacity = (1 - dist / maxDist) * 0.3;
-            line.setAttribute('class', 'constellation-line' + (highlight ? ' active' : ''));
-            line.setAttribute('stroke-opacity', String(highlight ? Math.min(0.9, baseOpacity + 0.5) : baseOpacity));
-            frag.appendChild(line);
-          }
-        }
-      }
-      constellationSvg.innerHTML = '';
-      constellationSvg.appendChild(frag);
-      if (activeQuotes.length > 0) requestAnimationFrame(updateConstellation);
-      else constellationRunning = false;
-    }
-
-    function ensureConstellationLoop() {
-      if (!constellationRunning && !reduceMotion) {
-        constellationRunning = true;
-        requestAnimationFrame(updateConstellation);
-      }
-    }
-
-    function spawnQuote(q) {
-      var el = document.createElement('div');
-      el.className = 'quote-star';
-      var sz = 13 + Math.floor(Math.random() * 10);
-
-      var sx = Math.random() * (window.innerWidth - 100);
-      var sy = Math.random() * (window.innerHeight - 80);
-      el.style.left = sx + 'px';
-      el.style.top = sy + 'px';
-      var ex = (Math.random() - 0.5) * 400;
-      var ey = (Math.random() - 0.5) * 400;
-      el.style.setProperty('--sx', '0px');
-      el.style.setProperty('--sy', '0px');
-      el.style.setProperty('--ex', ex + 'px');
-      el.style.setProperty('--ey', ey + 'px');
-      el.style.animationDuration = (14 + Math.random() * 10) + 's';
-      var tailAngle = (Math.atan2(ey, ex) * 180 / Math.PI) + 180;
-      el.style.setProperty('--tail-angle', tailAngle + 'deg');
-
-      el.innerHTML =
-        '<span class="comet-tail"></span>' +
-        '<span class="signal-dot"></span>' +
-        '<div class="quote-inner" style="font-size:' + sz + 'px">"<span class="quote-text"></span>"' +
-        '<span class="quote-author"></span></div>';
-
-      document.body.appendChild(el);
-
-      var entry = { el: el };
-      activeQuotes.push(entry);
-      ensureConstellationLoop();
-
-      el.addEventListener('mouseenter', function() { el.classList.add('hover-active'); });
-      el.addEventListener('mouseleave', function() { el.classList.remove('hover-active'); });
-
-      var textEl = el.querySelector('.quote-text');
-      var authorEl = el.querySelector('.quote-author');
-      var revealDelay = reduceMotion ? 0 : 400 + Math.random() * 500;
-      setTimeout(function() {
-        el.classList.add('revealed');
-        decodeText(textEl, q.text || '', reduceMotion ? 0 : 650);
-        setTimeout(function() {
-          authorEl.textContent = q.author || '';
-          authorEl.classList.add('shown');
-        }, reduceMotion ? 0 : 700);
-      }, revealDelay);
-
-      setTimeout(function() {
-        el.remove();
-        var idx = activeQuotes.indexOf(entry);
-        if (idx > -1) activeQuotes.splice(idx, 1);
-      }, 25000);
-    }
-    async function startQuotes() {
-      var quotes = await loadQuotes();
-      if (!quotes.length) return;
-      for (var i = 0; i < Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-      setInterval(function() {
-        if (document.querySelectorAll('.quote-star').length > 12) return;
-        spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-      }, 5000);
-    }
 
     async function loadAbout() {
       try {
@@ -551,7 +276,11 @@
         var r = await fetch('/api/articles/list');
         if (!r.ok) return [];
         var data = await r.json();
-        cachedArticles = Array.isArray(data) ? data : (data.articles || []);
+        var arr = Array.isArray(data) ? data : (data.articles || []);
+        // Stejná pojistka jako na homepage/article stránce — skrytý
+        // koncept (published === false) se na veřejném webu nemá
+        // objevit nikde, ani v podsekcích, ani v Aktualitách.
+        cachedArticles = arr.filter(function(a) { return a && a.published !== false; });
         return cachedArticles;
       } catch (e) { return []; }
     }
@@ -614,7 +343,7 @@
       try {
         var articles = await getAllArticles();
         var aboutArticles = articles.filter(function(a) {
-          return String(a.sectionId) === 'about' && a.published;
+          return String(a.sectionId) === 'about';
         });
         var sorted = aboutArticles.sort(function(a, b) {
           var da = a.date || a.created || '';
@@ -647,6 +376,7 @@
       }
     }
 
+    initStarfield(200);
     startQuotes();
     loadAbout();
     loadSubsections();
