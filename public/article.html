@@ -12,6 +12,15 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+
+    /* === PROGRESS BAR ČTENÍ === */
+    .reading-progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0%; z-index: 10001;
+      background: linear-gradient(90deg, var(--ember), var(--nova));
+      box-shadow: 0 0 10px rgba(255,122,69,0.5);
+      transition: width 0.1s ease-out;
+    }
+    @media (prefers-reduced-motion: reduce) { .reading-progress { transition: none; } }
     .back-btn {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--panel-solid); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -111,6 +120,44 @@
     .share-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); transform: translateY(-2px); }
     .share-btn.wa { color: #4fe0a3; border-color: rgba(79,224,163,0.4); }
     .share-btn.wa:hover { background: rgba(79,224,163,0.18); border-color: #4fe0a3; }
+    .share-btn.copied { color: var(--nova); border-color: var(--nova); background: rgba(47,230,201,0.14); }
+
+    /* === PŘEDCHOZÍ / DALŠÍ ČLÁNEK === */
+    .article-nav-links {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+      margin-top: 32px;
+    }
+    .article-nav-links.single { grid-template-columns: 1fr; }
+    .article-nav-link {
+      background: var(--panel-solid); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border); border-radius: 14px; padding: 16px 20px;
+      text-decoration: none; color: var(--parchment); transition: all 0.25s;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .article-nav-link:hover { border-color: var(--panel-border-hover); transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+    .article-nav-link.next { text-align: right; align-items: flex-end; }
+    .article-nav-link .nav-hint { font-size: 11.5px; color: var(--mist-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .article-nav-link .nav-title-text { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
+    @media (max-width: 640px) { .article-nav-links { grid-template-columns: 1fr; } }
+
+    /* === PODOBNÉ ČLÁNKY === */
+    .related-section { margin-top: 40px; }
+    .related-section h2 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
+      margin-bottom: 16px;
+    }
+    .related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .related-card {
+      background: var(--panel-solid); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border); border-radius: 14px; overflow: hidden;
+      text-decoration: none; color: inherit; transition: all 0.25s; display: block;
+    }
+    .related-card:hover { border-color: var(--panel-border-hover); transform: translateY(-3px); box-shadow: 0 14px 34px rgba(0,0,0,0.4); }
+    .related-card img { width: 100%; height: 130px; object-fit: cover; display: block; filter: saturate(0.95) brightness(0.94); transition: filter 0.3s; }
+    .related-card:hover img { filter: saturate(1.15) brightness(1.05); }
+    .related-card .related-body { padding: 12px 14px; }
+    .related-card h3 { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .related-card .related-date { font-size: 11.5px; color: var(--mist-dim); }
 
     /* Lightbox s listováním */
     .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(4,4,10,0.94); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
@@ -163,6 +210,8 @@
   </style>
 </head>
 <body>
+  <a href="#articleContainer" class="skip-link">Přeskočit na obsah</a>
+  <div class="reading-progress" id="readingProgress"></div>
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
 
@@ -179,7 +228,7 @@
     <a href="/" class="back-btn">← Zpět na vesmír</a>
     <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
   </div>
-  <div class="article-container" id="articleContainer">
+  <div class="article-container" id="articleContainer" tabindex="-1">
     <div class="article-loading" id="articleLoading">
       <div class="spinner"></div>
       <div>Načítání článku…</div>
@@ -380,7 +429,8 @@
         return;
       }
       try {
-        renderArticle(article);
+        var publishedArticles = allArticles.filter(function(a) { return a && a.published !== false; });
+        renderArticle(article, publishedArticles);
       } catch (renderErr) {
         console.error('Chyba renderování článku:', renderErr);
         container.innerHTML = '<div class="article-notfound"><h2>Chyba zobrazení</h2><p>Článek se podařilo načíst, ale nastala chyba při jeho zobrazení.</p></div>';
@@ -390,7 +440,112 @@
     }
   });
 
-  function renderArticle(article) {
+  function stripHtmlToText(html) {
+    return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function estimateReadingTime(html) {
+    var words = (stripHtmlToText(html).match(/\S+/g) || []).length;
+    return Math.max(1, Math.round(words / 200));
+  }
+
+  /* === PROGRESS BAR ČTENÍ ===
+     Sleduje scroll uvnitř #articleBody — 0 % na začátku textu, 100 %
+     na konci. Netýká se celé stránky (hlavička/patička by zkreslovaly
+     procenta), jen samotného textu článku. */
+  function initReadingProgress() {
+    var bar = document.getElementById('readingProgress');
+    var body = document.getElementById('articleBody');
+    if (!bar || !body) return;
+    function update() {
+      var rect = body.getBoundingClientRect();
+      var total = rect.height - window.innerHeight;
+      if (total <= 0) { bar.style.width = '100%'; return; }
+      var scrolled = -rect.top;
+      var pct = Math.max(0, Math.min(100, (scrolled / total) * 100));
+      bar.style.width = pct + '%';
+    }
+    document.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  }
+
+  /* === KOPÍROVAT ODKAZ === */
+  function copyArticleLink(btn) {
+    var url = window.location.href;
+    var done = function () {
+      var original = btn.textContent;
+      btn.textContent = '✅ Zkopírováno';
+      btn.classList.add('copied');
+      setTimeout(function () { btn.textContent = original; btn.classList.remove('copied'); }, 2000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(function () { prompt('Zkopíruj odkaz ručně:', url); });
+    } else {
+      prompt('Zkopíruj odkaz ručně:', url);
+    }
+  }
+
+  /* === PŘEDCHOZÍ / DALŠÍ ČLÁNEK ===
+     Řadí se chronologicky uvnitř STEJNÉ sekce (napříč podsekcemi — v rámci
+     jedné podsekce by u menších sekcí často nebylo co nabídnout). */
+  function findPrevNext(article, allArticles) {
+    var sameSection = allArticles
+      .filter(function (a) { return String(a.sectionId) === String(article.sectionId); })
+      .sort(function (a, b) {
+        var da = a.date || a.created || '', db = b.date || b.created || '';
+        return da < db ? 1 : da > db ? -1 : 0;
+      });
+    var idx = sameSection.findIndex(function (a) { return String(a.id) === String(article.id); });
+    if (idx === -1) return { prev: null, next: null };
+    // Pole je řazené od nejnovějšího po nejstarší — "novější" je tedy
+    // na nižším indexu, "starší" na vyšším.
+    return {
+      newer: idx > 0 ? sameSection[idx - 1] : null,
+      older: idx < sameSection.length - 1 ? sameSection[idx + 1] : null
+    };
+  }
+
+  /* === PODOBNÉ ČLÁNKY === 3 nejnovější ze stejné sekce, mimo aktuální
+     a mimo ty už použité v prev/next, ať se nabídka neopakuje. */
+  function findRelated(article, allArticles, excludeIds) {
+    return allArticles
+      .filter(function (a) { return String(a.sectionId) === String(article.sectionId) && String(a.id) !== String(article.id) && excludeIds.indexOf(String(a.id)) === -1; })
+      .sort(function (a, b) {
+        var da = a.date || a.created || '', db = b.date || b.created || '';
+        return da < db ? 1 : da > db ? -1 : 0;
+      })
+      .slice(0, 3);
+  }
+
+  /* === JSON-LD (schema.org/Article) ===
+     Pomáhá vyhledávačům pochopit, že jde o článek s datem/obrázkem/
+     autorem — může se promítnout do bohatších výsledků vyhledávání
+     (rich snippets). Čistě doplňkové, nic nerozbije, když to Google
+     nevyužije. */
+  function injectArticleJsonLd(article, title, description) {
+    var old = document.getElementById('articleJsonLd');
+    if (old) old.remove();
+    var script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'articleJsonLd';
+    var data = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: title,
+      description: description,
+      image: article.coverUrl ? [article.coverUrl] : undefined,
+      datePublished: article.date || article.created || undefined,
+      dateModified: article.updated || article.date || article.created || undefined,
+      author: { '@type': 'Person', name: 'Zajda' },
+      publisher: { '@type': 'Organization', name: 'Moje diagnóza, můj vesmír' },
+      mainEntityOfPage: window.location.href
+    };
+    script.textContent = JSON.stringify(data);
+    document.head.appendChild(script);
+  }
+
+  function renderArticle(article, allArticles) {
     var container = document.getElementById('articleContainer');
     var title = article.title || 'Bez názvu';
     var content = article.content || '';
@@ -398,6 +553,8 @@
     var dateStr = '';
     if (date) { try { dateStr = new Date(date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch(e) {} }
     var sectionName = SECTION_NAMES[article.sectionId] || article.sectionId || '';
+    var readingMinutes = estimateReadingTime(content);
+    var description = article.excerpt && article.excerpt.trim() ? article.excerpt.trim() : stripHtmlToText(content).slice(0, 160);
 
     // Titulek karty prohlížeče (dřív zůstával navždy jen generický
     // "Článek — Moje diagnóza, můj vesmír" bez ohledu na obsah). Pro
@@ -405,6 +562,7 @@
     // nespouští, viz functions/article.js, který vkládá meta tagy
     // ještě před odesláním HTML.
     document.title = title + ' — Moje diagnóza, můj vesmír';
+    injectArticleJsonLd(article, title, description);
 
     var html = '';
     html += '<div class="article-header">';
@@ -412,6 +570,7 @@
     html += '<div class="article-meta">';
     if (sectionName) html += '<span class="meta-badge">' + escapeHtml(sectionName) + '</span>';
     if (dateStr) html += '<span class="meta-item">' + escapeHtml(dateStr) + '</span>';
+    html += '<span class="meta-item">📖 ~' + readingMinutes + ' min čtení</span>';
     html += '</div></div>';
     html += '<div class="article-divider"></div>';
     html += '<div class="article-body" id="articleBody">' + content + '</div>';
@@ -423,12 +582,55 @@
     html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>';
     html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">Facebook</a>';
     html += '<a class="share-btn" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X / Twitter</a>';
+    html += '<button type="button" class="share-btn" onclick="copyArticleLink(this)">🔗 Kopírovat odkaz</button>';
     html += '</div>';
     html += '</div>';
+
+    // Předchozí / další článek (ve stejné sekci, chronologicky)
+    var excludeIds = [String(article.id)];
+    if (Array.isArray(allArticles) && allArticles.length) {
+      var pn = findPrevNext(article, allArticles);
+      var navParts = [];
+      if (pn.older) {
+        excludeIds.push(String(pn.older.id));
+        navParts.push('<a class="article-nav-link prev" href="/article?id=' + encodeURIComponent(pn.older.id) + '"><span class="nav-hint">← Starší</span><span class="nav-title-text">' + escapeHtml(pn.older.title || 'Bez názvu') + '</span></a>');
+      }
+      if (pn.newer) {
+        excludeIds.push(String(pn.newer.id));
+        navParts.push('<a class="article-nav-link next" href="/article?id=' + encodeURIComponent(pn.newer.id) + '"><span class="nav-hint">Novější →</span><span class="nav-title-text">' + escapeHtml(pn.newer.title || 'Bez názvu') + '</span></a>');
+      }
+      if (navParts.length) {
+        html += '<div class="article-nav-links' + (navParts.length === 1 ? ' single' : '') + '">' + navParts.join('') + '</div>';
+      }
+
+      // Podobné články (stejná sekce, bez duplicit s prev/next)
+      var related = findRelated(article, allArticles, excludeIds);
+      if (related.length) {
+        html += '<div class="related-section"><h2>Podobné články</h2><div class="related-grid">';
+        related.forEach(function (a) {
+          var rDate = '';
+          try { rDate = new Date(a.date || a.created).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) {}
+          var cover = a.coverUrl ? '<img src="' + a.coverUrl + '" alt="" loading="lazy">' : '';
+          html += '<a class="related-card" href="/article?id=' + encodeURIComponent(a.id) + '">' + cover +
+            '<div class="related-body"><h3>' + escapeHtml(a.title || 'Bez názvu') + '</h3>' +
+            (rDate ? '<div class="related-date">' + escapeHtml(rDate) + '</div>' : '') +
+            '</div></a>';
+        });
+        html += '</div></div>';
+      }
+    }
 
     container.innerHTML = html;
 
+    // Fotky v těle článku se stahují líně (mimo obrazovku počkají) —
+    // u fotoreportáží s desítkami fotek to výrazně sníží počáteční
+    // množství stažených dat.
+    container.querySelectorAll('#articleBody img').forEach(function (img) {
+      if (!img.hasAttribute('loading')) img.loading = 'lazy';
+    });
+
     buildGallery();
+    initReadingProgress();
   }
   </script>
 </body>
