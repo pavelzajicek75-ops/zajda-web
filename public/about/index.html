@@ -202,6 +202,7 @@
   </style>
 </head>
 <body>
+  <a href="#content" class="skip-link">Přeskočit na obsah</a>
 
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
@@ -217,7 +218,7 @@
   </div>
 
   <div class="container">
-    <div id="content" class="content loading">Načítání...</div>
+    <div id="content" class="content loading" tabindex="-1">Načítání...</div>
   </div>
 
   <div class="subsections" id="subsections" style="display:none">
@@ -258,6 +259,7 @@
           content.innerHTML = data.text;
           content.querySelectorAll('img').forEach(function(img) {
             img.style.cursor = 'pointer';
+            if (!img.hasAttribute('loading')) img.loading = 'lazy';
             img.addEventListener('click', function() {
               openLightbox(this.src);
             });
@@ -326,7 +328,7 @@
             return String(a.sectionId) === 'about' && String(a.subsectionId) === String(sub.id);
           });
           var coverHtml = sub.coverUrl
-            ? '<img class="sub-cover" src="' + sub.coverUrl + '" alt="">'
+            ? '<img class="sub-cover" src="' + sub.coverUrl + '" alt="" loading="lazy">'
             : '';
           html += '<div class="sub-panel">' + coverHtml +
             '<div class="sub-body"><h3>' + escapeHtml(sub.name) + '</h3>' +
@@ -360,7 +362,7 @@
             : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '');
           var date = formatDate(a.date || a.created);
           var cover = a.coverUrl
-            ? '<img src="' + a.coverUrl + '" alt="">'
+            ? '<img src="' + a.coverUrl + '" alt="" loading="lazy">'
             : '<div class="card-placeholder">📷</div>';
           // POZOR: dřív "/article.html?id=..." — opraveno na "/article?id=..."
           return '<a class="news-card" href="/article?id=' + encodeURIComponent(a.id) + '">' +
