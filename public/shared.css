@@ -133,6 +133,28 @@ body {
 
 :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
 
+/* === SKIP LINK — "Přeskočit na obsah" ===
+   Neviditelné, dokud na něj klávesnicí/čtečkou nenajedeš Tabem — pak
+   vyjede shora. Bez tohohle musí klávesnicoví uživatelé na každé
+   stránce protabovat celou navigaci/hvězdné pozadí, než se dostanou
+   k vlastnímu obsahu. */
+.skip-link {
+  position: absolute;
+  top: -60px; left: 12px;
+  z-index: 10000;
+  background: var(--ember);
+  color: #08080f;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-link:focus {
+  top: 12px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .star, .quote-star { animation: none !important; opacity: 0.6; }
   .signal-dot, .comet-tail { display: none; }
