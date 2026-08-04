@@ -2483,9 +2483,17 @@ async function deleteQuote(key) {
 }
 
 /* === PODSEKCE === */
+/* === PODSEKCE + POČET ČLÁNKŮ ===
+   Dřív bylo z tabulky vidět jen název/slug/pořadí podsekce — nešlo
+   poznat, jestli je v ní vůbec nějaký článek, aniž by se to muselo
+   ručně kontrolovat přes filtr v Článcích. Teď se u každé podsekce
+   spočítá a zobrazí počet, a prázdné se výrazně označí (červený rámeček
+   + ⚠️ odznak), ať jde na první pohled najít, co smazat/sloučit. */
 async function loadSubsections() {
   const tbody = $('subsectionTableBody');
   if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:1rem">Načítám…</td></tr>';
+
   const secs = ['travel', 'photo', 'projects', 'about'];
   const all = [];
   for (const sid of secs) {
@@ -2496,26 +2504,70 @@ async function loadSubsections() {
   }
   if (!all.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:1rem">Žádné podsekce.</td></tr>';
+    updateSubsectionsSummary(0, 0);
     return;
   }
-  tbody.innerHTML = all.map(s => `
-    <tr>
-      <td style="padding:0.75rem;border-bottom:1px solid #263252">${escapeHtml(s.sectionId)}</td>
-      <td style="padding:0.75rem;border-bottom:1px solid #263252">
+
+  // Počty se počítají z /api/articles/list — stejný zdroj, co používá
+  // záložka Články, jen natažený zvlášť (Podsekce se může otevřít jako
+  // úplně první záložka, bez toho, že by Články něco už nacachovaly).
+  let articles = [];
+  try {
+    const r = await fetch('/api/articles/list');
+    if (r.ok) {
+      const data = await r.json();
+      articles = Array.isArray(data) ? data : (data.articles || []);
+    }
+  } catch (e) {
+    console.error('Nepodařilo se načíst články pro počty v podsekcích:', e);
+  }
+
+  const countFor = (sectionId, subsectionId) => articles.filter(a =>
+    String(a.sectionId) === String(sectionId) && String(a.subsectionId) === String(subsectionId)
+  ).length;
+
+  let emptyCount = 0;
+  tbody.innerHTML = all.map(s => {
+    const count = countFor(s.sectionId, s.id);
+    const isEmpty = count === 0;
+    if (isEmpty) emptyCount++;
+    const countLabel = count === 1 ? 'článek' : (count >= 2 && count <= 4 ? 'články' : 'článků');
+    const countBadge = isEmpty
+      ? `<span class="count-badge count-badge-empty">⚠️ Prázdná</span>`
+      : `<span class="count-badge">${count} ${countLabel}</span>`;
+    return `
+    <tr class="${isEmpty ? 'row-flag-empty' : ''}">
+      <td data-label="Sekce">${escapeHtml(s.sectionId)}</td>
+      <td data-label="Podsekce">
         <div style="display:flex;align-items:center;gap:0.75rem">
-          ${s.coverUrl ? `<img src="${s.coverUrl}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #263252;flex-shrink:0">` : '<div style="width:120px;height:80px;background:#0a0f1c;border-radius:6px;border:1px solid #263252;flex-shrink:0"></div>'}
+          ${s.coverUrl ? `<img src="${s.coverUrl}" style="width:70px;height:50px;object-fit:cover;border-radius:6px;border:1px solid #263252;flex-shrink:0">` : '<div style="width:70px;height:50px;background:#0a0f1c;border-radius:6px;border:1px solid #263252;flex-shrink:0"></div>'}
           <span>${escapeHtml(s.name)}</span>
         </div>
       </td>
-      <td style="padding:0.75rem;border-bottom:1px solid #263252">${escapeHtml(s.slug)}</td>
-      <td style="padding:0.75rem;border-bottom:1px solid #263252">${s.order || 0}</td>
-      <td style="padding:0.75rem;border-bottom:1px solid #263252">
-        <div style="display:flex;gap:0.5rem">
+      <td data-label="Slug">${escapeHtml(s.slug)}</td>
+      <td data-label="Pořadí">${s.order || 0}</td>
+      <td data-label="Články">${countBadge}</td>
+      <td data-label="Akce">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
           <button onclick="pickSubsectionCover('${s.id}')" class="btn btn-blue btn-sm">Změnit cover</button>
           <button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+
+  updateSubsectionsSummary(all.length, emptyCount);
+}
+
+/* Krátký souhrn nad tabulkou — na mobilu, kde se scrolluje hodně dolů,
+   je fajn vědět hned nahoře, jestli je vůbec za čím jít hledat. */
+function updateSubsectionsSummary(total, empty) {
+  const el = $('subsectionsSummary');
+  if (!el) return;
+  if (!total) { el.textContent = ''; return; }
+  el.innerHTML = empty > 0
+    ? `📂 ${total} podsekcí celkem · <span style="color:var(--red);font-weight:600">⚠️ ${empty} ${empty === 1 ? 'prázdná' : (empty >= 2 && empty <= 4 ? 'prázdné' : 'prázdných')}</span>`
+    : `📂 ${total} podsekcí celkem · ✅ žádná není prázdná`;
 }
 
 async function createSubsection() {
