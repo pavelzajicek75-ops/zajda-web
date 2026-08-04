@@ -152,6 +152,19 @@ function spawnQuote(q) {
   el.addEventListener('mouseenter', function () { el.classList.add('hover-active'); });
   el.addEventListener('mouseleave', function () { el.classList.remove('hover-active'); });
 
+  // Klik/tap navíc — na dotykových zařízeních (mobil, tablet) se
+  // mouseenter/mouseleave nikdy nespustí, takže citáty šlo dřív odhalit
+  // jen myší. Klik teď přepíná stejnou třídu, co dělá hover; tap na
+  // jiný citát ten předchozí "zavře", ať se jich nekupí odhalených víc.
+  el.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var wasActive = el.classList.contains('hover-active');
+    document.querySelectorAll('.quote-star.hover-active').forEach(function (other) {
+      if (other !== el) other.classList.remove('hover-active');
+    });
+    el.classList.toggle('hover-active', !wasActive);
+  });
+
   var textEl = el.querySelector('.quote-text');
   var authorEl = el.querySelector('.quote-author');
   var revealDelay = __reduceMotion ? 0 : 400 + Math.random() * 500;
