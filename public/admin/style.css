@@ -585,6 +585,86 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 .data-table tr { transition: background 0.12s; }
 .data-table tr:hover td { background: var(--surface-2); }
 
+/* === PODSEKCE: odznak počtu článků + zvýraznění prázdných === */
+.count-badge {
+  display: inline-block;
+  background: var(--surface-3);
+  color: var(--text-muted);
+  border: 1px solid var(--border-soft);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.count-badge-empty {
+  background: rgba(247,92,92,0.14);
+  color: var(--red);
+  border-color: rgba(247,92,92,0.4);
+}
+.subsections-table tr.row-flag-empty td {
+  background: rgba(247,92,92,0.05);
+}
+.subsections-table tr.row-flag-empty:hover td {
+  background: rgba(247,92,92,0.1);
+}
+.subsections-table tr.row-flag-empty td:first-child {
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+/* === PODSEKCE: responzivní "karty" na mobilu/tabletu (jen tahle tabulka
+   — ostatní data-table v adminu data-label atributy nemají, takže by na
+   nich tenhle trik nefungoval a schválně se jich netýká). Pod 760px se
+   z řádků tabulky stanou samostatné karty, každá buňka dostane popisek
+   z data-label, ať je jasné, co je co i bez záhlaví sloupců. === */
+@media (max-width: 760px) {
+  .subsections-table thead { display: none; }
+  .subsections-table, .subsections-table tbody, .subsections-table tr, .subsections-table td {
+    display: block; width: 100%;
+  }
+  .subsections-table tr {
+    margin-bottom: 0.9rem;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .subsections-table tr.row-flag-empty {
+    border-color: rgba(247,92,92,0.4);
+  }
+  .subsections-table tr.row-flag-empty td:first-child {
+    box-shadow: none;
+    border-top: 3px solid var(--red);
+  }
+  .subsections-table td {
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    text-align: right;
+  }
+  .subsections-table td:last-child { border-bottom: none; }
+  .subsections-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-faint);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: left;
+    flex-shrink: 0;
+  }
+  .subsections-table td[data-label="Podsekce"] > div {
+    justify-content: flex-end;
+  }
+  .subsections-table td[data-label="Akce"] > div {
+    justify-content: flex-end;
+    width: 100%;
+  }
+}
+
 /* === MODAL === */
 .modal {
   position: fixed; inset: 0; z-index: 1000;
