@@ -102,7 +102,13 @@ export async function onRequestGet(context) {
     '\n  <meta name="twitter:card" content="summary_large_image">' +
     '\n  <meta name="twitter:title" content="' + escapeAttr(title) + '">' +
     '\n  <meta name="twitter:description" content="' + escapeAttr(description) + '">' +
-    '\n  <meta name="twitter:image" content="' + escapeAttr(image) + '">';
+    '\n  <meta name="twitter:image" content="' + escapeAttr(image) + '">' +
+    // Preload jen když má ČLÁNEK vlastní titulní fotku (article.coverUrl) —
+    // ne obecný fallback og-cover.jpg, ten by se preloadoval na každém
+    // článku bez fotky zbytečně. Fotka se teď zobrazuje i jako hero
+    // banner nahoře v article.html, takže preload reálně zrychlí, kdy ji
+    // uživatel uvidí (LCP).
+    (article.coverUrl ? '\n  <link rel="preload" as="image" href="' + escapeAttr(article.coverUrl) + '">' : '');
 
   html = html.replace(
     /(<meta name="viewport"[^>]*>)/,
