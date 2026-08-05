@@ -8,6 +8,15 @@
    vlastních <style> blocích — to sdílené není a nemělo by být.
    ========================================================= */
 
+/* === PLYNULÝ PŘECHOD MEZI STRÁNKAMI (View Transitions) ===
+   Nativní funkce prohlížeče — homepage → článek a zpátky se místo
+   tvrdého překliknutí jemně prolne. Podporováno v Chrome/Edge (a
+   postupně přibývá), ostatní prohlížeče tenhle řádek beze změny
+   ignorují a fungují jako dřív. Žádný JS, žádné riziko. */
+@view-transition {
+  navigation: auto;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
