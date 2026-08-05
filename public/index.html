@@ -329,6 +329,7 @@
   <div class="search-panel">
     <input type="text" id="siteSearchInput" placeholder="🔍 Hledat v článcích…" autocomplete="off">
     <div class="search-results" id="searchResults"></div>
+    <div style="text-align:center;margin-top:12px" id="savedLinkWrap"></div>
   </div>
   <div class="sections-container" id="sectionsContainer" tabindex="-1"></div>
 
@@ -561,6 +562,53 @@
       document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSectionModal(); });
     }
 
+    /* === PANEL "ULOŽENÉ NA POZDĚJI" ===
+       Znovu používá stejný section-modal, co slouží pro "Zobrazit vše"
+       u sekcí — jen s jiným obsahem (seznam z localStorage, ne fetch). */
+    function renderSavedList() {
+      var saved = getSavedArticles();
+      if (!saved.length) return '<div class="no-articles">Zatím nic uloženého. Otevři článek a klikni na „☆ Uložit na později".</div>';
+      return saved.map(function(s) {
+        var d = formatDate(s.date);
+        return '<a class="article-link" href="' + s.url + '" style="display:flex;align-items:center;gap:8px">' +
+          '<span style="flex:1;min-width:0"><span class="art-title">' + escapeHtml(s.title) + '</span>' +
+          (d ? '<span class="art-date">' + escapeHtml(d) + '</span>' : '') + '</span>' +
+          '<button type="button" class="remove-saved-btn" title="Odebrat z uložených" onclick="event.preventDefault();event.stopPropagation();removeSavedFromModal(\'' + escapeHtml(String(s.id)) + '\')">✕</button>' +
+          '</a>';
+      }).join('');
+    }
+
+    function updateSavedLinkLabel() {
+      var el = document.getElementById('savedLinkWrap');
+      if (!el) return;
+      var n = getSavedArticles().length;
+      el.innerHTML = '<span class="saved-link" role="button" tabindex="0">🔖 Uložené' + (n ? ' (' + n + ')' : '') + '</span>';
+      var link = el.querySelector('.saved-link');
+      if (link) {
+        link.addEventListener('click', openSavedModal);
+        link.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSavedModal(); } });
+      }
+    }
+
+    function openSavedModal() {
+      var overlay = document.getElementById('sectionModalOverlay');
+      var titleEl = document.getElementById('sectionModalTitle');
+      var scrollEl = document.getElementById('sectionModalScroll');
+      if (!overlay || !titleEl || !scrollEl) return;
+      titleEl.textContent = '🔖 Uložené na později';
+      scrollEl.innerHTML = renderSavedList();
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // Volané z tlačítka ✕ v modalu — smaže položku a rovnou překreslí
+    // otevřený seznam i číslo v odkazu, ať se to nemusí zavírat/otevírat.
+    window.removeSavedFromModal = function(id) {
+      removeSavedArticle(id);
+      openSavedModal();
+      updateSavedLinkLabel();
+    };
+
     /* === VYHLEDÁVÁNÍ NAPŘÍČ VŠEMI ČLÁNKY === */
     function initSiteSearch() {
       var input = document.getElementById('siteSearchInput');
@@ -741,6 +789,7 @@
     buildSections();
     initSiteSearch();
     initSectionModal();
+    updateSavedLinkLabel();
   });
   </script>
 </body>
