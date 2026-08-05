@@ -2,8 +2,25 @@
 <html lang="cs">
 <head>
   <meta charset="UTF-8">
-  <title>O Zajdovi</title>
+  <title>O Zajdovi — Moje diagnóza, můj vesmír</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kdo je Zajda — trochu cvok a občasný zapisovatel vlastního života. O člověku za blogem Moje diagnóza, můj vesmír.">
+  <link rel="canonical" href="https://zajda-web.pages.dev/about/">
+
+  <!-- Open Graph — dřív tahle stránka neměla žádné, sdílení odkazu na
+       "O Zajdovi" tak ukazovalo úplně prázdný/obecný náhled. -->
+  <meta property="og:type" content="profile">
+  <meta property="og:site_name" content="Moje diagnóza, můj vesmír">
+  <meta property="og:title" content="O Zajdovi — Moje diagnóza, můj vesmír">
+  <meta property="og:description" content="Kdo je Zajda — trochu cvok a občasný zapisovatel vlastního života.">
+  <meta property="og:url" content="https://zajda-web.pages.dev/about/">
+  <meta property="og:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
+  <meta property="og:locale" content="cs_CZ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="O Zajdovi — Moje diagnóza, můj vesmír">
+  <meta name="twitter:description" content="Kdo je Zajda — trochu cvok a občasný zapisovatel vlastního života.">
+  <meta name="twitter:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -379,6 +396,7 @@
     }
 
     initStarfield(200);
+    initStarfieldParallax();
     startQuotes();
     loadAbout();
     loadSubsections();
