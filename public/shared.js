@@ -44,6 +44,44 @@ function initStarfield(count) {
   starsBox.appendChild(frag);
 }
 
+/* === KURZOROVÁ PARALAXA HVĚZD ===
+   Jemný posun celé vrstvy hvězd podle polohy myši — dává pozadí trochu
+   hloubky, jako by hvězdy byly dál než zbytek stránky. Na dotykových
+   zařízeních nemá myš smysl (a mobil/tablet o tuhle drobnost nepřijde,
+   je to čistě kosmetické), takže se zapíná jen když prohlížeč hlásí
+   jemný ukazatel (fine pointer = myš). Respektuje "omezit pohyb" v OS. */
+function initStarfieldParallax() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (window.matchMedia && !window.matchMedia('(any-pointer: fine)').matches) return;
+  var starsBox = document.getElementById('stars');
+  if (!starsBox) return;
+  var targetX = 0, targetY = 0, curX = 0, curY = 0;
+  var ticking = false;
+
+  document.addEventListener('mousemove', function (e) {
+    var relX = (e.clientX / window.innerWidth) - 0.5;
+    var relY = (e.clientY / window.innerHeight) - 0.5;
+    targetX = relX * -14; // px, opačný směr než kurzor = dojem hloubky
+    targetY = relY * -14;
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(tick);
+    }
+  }, { passive: true });
+
+  function tick() {
+    // Plynulé dohánění cíle (lerp) místo trhavého skoku na každý pohyb myši.
+    curX += (targetX - curX) * 0.06;
+    curY += (targetY - curY) * 0.06;
+    starsBox.style.transform = 'translate(' + curX.toFixed(1) + 'px, ' + curY.toFixed(1) + 'px)';
+    if (Math.abs(targetX - curX) > 0.05 || Math.abs(targetY - curY) > 0.05) {
+      requestAnimationFrame(tick);
+    } else {
+      ticking = false;
+    }
+  }
+}
+
 /* === SYSTÉM PLOVOUCÍCH CITÁTŮ + SOUHVĚZDÍ === */
 var __reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var __activeQuotes = []; // { el }
