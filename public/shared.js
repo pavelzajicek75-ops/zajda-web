@@ -193,3 +193,45 @@ async function startQuotes() {
     spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   }, 5000);
 }
+
+/* === "ULOŽIT NA POZDĚJI" ===
+   Čistě klientská záložka (localStorage), bez backendu — funguje na
+   tomhle prohlížeči/zařízení. Používá se z article.html (tlačítko
+   Uložit) i z index.html (panel s přehledem uloženého). */
+function getSavedArticles() {
+  try { return JSON.parse(localStorage.getItem('savedArticles') || '[]'); } catch (e) { return []; }
+}
+
+function setSavedArticles(list) {
+  try { localStorage.setItem('savedArticles', JSON.stringify(list)); } catch (e) { /* plný localStorage — tiše ignorovat */ }
+}
+
+function isArticleSaved(id) {
+  return getSavedArticles().some(function (s) { return String(s.id) === String(id); });
+}
+
+function toggleSaveArticle(article, btn) {
+  var list = getSavedArticles();
+  var idx = list.findIndex(function (s) { return String(s.id) === String(article.id); });
+  if (idx > -1) {
+    list.splice(idx, 1);
+    if (btn) { btn.textContent = '☆ Uložit na později'; btn.classList.remove('saved'); }
+  } else {
+    list.unshift({
+      id: article.id,
+      title: article.title || 'Bez názvu',
+      url: '/article?id=' + encodeURIComponent(article.id),
+      date: article.date || article.created || ''
+    });
+    if (list.length > 100) list = list.slice(0, 100); // pojistka proti nekonečnému růstu
+    if (btn) { btn.textContent = '★ Uloženo'; btn.classList.add('saved'); }
+  }
+  setSavedArticles(list);
+  return list;
+}
+
+function removeSavedArticle(id) {
+  var list = getSavedArticles().filter(function (s) { return String(s.id) !== String(id); });
+  setSavedArticles(list);
+  return list;
+}
