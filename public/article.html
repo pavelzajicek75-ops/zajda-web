@@ -39,15 +39,39 @@
     .nav-title:hover { filter: drop-shadow(0 0 18px rgba(47,230,201,0.4)) brightness(1.15); }
 
     .article-container { position: relative; z-index: 10; max-width: 1200px; width: 100%; margin: 0 auto; padding: 20px 40px 80px; }
-    .article-loading { text-align: center; padding: 80px 20px; color: var(--mist-dim); font-size: 18px; }
-    .article-loading .spinner {
-      display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(255,122,69,0.2);
-      border-top-color: var(--ember); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;
+    .article-loading { text-align: center; padding: 80px 20px; color: var(--mist-dim); font-size: 15px; }
+    /* Místo obyčejného kolečka tři pulzující body ve stylu citátů/hvězd,
+       propojené čarami, co se postupně "skládají" — sedí k designu líp
+       než generický spinner. */
+    .loading-constellation { width: 120px; height: 60px; margin: 0 auto 18px; position: relative; }
+    .loading-constellation .lc-dot {
+      position: absolute; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--ember); box-shadow: 0 0 10px var(--ember-dim);
+      animation: lc-pulse 1.6s ease-in-out infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-constellation .lc-dot:nth-child(1) { left: 4px; top: 26px; animation-delay: 0s; background: var(--ember); box-shadow: 0 0 10px var(--ember-dim); }
+    .loading-constellation .lc-dot:nth-child(2) { left: 56px; top: 4px; animation-delay: 0.3s; background: var(--nova); box-shadow: 0 0 10px var(--nova-dim); }
+    .loading-constellation .lc-dot:nth-child(3) { left: 108px; top: 26px; animation-delay: 0.6s; background: var(--aurora); box-shadow: 0 0 10px var(--aurora-dim); }
+    .loading-constellation svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .loading-constellation line {
+      stroke: var(--panel-border-hover); stroke-width: 1; stroke-dasharray: 4 3;
+      animation: lc-line 1.6s ease-in-out infinite;
+    }
+    @keyframes lc-pulse { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+    @keyframes lc-line { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.6; } }
+    @media (prefers-reduced-motion: reduce) {
+      .loading-constellation .lc-dot, .loading-constellation line { animation: none; opacity: 0.7; }
+    }
     .article-notfound { text-align: center; padding: 80px 20px; }
     .article-notfound h2 { font-family: 'Space Grotesk', sans-serif; font-size: 28px; color: var(--ember); margin-bottom: 12px; }
     .article-notfound p { color: var(--mist); font-size: 16px; }
+
+    .article-hero {
+      width: 100%; max-height: 440px; object-fit: cover; border-radius: 18px;
+      margin: 0 0 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      display: block;
+    }
+    @media (max-width: 700px) { .article-hero { max-height: 260px; border-radius: 12px; } }
 
     .article-header { text-align: center; margin-bottom: 32px; }
     .article-title {
@@ -230,7 +254,10 @@
   </div>
   <div class="article-container" id="articleContainer" tabindex="-1">
     <div class="article-loading" id="articleLoading">
-      <div class="spinner"></div>
+      <div class="loading-constellation">
+        <svg viewBox="0 0 120 60"><line x1="8" y1="30" x2="60" y2="8"/><line x1="60" y1="8" x2="112" y2="30"/></svg>
+        <span class="lc-dot"></span><span class="lc-dot"></span><span class="lc-dot"></span>
+      </div>
       <div>Načítání článku…</div>
     </div>
   </div>
@@ -444,6 +471,38 @@
     return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
+  /* === AUTOMATICKÝ OBSAH (TOC) ===
+     Postaví se z <h2>/<h3> uvnitř #articleBody AŽ PO vložení do DOM (aby
+     šlo nadpisům přiřadit skutečné id pro kotvy #). Zobrazí se jen když
+     má článek aspoň 2 nadpisy — u krátkých článků by to byl zbytečný box
+     s jednou položkou. Sbalovací <details>, ať u dlouhých článků
+     nezabírá zbytečně místo hned na startu. */
+  function buildTOC(bodyEl) {
+    if (!bodyEl) return '';
+    var headings = bodyEl.querySelectorAll('h2, h3');
+    if (headings.length < 2) return '';
+    var usedIds = {};
+    var items = [];
+    headings.forEach(function (h, i) {
+      var text = h.textContent.trim();
+      if (!text) return;
+      var id = h.id;
+      if (!id) {
+        id = text.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || ('sekce-' + i);
+        var base = id, n = 1;
+        while (usedIds[id]) { id = base + '-' + (++n); }
+        h.id = id;
+      }
+      usedIds[id] = true;
+      var sub = h.tagName === 'H3' ? ' style="padding-left:16px;font-size:13px"' : '';
+      items.push('<a href="#' + id + '"' + sub + '>' + escapeHtml(text) + '</a>');
+    });
+    if (!items.length) return '';
+    return '<details class="toc-box"><summary>📑 Obsah</summary><div class="toc-list">' + items.join('') + '</div></details>';
+  }
+
   function estimateReadingTime(html) {
     var words = (stripHtmlToText(html).match(/\S+/g) || []).length;
     return Math.max(1, Math.round(words / 200));
@@ -565,6 +624,9 @@
     injectArticleJsonLd(article, title, description);
 
     var html = '';
+    if (article.coverUrl) {
+      html += '<img class="article-hero" src="' + escapeHtml(article.coverUrl) + '" alt="" loading="eager">';
+    }
     html += '<div class="article-header">';
     html += '<h1 class="article-title">' + escapeHtml(title) + '</h1>';
     html += '<div class="article-meta">';
@@ -573,12 +635,14 @@
     html += '<span class="meta-item">📖 ~' + readingMinutes + ' min čtení</span>';
     html += '</div></div>';
     html += '<div class="article-divider"></div>';
+    html += '<div id="tocPlaceholder"></div>';
     html += '<div class="article-body" id="articleBody">' + content + '</div>';
 
     var shareUrl = window.location.href;
     var shareText = title + ' — Moje diagnóza, můj vesmír';
     html += '<div class="article-footer">';
     html += '<div class="share-bar-inline">';
+    html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
     html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>';
     html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">Facebook</a>';
     html += '<a class="share-btn" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X / Twitter</a>';
@@ -621,6 +685,21 @@
     }
 
     container.innerHTML = html;
+
+    // Obsah (TOC) — až teď, kdy je #articleBody reálně v DOM a jde
+    // nadpisům přiřadit id pro kotvy #.
+    var tocPlaceholder = document.getElementById('tocPlaceholder');
+    var tocHtml = buildTOC(document.getElementById('articleBody'));
+    if (tocPlaceholder && tocHtml) tocPlaceholder.outerHTML = tocHtml;
+    else if (tocPlaceholder) tocPlaceholder.remove();
+
+    // Tlačítko "Uložit na později" — stav (uloženo/neuloženo) se zjistí
+    // z localStorage, klik přepíná přes toggleSaveArticle() ze shared.js.
+    var saveBtn = document.getElementById('saveArticleBtn');
+    if (saveBtn) {
+      if (isArticleSaved(article.id)) { saveBtn.textContent = '★ Uloženo'; saveBtn.classList.add('saved'); }
+      saveBtn.addEventListener('click', function () { toggleSaveArticle(article, saveBtn); });
+    }
 
     // Fotky v těle článku se stahují líně (mimo obrazovku počkají) —
     // u fotoreportáží s desítkami fotek to výrazně sníží počáteční
