@@ -77,8 +77,17 @@ export async function onRequestGet(context) {
   const description = (article.excerpt && article.excerpt.trim())
     || stripHtml(article.content).slice(0, 160)
     || 'Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou.';
-  const image = article.coverUrl || (url.origin + '/images/og-cover.jpg');
+  const rawImage = article.coverUrl || (url.origin + '/images/og-cover.jpg');
   const pageUrl = url.origin + '/article?id=' + encodeURIComponent(article.id);
+  const sectionNames = { travel: 'Cestování', photo: 'Fotografování', projects: 'Projekty', about: 'O Zajdovi' };
+  const sectionName = sectionNames[article.sectionId] || '';
+  // Sdílený náhled teď není jen syrová titulní fotka, ale vygenerovaná
+  // "cover karta" s nadpisem přes ni (viz functions/og-image.js) — pokud
+  // by generování z nějakého důvodu selhalo, ta Function sama fallbackne
+  // na rawImage, takže tohle je bezpečné i kdyby og-image.js měla problém.
+  const image = url.origin + '/og-image?title=' + encodeURIComponent(title)
+    + '&section=' + encodeURIComponent(sectionName)
+    + '&image=' + encodeURIComponent(rawImage);
 
   // 1) <title> — nahradí statický "Článek — Moje diagnóza, můj vesmír"
   html = html.replace(
