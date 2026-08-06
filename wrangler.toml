@@ -86,3 +86,6 @@ bucket_name = "zajda-photos"
 [[env.production.r2_buckets]]
 binding = "QUOTES_R2"
 bucket_name = "zajda-quotes"
+
+[build]
+command = "npm install"
