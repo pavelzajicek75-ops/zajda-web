@@ -1,34 +1,36 @@
 // functions/article.js
 //
-// Cloudflare Pages Function pro cestu /article (tzn. odkazy tvaru
-// /article?id=...). Doplňuje do <head> statického article.html SKUTEČNÉ
-// meta tagy podle konkrétního článku — title, description, Open Graph,
-// Twitter kartu — ještě PŘED tím, než HTML opustí server.
+// Cloudflare Pages Function pro články — obsluhuje OBOJÍ:
+//   - /article?id=...   (běžný formát, používá ho zbytek webu)
+//   - /article/<id>     (starší formát cesty)
+//
+// ⚠️ DŘÍV se o /article/<id> starala samostatná functions/article/
+// [[catchall]].js. To je v Cloudflare Pages "volitelný catch-all", který
+// ale chytá i holé /article (bez ničeho za lomítkem) — takže si o tu
+// samou cestu konkurovaly DVĚ funkce najednou. Vyhrávala ta stará
+// (catchall), která o meta tazích nic nevěděla, jen zavolala next() a
+// servírovala čistý needitovaný article.html — proto se sdílené odkazy
+// netvářily podle nastavených dat. Teď je to sloučené na jedno místo,
+// soubor functions/article/[[catchall]].js smaž (nebo celou složku
+// functions/article/), ať už nikdy nekoliduje.
+//
+// Doplňuje do <head> statického article.html SKUTEČNÉ meta tagy podle
+// konkrétního článku — title, description, Open Graph, Twitter kartu —
+// ještě PŘED tím, než HTML opustí server.
 //
 // PROČ je tohle potřeba: article.html renderuje obsah teprve JS-em po
 // načtení stránky (fetch /api/articles/list → najde článek → vloží HTML).
 // Prohlížeč to zvládne v pohodě, ale scrapery sociálních sítí (WhatsApp,
 // Facebook, X/Twitter, Messenger...) JS nespouští — vidí jen to, co je
-// v <head> hned na začátku odpovědi. Bez týhle Function by sdílení
-// odkazu na KAŽDÝ článek ukázalo jen obecný homepage náhled (stejný
-// nadpis/popisek/obrázek pro všechny), ne skutečný název, popisek a
-// titulní fotku toho konkrétního článku.
+// v <head> hned na začátku odpovědi.
 //
 // JAK TO FUNGUJE: necháme Cloudflare Pages doručit původní statický
-// article.html přes env.ASSETS (standardní binding pro přístup ke
-// statickým souborům zevnitř Function, obchází běžné routování — takže
-// nehrozí nekonečná smyčka volání sebe sama). Do vráceného HTML textu
-// pak jen přepíšeme pár řádků v <head> podle dat z veřejného
-// /api/articles/list (stejný endpoint, co používá i klientský JS —
-// takže žádná závislost na tom, jak přesně máš články uložené na
-// backendu).
-//
-// ⚠️ POZOR: pokud je tahle cesta u tebe obsluhovaná jinak (např. přes
-// _redirects na /article.html, nebo přes jiný routing), možná bude
-// potřeba soubor přejmenovat/přesunout, ať sedí s tím, jak Cloudflare
-// Pages tuhle URL doopravdy směruje. Pages Functions mají přednost před
-// statickými soubory na stejné cestě, takže běžný případ (čistá URL
-// /article díky "Clean URLs" nastavení) by měl fungovat bez úprav.
+// article.html přes env.ASSETS (přístup ke statickým souborům zevnitř
+// Function, obchází běžné routování). U cesty /article/<id> na tuhle
+// cestu žádný statický soubor neexistuje, takže se request přepíše na
+// /article.html, než se pošle do ASSETS. Do vráceného HTML textu pak
+// jen přepíšeme pár řádků v <head> podle dat z veřejného
+// /api/articles/list (stejný endpoint, co používá i klientský JS).
 
 function escapeAttr(str) {
   return String(str || '')
@@ -46,11 +48,21 @@ function stripHtml(html) {
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
-  const articleId = url.searchParams.get('id');
+  const pathname = url.pathname;
 
-  // Vždycky nejdřív natáhnout původní statickou stránku — je to fallback
-  // pro všechny případy, kdy nemáme co (nebo není proč) přepisovat.
-  const assetResponse = await env.ASSETS.fetch(request);
+  // ID článku ze dvou možných tvarů URL: ?id=... (běžné) nebo /article/<id>
+  // (starší cesta, dřív obsluhovaná zvlášť v article/[[catchall]].js).
+  let articleId = url.searchParams.get('id');
+  if (!articleId && pathname.startsWith('/article/') && pathname !== '/article/') {
+    articleId = decodeURIComponent(pathname.slice('/article/'.length));
+  }
+
+  // /article/<id> nemá vlastní statický soubor — natáhnout musíme
+  // article.html a předstírat, že o něj šlo od začátku.
+  const assetRequest = pathname.startsWith('/article/')
+    ? new Request(new URL('/article.html', url.origin), request)
+    : request;
+  const assetResponse = await env.ASSETS.fetch(assetRequest);
 
   if (!articleId) return assetResponse;
 
