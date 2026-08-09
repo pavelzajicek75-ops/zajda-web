@@ -89,7 +89,14 @@ export async function onRequestGet(context) {
   const description = (article.excerpt && article.excerpt.trim())
     || stripHtml(article.content).slice(0, 160)
     || 'Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou.';
-  const rawImage = article.coverUrl || (url.origin + '/images/og-cover.jpg');
+  // article.coverUrl bývá uložený jako RELATIVNÍ cesta (např.
+  // "/api/photos/file?key=..."). V prohlížeči to nevadí (sám si ji
+  // doplní vůči aktuální stránce), ale og-image.js běží na serveru a
+  // fotku stahuje přes fetch() — Cloudflare Workers relativní URL v
+  // fetch() neumí, potřebují vždy plnou adresu i s doménou.
+  const rawImage = article.coverUrl
+    ? (/^https?:\/\//i.test(article.coverUrl) ? article.coverUrl : url.origin + article.coverUrl)
+    : (url.origin + '/images/og-cover.jpg');
   const pageUrl = url.origin + '/article?id=' + encodeURIComponent(article.id);
   const sectionNames = { travel: 'Cestování', photo: 'Fotografování', projects: 'Projekty', about: 'O Zajdovi' };
   const sectionName = sectionNames[article.sectionId] || '';
