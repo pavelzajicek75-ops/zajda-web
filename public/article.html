@@ -40,9 +40,6 @@
 
     .article-container { position: relative; z-index: 10; max-width: 1200px; width: 100%; margin: 0 auto; padding: 20px 40px 80px; }
     .article-loading { text-align: center; padding: 80px 20px; color: var(--mist-dim); font-size: 15px; }
-    /* Místo obyčejného kolečka tři pulzující body ve stylu citátů/hvězd,
-       propojené čarami, co se postupně "skládají" — sedí k designu líp
-       než generický spinner. */
     .loading-constellation { width: 120px; height: 60px; margin: 0 auto 18px; position: relative; }
     .loading-constellation .lc-dot {
       position: absolute; width: 8px; height: 8px; border-radius: 50%;
@@ -146,7 +143,6 @@
     .share-btn.wa:hover { background: rgba(79,224,163,0.18); border-color: #4fe0a3; }
     .share-btn.copied { color: var(--nova); border-color: var(--nova); background: rgba(47,230,201,0.14); }
 
-    /* === PŘEDCHOZÍ / DALŠÍ ČLÁNEK === */
     .article-nav-links {
       display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
       margin-top: 32px;
@@ -164,7 +160,6 @@
     .article-nav-link .nav-title-text { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
     @media (max-width: 640px) { .article-nav-links { grid-template-columns: 1fr; } }
 
-    /* === PODOBNÉ ČLÁNKY === */
     .related-section { margin-top: 40px; }
     .related-section h2 {
       font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
@@ -230,6 +225,22 @@
       .lightbox-arrow.prev { left: 6px; } .lightbox-arrow.next { right: 6px; }
       .lightbox-close { width: 38px; height: 38px; font-size: 26px; top: 10px; right: 10px; }
       .lightbox-fullscreen { width: 36px; height: 36px; font-size: 17px; top: 10px; right: 56px; }
+    }
+
+    /* === TISKOVÉ STYLY (nové) ===
+       Bez hvězdiček, animací a panelů — čistý text a nadpisy na bílém
+       podkladu, ať jde článek smysluplně vytisknout / uložit jako PDF. */
+    @media print {
+      .bg, .stars, .constellation-layer, .lightbox-overlay,
+      .nav-bar, .reading-progress, .article-footer,
+      .article-nav-links, .related-section, .toc-box,
+      .skip-link { display: none !important; }
+      body { background: #fff !important; color: #111 !important; }
+      .article-container { max-width: 100%; padding: 0; }
+      .article-title { color: #111 !important; text-shadow: none !important; }
+      .article-body { color: #222 !important; }
+      .article-body h2, .article-body h3 { color: #111 !important; text-shadow: none !important; }
+      .article-hero { box-shadow: none; }
     }
   </style>
 </head>
@@ -430,7 +441,8 @@
   };
 
   document.addEventListener('DOMContentLoaded', async function() {
-    initStarfield(150);
+    var starCount = window.innerWidth <= 640 ? 90 : 150;
+    initStarfield(starCount);
     initStarfieldParallax();
 
     var container = document.getElementById('articleContainer');
@@ -447,9 +459,6 @@
       var allArticles = await r.json();
       if (!Array.isArray(allArticles)) throw new Error('Neplatná data');
       var article = allArticles.find(function(a) {
-        // Bezpečnostní pojistka NAVÍC (nezávisle na API) — skrytý/
-        // nepublikovaný koncept (a.published === false) se nemá dát
-        // otevřít ani přímým odkazem, natožpak se objevit v seznamu.
         return a.id != null && String(a.id) === String(articleId) && a.published !== false;
       });
       if (!article) {
@@ -472,12 +481,6 @@
     return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
-  /* === AUTOMATICKÝ OBSAH (TOC) ===
-     Postaví se z <h2>/<h3> uvnitř #articleBody AŽ PO vložení do DOM (aby
-     šlo nadpisům přiřadit skutečné id pro kotvy #). Zobrazí se jen když
-     má článek aspoň 2 nadpisy — u krátkých článků by to byl zbytečný box
-     s jednou položkou. Sbalovací <details>, ať u dlouhých článků
-     nezabírá zbytečně místo hned na startu. */
   function buildTOC(bodyEl) {
     if (!bodyEl) return '';
     var headings = bodyEl.querySelectorAll('h2, h3');
@@ -509,10 +512,6 @@
     return Math.max(1, Math.round(words / 200));
   }
 
-  /* === PROGRESS BAR ČTENÍ ===
-     Sleduje scroll uvnitř #articleBody — 0 % na začátku textu, 100 %
-     na konci. Netýká se celé stránky (hlavička/patička by zkreslovaly
-     procenta), jen samotného textu článku. */
   function initReadingProgress() {
     var bar = document.getElementById('readingProgress');
     var body = document.getElementById('articleBody');
@@ -530,7 +529,6 @@
     update();
   }
 
-  /* === KOPÍROVAT ODKAZ === */
   function copyArticleLink(btn) {
     var url = window.location.href;
     var done = function () {
@@ -546,9 +544,6 @@
     }
   }
 
-  /* === PŘEDCHOZÍ / DALŠÍ ČLÁNEK ===
-     Řadí se chronologicky uvnitř STEJNÉ sekce (napříč podsekcemi — v rámci
-     jedné podsekce by u menších sekcí často nebylo co nabídnout). */
   function findPrevNext(article, allArticles) {
     var sameSection = allArticles
       .filter(function (a) { return String(a.sectionId) === String(article.sectionId); })
@@ -558,16 +553,12 @@
       });
     var idx = sameSection.findIndex(function (a) { return String(a.id) === String(article.id); });
     if (idx === -1) return { prev: null, next: null };
-    // Pole je řazené od nejnovějšího po nejstarší — "novější" je tedy
-    // na nižším indexu, "starší" na vyšším.
     return {
       newer: idx > 0 ? sameSection[idx - 1] : null,
       older: idx < sameSection.length - 1 ? sameSection[idx + 1] : null
     };
   }
 
-  /* === PODOBNÉ ČLÁNKY === 3 nejnovější ze stejné sekce, mimo aktuální
-     a mimo ty už použité v prev/next, ať se nabídka neopakuje. */
   function findRelated(article, allArticles, excludeIds) {
     return allArticles
       .filter(function (a) { return String(a.sectionId) === String(article.sectionId) && String(a.id) !== String(article.id) && excludeIds.indexOf(String(a.id)) === -1; })
@@ -578,11 +569,6 @@
       .slice(0, 3);
   }
 
-  /* === JSON-LD (schema.org/Article) ===
-     Pomáhá vyhledávačům pochopit, že jde o článek s datem/obrázkem/
-     autorem — může se promítnout do bohatších výsledků vyhledávání
-     (rich snippets). Čistě doplňkové, nic nerozbije, když to Google
-     nevyužije. */
   function injectArticleJsonLd(article, title, description) {
     var old = document.getElementById('articleJsonLd');
     if (old) old.remove();
@@ -616,17 +602,16 @@
     var readingMinutes = estimateReadingTime(content);
     var description = article.excerpt && article.excerpt.trim() ? article.excerpt.trim() : stripHtmlToText(content).slice(0, 160);
 
-    // Titulek karty prohlížeče (dřív zůstával navždy jen generický
-    // "Článek — Moje diagnóza, můj vesmír" bez ohledu na obsah). Pro
-    // scrapery sociálních sítí (WhatsApp/FB/X) tohle nestačí — ty JS
-    // nespouští, viz functions/article.js, který vkládá meta tagy
-    // ještě před odesláním HTML.
     document.title = title + ' — Moje diagnóza, můj vesmír';
     injectArticleJsonLd(article, title, description);
 
     var html = '';
     if (article.coverUrl) {
-      html += '<img class="article-hero" src="' + escapeHtml(article.coverUrl) + '" alt="" loading="eager">';
+      // ★ ZMĚNA: dřív alt="" (dekorativní přístup) — u fotoreportáže je
+      // ale hero fotka obsahová informace, ne dekorace. Screenreader
+      // uživatel by o ni jinak úplně přišel. Použijeme titulek článku
+      // jako smysluplný fallback popisek.
+      html += '<img class="article-hero" src="' + escapeHtml(article.coverUrl) + '" alt="' + escapeHtml('Titulní fotografie k článku: ' + title) + '" loading="eager">';
     }
     html += '<div class="article-header">';
     html += '<h1 class="article-title">' + escapeHtml(title) + '</h1>';
@@ -651,7 +636,6 @@
     html += '</div>';
     html += '</div>';
 
-    // Předchozí / další článek (ve stejné sekci, chronologicky)
     var excludeIds = [String(article.id)];
     if (Array.isArray(allArticles) && allArticles.length) {
       var pn = findPrevNext(article, allArticles);
@@ -668,14 +652,14 @@
         html += '<div class="article-nav-links' + (navParts.length === 1 ? ' single' : '') + '">' + navParts.join('') + '</div>';
       }
 
-      // Podobné články (stejná sekce, bez duplicit s prev/next)
       var related = findRelated(article, allArticles, excludeIds);
       if (related.length) {
         html += '<div class="related-section"><h2>Podobné články</h2><div class="related-grid">';
         related.forEach(function (a) {
           var rDate = '';
           try { rDate = new Date(a.date || a.created).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) {}
-          var cover = a.coverUrl ? '<img src="' + a.coverUrl + '" alt="" loading="lazy">' : '';
+          // ★ ZMĚNA: alt="" → smysluplný popisek z titulku daného článku
+          var cover = a.coverUrl ? '<img src="' + a.coverUrl + '" alt="' + escapeHtml(a.title || 'Náhledová fotografie článku') + '" loading="lazy">' : '';
           html += '<a class="related-card" href="/article?id=' + encodeURIComponent(a.id) + '">' + cover +
             '<div class="related-body"><h3>' + escapeHtml(a.title || 'Bez názvu') + '</h3>' +
             (rDate ? '<div class="related-date">' + escapeHtml(rDate) + '</div>' : '') +
@@ -687,26 +671,24 @@
 
     container.innerHTML = html;
 
-    // Obsah (TOC) — až teď, kdy je #articleBody reálně v DOM a jde
-    // nadpisům přiřadit id pro kotvy #.
     var tocPlaceholder = document.getElementById('tocPlaceholder');
     var tocHtml = buildTOC(document.getElementById('articleBody'));
     if (tocPlaceholder && tocHtml) tocPlaceholder.outerHTML = tocHtml;
     else if (tocPlaceholder) tocPlaceholder.remove();
 
-    // Tlačítko "Uložit na později" — stav (uloženo/neuloženo) se zjistí
-    // z localStorage, klik přepíná přes toggleSaveArticle() ze shared.js.
     var saveBtn = document.getElementById('saveArticleBtn');
     if (saveBtn) {
       if (isArticleSaved(article.id)) { saveBtn.textContent = '★ Uloženo'; saveBtn.classList.add('saved'); }
       saveBtn.addEventListener('click', function () { toggleSaveArticle(article, saveBtn); });
     }
 
-    // Fotky v těle článku se stahují líně (mimo obrazovku počkají) —
-    // u fotoreportáží s desítkami fotek to výrazně sníží počáteční
-    // množství stažených dat.
     container.querySelectorAll('#articleBody img').forEach(function (img) {
       if (!img.hasAttribute('loading')) img.loading = 'lazy';
+      // ★ ZMĚNA: obrázky přímo v textu článku (ne cover) často přebírají
+      // alt z CMS/editoru beze změny, ale pokud editor alt nevyplnil,
+      // aspoň fallback na název článku, ať screenreader nedostane úplné
+      // ticho u každé fotky v galerii.
+      if (!img.getAttribute('alt')) img.setAttribute('alt', 'Fotografie z článku: ' + title);
     });
 
     buildGallery();
