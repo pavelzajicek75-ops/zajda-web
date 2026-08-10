@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa cest — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interaktivní mapa míst, o kterých vypráví články ze sekce Cestování — s trasou seřazenou podle data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
+
+  <!-- Leaflet — lehká open-source mapová knihovna (~40 kB gzip), žádný
+       API klíč, žádné napojení na Google Maps. Načítá se z jsdelivr CDN. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--panel-solid); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none;
+      transition: all 0.3s; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .back-btn:hover { border-color: var(--ember); transform: translateX(-3px); background: rgba(255,122,69,0.18); }
+    .nav-title {
+      font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; letter-spacing: 0.3px;
+      background: linear-gradient(90deg, var(--ember), var(--nova));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-decoration: none;
+      filter: drop-shadow(0 0 12px rgba(255,122,69,0.25));
+    }
+    .nav-title:hover { filter: drop-shadow(0 0 18px rgba(47,230,201,0.4)) brightness(1.15); }
+
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 10px 20px 30px; }
+    .page-title {
+      font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700;
+      background: linear-gradient(90deg, var(--parchment) 0%, var(--ember) 45%, var(--nova) 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 40px rgba(255,122,69,0.3);
+    }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+
+    .map-wrap {
+      position: relative; z-index: 10; max-width: 1200px; margin: 0 auto 60px; padding: 0 20px;
+    }
+    .map-panel {
+      background: var(--panel-solid); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border); border-radius: 20px; overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    }
+    #travelMap {
+      width: 100%; height: 62vh; min-height: 420px; background: #0a0a16;
+    }
+    /* Leaflet defaultně počítá s bílým UI — přebarvujeme na tmavé, ať
+       zapadne do zbytku webu. */
+    .leaflet-control-zoom a {
+      background: var(--panel-solid) !important; color: var(--parchment) !important;
+      border-color: var(--panel-border) !important;
+    }
+    .leaflet-control-zoom a:hover { background: rgba(255,122,69,0.25) !important; }
+    .leaflet-control-attribution {
+      background: rgba(8,8,15,0.75) !important; color: var(--mist-dim) !important;
+      backdrop-filter: blur(4px);
+    }
+    .leaflet-control-attribution a { color: var(--mist) !important; }
+    .leaflet-popup-content-wrapper {
+      background: var(--panel-solid) !important; color: var(--parchment) !important;
+      border: 1px solid var(--panel-border); border-radius: 12px !important;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.5);
+    }
+    .leaflet-popup-tip { background: var(--panel-solid) !important; }
+    .leaflet-popup-content { margin: 12px 14px !important; }
+    .map-popup-title {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14.5px;
+      color: var(--parchment); margin-bottom: 4px; display: block;
+    }
+    .map-popup-meta { font-size: 11.5px; color: var(--mist-dim); display: block; margin-bottom: 8px; }
+    .map-popup-link {
+      display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--ember);
+      text-decoration: none; border-bottom: 1px solid var(--ember-dim);
+    }
+    .map-popup-link:hover { color: var(--nova); border-bottom-color: var(--nova); }
+
+    /* Vlastní "hvězdný" pin — glowing tečka místo výchozí Leaflet
+       kapky, ať drží vesmírný motiv webu. */
+    .star-pin {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, var(--ember) 45%, transparent 75%);
+      box-shadow: 0 0 10px var(--ember), 0 0 22px var(--ember-dim);
+      border: 2px solid rgba(255,255,255,0.85);
+      animation: pin-pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes pin-pulse { 0%,100% { transform: scale(0.9); } 50% { transform: scale(1.15); } }
+    @media (prefers-reduced-motion: reduce) { .star-pin { animation: none; } }
+
+    .map-empty {
+      display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+      height: 62vh; min-height: 420px; text-align: center; padding: 20px; color: var(--mist);
+    }
+    .map-empty h2 { font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 20px; }
+    .map-empty p { max-width: 420px; font-size: 14px; line-height: 1.6; color: var(--mist-dim); }
+
+    .map-legend {
+      display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap;
+      padding: 16px 20px; font-size: 12.5px; color: var(--mist-dim);
+      border-top: 1px solid rgba(140,150,255,0.12);
+    }
+    .map-legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 8px var(--ember-dim); display: inline-block; }
+    .legend-line { width: 22px; height: 0; border-top: 2px dashed var(--nova); display: inline-block; }
+
+    @media (max-width: 700px) {
+      .nav-bar { padding: 16px 20px; }
+      .map-wrap { padding: 0 12px; }
+      #travelMap, .map-empty { height: 56vh; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#mapWrap" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+
+  <div class="page-header">
+    <h1 class="page-title">Mapa cest</h1>
+    <p class="page-subtitle">Místa, o kterých vyprávím — seřazená podle data jako trasa mezi hvězdami</p>
+  </div>
+
+  <div class="map-wrap" id="mapWrap" tabindex="-1">
+    <div class="map-panel">
+      <div id="travelMap"></div>
+      <div class="map-legend" id="mapLegend" hidden>
+        <span><span class="legend-dot"></span> Místo z článku (klikni pro náhled)</span>
+        <span><span class="legend-line"></span> Trasa podle data</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="/shared.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', async function() {
+    initStarfield(120);
+    initStarfieldParallax();
+
+    var wrap = document.getElementById('mapWrap');
+    var legend = document.getElementById('mapLegend');
+
+    function formatDateCz(d) {
+      if (!d) return '';
+      try { return new Date(d).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); }
+      catch (e) { return ''; }
+    }
+
+    function showEmptyState(message) {
+      wrap.querySelector('.map-panel').innerHTML =
+        '<div class="map-empty"><h2>Zatím tu nejsou žádná místa</h2><p>' + message + '</p></div>';
+    }
+
+    var articles;
+    try {
+      var r = await fetch('/api/articles/list');
+      if (!r.ok) throw new Error('API chyba');
+      var all = await r.json();
+      articles = Array.isArray(all) ? all : [];
+    } catch (e) {
+      showEmptyState('Nepodařilo se načíst data z API. Zkus stránku načíst znovu později.');
+      return;
+    }
+
+    // Jen publikované články s platnými souřadnicemi (lat/lng nejsou
+    // povinná pole — u starších/ostatních článků chybí a to je v
+    // pořádku, prostě se na mapě neobjeví).
+    var withCoords = articles.filter(function (a) {
+      return a && a.published !== false &&
+        typeof a.lat === 'number' && isFinite(a.lat) &&
+        typeof a.lng === 'number' && isFinite(a.lng);
+    });
+
+    if (!withCoords.length) {
+      showEmptyState('Jakmile u některého článku vyplníš souřadnice místa, objeví se tu jako bod na mapě.');
+      return;
+    }
+
+    // Chronologicky podle data — tohle pořadí určuje i vedenou trasu.
+    withCoords.sort(function (a, b) {
+      var da = a.date || a.created || '', db = b.date || b.created || '';
+      return da < db ? -1 : da > db ? 1 : 0;
+    });
+
+    var map = L.map('travelMap', { scrollWheelZoom: false });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxZoom: 19
+    }).addTo(map);
+
+    // Kolečko zapne zoom kolečkem myši, až uživatel do mapy klikne —
+    // jinak by nechtěně přebíral scroll celé stránky při projíždění.
+    map.on('focus', function () { map.scrollWheelZoom.enable(); });
+    map.on('blur', function () { map.scrollWheelZoom.disable(); });
+
+    var starIcon = L.divIcon({
+      className: '',
+      html: '<div class="star-pin"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8],
+      popupAnchor: [0, -10]
+    });
+
+    var latlngs = [];
+    withCoords.forEach(function (a) {
+      var ll = [a.lat, a.lng];
+      latlngs.push(ll);
+      var marker = L.marker(ll, { icon: starIcon }).addTo(map);
+      var title = escapeHtml(a.title || 'Bez názvu');
+      var place = escapeHtml(a.place || '');
+      var dateStr = escapeHtml(formatDateCz(a.date || a.created));
+      var meta = [place, dateStr].filter(Boolean).join(' • ');
+      var popupHtml =
+        '<span class="map-popup-title">' + title + '</span>' +
+        (meta ? '<span class="map-popup-meta">' + meta + '</span>' : '') +
+        '<a class="map-popup-link" href="/article?id=' + encodeURIComponent(a.id) + '">Otevřít článek →</a>';
+      marker.bindPopup(popupHtml);
+    });
+
+    // Trasa mezi body v chronologickém pořadí — stylově navazuje na
+    // "souhvězdí" mezi citáty na homepage (přerušovaná čára, nova barva).
+    if (latlngs.length > 1) {
+      L.polyline(latlngs, {
+        color: getComputedStyle(document.documentElement).getPropertyValue('--nova').trim() || '#2fe6c9',
+        weight: 2, opacity: 0.55, dashArray: '5 8'
+      }).addTo(map);
+    }
+
+    if (latlngs.length === 1) {
+      map.setView(latlngs[0], 8);
+    } else {
+      map.fitBounds(L.latLngBounds(latlngs), { padding: [40, 40] });
+    }
+
+    legend.hidden = false;
+  });
+  </script>
+</body>
+</html>
