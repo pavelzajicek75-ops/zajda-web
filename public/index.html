@@ -112,13 +112,21 @@
        ============================================================ */
     .top-grid {
       position: relative; z-index: 10;
-      max-width: 900px; margin: 40px auto 0; padding: 0 20px;
+      /* ★ ZMĚNA: stejná šířka jako .sections-container (max-width 1200px,
+         padding 0 20px) — dřív bylo 900px, karty tak byly užší, než
+         karty sekcí pod nimi, a vizuálně web působil nesourodě. */
+      max-width: 1200px; margin: 40px auto 0; padding: 0 20px;
       display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+      /* align-items: stretch je výchozí chování gridu, ale píšu to
+         explicitně — obě karty se vždy natáhnou na výšku té vyšší
+         z dvojice, ať mají uvnitř jakkoli dlouhý obsah. */
+      align-items: stretch;
     }
     .latest-panel, .intro-text {
       background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--panel-border); border-radius: 16px; padding: 1.3rem;
       box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+      height: 100%;
     }
     .latest-panel h3 {
       font-family: 'Space Grotesk', sans-serif; font-weight: 600;
@@ -427,7 +435,10 @@
         if (da > db) return -1;
         return 0;
       });
-      var latest = sorted.slice(0, 3);
+      // ★ ZMĚNA: 3 → 2 položky. Karta "Poslední aktuality" tak zůstává
+      // kratší a stejně vysoká karta "Jsem Zajda" ji nemusí uměle
+      // natahovat na výšku, aby to na desktopu vypadalo vyrovnaně.
+      var latest = sorted.slice(0, 2);
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
         return;
