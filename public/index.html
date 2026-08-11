@@ -464,11 +464,7 @@
       { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
       { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
       { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
-      { id: 'about', name: 'O Zajdovi', nameEn: 'About' },
-      /* ★ ZMĚNA: nový panel — vede na samostatnou stránku /mapa.html,
-         ne na modal se seznamem článků (proto se chová jako 'about',
-         viz podmínka níž v buildSections()). */
-      { id: 'map', name: 'Mapa cest', nameEn: 'Map' }
+      { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
     ];
 
     function getSectionName(id) {
@@ -559,13 +555,19 @@
       var subs = await loadSubsections(sectionId);
       var html = '';
 
+      // ★ NOVÉ: stejný odkaz na mapu jako v panelu na homepage — i tady
+      // nahoře, jen pro sekci Cestování.
+      if (sectionId === 'travel') {
+        html += '<a href="/mapa.html" class="show-all-link" style="display:block;border-top:none;border-bottom:1px solid rgba(140,150,255,0.12);text-decoration:none;margin-bottom:10px;padding-bottom:12px">🗺️ Zobrazit na mapě →</a>';
+      }
+
       if (!subs.length) {
         var articles = allArticles.filter(function(a) {
           var secId = a.sectionId;
           if (secId == null) return false;
           return String(secId) === sectionId;
         });
-        html = renderArticleList(articles);
+        html += renderArticleList(articles);
       } else {
         for (var i = 0; i < subs.length; i++) {
           var sub = subs[i];
@@ -742,31 +744,6 @@
             return;
           }
 
-          // ★ NOVÉ: panel "Mapa cest" — stejný princip jako "O Zajdovi":
-          // externí odkaz na samostatnou stránku (/mapa.html), ne modal
-          // se seznamem článků. Ikonu tam ani cover foto nemá — mapa
-          // sama je náhled.
-          if (sec.id === 'map') {
-            panel.classList.add('panel-external');
-            panel.addEventListener('click', function() {
-              window.location.href = '/mapa.html';
-            });
-
-            var body = document.createElement('div');
-            body.className = 'panel-body';
-            body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>';
-
-            var scroll = document.createElement('div');
-            scroll.className = 'panel-scroll';
-            scroll.innerHTML = '<div style="color:#cbd5e1;font-size:13px;line-height:1.6;padding:8px 0">Místa, o kterých vyprávím — na interaktivní mapě, seřazená do trasy podle data.</div>' +
-              '<div style="text-align:center;margin-top:1rem"><span style="color:#ff6600;font-size:13px;font-weight:600;text-shadow:0 0 12px rgba(255,102,0,0.4)">Otevřít mapu →</span></div>';
-
-            body.appendChild(scroll);
-            panel.appendChild(body);
-            container.appendChild(panel);
-            return;
-          }
-
           var img = document.createElement('img');
           img.className = 'panel-cover';
           img.alt = 'Titulní fotografie sekce ' + sec.name;
@@ -793,6 +770,14 @@
             var subs = await loadSubsections(sec.id);
             var html = '';
             var totalCount = 0;
+
+            // ★ NOVÉ: odkaz na mapu cest — jen v panelu Cestování, jako
+            // první položka nad seznamem podsekcí/článků. Vede na
+            // /mapa.html (viz mapa.html — čte stejná data z /api/articles/list,
+            // filtruje jen ty s vyplněnými souřadnicemi).
+            if (sec.id === 'travel') {
+              html += '<a href="/mapa.html" class="show-all-link" style="display:block;border-top:none;border-bottom:1px solid rgba(140,150,255,0.12);text-decoration:none;margin-bottom:6px;padding-bottom:10px">🗺️ Zobrazit na mapě →</a>';
+            }
 
             if (!subs.length) {
               var articles = allArticles.filter(function(a) {
