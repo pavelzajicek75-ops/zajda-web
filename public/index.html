@@ -339,6 +339,7 @@
     }
     .travel-map-modal-overlay.open { display: flex; }
     .travel-map-modal-box {
+      position: relative;
       width: 100%; max-width: 960px; max-height: 88vh;
       background: var(--void-2); border: 1px solid var(--panel-border);
       border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
@@ -359,6 +360,18 @@
     .travel-map-modal-close:hover { border-color: var(--panel-border-hover); background: rgba(255,122,69,0.12); }
     #travelMapModalMap {
       width: 100%; height: 60vh; min-height: 380px; background: #0a0a16; flex-shrink: 0;
+    }
+    /* === DENNÍ / NOČNÍ PŘEPÍNAČ (stejný princip jako mapa.html) === */
+    .travel-map-modal-theme-toggle {
+      position: absolute; top: 66px; right: 26px; z-index: 900;
+      background: var(--panel-solid); border: 1px solid var(--panel-border);
+      color: var(--parchment); width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      font-size: 17px; box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .travel-map-modal-theme-toggle:hover, .travel-map-modal-theme-toggle:focus-visible {
+      border-color: var(--panel-border-hover); background: rgba(255,122,69,0.18);
     }
     .travel-map-modal-legend {
       display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap;
@@ -384,15 +397,17 @@
       background: rgba(8,8,15,0.75) !important; color: var(--mist-dim) !important;
     }
 
+    /* ★ ZMĚNA: kontrastnější popisky — plně neprůhledné tmavé pozadí a
+       světlejší text, dřív byly obtížně čitelné (hlavně meta řádek). */
     .travel-map-modal-box .map-point-label {
-      background: var(--panel-solid) !important; border: 1px solid var(--panel-border) !important;
-      border-radius: 8px !important; padding: 3px 8px !important;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.35); font-family: 'Inter', sans-serif; line-height: 1.25;
+      background: #14152a !important; border: 1px solid rgba(255,122,69,0.5) !important;
+      border-radius: 8px !important; padding: 5px 10px !important;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.55); font-family: 'Inter', sans-serif; line-height: 1.35;
       pointer-events: none;
     }
     .travel-map-modal-box .map-point-label::before { display: none !important; }
-    .travel-map-modal-box .map-label-title { display: block; font-size: 11.5px; font-weight: 600; color: var(--parchment); white-space: nowrap; margin-bottom: 1px; }
-    .travel-map-modal-box .map-label-meta { display: block; font-size: 9.5px; color: var(--mist-dim); white-space: nowrap; }
+    .travel-map-modal-box .map-label-title { display: block; font-size: 12.5px; font-weight: 700; color: #ffffff; white-space: nowrap; margin-bottom: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+    .travel-map-modal-box .map-label-meta { display: block; font-size: 10.5px; color: #d7d9ec; font-weight: 500; white-space: nowrap; }
 
     .travel-map-modal-box .star-pin {
       width: 16px; height: 16px; border-radius: 50%;
@@ -481,6 +496,7 @@
         <button class="travel-map-modal-close" id="travelMapModalClose" aria-label="Zavřít">✕</button>
       </div>
       <div id="travelMapModalMap"></div>
+      <button type="button" class="travel-map-modal-theme-toggle" id="travelMapModalThemeToggle" title="Přepnout denní/noční mapu" aria-label="Přepnout denní/noční mapu">☀️</button>
       <div class="travel-map-modal-legend" id="travelMapModalLegend" hidden></div>
     </div>
   </div>
@@ -820,12 +836,38 @@
 
       var map = L.map('travelMapModalMap', { scrollWheelZoom: false });
       window._travelMapInstance = map;
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+
+      // === DENNÍ / NOČNÍ MAPOVÝ PODKLAD (stejný princip jako mapa.html) ===
+      var TILE_THEMES = {
+        day: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', icon: '☀️' },
+        night: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', icon: '🌙' }
+      };
+      var currentTileTheme = localStorage.getItem('mapTileTheme') === 'night' ? 'night' : 'day';
+      var tileLayer = L.tileLayer(TILE_THEMES[currentTileTheme].url, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
         maxZoom: 19
       }).addTo(map);
+      var themeToggleBtn = document.getElementById('travelMapModalThemeToggle');
+      if (themeToggleBtn) {
+        themeToggleBtn.textContent = TILE_THEMES[currentTileTheme].icon;
+        themeToggleBtn.onclick = function () {
+          currentTileTheme = currentTileTheme === 'day' ? 'night' : 'day';
+          map.removeLayer(tileLayer);
+          tileLayer = L.tileLayer(TILE_THEMES[currentTileTheme].url, {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            maxZoom: 19
+          }).addTo(map);
+          themeToggleBtn.textContent = TILE_THEMES[currentTileTheme].icon;
+          localStorage.setItem('mapTileTheme', currentTileTheme);
+        };
+      }
+
       map.on('focus', function () { map.scrollWheelZoom.enable(); });
       map.on('blur', function () { map.scrollWheelZoom.disable(); });
+
+      // Dotyková zařízení: hover neexistuje, takže první ťuknutí na
+      // hvězdičku jen ukáže popisek, teprve druhé naviguje na článek.
+      var isTouchDevice = window.matchMedia && window.matchMedia('(hover: none)').matches;
 
       function starIconForColor(color) {
         return L.divIcon({
@@ -861,7 +903,15 @@
             (dateStr ? '<span class="map-label-meta">' + dateStr + '</span>' : ''),
             { direction: 'top', offset: [0, -10], className: 'map-point-label', opacity: 1 }
           );
-          marker.on('click', function () { window.location.href = articleUrl; });
+          var tooltipOpenedByTap = false;
+          marker.on('click', function () {
+            if (isTouchDevice && !tooltipOpenedByTap) {
+              tooltipOpenedByTap = true;
+              this.openTooltip();
+              return;
+            }
+            window.location.href = articleUrl;
+          });
         });
 
         if (groupLatLngs.length > 1) {
