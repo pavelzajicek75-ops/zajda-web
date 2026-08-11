@@ -282,6 +282,17 @@
       transition: color 0.2s ease, background 0.2s ease; border-radius: 6px;
     }
     .show-all-link:hover, .show-all-link:focus-visible { color: #fff; background: rgba(47,230,201,0.08); }
+    /* Vizuálně stejné jako .show-all-link, ale VLASTNÍ třída — nesmí se
+       jmenovat stejně, protože buildSections() dělá querySelector('.show-all-link')
+       a bral by pak (chybně) tenhle odkaz na mapu místo tlačítka "Zobrazit vše". */
+    .travel-map-link {
+      display: block; text-align: center; padding: 8px;
+      color: var(--nova); font-size: 12px; font-weight: 600; cursor: pointer;
+      border-bottom: 1px solid rgba(140,150,255,0.12); letter-spacing: 0.3px;
+      transition: color 0.2s ease, background 0.2s ease; border-radius: 6px;
+      text-decoration: none; margin-bottom: 6px;
+    }
+    .travel-map-link:hover, .travel-map-link:focus-visible { color: #fff; background: rgba(47,230,201,0.08); }
 
     .section-modal-overlay {
       position: fixed; inset: 0; z-index: 8000; background: rgba(4,4,10,0.85);
@@ -558,7 +569,7 @@
       // ★ NOVÉ: stejný odkaz na mapu jako v panelu na homepage — i tady
       // nahoře, jen pro sekci Cestování.
       if (sectionId === 'travel') {
-        html += '<a href="/mapa.html" class="show-all-link" style="display:block;border-top:none;border-bottom:1px solid rgba(140,150,255,0.12);text-decoration:none;margin-bottom:10px;padding-bottom:12px">🗺️ Zobrazit na mapě →</a>';
+        html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
       }
 
       if (!subs.length) {
@@ -776,7 +787,7 @@
             // /mapa.html (viz mapa.html — čte stejná data z /api/articles/list,
             // filtruje jen ty s vyplněnými souřadnicemi).
             if (sec.id === 'travel') {
-              html += '<a href="/mapa.html" class="show-all-link" style="display:block;border-top:none;border-bottom:1px solid rgba(140,150,255,0.12);text-decoration:none;margin-bottom:6px;padding-bottom:10px">🗺️ Zobrazit na mapě →</a>';
+              html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
             }
 
             if (!subs.length) {
