@@ -135,7 +135,12 @@
       '</div>' +
       '<div id="artLocationMap" style="height:220px;border-radius:10px;overflow:hidden;border:1px solid var(--border-soft,#263252)"></div>';
     row.after(wrap);
-    initMap();
+    // ★ initMap() se odsud ZÁMĚRNĚ nevolá — v okamžiku, kdy tohle běží
+    // (DOMContentLoaded), je výchozí aktivní záložka "Galerie", takže
+    // panel Články má display:none. Leaflet inicializovaný do skrytého
+    // (0×0) kontejneru zůstane navždy prázdný/rozbitý, i po pozdějším
+    // zviditelnění. Mapa se proto vytváří lazy, až při reálném otevření
+    // záložky Články — viz wrap kolem showTab() níže.
   }
 
   /* === 3) Předvyplnění při editaci existujícího článku ===
@@ -178,13 +183,42 @@
     };
   }
 
-  /* === Inicializace UI, jakmile je formulář Články v DOM ===
-     injectUI() je idempotentní (viz guard na začátku), takže opakované
-     volání nevadí — jen pro jistotu, kdyby formulář v okamžiku
-     DOMContentLoaded ještě nebyl vykreslený. */
+  /* === 5) Mapa se vytvoří/zviditelní přesně v okamžiku otevření záložky
+     Články === Řeší to hlavní problém: Leaflet inicializovaný do
+     skrytého (display:none) panelu skončí s kontejnerem o velikosti
+     0×0 a zůstane prázdný napořád, i po pozdějším zviditelnění panelu.
+     Řešení: mapu vůbec nezakládat, dokud záložka Články není fakticky
+     vidět — a když se do ní uživatel vrátí znovu, jen zavolat
+     invalidateSize() (Leaflet potřebuje vědět, že se kontejner mohl
+     mezitím přeměřit). */
+  if (typeof window.showTab === 'function') {
+    const originalShowTab = window.showTab;
+    window.showTab = function (name) {
+      const result = originalShowTab.apply(this, arguments);
+      if (name === 'articles') {
+        injectUI(); // pole (idempotentní), kdyby ještě nebyla vložená
+        // requestAnimationFrame necháme CSS domalovat layout záložky,
+        // teprve pak má smysl Leaflet měřit/inicializovat.
+        requestAnimationFrame(function () {
+          if (!mapInstance) initMap();
+          else mapInstance.invalidateSize();
+        });
+      }
+      return result;
+    };
+  }
+
+  /* === Inicializace polí, jakmile je formulář Články v DOM ===
+     Jen vloží HTML (inputy + prázdný <div> pro mapu) — samotnou mapu
+     zakládá až showTab('articles') výše, viz důvod tamtéž. injectUI()
+     je idempotentní, takže opakované volání nevadí. */
   document.addEventListener('DOMContentLoaded', function () {
     injectUI();
     setTimeout(injectUI, 500);
     setTimeout(injectUI, 1500);
+    // Kdyby byla záložka Články uložená jako aktivní už z minula
+    // (localStorage dashActiveTab) a dashboard-core.js ji tedy otevře
+    // hned při startu, tenhle wrap kolem showTab výše to zachytí
+    // automaticky — nic navíc tu řešit netřeba.
   });
 })();
