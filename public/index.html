@@ -328,6 +328,86 @@
     .section-modal-scroll::-webkit-scrollbar-thumb { background: var(--nova); border-radius: 5px; }
     .section-modal-scroll .sub-block { margin-bottom: 0.6rem; }
     .section-modal-scroll .sub-title { font-size: 13.5px; padding: 10px 12px; }
+
+    /* === MAPOVÝ MODAL (mapa cest, otevře se rovnou na stránce) ===
+       Samostatný overlay/box (ne section-modal-overlay) — mapa potřebuje
+       pevnou výšku pro Leaflet, ne scrollovací obsah jako seznam článků. */
+    .travel-map-modal-overlay {
+      position: fixed; inset: 0; z-index: 8000; background: rgba(4,4,10,0.85);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .travel-map-modal-overlay.open { display: flex; }
+    .travel-map-modal-box {
+      width: 100%; max-width: 960px; max-height: 88vh;
+      background: var(--void-2); border: 1px solid var(--panel-border);
+      border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .travel-map-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 1.4rem; border-bottom: 1px solid rgba(140,150,255,0.14); flex-shrink: 0;
+    }
+    .travel-map-modal-header h2 {
+      font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
+    }
+    .travel-map-modal-close {
+      background: rgba(140,150,255,0.1); border: 1px solid var(--panel-border); color: var(--parchment);
+      width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+    }
+    .travel-map-modal-close:hover { border-color: var(--panel-border-hover); background: rgba(255,122,69,0.12); }
+    #travelMapModalMap {
+      width: 100%; height: 60vh; min-height: 380px; background: #0a0a16; flex-shrink: 0;
+    }
+    .travel-map-modal-legend {
+      display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap;
+      padding: 12px 16px; font-size: 12px; color: var(--mist-dim);
+      border-top: 1px solid rgba(140,150,255,0.12); flex-shrink: 0;
+    }
+    .travel-map-modal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .travel-map-modal-legend .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .travel-map-modal-empty {
+      display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
+      height: 60vh; min-height: 380px; text-align: center; padding: 20px; color: var(--mist);
+    }
+    .travel-map-modal-empty h3 { font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 18px; }
+    .travel-map-modal-empty p { max-width: 380px; font-size: 13.5px; line-height: 1.6; color: var(--mist-dim); }
+
+    /* Leaflet UI přebarvené do tmavého skla webu (stejné jako v mapa.html) */
+    .travel-map-modal-box .leaflet-control-zoom a {
+      background: var(--panel-solid) !important; color: var(--parchment) !important;
+      border-color: var(--panel-border) !important;
+    }
+    .travel-map-modal-box .leaflet-control-zoom a:hover { background: rgba(255,122,69,0.25) !important; }
+    .travel-map-modal-box .leaflet-control-attribution {
+      background: rgba(8,8,15,0.75) !important; color: var(--mist-dim) !important;
+    }
+
+    .travel-map-modal-box .map-point-label {
+      background: var(--panel-solid) !important; border: 1px solid var(--panel-border) !important;
+      border-radius: 8px !important; padding: 3px 8px !important;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35); font-family: 'Inter', sans-serif; line-height: 1.25;
+      pointer-events: none;
+    }
+    .travel-map-modal-box .map-point-label::before { display: none !important; }
+    .travel-map-modal-box .map-label-title { display: block; font-size: 11.5px; font-weight: 600; color: var(--parchment); white-space: nowrap; margin-bottom: 1px; }
+    .travel-map-modal-box .map-label-meta { display: block; font-size: 9.5px; color: var(--mist-dim); white-space: nowrap; }
+
+    .travel-map-modal-box .star-pin {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, var(--ember) 45%, transparent 75%);
+      box-shadow: 0 0 10px var(--ember), 0 0 22px var(--ember-dim);
+      border: 2px solid rgba(255,255,255,0.85);
+      animation: pin-pulse 2.2s ease-in-out infinite;
+      cursor: pointer;
+    }
+    @keyframes pin-pulse { 0%,100% { transform: scale(0.9); } 50% { transform: scale(1.15); } }
+    @media (prefers-reduced-motion: reduce) { .travel-map-modal-box .star-pin { animation: none; } }
+
+    @media (max-width: 700px) {
+      #travelMapModalMap, .travel-map-modal-empty { height: 52vh; }
+    }
     .section-modal-scroll .article-link { font-size: 13px; padding: 8px 10px 8px 16px; }
 
     /* === PATIČKA (nová) — RSS odkaz viditelně, ne jen v <head> === */
@@ -393,6 +473,24 @@
       <div class="section-modal-scroll" id="sectionModalScroll"></div>
     </div>
   </div>
+
+  <div class="travel-map-modal-overlay" id="travelMapModalOverlay">
+    <div class="travel-map-modal-box">
+      <div class="travel-map-modal-header">
+        <h2>🗺️ Mapa cest</h2>
+        <button class="travel-map-modal-close" id="travelMapModalClose" aria-label="Zavřít">✕</button>
+      </div>
+      <div id="travelMapModalMap"></div>
+      <div class="travel-map-modal-legend" id="travelMapModalLegend" hidden></div>
+    </div>
+  </div>
+
+  <!-- Leaflet — lehká open-source mapová knihovna, žádný API klíč. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
   <script src="/shared.js"></script>
   <script>
   document.getElementById('footerYear').textContent = new Date().getFullYear();
@@ -606,6 +704,14 @@
           if (block) block.classList.toggle('collapsed');
         });
       });
+      var travelLinkInModal = scrollEl.querySelector('.travel-map-link');
+      if (travelLinkInModal) {
+        travelLinkInModal.addEventListener('click', function(e) {
+          e.preventDefault();
+          closeSectionModal();
+          openTravelMapModal();
+        });
+      }
     }
 
     function closeSectionModal() {
@@ -620,6 +726,160 @@
       if (closeBtn) closeBtn.addEventListener('click', closeSectionModal);
       if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSectionModal(); });
       document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSectionModal(); });
+    }
+
+    /* === MAPA CEST — modal přímo na stránce (bez přechodu na /mapa.html) ===
+       Stejná logika jako samostatná stránka mapa.html (seskupení podle
+       podsekce s vlastní barvou/trasou, trvalé popisky, denní podklad),
+       jen vykreslená do modalu, aby se otevřela okamžitě po kliku, ne až
+       po načtení nové stránky. */
+    var travelMapInitialized = false;
+
+    function formatDateCz(d) {
+      if (!d) return '';
+      try { return new Date(d).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); }
+      catch (e) { return ''; }
+    }
+
+    async function openTravelMapModal() {
+      var overlay = document.getElementById('travelMapModalOverlay');
+      if (!overlay) return;
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      if (!travelMapInitialized) {
+        travelMapInitialized = true;
+        await buildTravelMapModalContent();
+      } else if (window._travelMapInstance) {
+        // Modal se zavíral/otevíral už dřív — Leaflet potřebuje vědět,
+        // že se kontejner mezitím mohl přeměřit (stejný důvod jako u
+        // mapy v administraci).
+        setTimeout(function () { window._travelMapInstance.invalidateSize(); }, 50);
+      }
+    }
+
+    function closeTravelMapModal() {
+      var overlay = document.getElementById('travelMapModalOverlay');
+      if (overlay) overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function initTravelMapModal() {
+      var overlay = document.getElementById('travelMapModalOverlay');
+      var closeBtn = document.getElementById('travelMapModalClose');
+      if (closeBtn) closeBtn.addEventListener('click', closeTravelMapModal);
+      if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeTravelMapModal(); });
+      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTravelMapModal(); });
+    }
+
+    async function buildTravelMapModalContent() {
+      var mapEl = document.getElementById('travelMapModalMap');
+      var legend = document.getElementById('travelMapModalLegend');
+      if (!mapEl) return;
+
+      var articles = await getAllArticles();
+      var withCoords = articles.filter(function (a) {
+        return a && typeof a.lat === 'number' && isFinite(a.lat) &&
+          typeof a.lng === 'number' && isFinite(a.lng);
+      });
+
+      if (!withCoords.length) {
+        mapEl.outerHTML = '<div class="travel-map-modal-empty" id="travelMapModalMap"><h3>Zatím tu nejsou žádná místa</h3><p>Jakmile u některého článku vyplníš souřadnice místa, objeví se tu jako bod na mapě.</p></div>';
+        if (legend) legend.hidden = true;
+        return;
+      }
+
+      withCoords.sort(function (a, b) {
+        var da = a.date || a.created || '', db = b.date || b.created || '';
+        return da < db ? -1 : da > db ? 1 : 0;
+      });
+
+      var SECTION_NAMES = { travel: 'Cestování', photo: 'Fotografování', projects: 'Projekty', about: 'O Zajdovi' };
+      var groupsMap = {};
+      var groupOrder = [];
+      withCoords.forEach(function (a) {
+        var key = (a.sectionId || '?') + ':' + (a.subsectionId || '');
+        if (!groupsMap[key]) {
+          groupsMap[key] = { key: key, sectionId: a.sectionId, subsectionId: a.subsectionId, points: [] };
+          groupOrder.push(key);
+        }
+        groupsMap[key].points.push(a);
+      });
+      for (var gi = 0; gi < groupOrder.length; gi++) {
+        var g = groupsMap[groupOrder[gi]];
+        var secName = SECTION_NAMES[g.sectionId] || g.sectionId || 'Ostatní';
+        var subName = await getSubsectionNameMap().then(function(map) { return map[g.sectionId + ':' + (g.subsectionId || '')] || ''; });
+        g.label = subName ? secName + ' — ' + subName : secName;
+      }
+
+      var THEME_COLORS = ['#ff7a45', '#2fe6c9', '#8f6bff'];
+      function colorForIndex(i) {
+        if (i < THEME_COLORS.length) return THEME_COLORS[i];
+        return 'hsl(' + ((i * 47) % 360) + ', 70%, 62%)';
+      }
+      groupOrder.forEach(function (key, i) { groupsMap[key].color = colorForIndex(i); });
+
+      var map = L.map('travelMapModalMap', { scrollWheelZoom: false });
+      window._travelMapInstance = map;
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        maxZoom: 19
+      }).addTo(map);
+      map.on('focus', function () { map.scrollWheelZoom.enable(); });
+      map.on('blur', function () { map.scrollWheelZoom.disable(); });
+
+      function starIconForColor(color) {
+        return L.divIcon({
+          className: '',
+          html: '<div class="star-pin" style="background:radial-gradient(circle,#fff 0%,' + color + ' 45%,transparent 75%);box-shadow:0 0 10px ' + color + ',0 0 22px ' + color + '99;"></div>',
+          iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -10]
+        });
+      }
+
+      var allLatLngs = [];
+      var legendHtml = '';
+      groupOrder.forEach(function (key) {
+        var g = groupsMap[key];
+        var icon = starIconForColor(g.color);
+        var groupLatLngs = [];
+
+        g.points.forEach(function (a) {
+          var ll = [a.lat, a.lng];
+          groupLatLngs.push(ll);
+          allLatLngs.push(ll);
+          var marker = L.marker(ll, { icon: icon }).addTo(map);
+          var title = escapeHtml(a.title || 'Bez názvu');
+          var place = escapeHtml(a.place || '');
+          var dateStr = escapeHtml(formatDateCz(a.date || a.created));
+          var articleUrl = '/article?id=' + encodeURIComponent(a.id);
+
+          // Mapa je alternativní způsob listování mezi články jedné cesty —
+          // hover ukáže náhled (název/místo/datum), klik rovnou otevře
+          // článek. Žádná mezikroková bublina s odkazem uvnitř.
+          marker.bindTooltip(
+            '<span class="map-label-title">' + title + '</span>' +
+            (place ? '<span class="map-label-meta">' + place + '</span>' : '') +
+            (dateStr ? '<span class="map-label-meta">' + dateStr + '</span>' : ''),
+            { direction: 'top', offset: [0, -10], className: 'map-point-label', opacity: 1 }
+          );
+          marker.on('click', function () { window.location.href = articleUrl; });
+        });
+
+        if (groupLatLngs.length > 1) {
+          L.polyline(groupLatLngs, { color: g.color, weight: 2.5, opacity: 0.65, dashArray: '5 8' }).addTo(map);
+        }
+        legendHtml += '<span><span class="legend-dot" style="background:' + g.color + ';box-shadow:0 0 8px ' + g.color + '99"></span> ' + escapeHtml(g.label) + (groupLatLngs.length > 1 ? '' : ' (1 místo)') + '</span>';
+      });
+
+      if (allLatLngs.length === 1) map.setView(allLatLngs[0], 8);
+      else map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
+
+      if (legend) { legend.innerHTML = legendHtml; legend.hidden = false; }
+
+      // Modal se otevírá s display:none → flex až po kliknutí, ale
+      // Leaflet měřil kontejner ještě v okamžiku, kdy mohl mít 0 výšky
+      // (těsně po přepnutí třídy 'open'). Jedno doměření o kousek později
+      // pro jistotu, ať mapa nezůstane "rozbitá" napůl vykreslená.
+      setTimeout(function () { map.invalidateSize(); }, 60);
     }
 
     function renderSavedList() {
