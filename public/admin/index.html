@@ -12,7 +12,6 @@
 </head>
 <body>
 
-<!-- ============ HORNÍ LIŠTA (napevno nahoře jako ve Wordu) ============ -->
 <div class="dash-topbar">
 
 <header class="dash-header">
@@ -20,7 +19,6 @@
   <button class="btn btn-red btn-sm" onclick="logout()">🚪 Odhlásit</button>
 </header>
 
-<!-- ============ RIBBON TABS ============ -->
 <nav class="ribbon-tabs" id="ribbonTabs">
   <span class="ribbon-tab-indicator" id="ribbonTabIndicator"></span>
   <button class="ribbon-tab" data-tab="galleries" onclick="showTab('galleries')">🖼️ Galerie</button>
@@ -31,15 +29,12 @@
   <button class="ribbon-tab" data-tab="admin" onclick="showTab('admin')">🛠️ ADMIN</button>
 </nav>
 
-<!-- ============ RIBBON TOOLBAR ============ -->
 <div class="ribbon-toolbar" id="ribbonToolbar">
 
   <button class="btn btn-sm ribbon-reorder-toggle" id="reorderToggleBtn" onclick="toggleRibbonReorderMode()" title="Přeuspořádat tlačítka v této liště tažením myší, nebo je skrýt">↕️ Uspořádat</button>
   <button class="btn btn-sm ribbon-reorder-toggle" onclick="restoreAllRibbonItems()" title="Vrátit všechny skryté prvky v této liště">↺ Obnovit vše</button>
 
-  <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
-    <!-- Zobrazení a hledání -->
     <select id="viewMode" class="ribbon-select" data-key="viewMode" onchange="renderGallery()">
       <option value="grid">Mřížka</option>
       <option value="small">Malé náhledy</option>
@@ -59,7 +54,6 @@
 
     <div class="ribbon-sep" data-key="sep1"></div>
 
-    <!-- Složky -->
     <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
       <option value="">📁 Všechny složky</option>
     </select>
@@ -69,7 +63,6 @@
 
     <div class="ribbon-sep" data-key="sep2"></div>
 
-    <!-- Nahrávání -->
     <select id="upResSelect" class="ribbon-select" data-key="upRes" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
       <option value="1000">1000 px</option>
       <option value="2000">2000 px</option>
@@ -90,7 +83,6 @@
 
     <div class="ribbon-sep" data-key="sep3"></div>
 
-    <!-- Hromadné akce s vybranými fotkami -->
     <button class="btn btn-sm" data-key="selectAll" onclick="selectAllVisiblePhotos()" title="Vybere všechny fotky podle aktuálního filtru">☑️ Vybrat vše</button>
     <button class="btn btn-sm" data-key="selectNone" onclick="clearPhotoSelection()">◻️ Zrušit výběr</button>
     <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
@@ -102,7 +94,6 @@
     <span class="pill" id="galleryCountPill" data-key="countPill">0 fotek</span>
   </div>
 
-  <!-- Články -->
   <div class="ribbon-group" data-for="articles">
     <button class="btn btn-blue btn-sm" data-key="newArticle" onclick="resetArticleForm()">➕ Nový článek</button>
     <button class="btn btn-sm" data-key="previewArticle" onclick="previewArticle()">👁 Náhled</button>
@@ -110,22 +101,18 @@
     <button class="btn btn-sm" data-key="selectNoneArticles" onclick="clearArticleSelection()">◻️ Zrušit výběr</button>
   </div>
 
-  <!-- Citáty -->
   <div class="ribbon-group" data-for="quotes">
     <span class="ribbon-label" data-key="quotesLabel">Správa citátů</span>
   </div>
 
-  <!-- Podsekce -->
   <div class="ribbon-group" data-for="subsections">
     <span class="ribbon-label" data-key="subsectionsLabel">Správa podsekcí a coverů</span>
   </div>
 
-  <!-- O Zajdovi -->
   <div class="ribbon-group" data-for="about">
     <button class="btn btn-green btn-sm" data-key="saveAbout" onclick="saveAbout()">💾 Uložit</button>
   </div>
 
-  <!-- ADMIN -->
   <div class="ribbon-group" data-for="admin">
     <button class="btn btn-sm" data-key="refreshAdmin" onclick="loadAdminPanel()">🔄 Obnovit</button>
     <span class="ribbon-label" data-key="adminLabel">Cloudflare metriky a správa přístupů</span>
@@ -134,17 +121,13 @@
 </div>
 
 </div>
-<!-- /dash-topbar -->
 
-<!-- ============ CONTENT ============ -->
 <main class="dash-content">
 
-  <!-- ---------- GALERIE ---------- -->
   <section id="galleries" class="section">
     <div id="galleryGrid" class="gallery-grid"></div>
   </section>
 
-  <!-- ---------- ČLÁNKY ---------- -->
   <section id="articles" class="section">
     <div class="form-card">
       <div class="form-row">
@@ -246,7 +229,6 @@
     <div id="articleList" style="margin-top:1rem"></div>
   </section>
 
-  <!-- ---------- CITÁTY ---------- -->
   <section id="quotes" class="section">
     <div class="form-card">
       <div class="form-row">
@@ -261,7 +243,6 @@
     </table>
   </section>
 
-  <!-- ---------- PODSEKCE ---------- -->
   <section id="subsections" class="section">
     <div class="form-card">
       <div class="form-row">
@@ -289,7 +270,6 @@
     </table>
   </section>
 
-  <!-- ---------- O ZAJDOVI ---------- -->
   <section id="about" class="section">
     <div class="form-card">
       <div class="form-row">
@@ -357,7 +337,6 @@
     <div id="aboutPreview" class="form-card"></div>
   </section>
 
-  <!-- ---------- ADMIN ---------- -->
   <section id="admin" class="section">
     <h3 style="margin-bottom:0.75rem">📊 Využití (Cloudflare)</h3>
     <div id="adminUsageCards" class="usage-cards"></div>
@@ -404,7 +383,6 @@
 
 </main>
 
-<!-- ============ IMPORT SLOŽEK ============ -->
 <div id="importFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Importovat kód složek">
   <div class="modal-box">
     <h3>⬆️ Importovat kód složek</h3>
@@ -423,7 +401,6 @@
   </div>
 </div>
 
-<!-- ============ UPLOAD SETTINGS MODAL ============ -->
 <div id="uploadSettingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Nastavení nahrávání">
   <div class="modal-box">
     <h3>⚙️ Nastavení nahrávání</h3>
@@ -459,7 +436,6 @@
   </div>
 </div>
 
-<!-- ============ NOVÁ SLOŽKA ============ -->
 <div id="newFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Nová složka">
   <div class="modal-box">
     <h3>➕ Nová složka</h3>
@@ -474,7 +450,6 @@
   </div>
 </div>
 
-<!-- ============ PŘESUN DO SLOŽKY ============ -->
 <div id="moveToFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Přesunout do složky">
   <div class="modal-box">
     <h3>📁 Přesunout do složky</h3>
@@ -490,7 +465,6 @@
   </div>
 </div>
 
-<!-- ============ HROMADNÁ ÚPRAVA VYBRANÝCH FOTEK ============ -->
 <div id="bulkEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Hromadná úprava vybraných fotek">
   <div class="modal-box">
     <h3>🔧 Hromadná úprava vybraných fotek</h3>
@@ -523,7 +497,6 @@
   </div>
 </div>
 
-<!-- ============ FOTO EDITOR MODAL (beze změny, používá dashboard-editor.js) ============ -->
 <div id="editorModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Editor fotografie">
   <div class="editor-box">
     <div class="editor-body">
@@ -716,5 +689,6 @@
 
 <script src="dashboard-core.js?v=20260731"></script>
 <script src="dashboard-editor.js?v=20260731"></script>
+<script src="article-map-picker.js?v=20260811"></script>
 </body>
 </html>
