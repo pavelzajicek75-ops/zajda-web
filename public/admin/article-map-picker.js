@@ -126,14 +126,21 @@
     const wrap = document.createElement('div');
     wrap.className = 'form-row';
     wrap.id = 'artLocationRow';
+    // ★ ZMĚNA: .form-row v CSS administrace dělá display:flex na PŘÍMÝCH
+    // potomcích — proto se popisek, řádek s čísly a mapa naskládaly vedle
+    // sebe do jednoho řádku (na desktopu), zatímco na mobilu to zachránil
+    // nějaký media query. Inline styl display:block tohle přebije a vynutí
+    // sloupcové řazení vždy, nezávisle na šířce obrazovky — přesně to,
+    // jak už to vypadalo na mobilu.
+    wrap.style.cssText = 'display:block;width:100%;margin:0.6rem 0 1rem';
     wrap.innerHTML =
-      '<label>📍 Poloha na mapě <span style="font-weight:400;color:var(--text-faint)">(nepovinné — vyplň, ať se článek objeví na Mapě cest)</span></label>' +
-      '<div style="display:flex;gap:8px;margin-bottom:6px">' +
-      '<input type="number" id="artLat" class="form-input" placeholder="Šířka (lat)" step="any" style="flex:1" oninput="syncLocationMapFromInputs()">' +
-      '<input type="number" id="artLng" class="form-input" placeholder="Délka (lng)" step="any" style="flex:1" oninput="syncLocationMapFromInputs()">' +
-      '<button type="button" class="btn btn-sm" onclick="clearArticleLocation()" title="Smazat polohu">✕</button>' +
+      '<label style="display:block;margin-bottom:6px">📍 Poloha na mapě <span style="font-weight:400;color:var(--text-faint)">(nepovinné — vyplň, ať se článek objeví na Mapě cest)</span></label>' +
+      '<div style="display:flex;gap:8px;margin-bottom:8px;max-width:420px">' +
+      '<input type="number" id="artLat" class="form-input" placeholder="Šířka (lat)" step="any" style="flex:1;min-width:0" oninput="syncLocationMapFromInputs()">' +
+      '<input type="number" id="artLng" class="form-input" placeholder="Délka (lng)" step="any" style="flex:1;min-width:0" oninput="syncLocationMapFromInputs()">' +
+      '<button type="button" class="btn btn-sm" onclick="clearArticleLocation()" title="Smazat polohu" style="flex:0 0 auto">✕</button>' +
       '</div>' +
-      '<div id="artLocationMap" style="height:220px;border-radius:10px;overflow:hidden;border:1px solid var(--border-soft,#263252)"></div>';
+      '<div id="artLocationMap" style="display:block;width:100%;height:300px;border-radius:10px;overflow:hidden;border:1px solid var(--border-soft,#263252)"></div>';
     row.after(wrap);
     // ★ initMap() se odsud ZÁMĚRNĚ nevolá — v okamžiku, kdy tohle běží
     // (DOMContentLoaded), je výchozí aktivní záložka "Galerie", takže
