@@ -102,6 +102,41 @@
     if (Number.isFinite(lat) && Number.isFinite(lng) && mapInstance) setMarker(lat, lng, true);
   };
 
+  /* === AUTOMATICKÉ DOHLEDÁNÍ SOUŘADNIC PODLE NÁZVU MÍSTA ===
+     Používá veřejné Nominatim API (OpenStreetMap) — zdarma, bez klíče,
+     podporuje CORS přímo z prohlížeče. Podle jejich pravidel použití:
+     max. cca 1 dotaz/s (tady je to jeden klik = jeden dotaz, takže OK)
+     a sluší se odkázat na zdroj dat — atribuci už mapa má u dlaždic.
+     Bere text z pole "Místo", ne z nových lat/lng polí. */
+  window.geocodeArticlePlace = async function () {
+    const placeVal = $('artPlace')?.value.trim();
+    const btn = $('artGeocodeBtn');
+    if (!placeVal) {
+      if (typeof showToast === 'function') showToast('Nejdřív vyplň pole "Místo".', 'info');
+      return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Hledám…'; }
+    try {
+      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(placeVal);
+      const r = await fetch(url, { headers: { 'Accept-Language': 'cs' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      if (!data || !data.length) {
+        if (typeof showToast === 'function') showToast('Místo "' + placeVal + '" se nepodařilo najít — zkus přesnější název, nebo klikni do mapy ručně.', 'info');
+        return;
+      }
+      const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+      if (!mapInstance) await initMap();
+      setMarker(lat, lng);
+      if (typeof showToast === 'function') showToast('Nalezeno: ' + (data[0].display_name || placeVal), 'success');
+    } catch (e) {
+      console.error('Geokódování selhalo:', e);
+      if (typeof showToast === 'function') showToast('Hledání se nezdařilo — zkus to znovu nebo zadej souřadnice ručně.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🔍 Najít podle názvu'; }
+    }
+  };
+
   async function initMap() {
     try { await loadLeaflet(); } catch (e) { console.error(e); return; }
     const el = $('artLocationMap');
@@ -135,6 +170,9 @@
     wrap.style.cssText = 'display:block;width:100%;margin:0.6rem 0 1rem';
     wrap.innerHTML =
       '<label style="display:block;margin-bottom:6px">📍 Poloha na mapě <span style="font-weight:400;color:var(--text-faint)">(nepovinné — vyplň, ať se článek objeví na Mapě cest)</span></label>' +
+      '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;max-width:520px">' +
+      '<button type="button" id="artGeocodeBtn" class="btn btn-sm" onclick="geocodeArticlePlace()" title="Zkusí najít souřadnice podle textu v poli Místo výše">🔍 Najít podle názvu</button>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;margin-bottom:8px;max-width:420px">' +
       '<input type="number" id="artLat" class="form-input" placeholder="Šířka (lat)" step="any" style="flex:1;min-width:0" oninput="syncLocationMapFromInputs()">' +
       '<input type="number" id="artLng" class="form-input" placeholder="Délka (lng)" step="any" style="flex:1;min-width:0" oninput="syncLocationMapFromInputs()">' +
