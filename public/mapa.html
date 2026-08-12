@@ -17,6 +17,13 @@
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+  <!-- Leaflet.markercluster — shlukuje blízké body do jedné "bubliny" s
+       počtem, dokud nezoomuješ blíž. Self-hosted (ne CDN), ať nemusíme
+       řešit integrity hash cizího souboru. -->
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.css">
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.Default.css">
+  <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -140,14 +147,55 @@
       padding: 16px 20px; font-size: 12.5px; color: var(--mist-dim);
       border-top: 1px solid rgba(140,150,255,0.12);
     }
-    .map-legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .map-legend span.legend-item {
+      display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+      padding: 3px 8px; border-radius: 20px; transition: background 0.2s, opacity 0.2s;
+      user-select: none;
+    }
+    .map-legend span.legend-item:hover, .map-legend span.legend-item:focus-visible {
+      background: rgba(140,150,255,0.1);
+    }
+    /* Skrytá trasa (po kliku na legendu) — ztlumená, ne úplně schovaná,
+       ať je jasné, že je vypnutá a ne že zmizela navždy. */
+    .map-legend span.legend-item.legend-off { opacity: 0.4; }
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 8px var(--ember-dim); display: inline-block; }
     .legend-line { width: 22px; height: 0; border-top: 2px dashed var(--nova); display: inline-block; }
+
+    /* === STATISTIKY (X cest · Y míst · Z km) === */
+    .map-stats {
+      display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap;
+      padding: 12px 20px; font-size: 13px; color: var(--parchment);
+      border-bottom: 1px solid rgba(140,150,255,0.12);
+    }
+    .map-stats strong { color: var(--nova); font-weight: 700; }
+
+    /* === PŘEHRÁT TRASU === */
+    .map-play-btn {
+      position: absolute; bottom: 14px; left: 14px; z-index: 900;
+      background: var(--panel-solid); border: 1px solid var(--panel-border);
+      color: var(--parchment); padding: 9px 16px; border-radius: 30px; cursor: pointer;
+      font-size: 13px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+      transition: border-color 0.2s, background 0.2s; font-family: 'Inter', sans-serif;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .map-play-btn:hover, .map-play-btn:focus-visible {
+      border-color: var(--panel-border-hover); background: rgba(255,122,69,0.18);
+    }
+    .map-play-btn:disabled { opacity: 0.6; cursor: default; }
+
+    /* === VLASTNÍ IKONA SHLUKU (cluster) === */
+    .map-cluster-icon {
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: #08080f; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+      border: 2px solid rgba(255,255,255,0.85);
+    }
 
     @media (max-width: 700px) {
       .nav-bar { padding: 16px 20px; }
       .map-wrap { padding: 0 12px; }
       #travelMap, .map-empty { height: 56vh; }
+      .map-stats { gap: 14px; font-size: 12px; }
+      .map-play-btn { font-size: 12px; padding: 7px 12px; bottom: 10px; left: 10px; }
     }
   </style>
 </head>
@@ -168,8 +216,10 @@
 
   <div class="map-wrap" id="mapWrap" tabindex="-1">
     <div class="map-panel">
+      <div class="map-stats" id="mapStats" hidden></div>
       <button type="button" class="map-theme-toggle" id="mapThemeToggle" title="Přepnout denní/noční mapu" aria-label="Přepnout denní/noční mapu">☀️</button>
       <div id="travelMap"></div>
+      <button type="button" class="map-play-btn" id="mapPlayBtn" hidden>▶️ Přehrát trasu</button>
       <div class="map-legend" id="mapLegend" hidden></div>
     </div>
   </div>
@@ -275,6 +325,20 @@
     }
     groupOrder.forEach(function (key, i) { groupsMap[key].color = colorForIndex(i); });
 
+    // === VZDUŠNÁ VZDÁLENOST (Haversine) ===
+    // Pro statistiku "~X km" — počítá se jako součet přímých úseků mezi
+    // po sobě jdoucími body v rámci KAŽDÉ trasy (ne skutečná ujetá
+    // vzdálenost po silnici/letecky, proto "vzdušnou čarou").
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      var R = 6371;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLon = (lon2 - lon1) * Math.PI / 180;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     var map = L.map('travelMap', { scrollWheelZoom: false });
 
     // === DENNÍ / NOČNÍ MAPOVÝ PODKLAD ===
@@ -311,11 +375,6 @@
     map.on('blur', function () { map.scrollWheelZoom.disable(); });
 
     // === DOTYKOVÁ ZAŘÍZENÍ: nejdřív náhled, pak teprve otevření ===
-    // Na počítači hover ukáže popisek a klik rovnou otevře článek — na
-    // mobilu/tabletu ale žádný hover neexistuje, takže první ťuknutí by
-    // rovnou odnaneslo pryč bez šance si popisek přečíst. Na dotykových
-    // zařízeních proto první ťuknutí na hvězdičku jen ukáže popisek,
-    // teprve druhé ťuknutí (na stejnou nebo jinou hvězdičku) naviguje.
     var isTouchDevice = window.matchMedia && window.matchMedia('(hover: none)').matches;
 
     function starIconForColor(color) {
@@ -328,18 +387,47 @@
       });
     }
 
+    // Shluková ikona v barvě dané trasy — s počtem bodů uvnitř. Velikost
+    // roste mírně s počtem, ať je vidět rozdíl mezi shlukem 2 a shlukem 20.
+    function clusterIconForColor(color) {
+      return function (cluster) {
+        var count = cluster.getChildCount();
+        var size = count < 10 ? 32 : count < 50 ? 38 : 44;
+        return L.divIcon({
+          html: '<div class="map-cluster-icon" style="width:' + size + 'px;height:' + size + 'px;font-size:' + (count < 10 ? 13 : 14) + 'px;background:' + color + ';box-shadow:0 0 12px ' + color + 'aa;">' + count + '</div>',
+          className: '',
+          iconSize: [size, size]
+        });
+      };
+    }
+
     var allLatLngs = [];
     var legendHtml = '';
+    var markerById = {};       // pro "Přehrát trasu" — najít marker podle id článku
+    var totalDistanceKm = 0;
+
     groupOrder.forEach(function (key) {
       var g = groupsMap[key];
       var icon = starIconForColor(g.color);
       var groupLatLngs = [];
 
+      // Vlastní shlukovací vrstva PRO KAŽDOU trasu zvlášť (ne jedna
+      // společná) — díky tomu shluk nikdy nemíchá body z různých cest a
+      // legenda může trasu i s jejím shlukem najednou schovat/zobrazit.
+      var clusterGroup = L.markerClusterGroup({
+        iconCreateFunction: clusterIconForColor(g.color),
+        maxClusterRadius: 45,
+        disableClusteringAtZoom: 13,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false
+      });
+
       g.points.forEach(function (a) {
         var ll = [a.lat, a.lng];
         groupLatLngs.push(ll);
         allLatLngs.push(ll);
-        var marker = L.marker(ll, { icon: icon }).addTo(map);
+        var marker = L.marker(ll, { icon: icon });
+        markerById[a.id] = marker;
         var title = escapeHtml(a.title || 'Bez názvu');
         var place = escapeHtml(a.place || '');
         var dateStr = escapeHtml(formatDateCz(a.date || a.created));
@@ -348,17 +436,13 @@
         // Mapa je alternativní způsob listování mezi články jedné cesty —
         // na počítači hover ukáže název/místo/datum a klik rovnou otevře
         // článek. Na dotykovém zařízení hover neexistuje, takže první
-        // ťuknutí jen otevře popisek (jinak by hned odnaneslo pryč bez
-        // šance si ho přečíst) — teprve druhé ťuknutí naviguje.
+        // ťuknutí jen otevře popisek — teprve druhé naviguje.
         var tooltipHtml =
           '<span class="map-label-title">' + title + '</span>' +
           (place ? '<span class="map-label-meta">' + place + '</span>' : '') +
           (dateStr ? '<span class="map-label-meta">' + dateStr + '</span>' : '');
         marker.bindTooltip(tooltipHtml, {
-          direction: 'top',
-          offset: [0, -10],
-          className: 'map-point-label',
-          opacity: 1
+          direction: 'top', offset: [0, -10], className: 'map-point-label', opacity: 1
         });
         var tooltipOpenedByTap = false;
         marker.on('click', function () {
@@ -369,19 +453,29 @@
           }
           window.location.href = articleUrl;
         });
-        // Klávesnice/čtečky obrazovky — Leaflet marker není <a>, takže bez
-        // tohohle by špendlík vůbec nešel aktivovat jinak než myší.
-        marker.getElement() && marker.getElement().setAttribute('tabindex', '0');
+        marker.on('add', function () {
+          // Klávesnice/čtečky obrazovky — nastavit tabindex až PO přidání
+          // do (cluster) skupiny, jinak element ještě neexistuje v DOM.
+          var el = marker.getElement();
+          if (el) el.setAttribute('tabindex', '0');
+        });
+        clusterGroup.addLayer(marker);
       });
 
       // Trasa jen v rámci téhle skupiny (podsekce) — ne napříč všemi.
+      var polyline = null;
       if (groupLatLngs.length > 1) {
-        L.polyline(groupLatLngs, {
-          color: g.color, weight: 2.5, opacity: 0.65, dashArray: '5 8'
-        }).addTo(map);
+        polyline = L.polyline(groupLatLngs, { color: g.color, weight: 2.5, opacity: 0.65, dashArray: '5 8' }).addTo(map);
+        for (var pi = 1; pi < groupLatLngs.length; pi++) {
+          totalDistanceKm += haversineKm(groupLatLngs[pi - 1][0], groupLatLngs[pi - 1][1], groupLatLngs[pi][0], groupLatLngs[pi][1]);
+        }
       }
+      g.polyline = polyline;
+      g.clusterGroup = clusterGroup;
+      g.visible = true;
+      clusterGroup.addTo(map);
 
-      legendHtml += '<span><span class="legend-dot" style="background:' + g.color + ';box-shadow:0 0 8px ' + g.color + '99"></span> ' + escapeHtml(g.label) + (groupLatLngs.length > 1 ? '' : ' (1 místo)') + '</span>';
+      legendHtml += '<span class="legend-item" tabindex="0" role="button" data-group-key="' + escapeHtml(key) + '"><span class="legend-dot" style="background:' + g.color + ';box-shadow:0 0 8px ' + g.color + '99"></span> ' + escapeHtml(g.label) + (groupLatLngs.length > 1 ? '' : ' (1 místo)') + '</span>';
     });
 
     if (allLatLngs.length === 1) {
@@ -392,6 +486,67 @@
 
     legend.innerHTML = legendHtml;
     legend.hidden = false;
+
+    // === FILTROVATELNÁ LEGENDA — klik na trasu ji schová/zobrazí ===
+    legend.querySelectorAll('.legend-item').forEach(function (item) {
+      function toggle() {
+        var key = item.getAttribute('data-group-key');
+        var g = groupsMap[key];
+        if (!g) return;
+        g.visible = !g.visible;
+        item.classList.toggle('legend-off', !g.visible);
+        if (g.visible) {
+          g.clusterGroup.addTo(map);
+          if (g.polyline) g.polyline.addTo(map);
+        } else {
+          map.removeLayer(g.clusterGroup);
+          if (g.polyline) map.removeLayer(g.polyline);
+        }
+      }
+      item.addEventListener('click', toggle);
+      item.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+    });
+
+    // === STATISTIKY ===
+    var statsEl = document.getElementById('mapStats');
+    if (statsEl) {
+      var tripWord = groupOrder.length === 1 ? 'cesta' : (groupOrder.length >= 2 && groupOrder.length <= 4 ? 'cesty' : 'cest');
+      var placeWord = withCoords.length === 1 ? 'místo' : (withCoords.length >= 2 && withCoords.length <= 4 ? 'místa' : 'míst');
+      var distancePart = totalDistanceKm > 0 ? ' · <strong>~' + Math.round(totalDistanceKm).toLocaleString('cs-CZ') + ' km</strong> vzdušnou čarou' : '';
+      statsEl.innerHTML = '<span><strong>' + groupOrder.length + '</strong> ' + tripWord + '</span><span><strong>' + withCoords.length + '</strong> ' + placeWord + '</span>' +
+        (distancePart ? '<span>' + distancePart.replace(/^ · /, '') + '</span>' : '');
+      statsEl.hidden = false;
+    }
+
+    // === PŘEHRÁT TRASU ===
+    // "Proletí" mapou postupně všemi body v chronologickém pořadí napříč
+    // VŠEMI trasami (ne jen jednou skupinou) — jako mini prolet celou
+    // historií cestování. U každého bodu na chvíli ukáže popisek.
+    var playBtn = document.getElementById('mapPlayBtn');
+    if (playBtn && withCoords.length > 1) {
+      playBtn.hidden = false;
+      var isPlaying = false;
+      function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+      playBtn.addEventListener('click', async function () {
+        if (isPlaying) return;
+        isPlaying = true;
+        playBtn.disabled = true;
+        playBtn.textContent = '⏸ Přehrávám…';
+        for (var i = 0; i < withCoords.length; i++) {
+          var a = withCoords[i];
+          var m = markerById[a.id];
+          map.flyTo([a.lat, a.lng], 9, { duration: 1 });
+          await sleep(1100);
+          if (m) { try { m.openTooltip(); } catch (e) {} }
+          await sleep(1300);
+          if (m) { try { m.closeTooltip(); } catch (e) {} }
+        }
+        if (allLatLngs.length > 1) map.fitBounds(L.latLngBounds(allLatLngs), { padding: [40, 40] });
+        playBtn.disabled = false;
+        playBtn.textContent = '▶️ Přehrát trasu';
+        isPlaying = false;
+      });
+    }
   });
   </script>
 </body>
