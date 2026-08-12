@@ -4,10 +4,13 @@
   <meta charset="UTF-8">
   <title>Článek — Moje diagnóza, můj vesmír</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- ★ ZMĚNA: self-hosted fonty místo Google Fonts CDN — viz /fonts.css -->
+  <link rel="stylesheet" href="/fonts.css">
   <link rel="stylesheet" href="/shared.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -84,6 +87,34 @@
       padding: 3px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;
     }
     .article-divider { width: 60%; max-width: 300px; height: 1px; margin: 0 auto 32px; background: linear-gradient(to right, transparent, var(--ember-dim), transparent); }
+
+    /* === MINIATURA MAPY (jen u článků s vyplněnými souřadnicemi) === */
+    .article-mini-map-wrap {
+      max-width: 480px; margin: 0 auto 32px; border-radius: 14px; overflow: hidden;
+      border: 1px solid var(--panel-border); box-shadow: 0 14px 34px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .article-mini-map {
+      width: 100%; height: 180px; background: #0a0a16; cursor: pointer;
+    }
+    .article-mini-map-label {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 14px; background: var(--panel-solid); font-size: 13px;
+    }
+    .article-mini-map-label span { color: var(--mist); }
+    .article-mini-map-label a {
+      color: var(--nova); text-decoration: none; font-weight: 600; font-size: 12.5px;
+      white-space: nowrap; border-bottom: 1px solid transparent;
+    }
+    .article-mini-map-label a:hover { border-bottom-color: var(--nova); }
+    .article-mini-map .star-pin {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, var(--ember) 45%, transparent 75%);
+      box-shadow: 0 0 10px var(--ember), 0 0 22px var(--ember-dim);
+      border: 2px solid rgba(255,255,255,0.85);
+    }
+    .article-mini-map .leaflet-control-zoom,
+    .article-mini-map .leaflet-control-attribution { display: none; }
 
     .article-body { color: #dcdce8; font-size: 17px; line-height: 1.8; }
     .article-body p { margin-bottom: 18px; }
@@ -234,6 +265,7 @@
       .bg, .stars, .constellation-layer, .lightbox-overlay,
       .nav-bar, .reading-progress, .article-footer,
       .article-nav-links, .related-section, .toc-box,
+      .article-mini-map-wrap,
       .skip-link { display: none !important; }
       body { background: #fff !important; color: #111 !important; }
       .article-container { max-width: 100%; padding: 0; }
@@ -621,6 +653,19 @@
     html += '<span class="meta-item">📖 ~' + readingMinutes + ' min čtení</span>';
     html += '</div></div>';
     html += '<div class="article-divider"></div>';
+
+    // === MINIATURA MAPY — jen pokud má článek vyplněné souřadnice ===
+    var hasLocation = typeof article.lat === 'number' && isFinite(article.lat) &&
+      typeof article.lng === 'number' && isFinite(article.lng);
+    if (hasLocation) {
+      html += '<div class="article-mini-map-wrap">' +
+        '<div class="article-mini-map" id="articleMiniMap"></div>' +
+        '<div class="article-mini-map-label">' +
+        '<span>📍 ' + escapeHtml(article.place || 'Místo na mapě') + '</span>' +
+        '<a href="/mapa.html">Zobrazit celou mapu cest →</a>' +
+        '</div></div>';
+    }
+
     html += '<div id="tocPlaceholder"></div>';
     html += '<div class="article-body" id="articleBody">' + content + '</div>';
 
@@ -670,6 +715,27 @@
     }
 
     container.innerHTML = html;
+
+    // === Inicializace miniatury mapy (jen pokud má článek souřadnice) ===
+    if (hasLocation) {
+      var miniMapEl = document.getElementById('articleMiniMap');
+      if (miniMapEl && window.L) {
+        var miniMap = L.map('articleMiniMap', {
+          zoomControl: false, dragging: false, scrollWheelZoom: false,
+          doubleClickZoom: false, touchZoom: false, boxZoom: false,
+          keyboard: false, attributionControl: false
+        }).setView([article.lat, article.lng], 11);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(miniMap);
+        var miniIcon = L.divIcon({
+          className: '', html: '<div class="star-pin"></div>',
+          iconSize: [16, 16], iconAnchor: [8, 8]
+        });
+        L.marker([article.lat, article.lng], { icon: miniIcon, interactive: false }).addTo(miniMap);
+        // Miniatura je jen náhled (bez interakce) — klik kamkoliv v ní
+        // vede na plnou mapu cest, stejně jako odkaz pod ní.
+        miniMapEl.addEventListener('click', function () { window.location.href = '/mapa.html'; });
+      }
+    }
 
     var tocPlaceholder = document.getElementById('tocPlaceholder');
     var tocHtml = buildTOC(document.getElementById('articleBody'));
