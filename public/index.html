@@ -378,8 +378,34 @@
       padding: 12px 16px; font-size: 12px; color: var(--mist-dim);
       border-top: 1px solid rgba(140,150,255,0.12); flex-shrink: 0;
     }
-    .travel-map-modal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .travel-map-modal-legend span.legend-item {
+      display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+      padding: 3px 8px; border-radius: 20px; transition: background 0.2s, opacity 0.2s;
+      user-select: none;
+    }
+    .travel-map-modal-legend span.legend-item:hover, .travel-map-modal-legend span.legend-item:focus-visible {
+      background: rgba(140,150,255,0.1);
+    }
+    .travel-map-modal-legend span.legend-item.legend-off { opacity: 0.4; }
     .travel-map-modal-legend .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .travel-map-modal-stats {
+      display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
+      padding: 10px 16px; font-size: 12.5px; color: var(--parchment);
+      border-bottom: 1px solid rgba(140,150,255,0.12); flex-shrink: 0;
+    }
+    .travel-map-modal-stats strong { color: var(--nova); font-weight: 700; }
+    .travel-map-modal-play-btn {
+      position: absolute; bottom: 14px; left: 14px; z-index: 900;
+      background: var(--panel-solid); border: 1px solid var(--panel-border);
+      color: var(--parchment); padding: 8px 14px; border-radius: 30px; cursor: pointer;
+      font-size: 12.5px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+      transition: border-color 0.2s, background 0.2s; font-family: 'Inter', sans-serif;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .travel-map-modal-play-btn:hover, .travel-map-modal-play-btn:focus-visible {
+      border-color: var(--panel-border-hover); background: rgba(255,122,69,0.18);
+    }
+    .travel-map-modal-play-btn:disabled { opacity: 0.6; cursor: default; }
     .travel-map-modal-empty {
       display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
       height: 60vh; min-height: 380px; text-align: center; padding: 20px; color: var(--mist);
@@ -408,6 +434,11 @@
     .travel-map-modal-box .map-point-label::before { display: none !important; }
     .travel-map-modal-box .map-label-title { display: block; font-size: 12.5px; font-weight: 700; color: #ffffff; white-space: nowrap; margin-bottom: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
     .travel-map-modal-box .map-label-meta { display: block; font-size: 10.5px; color: #d7d9ec; font-weight: 500; white-space: nowrap; }
+    .travel-map-modal-box .map-cluster-icon {
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: #08080f; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+      border: 2px solid rgba(255,255,255,0.85);
+    }
 
     .travel-map-modal-box .star-pin {
       width: 16px; height: 16px; border-radius: 50%;
@@ -495,8 +526,10 @@
         <h2>🗺️ Mapa cest</h2>
         <button class="travel-map-modal-close" id="travelMapModalClose" aria-label="Zavřít">✕</button>
       </div>
+      <div class="travel-map-modal-stats" id="travelMapModalStats" hidden></div>
       <div id="travelMapModalMap"></div>
       <button type="button" class="travel-map-modal-theme-toggle" id="travelMapModalThemeToggle" title="Přepnout denní/noční mapu" aria-label="Přepnout denní/noční mapu">☀️</button>
+      <button type="button" class="travel-map-modal-play-btn" id="travelMapModalPlayBtn" hidden>▶️ Přehrát trasu</button>
       <div class="travel-map-modal-legend" id="travelMapModalLegend" hidden></div>
     </div>
   </div>
@@ -506,6 +539,9 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.css">
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.Default.css">
+  <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js"></script>
 
   <script src="/shared.js"></script>
   <script>
@@ -834,6 +870,16 @@
       }
       groupOrder.forEach(function (key, i) { groupsMap[key].color = colorForIndex(i); });
 
+      function haversineKm(lat1, lon1, lat2, lon2) {
+        var R = 6371;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lon2 - lon1) * Math.PI / 180;
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
       var map = L.map('travelMapModalMap', { scrollWheelZoom: false });
       window._travelMapInstance = map;
 
@@ -865,8 +911,6 @@
       map.on('focus', function () { map.scrollWheelZoom.enable(); });
       map.on('blur', function () { map.scrollWheelZoom.disable(); });
 
-      // Dotyková zařízení: hover neexistuje, takže první ťuknutí na
-      // hvězdičku jen ukáže popisek, teprve druhé naviguje na článek.
       var isTouchDevice = window.matchMedia && window.matchMedia('(hover: none)').matches;
 
       function starIconForColor(color) {
@@ -877,26 +921,45 @@
         });
       }
 
+      function clusterIconForColor(color) {
+        return function (cluster) {
+          var count = cluster.getChildCount();
+          var size = count < 10 ? 32 : count < 50 ? 38 : 44;
+          return L.divIcon({
+            html: '<div class="map-cluster-icon" style="width:' + size + 'px;height:' + size + 'px;font-size:' + (count < 10 ? 13 : 14) + 'px;background:' + color + ';box-shadow:0 0 12px ' + color + 'aa;">' + count + '</div>',
+            className: '', iconSize: [size, size]
+          });
+        };
+      }
+
       var allLatLngs = [];
       var legendHtml = '';
+      var markerById = {};
+      var totalDistanceKm = 0;
+
       groupOrder.forEach(function (key) {
         var g = groupsMap[key];
         var icon = starIconForColor(g.color);
         var groupLatLngs = [];
+        var clusterGroup = L.markerClusterGroup({
+          iconCreateFunction: clusterIconForColor(g.color),
+          maxClusterRadius: 45,
+          disableClusteringAtZoom: 13,
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false
+        });
 
         g.points.forEach(function (a) {
           var ll = [a.lat, a.lng];
           groupLatLngs.push(ll);
           allLatLngs.push(ll);
-          var marker = L.marker(ll, { icon: icon }).addTo(map);
+          var marker = L.marker(ll, { icon: icon });
+          markerById[a.id] = marker;
           var title = escapeHtml(a.title || 'Bez názvu');
           var place = escapeHtml(a.place || '');
           var dateStr = escapeHtml(formatDateCz(a.date || a.created));
           var articleUrl = '/article?id=' + encodeURIComponent(a.id);
 
-          // Mapa je alternativní způsob listování mezi články jedné cesty —
-          // hover ukáže náhled (název/místo/datum), klik rovnou otevře
-          // článek. Žádná mezikroková bublina s odkazem uvnitř.
           marker.bindTooltip(
             '<span class="map-label-title">' + title + '</span>' +
             (place ? '<span class="map-label-meta">' + place + '</span>' : '') +
@@ -912,18 +975,89 @@
             }
             window.location.href = articleUrl;
           });
+          marker.on('add', function () {
+            var el = marker.getElement();
+            if (el) el.setAttribute('tabindex', '0');
+          });
+          clusterGroup.addLayer(marker);
         });
 
+        var polyline = null;
         if (groupLatLngs.length > 1) {
-          L.polyline(groupLatLngs, { color: g.color, weight: 2.5, opacity: 0.65, dashArray: '5 8' }).addTo(map);
+          polyline = L.polyline(groupLatLngs, { color: g.color, weight: 2.5, opacity: 0.65, dashArray: '5 8' }).addTo(map);
+          for (var pi = 1; pi < groupLatLngs.length; pi++) {
+            totalDistanceKm += haversineKm(groupLatLngs[pi - 1][0], groupLatLngs[pi - 1][1], groupLatLngs[pi][0], groupLatLngs[pi][1]);
+          }
         }
-        legendHtml += '<span><span class="legend-dot" style="background:' + g.color + ';box-shadow:0 0 8px ' + g.color + '99"></span> ' + escapeHtml(g.label) + (groupLatLngs.length > 1 ? '' : ' (1 místo)') + '</span>';
+        g.polyline = polyline;
+        g.clusterGroup = clusterGroup;
+        g.visible = true;
+        clusterGroup.addTo(map);
+
+        legendHtml += '<span class="legend-item" tabindex="0" role="button" data-group-key="' + escapeHtml(key) + '"><span class="legend-dot" style="background:' + g.color + ';box-shadow:0 0 8px ' + g.color + '99"></span> ' + escapeHtml(g.label) + (groupLatLngs.length > 1 ? '' : ' (1 místo)') + '</span>';
       });
 
       if (allLatLngs.length === 1) map.setView(allLatLngs[0], 8);
       else map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
 
       if (legend) { legend.innerHTML = legendHtml; legend.hidden = false; }
+
+      legend.querySelectorAll('.legend-item').forEach(function (item) {
+        function toggle() {
+          var key = item.getAttribute('data-group-key');
+          var g = groupsMap[key];
+          if (!g) return;
+          g.visible = !g.visible;
+          item.classList.toggle('legend-off', !g.visible);
+          if (g.visible) {
+            g.clusterGroup.addTo(map);
+            if (g.polyline) g.polyline.addTo(map);
+          } else {
+            map.removeLayer(g.clusterGroup);
+            if (g.polyline) map.removeLayer(g.polyline);
+          }
+        }
+        item.addEventListener('click', toggle);
+        item.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+      });
+
+      var statsEl = document.getElementById('travelMapModalStats');
+      if (statsEl) {
+        var tripWord = groupOrder.length === 1 ? 'cesta' : (groupOrder.length >= 2 && groupOrder.length <= 4 ? 'cesty' : 'cest');
+        var placeWord = withCoords.length === 1 ? 'místo' : (withCoords.length >= 2 && withCoords.length <= 4 ? 'místa' : 'míst');
+        var distancePart = totalDistanceKm > 0 ? '<span>~<strong>' + Math.round(totalDistanceKm).toLocaleString('cs-CZ') + '</strong> km vzdušnou čarou</span>' : '';
+        statsEl.innerHTML = '<span><strong>' + groupOrder.length + '</strong> ' + tripWord + '</span><span><strong>' + withCoords.length + '</strong> ' + placeWord + '</span>' + distancePart;
+        statsEl.hidden = false;
+      }
+
+      var playBtn = document.getElementById('travelMapModalPlayBtn');
+      if (playBtn) {
+        playBtn.hidden = withCoords.length <= 1;
+        if (withCoords.length > 1 && !playBtn.dataset.wired) {
+          playBtn.dataset.wired = '1';
+          var isPlaying = false;
+          function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+          playBtn.onclick = async function () {
+            if (isPlaying) return;
+            isPlaying = true;
+            playBtn.disabled = true;
+            playBtn.textContent = '⏸ Přehrávám…';
+            for (var i = 0; i < withCoords.length; i++) {
+              var a = withCoords[i];
+              var m = markerById[a.id];
+              map.flyTo([a.lat, a.lng], 9, { duration: 1 });
+              await sleep(1100);
+              if (m) { try { m.openTooltip(); } catch (e) {} }
+              await sleep(1300);
+              if (m) { try { m.closeTooltip(); } catch (e) {} }
+            }
+            if (allLatLngs.length > 1) map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
+            playBtn.disabled = false;
+            playBtn.textContent = '▶️ Přehrát trasu';
+            isPlaying = false;
+          };
+        }
+      }
 
       // Modal se otevírá s display:none → flex až po kliknutí, ale
       // Leaflet měřil kontejner ještě v okamžiku, kdy mohl mít 0 výšky
