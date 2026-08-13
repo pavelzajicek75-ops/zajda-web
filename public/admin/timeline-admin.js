@@ -307,28 +307,88 @@
     var m = document.createElement('div');
     m.className = 'modal';
     m.innerHTML =
-      '<div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:92vw;width:420px;border:1px solid var(--border-soft)">' +
+      '<div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:92vw;width:460px;max-height:92vh;overflow-y:auto;border:1px solid var(--border-soft)">' +
       '<h3 style="margin-bottom:1rem;color:var(--text)">📷 Nová fotka</h3>' +
-      '<div style="width:100%;max-height:55vh;overflow:hidden;border-radius:10px;background:#0a0f1c;display:flex;align-items:center;justify-content:center">' +
-      '<img id="camPreviewImg" src="' + objectUrl + '" style="max-width:100%;max-height:55vh;transition:transform 0.2s;display:block">' +
+
+      '<div id="camPreviewWrap" style="position:relative;display:inline-block;line-height:0;max-width:100%;background:#0a0f1c;border-radius:10px;overflow:hidden">' +
+      '<img id="camPreviewImg" src="' + objectUrl + '" style="display:block;max-width:100%;max-height:46vh;filter:brightness(100%) saturate(100%)">' +
+      '<div id="camCropRect" style="position:absolute;display:none;border:2px solid var(--gold,#ffc857);box-shadow:0 0 0 2000px rgba(0,0,0,0.45);cursor:move"><div id="camCropHandle" style="position:absolute;right:-7px;bottom:-7px;width:16px;height:16px;background:var(--gold,#ffc857);border-radius:50%;cursor:nwse-resize"></div></div>' +
       '</div>' +
-      '<p style="font-size:11.5px;color:var(--text-faint);margin-top:0.6rem;text-align:center">Fotka se před nahráním automaticky zmenší na rozumnou velikost.</p>' +
-      '<div style="display:flex;gap:0.5rem;justify-content:center;margin-top:0.75rem">' +
+
+      '<div style="margin-top:0.9rem">' +
+      '<div style="font-size:11.5px;color:var(--text-faint);margin-bottom:4px">Otočení</div>' +
+      '<div style="display:flex;gap:0.5rem">' +
       '<button type="button" class="btn btn-sm" onclick="rotateCamPreview(-90)">⟲ Otočit</button>' +
       '<button type="button" class="btn btn-sm" onclick="rotateCamPreview(90)">⟳ Otočit</button>' +
+      '</div></div>' +
+
+      '<div style="margin-top:0.9rem">' +
+      '<div style="font-size:11.5px;color:var(--text-faint);margin-bottom:4px">Ořez</div>' +
+      '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">' +
+      '<button type="button" class="btn btn-sm btn-blue" data-crop="none" onclick="setCamCropMode(\'none\')">Bez ořezu</button>' +
+      '<button type="button" class="btn btn-sm" data-crop="free" onclick="setCamCropMode(\'free\')">Volný</button>' +
+      '<button type="button" class="btn btn-sm" data-crop="1:1" onclick="setCamCropMode(\'1:1\')">1:1</button>' +
+      '<button type="button" class="btn btn-sm" data-crop="4:3" onclick="setCamCropMode(\'4:3\')">4:3</button>' +
+      '<button type="button" class="btn btn-sm" data-crop="3:4" onclick="setCamCropMode(\'3:4\')">3:4</button>' +
+      '<button type="button" class="btn btn-sm" data-crop="16:9" onclick="setCamCropMode(\'16:9\')">16:9</button>' +
+      '</div></div>' +
+
+      '<div style="margin-top:0.9rem">' +
+      '<label style="font-size:11.5px;color:var(--text-faint);display:flex;justify-content:space-between">Jas <span id="camExposureVal">0</span></label>' +
+      '<input type="range" id="camExposureSlider" min="-60" max="60" value="0" style="width:100%" oninput="setCamAdjust(\'exposure\', this.value)">' +
       '</div>' +
+      '<div style="margin-top:0.6rem">' +
+      '<label style="font-size:11.5px;color:var(--text-faint);display:flex;justify-content:space-between">Sytost <span id="camSaturationVal">0</span></label>' +
+      '<input type="range" id="camSaturationSlider" min="-100" max="100" value="0" style="width:100%" oninput="setCamAdjust(\'saturation\', this.value)">' +
+      '</div>' +
+
+      '<div style="display:flex;gap:0.75rem;margin-top:0.9rem">' +
+      '<div style="flex:1">' +
+      '<label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:4px">Kvalita</label>' +
+      '<select id="camQualitySelect" class="form-select" style="width:100%">' +
+      '<option value="0.6">Nízká (nejmenší soubor)</option>' +
+      '<option value="0.75">Nižší</option>' +
+      '<option value="0.85" selected>Střední</option>' +
+      '<option value="0.95">Vysoká</option>' +
+      '</select></div>' +
+      '<div style="flex:1">' +
+      '<label style="font-size:11.5px;color:var(--text-faint);display:block;margin-bottom:4px">Max. rozlišení</label>' +
+      '<select id="camMaxResSelect" class="form-select" style="width:100%">' +
+      '<option value="800">800 px</option>' +
+      '<option value="1200">1200 px</option>' +
+      '<option value="1600" selected>1600 px</option>' +
+      '<option value="2000">2000 px</option>' +
+      '<option value="0">Originál</option>' +
+      '</select></div>' +
+      '</div>' +
+
+      '<p id="camSizeHint" style="font-size:11px;color:var(--text-faint);margin-top:0.6rem;text-align:center"></p>' +
+
       '<div style="display:flex;gap:0.5rem;justify-content:center;margin-top:1rem">' +
       '<button type="button" class="btn btn-blue" id="camConfirmBtn">✅ Použít fotku</button>' +
       '<button type="button" class="btn btn-red" id="camCancelBtn">Zrušit</button>' +
       '</div></div>';
     document.body.appendChild(m);
-    m._rotation = 0;
+
     m._file = file;
     m._objectUrl = objectUrl;
+    m._exposure = 0;
+    m._saturation = 0;
+    m._cropMode = 'none';
+    m._cropAspect = null; // null = volný poměr, jinak číslo (w/h)
+    m._cropRect = null;   // { x, y, w, h } v ZOBRAZENÝCH pixelech (relativně k <img>)
     window._camModal = m;
+
+    var previewImg = $('camPreviewImg');
+    previewImg.onload = function () { updateCamSizeHint(m); };
+
     $('camConfirmBtn').onclick = function () { confirmCameraPhoto(m); };
     $('camCancelBtn').onclick = function () { closeCameraPreviewModal(m); };
     m.onclick = function (e) { if (e.target === m) closeCameraPreviewModal(m); };
+    $('camQualitySelect').onchange = function () { updateCamSizeHint(m); };
+    $('camMaxResSelect').onchange = function () { updateCamSizeHint(m); };
+
+    initCamCropDragging(m);
   }
 
   function closeCameraPreviewModal(m) {
@@ -337,40 +397,170 @@
     if (window._camModal === m) window._camModal = null;
   }
 
+  function updateCamSizeHint(m) {
+    var hint = $('camSizeHint');
+    var img = $('camPreviewImg');
+    if (!hint || !img || !img.naturalWidth) return;
+    var maxRes = parseInt($('camMaxResSelect').value) || 0;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    if (m._cropRect) {
+      var scale = w / img.clientWidth;
+      w = Math.round(m._cropRect.w * scale);
+      h = Math.round(m._cropRect.h * scale);
+    }
+    if (maxRes && Math.max(w, h) > maxRes) {
+      var s = maxRes / Math.max(w, h);
+      w = Math.round(w * s); h = Math.round(h * s);
+    }
+    hint.textContent = 'Výsledek přibližně ' + w + '×' + h + ' px';
+  }
+
+  /* === OTOČENÍ — "zapeče" se rovnou do náhledu (nový <img> src z canvasu),
+     ať se nemusí řešit rotace při výpočtu ořezu později. Ořez se proto
+     po otočení resetuje (rozměry/orientace se změnily). === */
   window.rotateCamPreview = function (deg) {
     var m = window._camModal;
     if (!m) return;
-    m._rotation = (m._rotation + deg + 360) % 360;
     var img = $('camPreviewImg');
-    if (img) img.style.transform = 'rotate(' + m._rotation + 'deg)';
+    if (!img || !img.naturalWidth) return;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var swapped = Math.abs(deg) === 90;
+    var canvas = document.createElement('canvas');
+    canvas.width = swapped ? h : w;
+    canvas.height = swapped ? w : h;
+    var ctx = canvas.getContext('2d');
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(deg * Math.PI / 180);
+    ctx.drawImage(img, -w / 2, -h / 2, w, h);
+    if (m._objectUrl) URL.revokeObjectURL(m._objectUrl);
+    m._objectUrl = null;
+    img.src = canvas.toDataURL('image/jpeg', 0.95);
+    m._cropRect = null;
+    setCamCropMode('none');
+    img.onload = function () { updateCamSizeHint(m); };
   };
+
+  window.setCamAdjust = function (key, val) {
+    var m = window._camModal;
+    if (!m) return;
+    m['_' + key] = parseInt(val);
+    var label = $('cam' + key.charAt(0).toUpperCase() + key.slice(1) + 'Val');
+    if (label) label.textContent = val;
+    var img = $('camPreviewImg');
+    if (img) img.style.filter = 'brightness(' + (100 + m._exposure) + '%) saturate(' + (100 + m._saturation) + '%)';
+  };
+
+  /* === OŘEZ === */
+  window.setCamCropMode = function (mode) {
+    var m = window._camModal;
+    if (!m) return;
+    m._cropMode = mode;
+    document.querySelectorAll('[data-crop]').forEach(function (b) {
+      b.classList.toggle('btn-blue', b.dataset.crop === mode);
+    });
+    var rectEl = $('camCropRect');
+    var img = $('camPreviewImg');
+    if (mode === 'none') {
+      m._cropRect = null;
+      m._cropAspect = null;
+      if (rectEl) rectEl.style.display = 'none';
+      updateCamSizeHint(m);
+      return;
+    }
+    m._cropAspect = mode === 'free' ? null :
+      (mode === '1:1' ? 1 : mode === '4:3' ? 4 / 3 : mode === '3:4' ? 3 / 4 : 16 / 9);
+    if (!img || !img.clientWidth) return;
+    var W = img.clientWidth, H = img.clientHeight;
+    var w = W * 0.8, h = m._cropAspect ? w / m._cropAspect : H * 0.8;
+    if (h > H * 0.95) { h = H * 0.95; w = m._cropAspect ? h * m._cropAspect : w; }
+    m._cropRect = { x: (W - w) / 2, y: (H - h) / 2, w: w, h: h };
+    renderCamCropRect(m);
+    if (rectEl) rectEl.style.display = 'block';
+    updateCamSizeHint(m);
+  };
+
+  function renderCamCropRect(m) {
+    var rectEl = $('camCropRect');
+    if (!rectEl || !m._cropRect) return;
+    var r = m._cropRect;
+    rectEl.style.left = r.x + 'px';
+    rectEl.style.top = r.y + 'px';
+    rectEl.style.width = r.w + 'px';
+    rectEl.style.height = r.h + 'px';
+  }
+
+  function initCamCropDragging(m) {
+    var wrap = $('camPreviewWrap');
+    var rectEl = $('camCropRect');
+    var handle = $('camCropHandle');
+    if (!wrap || !rectEl || !handle) return;
+    var dragging = null; // 'move' | 'resize'
+    var startX = 0, startY = 0, startRect = null;
+
+    function pointerDown(target, e) {
+      var t = e.touches ? e.touches[0] : e;
+      startX = t.clientX; startY = t.clientY;
+      startRect = { x: m._cropRect.x, y: m._cropRect.y, w: m._cropRect.w, h: m._cropRect.h };
+      dragging = target;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    rectEl.addEventListener('mousedown', function (e) { if (m._cropRect) pointerDown('move', e); });
+    rectEl.addEventListener('touchstart', function (e) { if (m._cropRect) pointerDown('move', e); }, { passive: false });
+    handle.addEventListener('mousedown', function (e) { if (m._cropRect) pointerDown('resize', e); });
+    handle.addEventListener('touchstart', function (e) { if (m._cropRect) pointerDown('resize', e); }, { passive: false });
+
+    function onMove(e) {
+      if (!dragging || !m._cropRect) return;
+      var t = e.touches ? e.touches[0] : e;
+      var dx = t.clientX - startX, dy = t.clientY - startY;
+      var img = $('camPreviewImg');
+      var W = img.clientWidth, H = img.clientHeight;
+      if (dragging === 'move') {
+        var x = Math.max(0, Math.min(startRect.x + dx, W - startRect.w));
+        var y = Math.max(0, Math.min(startRect.y + dy, H - startRect.h));
+        m._cropRect.x = x; m._cropRect.y = y;
+      } else {
+        var w = Math.max(40, startRect.w + dx);
+        var h = m._cropAspect ? w / m._cropAspect : Math.max(40, startRect.h + dy);
+        w = Math.min(w, W - startRect.x);
+        h = Math.min(h, H - startRect.y);
+        if (m._cropAspect) { w = Math.min(w, h * m._cropAspect); h = w / m._cropAspect; }
+        m._cropRect.w = w; m._cropRect.h = h;
+      }
+      renderCamCropRect(m);
+      e.preventDefault();
+    }
+    function onUp() { dragging = null; if (window._camModal) updateCamSizeHint(window._camModal); }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchend', onUp);
+  }
 
   async function confirmCameraPhoto(m) {
     var btn = $('camConfirmBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Zpracovávám…'; }
     try {
-      var blob = await processCameraImage(m._file, m._rotation);
+      var quality = parseFloat($('camQualitySelect').value) || 0.85;
+      var maxRes = parseInt($('camMaxResSelect').value) || 0;
+      var blob = await processCameraImage(m, quality, maxRes);
       var filename = 'timeline-' + Date.now() + '.jpg';
       var fd = new FormData();
       fd.append('file', blob, filename);
-      // ★ ZMĚNA: dřív 'main' — fotka se tak nahrála do stejné galerie,
-      // co spravuje záložka Galerie, a objevila se tam vedle běžných
-      // fotek, i když šla použít v milníku. "timeline" je samostatný
-      // prostor — fotky z fotoaparátu už v hlavní Galerii vůbec
-      // neuvidíš, jsou jen pro milníky.
+      // "timeline" je samostatný prostor odděleně od hlavní galerie —
+      // fotky z fotoaparátu se v záložce Galerie neukazují, jsou jen
+      // pro milníky.
       fd.append('galleryId', 'timeline');
       var r = await fetch('/api/photos/upload', { method: 'POST', body: fd });
       if (!r.ok) throw new Error('Nahrání selhalo (HTTP ' + r.status + ')');
 
-      // URL zkusit rovnou z odpovědi uploadu (různé možné tvary podle
-      // toho, jak přesně /api/photos/upload odpovídá) — a jen pokud by
-      // to selhalo, dotáhnout galerii "timeline" a najít podle jména.
       var uploadedUrl = null;
       try {
         var respData = await r.clone().json();
         uploadedUrl = respData.url || respData.fileUrl || respData.publicUrl ||
           (respData.photo && respData.photo.url) || null;
-      } catch (e) { /* odpověď nemusí být JSON — zkusíme fallback níž */ }
+      } catch (e) {}
 
       if (!uploadedUrl) {
         try {
@@ -398,31 +588,40 @@
     }
   }
 
-  // Zmenší na max. 1600 px na delší straně a aplikuje zvolené otočení —
-  // vrací JPEG blob (kvalita 0.85), stejný poměr jako běžný upload.
-  function processCameraImage(file, rotationDeg) {
+  // Aplikuje ořez (pokud je nastavený), jas/sytost (přes canvas filter —
+  // podporováno ve všech moderních prohlížečích) a zmenšení na zvolené
+  // maximální rozlišení. Vrací JPEG blob v ZVOLENÉ kvalitě.
+  function processCameraImage(m, quality, maxRes) {
     return new Promise(function (resolve, reject) {
+      var previewImg = $('camPreviewImg');
       var img = new Image();
       img.onload = function () {
-        var w = img.naturalWidth, h = img.naturalHeight;
-        var maxSide = 1600;
-        var scale = Math.min(1, maxSide / Math.max(w, h));
-        var dw = Math.round(w * scale), dh = Math.round(h * scale);
-        var swapped = rotationDeg === 90 || rotationDeg === 270;
+        var srcX = 0, srcY = 0, srcW = img.naturalWidth, srcH = img.naturalHeight;
+        if (m._cropRect && previewImg && previewImg.clientWidth) {
+          var scale = img.naturalWidth / previewImg.clientWidth;
+          srcX = Math.round(m._cropRect.x * scale);
+          srcY = Math.round(m._cropRect.y * scale);
+          srcW = Math.round(m._cropRect.w * scale);
+          srcH = Math.round(m._cropRect.h * scale);
+        }
+        var dw = srcW, dh = srcH;
+        if (maxRes && Math.max(dw, dh) > maxRes) {
+          var s = maxRes / Math.max(dw, dh);
+          dw = Math.round(dw * s); dh = Math.round(dh * s);
+        }
         var canvas = document.createElement('canvas');
-        canvas.width = swapped ? dh : dw;
-        canvas.height = swapped ? dw : dh;
+        canvas.width = dw; canvas.height = dh;
         var ctx = canvas.getContext('2d');
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(rotationDeg * Math.PI / 180);
-        ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
-        URL.revokeObjectURL(img.src);
+        ctx.filter = 'brightness(' + (100 + m._exposure) + '%) saturate(' + (100 + m._saturation) + '%)';
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, dw, dh);
         canvas.toBlob(function (blob) {
           if (blob) resolve(blob); else reject(new Error('Canvas export selhal'));
-        }, 'image/jpeg', 0.85);
+        }, 'image/jpeg', quality);
       };
       img.onerror = function () { reject(new Error('Obrázek se nepodařilo načíst')); };
-      img.src = URL.createObjectURL(file);
+      // Bere se z AKTUÁLNÍHO src náhledu (po případném otočení už jde
+      // o "zapečenou" verzi, viz rotateCamPreview) — ne z původního souboru.
+      img.src = previewImg.src;
     });
   }
 
