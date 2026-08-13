@@ -353,20 +353,42 @@
       var filename = 'timeline-' + Date.now() + '.jpg';
       var fd = new FormData();
       fd.append('file', blob, filename);
-      fd.append('galleryId', 'main');
+      // ★ ZMĚNA: dřív 'main' — fotka se tak nahrála do stejné galerie,
+      // co spravuje záložka Galerie, a objevila se tam vedle běžných
+      // fotek, i když šla použít v milníku. "timeline" je samostatný
+      // prostor — fotky z fotoaparátu už v hlavní Galerii vůbec
+      // neuvidíš, jsou jen pro milníky.
+      fd.append('galleryId', 'timeline');
       var r = await fetch('/api/photos/upload', { method: 'POST', body: fd });
       if (!r.ok) throw new Error('Nahrání selhalo (HTTP ' + r.status + ')');
 
-      // Znovu natáhnout galerii a najít nově nahranou fotku podle jména
-      // — stejný princip, jaký dashboard-core.js používá při přiřazování
-      // složky nově nahraným fotkám (uploadFileList()).
-      if (typeof loadGallery === 'function') await loadGallery();
-      var uploaded = (window.G && G.photos ? G.photos : []).find(function (p) { return p.name === filename; });
-      if (uploaded) {
-        window.setTimelinePhoto(uploaded.url);
+      // URL zkusit rovnou z odpovědi uploadu (různé možné tvary podle
+      // toho, jak přesně /api/photos/upload odpovídá) — a jen pokud by
+      // to selhalo, dotáhnout galerii "timeline" a najít podle jména.
+      var uploadedUrl = null;
+      try {
+        var respData = await r.clone().json();
+        uploadedUrl = respData.url || respData.fileUrl || respData.publicUrl ||
+          (respData.photo && respData.photo.url) || null;
+      } catch (e) { /* odpověď nemusí být JSON — zkusíme fallback níž */ }
+
+      if (!uploadedUrl) {
+        try {
+          var listRes = await fetch('/api/photos/list?galleryId=timeline');
+          if (listRes.ok) {
+            var listData = await listRes.json();
+            var arr = Array.isArray(listData) ? listData : (listData.photos || []);
+            var found = arr.find(function (p) { return p.name === filename; });
+            if (found) uploadedUrl = found.url;
+          }
+        } catch (e) { console.error('Fallback hledání nahrané fotky selhalo:', e); }
+      }
+
+      if (uploadedUrl) {
+        window.setTimelinePhoto(uploadedUrl);
         if (typeof showToast === 'function') showToast('Fotka přidána', 'success');
       } else if (typeof showToast === 'function') {
-        showToast('Fotka se nahrála, ale nepodařilo se ji automaticky vybrat — najdi ji v galerii a vyber ručně.', 'info');
+        showToast('Fotka se nahrála, ale nepodařilo se zjistit její adresu — napiš mi prosím, jak vypadá odpověď /api/photos/upload, ať to doladím.', 'info');
       }
       closeCameraPreviewModal(m);
     } catch (e) {
