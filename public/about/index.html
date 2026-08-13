@@ -7,8 +7,6 @@
   <meta name="description" content="Kdo je Zajda — trochu cvok a občasný zapisovatel vlastního života. O člověku za blogem Moje diagnóza, můj vesmír.">
   <link rel="canonical" href="https://zajda-web.pages.dev/about/">
 
-  <!-- Open Graph — dřív tahle stránka neměla žádné, sdílení odkazu na
-       "O Zajdovi" tak ukazovalo úplně prázdný/obecný náhled. -->
   <meta property="og:type" content="profile">
   <meta property="og:site_name" content="Moje diagnóza, můj vesmír">
   <meta property="og:title" content="O Zajdovi — Moje diagnóza, můj vesmír">
@@ -103,6 +101,65 @@
       color: var(--mist);
     }
     .content hr { border: none; border-top: 1px solid rgba(140,150,255,0.14); margin: 1.5rem 0; }
+
+    /* === ČASOVÁ OSA (timeline diagnózy) ===
+       Svislá čára se "hvězdnými" body — stejný vizuální jazyk jako
+       souhvězdí mezi citáty na homepage. Zobrazí se jen pokud existuje
+       aspoň jeden milník (viz loadTimeline()). */
+    .timeline-section {
+      max-width: 1000px; margin: 0 auto; padding: 0 1.5rem 2rem; position: relative; z-index: 10;
+    }
+    .timeline-heading {
+      font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 1.5rem; font-weight: 600;
+      margin-bottom: 1.75rem; text-align: center; text-shadow: 0 0 15px rgba(255,122,69,0.25);
+    }
+    .timeline-track { position: relative; padding-left: 44px; }
+    .timeline-track::before {
+      content: ''; position: absolute; left: 14px; top: 6px; bottom: 6px; width: 2px;
+      background: linear-gradient(180deg, var(--ember), var(--nova), var(--aurora));
+      opacity: 0.5;
+    }
+    .timeline-item {
+      position: relative; margin-bottom: 1.75rem;
+      opacity: 0; transform: translateY(16px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .timeline-item:last-child { margin-bottom: 0; }
+    .timeline-item.in-view { opacity: 1; transform: translateY(0); }
+    .timeline-dot {
+      position: absolute; left: -44px; top: 6px; width: 16px; height: 16px; border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, var(--ember) 45%, transparent 75%);
+      box-shadow: 0 0 10px var(--ember), 0 0 22px var(--ember-dim);
+      border: 2px solid rgba(255,255,255,0.85);
+    }
+    .timeline-card {
+      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+      padding: 1.25rem 1.5rem; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 14px 34px rgba(0,0,0,0.35);
+    }
+    .timeline-date {
+      font-family: 'Space Grotesk', sans-serif; color: var(--nova); font-size: 0.78rem; font-weight: 600;
+      letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 0.35rem; display: block;
+    }
+    .timeline-card h3 {
+      font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 1.15rem; font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .timeline-card img {
+      max-width: 100%; border-radius: 10px; margin: 0.75rem 0; display: block; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5); transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .timeline-card img:hover { transform: scale(1.02); box-shadow: 0 6px 24px rgba(255,122,69,0.25); }
+    .timeline-card p { color: var(--mist); font-size: 0.95rem; line-height: 1.65; margin: 0; font-weight: 300; }
+    @media (prefers-reduced-motion: reduce) {
+      .timeline-item { opacity: 1; transform: none; transition: none; }
+    }
+    @media (max-width: 640px) {
+      .timeline-track { padding-left: 34px; }
+      .timeline-track::before { left: 10px; }
+      .timeline-dot { left: -34px; }
+      .timeline-card { padding: 1rem 1.15rem; }
+    }
 
     .subsections { max-width: 1000px; margin: 0 auto; padding: 0 1.5rem 0; position: relative; z-index: 10; pointer-events: none; }
     .sub-grid { display: flex; gap: 1rem; }
@@ -238,6 +295,11 @@
     <div id="content" class="content loading" tabindex="-1">Načítání...</div>
   </div>
 
+  <div class="timeline-section" id="timelineSection" style="display:none">
+    <h2 class="timeline-heading">📖 Časová osa</h2>
+    <div class="timeline-track" id="timelineTrack"></div>
+  </div>
+
   <div class="subsections" id="subsections" style="display:none">
     <div class="sub-grid" id="subGrid"></div>
   </div>
@@ -288,6 +350,56 @@
       }
     }
 
+    /* === ČASOVÁ OSA (timeline diagnózy) ===
+       Data z /api/timeline/list (spravuje se v administraci, záložka
+       "📖 Timeline"). Vrací se už seřazené vzestupně podle data. Pokud
+       zatím žádné milníky nejsou, sekce zůstane skrytá (display:none). */
+    async function loadTimeline() {
+      try {
+        var r = await fetch('/api/timeline/list');
+        if (!r.ok) return;
+        var data = await r.json();
+        var milestones = Array.isArray(data) ? data : [];
+        if (!milestones.length) return;
+
+        document.getElementById('timelineSection').style.display = 'block';
+        var track = document.getElementById('timelineTrack');
+        track.innerHTML = milestones.map(function (m) {
+          var dateStr = '';
+          try {
+            dateStr = m.date ? new Date(m.date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+          } catch (e) {}
+          var photoHtml = m.photoUrl ? '<img src="' + escapeHtml(m.photoUrl) + '" alt="" loading="lazy">' : '';
+          var textHtml = m.text ? '<p>' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</p>' : '';
+          return '<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-card">' +
+            (dateStr ? '<span class="timeline-date">' + escapeHtml(dateStr) + '</span>' : '') +
+            '<h3>' + escapeHtml(m.title || '') + '</h3>' +
+            photoHtml + textHtml +
+            '</div></div>';
+        }).join('');
+
+        // Fotky v milnících otevřít v lightboxu, stejně jako zbytek stránky.
+        track.querySelectorAll('img').forEach(function (img) {
+          img.addEventListener('click', function () { openLightbox(this.src); });
+        });
+
+        // Postupné odhalení karet při scrollování — v duchu "hvězd", co
+        // se objevují na obloze jedna po druhé, ne celá timeline naráz.
+        if ('IntersectionObserver' in window) {
+          var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) { entry.target.classList.add('in-view'); obs.unobserve(entry.target); }
+            });
+          }, { threshold: 0.15 });
+          track.querySelectorAll('.timeline-item').forEach(function (el) { obs.observe(el); });
+        } else {
+          track.querySelectorAll('.timeline-item').forEach(function (el) { el.classList.add('in-view'); });
+        }
+      } catch (e) {
+        console.error('Timeline:', e);
+      }
+    }
+
     var cachedArticles = null;
     async function getAllArticles() {
       if (cachedArticles) return cachedArticles;
@@ -318,10 +430,6 @@
         var a = sorted[i];
         var title = a.title || 'Bez názvu';
         var dateStr = formatDate(a.date || a.created);
-        // POZOR: dřív tu bylo "/article.html?id=..." — na zbytku webu
-        // (homepage, samotná stránka článku) se ale všude používá čisté
-        // "/article?id=..." bez přípony. Ten nesoulad dělal ze všech
-        // odkazů na téhle stránce mrtvé 404 odkazy.
         html += '<a class="article-link" href="/article?id=' + encodeURIComponent(a.id) + '">' +
           escapeHtml(title) +
           (dateStr ? '<span class="art-date">' + dateStr + '</span>' : '') +
@@ -381,7 +489,6 @@
           var cover = a.coverUrl
             ? '<img src="' + a.coverUrl + '" alt="" loading="lazy">'
             : '<div class="card-placeholder">📷</div>';
-          // POZOR: dřív "/article.html?id=..." — opraveno na "/article?id=..."
           return '<a class="news-card" href="/article?id=' + encodeURIComponent(a.id) + '">' +
             cover +
             '<div class="card-body">' +
@@ -399,6 +506,7 @@
     initStarfieldParallax();
     startQuotes();
     loadAbout();
+    loadTimeline();
     loadSubsections();
     loadNews();
   </script>
