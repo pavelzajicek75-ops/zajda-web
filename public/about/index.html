@@ -120,7 +120,7 @@
       opacity: 0.5;
     }
     .timeline-item {
-      position: relative; margin-bottom: 1.75rem;
+      position: relative; margin-bottom: 1.15rem;
       opacity: 0; transform: translateY(16px);
       transition: opacity 0.6s ease, transform 0.6s ease;
     }
@@ -134,23 +134,29 @@
     }
     .timeline-card {
       background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
-      padding: 1.25rem 1.5rem; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      padding: 1rem 1.25rem; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
       box-shadow: 0 14px 34px rgba(0,0,0,0.35);
     }
     .timeline-date {
-      font-family: 'Space Grotesk', sans-serif; color: var(--nova); font-size: 0.78rem; font-weight: 600;
-      letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 0.35rem; display: block;
+      font-family: 'Space Grotesk', sans-serif; color: var(--nova); font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 0.3rem; display: block;
     }
     .timeline-card h3 {
-      font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 1.15rem; font-weight: 600;
-      margin-bottom: 0.5rem;
+      font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 1.02rem; font-weight: 600;
+      margin-bottom: 0.4rem;
     }
+    /* ★ ZMĚNA: dřív max-width:100% bez omezení výšky — u vysokých fotek
+       z mobilu to kartu zbytečně natáhlo přes celou obrazovku. Timeline
+       je "aktualita", ne fotogalerie — foto teď má stejnou orientační
+       velikost jako náhledy v článcích, proklik (viz JS níž, click →
+       openLightbox) ho zvětší na celou obrazovku. */
     .timeline-card img {
-      max-width: 100%; border-radius: 10px; margin: 0.75rem 0; display: block; cursor: pointer;
+      width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px;
+      margin: 0.6rem 0; display: block; cursor: zoom-in;
       box-shadow: 0 4px 16px rgba(0,0,0,0.5); transition: transform 0.3s, box-shadow 0.3s;
     }
     .timeline-card img:hover { transform: scale(1.02); box-shadow: 0 6px 24px rgba(255,122,69,0.25); }
-    .timeline-card p { color: var(--mist); font-size: 0.95rem; line-height: 1.65; margin: 0; font-weight: 300; }
+    .timeline-card p { color: var(--mist); font-size: 0.9rem; line-height: 1.6; margin: 0; font-weight: 300; }
     .timeline-share {
       display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0.9rem; padding-top: 0.75rem;
       border-top: 1px solid rgba(140,150,255,0.12);
