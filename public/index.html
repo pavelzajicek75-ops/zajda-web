@@ -544,6 +544,7 @@
   <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js"></script>
 
   <script src="/shared.js"></script>
+  <script src="/travel-map-core.js"></script>
   <script>
   document.getElementById('footerYear').textContent = new Date().getFullYear();
 
@@ -824,246 +825,25 @@
     }
 
     async function buildTravelMapModalContent() {
-      var mapEl = document.getElementById('travelMapModalMap');
-      var legend = document.getElementById('travelMapModalLegend');
-      if (!mapEl) return;
-
-      var articles = await getAllArticles();
-      var withCoords = articles.filter(function (a) {
-        return a && typeof a.lat === 'number' && isFinite(a.lat) &&
-          typeof a.lng === 'number' && isFinite(a.lng);
+      // Veškerá logika (data, shluky, barvy, trasy, legenda, statistiky,
+      // denní/noční přepínač, přehrání trasy) žije v travel-map-core.js —
+      // tady se jen předají ID kontejnerů modalu na týhle stránce.
+      var map = await TravelMapCore.render({
+        mapId: 'travelMapModalMap',
+        legendId: 'travelMapModalLegend',
+        statsId: 'travelMapModalStats',
+        playBtnId: 'travelMapModalPlayBtn',
+        themeToggleId: 'travelMapModalThemeToggle',
+        emptyClassName: 'travel-map-modal-empty'
       });
-
-      if (!withCoords.length) {
-        mapEl.outerHTML = '<div class="travel-map-modal-empty" id="travelMapModalMap"><h3>Zatím tu nejsou žádná místa</h3><p>Jakmile u některého článku vyplníš souřadnice místa, objeví se tu jako bod na mapě.</p></div>';
-        if (legend) legend.hidden = true;
-        return;
+      if (map) {
+        window._travelMapInstance = map;
+        // Modal se otevírá s display:none → flex až po kliknutí, ale
+        // Leaflet měřil kontejner ještě v okamžiku, kdy mohl mít 0 výšky
+        // (těsně po přepnutí třídy 'open'). Jedno doměření o kousek později
+        // pro jistotu, ať mapa nezůstane "rozbitá" napůl vykreslená.
+        setTimeout(function () { map.invalidateSize(); }, 60);
       }
-
-      withCoords.sort(function (a, b) {
-        var da = a.date || a.created || '', db = b.date || b.created || '';
-        return da < db ? -1 : da > db ? 1 : 0;
-      });
-
-      var SECTION_NAMES = { travel: 'Cestování', photo: 'Fotografování', projects: 'Projekty', about: 'O Zajdovi' };
-      var groupsMap = {};
-      var groupOrder = [];
-      withCoords.forEach(function (a) {
-        var key = (a.sectionId || '?') + ':' + (a.subsectionId || '');
-        if (!groupsMap[key]) {
-          groupsMap[key] = { key: key, sectionId: a.sectionId, subsectionId: a.subsectionId, points: [] };
-          groupOrder.push(key);
-        }
-        groupsMap[key].points.push(a);
-      });
-      for (var gi = 0; gi < groupOrder.length; gi++) {
-        var g = groupsMap[groupOrder[gi]];
-        var secName = SECTION_NAMES[g.sectionId] || g.sectionId || 'Ostatní';
-        var subName = await getSubsectionNameMap().then(function(map) { return map[g.sectionId + ':' + (g.subsectionId || '')] || ''; });
-        g.label = subName ? secName + ' — ' + subName : secName;
-      }
-
-      var THEME_COLORS = ['#ff7a45', '#2fe6c9', '#8f6bff'];
-      function colorForIndex(i) {
-        if (i < THEME_COLORS.length) return THEME_COLORS[i];
-        return 'hsl(' + ((i * 47) % 360) + ', 70%, 62%)';
-      }
-      groupOrder.forEach(function (key, i) { groupsMap[key].color = colorForIndex(i); });
-
-      function haversineKm(lat1, lon1, lat2, lon2) {
-        var R = 6371;
-        var dLat = (lat2 - lat1) * Math.PI / 180;
-        var dLon = (lon2 - lon1) * Math.PI / 180;
-        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      }
-
-      var map = L.map('travelMapModalMap', { scrollWheelZoom: false });
-      window._travelMapInstance = map;
-
-      // === DENNÍ / NOČNÍ MAPOVÝ PODKLAD (stejný princip jako mapa.html) ===
-      var TILE_THEMES = {
-        day: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', icon: '☀️' },
-        night: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', icon: '🌙' }
-      };
-      var currentTileTheme = localStorage.getItem('mapTileTheme') === 'night' ? 'night' : 'day';
-      var tileLayer = L.tileLayer(TILE_THEMES[currentTileTheme].url, {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 19
-      }).addTo(map);
-      var themeToggleBtn = document.getElementById('travelMapModalThemeToggle');
-      if (themeToggleBtn) {
-        themeToggleBtn.textContent = TILE_THEMES[currentTileTheme].icon;
-        themeToggleBtn.onclick = function () {
-          currentTileTheme = currentTileTheme === 'day' ? 'night' : 'day';
-          map.removeLayer(tileLayer);
-          tileLayer = L.tileLayer(TILE_THEMES[currentTileTheme].url, {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            maxZoom: 19
-          }).addTo(map);
-          themeToggleBtn.textContent = TILE_THEMES[currentTileTheme].icon;
-          localStorage.setItem('mapTileTheme', currentTileTheme);
-        };
-      }
-
-      map.on('focus', function () { map.scrollWheelZoom.enable(); });
-      map.on('blur', function () { map.scrollWheelZoom.disable(); });
-
-      var isTouchDevice = window.matchMedia && window.matchMedia('(hover: none)').matches;
-
-      function starIconForColor(color) {
-        return L.divIcon({
-          className: '',
-          html: '<div class="star-pin" style="background:radial-gradient(circle,#fff 0%,' + color + ' 45%,transparent 75%);box-shadow:0 0 10px ' + color + ',0 0 22px ' + color + '99;"></div>',
-          iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -10]
-        });
-      }
-
-      function clusterIconForColor(color) {
-        return function (cluster) {
-          var count = cluster.getChildCount();
-          var size = count < 10 ? 32 : count < 50 ? 38 : 44;
-          return L.divIcon({
-            html: '<div class="map-cluster-icon" style="width:' + size + 'px;height:' + size + 'px;font-size:' + (count < 10 ? 13 : 14) + 'px;background:' + color + ';box-shadow:0 0 12px ' + color + 'aa;">' + count + '</div>',
-            className: '', iconSize: [size, size]
-          });
-        };
-      }
-
-      var allLatLngs = [];
-      var legendHtml = '';
-      var markerById = {};
-      var totalDistanceKm = 0;
-
-      groupOrder.forEach(function (key) {
-        var g = groupsMap[key];
-        var icon = starIconForColor(g.color);
-        var groupLatLngs = [];
-        var clusterGroup = L.markerClusterGroup({
-          iconCreateFunction: clusterIconForColor(g.color),
-          maxClusterRadius: 45,
-          disableClusteringAtZoom: 13,
-          spiderfyOnMaxZoom: true,
-          showCoverageOnHover: false
-        });
-
-        g.points.forEach(function (a) {
-          var ll = [a.lat, a.lng];
-          groupLatLngs.push(ll);
-          allLatLngs.push(ll);
-          var marker = L.marker(ll, { icon: icon });
-          markerById[a.id] = marker;
-          var title = escapeHtml(a.title || 'Bez názvu');
-          var place = escapeHtml(a.place || '');
-          var dateStr = escapeHtml(formatDateCz(a.date || a.created));
-          var articleUrl = '/article?id=' + encodeURIComponent(a.id);
-
-          marker.bindTooltip(
-            '<span class="map-label-title">' + title + '</span>' +
-            (place ? '<span class="map-label-meta">' + place + '</span>' : '') +
-            (dateStr ? '<span class="map-label-meta">' + dateStr + '</span>' : ''),
-            { direction: 'top', offset: [0, -10], className: 'map-point-label', opacity: 1 }
-          );
-          var tooltipOpenedByTap = false;
-          marker.on('click', function () {
-            if (isTouchDevice && !tooltipOpenedByTap) {
-              tooltipOpenedByTap = true;
-              this.openTooltip();
-              return;
-            }
-            window.location.href = articleUrl;
-          });
-          marker.on('add', function () {
-            var el = marker.getElement();
-            if (el) el.setAttribute('tabindex', '0');
-          });
-          clusterGroup.addLayer(marker);
-        });
-
-        var polyline = null;
-        if (groupLatLngs.length > 1) {
-          polyline = L.polyline(groupLatLngs, { color: g.color, weight: 2.5, opacity: 0.65, dashArray: '5 8' }).addTo(map);
-          for (var pi = 1; pi < groupLatLngs.length; pi++) {
-            totalDistanceKm += haversineKm(groupLatLngs[pi - 1][0], groupLatLngs[pi - 1][1], groupLatLngs[pi][0], groupLatLngs[pi][1]);
-          }
-        }
-        g.polyline = polyline;
-        g.clusterGroup = clusterGroup;
-        g.visible = true;
-        clusterGroup.addTo(map);
-
-        legendHtml += '<span class="legend-item" tabindex="0" role="button" data-group-key="' + escapeHtml(key) + '"><span class="legend-dot" style="background:' + g.color + ';box-shadow:0 0 8px ' + g.color + '99"></span> ' + escapeHtml(g.label) + (groupLatLngs.length > 1 ? '' : ' (1 místo)') + '</span>';
-      });
-
-      if (allLatLngs.length === 1) map.setView(allLatLngs[0], 8);
-      else map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
-
-      if (legend) { legend.innerHTML = legendHtml; legend.hidden = false; }
-
-      legend.querySelectorAll('.legend-item').forEach(function (item) {
-        function toggle() {
-          var key = item.getAttribute('data-group-key');
-          var g = groupsMap[key];
-          if (!g) return;
-          g.visible = !g.visible;
-          item.classList.toggle('legend-off', !g.visible);
-          if (g.visible) {
-            g.clusterGroup.addTo(map);
-            if (g.polyline) g.polyline.addTo(map);
-          } else {
-            map.removeLayer(g.clusterGroup);
-            if (g.polyline) map.removeLayer(g.polyline);
-          }
-        }
-        item.addEventListener('click', toggle);
-        item.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
-      });
-
-      var statsEl = document.getElementById('travelMapModalStats');
-      if (statsEl) {
-        var tripWord = groupOrder.length === 1 ? 'cesta' : (groupOrder.length >= 2 && groupOrder.length <= 4 ? 'cesty' : 'cest');
-        var placeWord = withCoords.length === 1 ? 'místo' : (withCoords.length >= 2 && withCoords.length <= 4 ? 'místa' : 'míst');
-        var distancePart = totalDistanceKm > 0 ? '<span>~<strong>' + Math.round(totalDistanceKm).toLocaleString('cs-CZ') + '</strong> km vzdušnou čarou</span>' : '';
-        statsEl.innerHTML = '<span><strong>' + groupOrder.length + '</strong> ' + tripWord + '</span><span><strong>' + withCoords.length + '</strong> ' + placeWord + '</span>' + distancePart;
-        statsEl.hidden = false;
-      }
-
-      var playBtn = document.getElementById('travelMapModalPlayBtn');
-      if (playBtn) {
-        playBtn.hidden = withCoords.length <= 1;
-        if (withCoords.length > 1 && !playBtn.dataset.wired) {
-          playBtn.dataset.wired = '1';
-          var isPlaying = false;
-          function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
-          playBtn.onclick = async function () {
-            if (isPlaying) return;
-            isPlaying = true;
-            playBtn.disabled = true;
-            playBtn.textContent = '⏸ Přehrávám…';
-            for (var i = 0; i < withCoords.length; i++) {
-              var a = withCoords[i];
-              var m = markerById[a.id];
-              map.flyTo([a.lat, a.lng], 9, { duration: 1 });
-              await sleep(1100);
-              if (m) { try { m.openTooltip(); } catch (e) {} }
-              await sleep(1300);
-              if (m) { try { m.closeTooltip(); } catch (e) {} }
-            }
-            if (allLatLngs.length > 1) map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
-            playBtn.disabled = false;
-            playBtn.textContent = '▶️ Přehrát trasu';
-            isPlaying = false;
-          };
-        }
-      }
-
-      // Modal se otevírá s display:none → flex až po kliknutí, ale
-      // Leaflet měřil kontejner ještě v okamžiku, kdy mohl mít 0 výšky
-      // (těsně po přepnutí třídy 'open'). Jedno doměření o kousek později
-      // pro jistotu, ať mapa nezůstane "rozbitá" napůl vykreslená.
-      setTimeout(function () { map.invalidateSize(); }, 60);
     }
 
     function renderSavedList() {
@@ -1298,6 +1078,7 @@
     buildSections();
     initSiteSearch();
     initSectionModal();
+    initTravelMapModal();
     updateSavedLinkLabel();
   });
   </script>
