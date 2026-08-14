@@ -260,12 +260,18 @@
       if (typeof showToast === 'function') showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info');
       return;
     }
+    // Nejnovější nahoře — hledáš typicky čerstvě nahranou fotku, ne
+    // něco z galerie starého data.
+    var sortedPhotos = G.photos.slice().sort(function (a, b) {
+      var da = a.uploaded || a.date || 0, db = b.uploaded || b.date || 0;
+      return new Date(db) - new Date(da);
+    });
     var m = document.createElement('div');
     m.className = 'modal';
     m.innerHTML = '<div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)">' +
       '<h3 style="margin-bottom:1rem;color:var(--text)">Fotka k milníku</h3>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' +
-      G.photos.map(function (p) {
+      sortedPhotos.map(function (p) {
         return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="setTimelinePhoto(\'' + p.url + '\')">';
       }).join('') +
       '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
@@ -397,22 +403,57 @@
     if (window._camModal === m) window._camModal = null;
   }
 
+  // ★ ZMĚNA: dřív jen odhad ROZMĚRŮ (px) — teď se obrázek se zvolenou
+  // kvalitou/rozlišením/ořezem skutečně vyrenderuje do canvasu a přečte
+  // se REÁLNÁ velikost výsledného souboru (ne odhad), přesně to, co je
+  // vidět při výběru kvality nejužitečnější. Volá se při změně kvality,
+  // rozlišení, nebo po dokončení ořezu (viz initCamCropDragging/
+  // setCamCropMode níž) — ne při tažení posuvníků jasu/sytosti, ty
+  // velikost souboru ovlivňují jen zanedbatelně a přepočet by zbytečně
+  // zatěžoval prohlížeč při každém tiku posuvníku.
   function updateCamSizeHint(m) {
     var hint = $('camSizeHint');
     var img = $('camPreviewImg');
     if (!hint || !img || !img.naturalWidth) return;
+    hint.textContent = 'Počítám odhad velikosti…';
+
+    var quality = parseFloat($('camQualitySelect').value) || 0.85;
     var maxRes = parseInt($('camMaxResSelect').value) || 0;
-    var w = img.naturalWidth, h = img.naturalHeight;
-    if (m._cropRect) {
-      var scale = w / img.clientWidth;
-      w = Math.round(m._cropRect.w * scale);
-      h = Math.round(m._cropRect.h * scale);
+    var srcX = 0, srcY = 0, srcW = img.naturalWidth, srcH = img.naturalHeight;
+    if (m._cropRect && img.clientWidth) {
+      var scale = img.naturalWidth / img.clientWidth;
+      srcX = Math.round(m._cropRect.x * scale);
+      srcY = Math.round(m._cropRect.y * scale);
+      srcW = Math.round(m._cropRect.w * scale);
+      srcH = Math.round(m._cropRect.h * scale);
     }
-    if (maxRes && Math.max(w, h) > maxRes) {
-      var s = maxRes / Math.max(w, h);
-      w = Math.round(w * s); h = Math.round(h * s);
+    var dw = srcW, dh = srcH;
+    if (maxRes && Math.max(dw, dh) > maxRes) {
+      var s = maxRes / Math.max(dw, dh);
+      dw = Math.round(dw * s); dh = Math.round(dh * s);
     }
-    hint.textContent = 'Výsledek přibližně ' + w + '×' + h + ' px';
+
+    var canvas = document.createElement('canvas');
+    canvas.width = dw; canvas.height = dh;
+    var ctx = canvas.getContext('2d');
+    ctx.filter = 'brightness(' + (100 + m._exposure) + '%) saturate(' + (100 + m._saturation) + '%)';
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, dw, dh);
+
+    // Token proti "race condition" — když uživatel rychle překlikává
+    // kvalitu/rozlišení, ať se nezobrazí zastaralý výsledek pomalejšího
+    // předchozího výpočtu PO tom novějším.
+    m._sizeHintToken = (m._sizeHintToken || 0) + 1;
+    var myToken = m._sizeHintToken;
+    canvas.toBlob(function (blob) {
+      if (myToken !== m._sizeHintToken) return; // zastaralé, zahodit
+      if (!blob) { hint.textContent = dw + '×' + dh + ' px'; return; }
+      hint.textContent = 'Výsledek přibližně ' + dw + '×' + dh + ' px · ~' + formatBytesApprox(blob.size);
+    }, 'image/jpeg', quality);
+  }
+
+  function formatBytesApprox(bytes) {
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   /* === OTOČENÍ — "zapeče" se rovnou do náhledu (nový <img> src z canvasu),
