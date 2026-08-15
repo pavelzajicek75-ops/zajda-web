@@ -24,6 +24,8 @@
   var TIMELINE_TAB_LABEL = '📖 Timeline';
   var timelineCache = [];
   var editingId = null;
+  var tlPhotos = [];   // URL fotek aktuálně rozepsaného milníku (max 3)
+  var camQueue = [];   // fronta souborů čekajících na úpravu (při výběru víc najednou z telefonu)
 
   /* === VLOŽENÍ TLAČÍTKA ZÁLOŽKY, RIBBON SKUPINY A SEKCE === */
   function injectTimelineUI() {
@@ -65,14 +67,17 @@
         '<div class="form-row">' +
         '<textarea id="tlText" class="form-input" rows="4" placeholder="Text — co se stalo, jak jsi se cítil, co to znamenalo…" style="resize:vertical;flex:1"></textarea>' +
         '</div>' +
-        '<div class="form-row" style="align-items:center">' +
-        '<label style="min-width:110px">Fotka (volitelné)</label>' +
-        '<div id="tlPhotoPreview" style="width:90px;height:60px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border-soft);background-size:cover;background-position:center;flex-shrink:0"></div>' +
-        '<button type="button" class="btn btn-sm" onclick="pickTimelinePhoto()">🖼️ Vybrat z galerie</button>' +
-        '<button type="button" class="btn btn-sm" onclick="captureTimelinePhoto()">📷 Vyfotit</button>' +
-        '<button type="button" class="btn btn-sm" onclick="clearTimelinePhoto()">✖ Zrušit</button>' +
-        '<input type="hidden" id="tlPhotoUrl" value="">' +
+        '<div class="form-row" style="align-items:flex-start;flex-wrap:wrap;gap:0.6rem">' +
+        '<label style="min-width:110px;padding-top:6px">Fotky (max 3)</label>' +
+        '<div style="flex:1;min-width:200px">' +
+        '<div id="tlPhotosPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>' +
+        '<div style="display:flex;gap:0.5rem;flex-wrap:wrap">' +
+        '<button type="button" id="tlAddGalleryBtn" class="btn btn-sm" onclick="pickTimelinePhoto()">🖼️ Z galerie webu</button>' +
+        '<button type="button" id="tlAddLibraryBtn" class="btn btn-sm" onclick="pickTimelineFromLibrary()">📱 Z telefonu</button>' +
+        '<button type="button" id="tlAddCameraBtn" class="btn btn-sm" onclick="captureTimelinePhoto()">📷 Vyfotit</button>' +
+        '</div></div>' +
         '<input type="file" id="tlCameraInput" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="handleTimelineCameraCapture(this)">' +
+        '<input type="file" id="tlLibraryInput" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden" onchange="handleTimelineLibraryFiles(this)">' +
         '</div>' +
         '<div class="form-row" style="margin-top:1rem">' +
         '<button id="tlSubmitBtn" class="btn btn-blue" onclick="createTimelineMilestone()">Přidat milník</button>' +
@@ -127,8 +132,9 @@
     box.innerHTML = sorted.map(function (m) {
       var dateStr = '';
       try { dateStr = m.date ? new Date(m.date).toLocaleDateString('cs') : ''; } catch (e) {}
-      var thumb = m.photoUrl
-        ? '<img src="' + m.photoUrl + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">'
+      var firstPhoto = (m.photos && m.photos.length) ? m.photos[0] : (m.photoUrl || '');
+      var thumb = firstPhoto
+        ? '<img src="' + firstPhoto + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">'
         : '';
       var excerpt = (m.text || '').replace(/<[^>]+>/g, '').substring(0, 140);
       return '<div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px">' +
@@ -157,7 +163,7 @@
       date: date,
       title: title,
       text: $('tlText') ? $('tlText').value.trim() : '',
-      photoUrl: $('tlPhotoUrl') ? $('tlPhotoUrl').value : ''
+      photos: tlPhotos.slice(0, 3)
     };
     try {
       var r = await fetch('/api/timeline/create', {
@@ -179,9 +185,10 @@
     if ($('tlDate')) $('tlDate').value = m.date || '';
     if ($('tlTitle')) $('tlTitle').value = m.title || '';
     if ($('tlText')) $('tlText').value = m.text || '';
-    if ($('tlPhotoUrl')) $('tlPhotoUrl').value = m.photoUrl || '';
-    var prev = $('tlPhotoPreview');
-    if (prev) prev.style.backgroundImage = m.photoUrl ? "url('" + m.photoUrl + "')" : '';
+    // Zpětná kompatibilita se staršími milníky, co mají jen photoUrl
+    // (jedna fotka) místo nového pole photos.
+    tlPhotos = (m.photos && m.photos.length) ? m.photos.slice(0, 3) : (m.photoUrl ? [m.photoUrl] : []);
+    renderTlPhotosPreview();
     editingId = id;
     var btn = $('tlSubmitBtn');
     if (btn) {
@@ -199,7 +206,7 @@
       date: $('tlDate') ? $('tlDate').value : '',
       title: $('tlTitle') ? $('tlTitle').value.trim() : '',
       text: $('tlText') ? $('tlText').value.trim() : '',
-      photoUrl: $('tlPhotoUrl') ? $('tlPhotoUrl').value : ''
+      photos: tlPhotos.slice(0, 3)
     };
     if (!payload.title || !payload.date) {
       if (typeof showToast === 'function') showToast('Vyplň aspoň datum a název.', 'info');
@@ -239,7 +246,9 @@
     if ($('tlDate')) $('tlDate').value = '';
     if ($('tlTitle')) $('tlTitle').value = '';
     if ($('tlText')) $('tlText').value = '';
-    window.clearTimelinePhoto();
+    tlPhotos = [];
+    camQueue = [];
+    renderTlPhotosPreview();
     var btn = $('tlSubmitBtn');
     if (btn) {
       btn.textContent = 'Přidat milník';
@@ -247,17 +256,53 @@
     }
   };
 
-  window.clearTimelinePhoto = function () {
-    if ($('tlPhotoUrl')) $('tlPhotoUrl').value = '';
-    var prev = $('tlPhotoPreview');
-    if (prev) prev.style.backgroundImage = '';
+  /* === SPRÁVA POLE FOTEK (max 3) === */
+  function renderTlPhotosPreview() {
+    var box = $('tlPhotosPreview');
+    if (!box) return;
+    box.innerHTML = tlPhotos.map(function (url, i) {
+      return '<div style="position:relative;width:74px;height:74px;flex-shrink:0">' +
+        '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;border-radius:8px;border:1px solid var(--border-soft)">' +
+        '<button type="button" onclick="removeTlPhoto(' + i + ')" title="Odebrat" ' +
+        'style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--red,#ef4444);color:#fff;border:none;cursor:pointer;font-size:11px;line-height:1;display:flex;align-items:center;justify-content:center">✕</button>' +
+        '</div>';
+    }).join('');
+    updateTlPhotoButtonsState();
+  }
+
+  function updateTlPhotoButtonsState() {
+    var full = tlPhotos.length >= 3;
+    ['tlAddGalleryBtn', 'tlAddLibraryBtn', 'tlAddCameraBtn'].forEach(function (id) {
+      var b = $(id);
+      if (b) b.disabled = full;
+    });
+  }
+
+  window.removeTlPhoto = function (i) {
+    tlPhotos.splice(i, 1);
+    renderTlPhotosPreview();
   };
 
-  /* === VÝBĚR FOTKY Z GALERIE (znovu použije window.G.photos, které
-     naplňuje dashboard-core.js) === */
+  /* === VÝBĚR Z GALERIE WEBU (znovu použije window.G.photos, které
+     naplňuje dashboard-core.js) — teď jde vybrat víc fotek najednou
+     (zaškrtnutím), ne jen jednu s okamžitým zavřením. === */
+  function buildTlGalleryGridHtml(sortedPhotos) {
+    return sortedPhotos.map(function (p) {
+      var selected = tlPhotos.indexOf(p.url) !== -1;
+      return '<div onclick="toggleTlGalleryPhoto(\'' + p.url + '\')" style="position:relative;cursor:pointer">' +
+        '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;opacity:' + (selected ? '0.5' : '1') + '">' +
+        (selected ? '<span style="position:absolute;top:6px;right:6px;background:var(--gold,#ffc857);color:#000;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">✓</span>' : '') +
+        '</div>';
+    }).join('');
+  }
+
   window.pickTimelinePhoto = function () {
     if (!window.G || !G.photos || !G.photos.length) {
       if (typeof showToast === 'function') showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info');
+      return;
+    }
+    if (tlPhotos.length >= 3) {
+      if (typeof showToast === 'function') showToast('Milník může mít max. 3 fotky.', 'info');
       return;
     }
     // Nejnovější nahoře — hledáš typicky čerstvě nahranou fotku, ne
@@ -269,23 +314,71 @@
     var m = document.createElement('div');
     m.className = 'modal';
     m.innerHTML = '<div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)">' +
-      '<h3 style="margin-bottom:1rem;color:var(--text)">Fotka k milníku</h3>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' +
-      sortedPhotos.map(function (p) {
-        return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="setTimelinePhoto(\'' + p.url + '\')">';
-      }).join('') +
-      '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
-    m.onclick = function (e) { if (e.target === m) m.remove(); };
+      '<h3 style="margin-bottom:0.3rem;color:var(--text)">Fotky k milníku</h3>' +
+      '<p style="font-size:12px;color:var(--text-faint);margin-bottom:1rem" id="tlGalleryCount">Vyber až 3 fotky (' + tlPhotos.length + '/3)</p>' +
+      '<div id="tlGalleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' +
+      buildTlGalleryGridHtml(sortedPhotos) +
+      '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove();renderTlPhotosPreview()" class="btn btn-blue">✅ Hotovo</button></div></div>';
+    m._sortedPhotos = sortedPhotos;
+    m.onclick = function (e) { if (e.target === m) { m.remove(); renderTlPhotosPreview(); } };
     document.body.appendChild(m);
   };
 
-  window.setTimelinePhoto = function (url) {
-    if ($('tlPhotoUrl')) $('tlPhotoUrl').value = url;
-    var prev = $('tlPhotoPreview');
-    if (prev) prev.style.backgroundImage = "url('" + url + "')";
+  window.toggleTlGalleryPhoto = function (url) {
+    var idx = tlPhotos.indexOf(url);
+    if (idx !== -1) {
+      tlPhotos.splice(idx, 1);
+    } else {
+      if (tlPhotos.length >= 3) {
+        if (typeof showToast === 'function') showToast('Milník může mít max. 3 fotky.', 'info');
+        return;
+      }
+      tlPhotos.push(url);
+    }
     var modal = document.querySelector('.modal');
-    if (modal) modal.remove();
+    var grid = $('tlGalleryGrid');
+    var countEl = $('tlGalleryCount');
+    if (grid && modal && modal._sortedPhotos) grid.innerHTML = buildTlGalleryGridHtml(modal._sortedPhotos);
+    if (countEl) countEl.textContent = 'Vyber až 3 fotky (' + tlPhotos.length + '/3)';
   };
+
+  /* === VÝBĚR FOTEK PŘÍMO Z TELEFONU (mimo galerii webu) ===
+     input[type=file][multiple] BEZ atributu capture — na mobilu tak
+     otevře knihovnu fotek (Fotky/Galerie v telefonu), ne fotoaparát.
+     Jde vybrat víc fotek najednou; každá se pak jedna po druhé pošle
+     do stejného náhledu s ořezem/jasem/sytostí/kvalitou jako u
+     fotoaparátu (viz camQueue níž). */
+  window.pickTimelineFromLibrary = function () {
+    if (tlPhotos.length >= 3) {
+      if (typeof showToast === 'function') showToast('Milník může mít max. 3 fotky.', 'info');
+      return;
+    }
+    var input = $('tlLibraryInput');
+    if (!input) return;
+    input.value = '';
+    input.click();
+  };
+
+  window.handleTimelineLibraryFiles = function (input) {
+    var files = Array.prototype.slice.call(input.files || []);
+    if (!files.length) return;
+    var remaining = 3 - tlPhotos.length;
+    if (remaining <= 0) {
+      if (typeof showToast === 'function') showToast('Milník může mít max. 3 fotky.', 'info');
+      return;
+    }
+    if (files.length > remaining && typeof showToast === 'function') {
+      showToast('Vybráno víc fotek, než je volných míst — použije se jen prvních ' + remaining + '.', 'info');
+    }
+    camQueue = files.slice(0, remaining);
+    processNextQueuedPhoto();
+  };
+
+  function processNextQueuedPhoto() {
+    if (!camQueue.length) return;
+    var file = camQueue.shift();
+    openCameraPreviewModal(file);
+  }
 
   /* === VYFOTIT PŘÍMO Z TELEFONU (mimo galerii) ===
      input[type=file][capture=environment] otevře na mobilu rovnou
@@ -389,8 +482,8 @@
     previewImg.onload = function () { updateCamSizeHint(m); };
 
     $('camConfirmBtn').onclick = function () { confirmCameraPhoto(m); };
-    $('camCancelBtn').onclick = function () { closeCameraPreviewModal(m); };
-    m.onclick = function (e) { if (e.target === m) closeCameraPreviewModal(m); };
+    $('camCancelBtn').onclick = function () { closeCameraPreviewModal(m); processNextQueuedPhoto(); };
+    m.onclick = function (e) { if (e.target === m) { closeCameraPreviewModal(m); processNextQueuedPhoto(); } };
     $('camQualitySelect').onchange = function () { updateCamSizeHint(m); };
     $('camMaxResSelect').onchange = function () { updateCamSizeHint(m); };
 
@@ -616,12 +709,16 @@
       }
 
       if (uploadedUrl) {
-        window.setTimelinePhoto(uploadedUrl);
+        if (tlPhotos.length < 3) tlPhotos.push(uploadedUrl);
+        renderTlPhotosPreview();
         if (typeof showToast === 'function') showToast('Fotka přidána', 'success');
       } else if (typeof showToast === 'function') {
         showToast('Fotka se nahrála, ale nepodařilo se zjistit její adresu — napiš mi prosím, jak vypadá odpověď /api/photos/upload, ať to doladím.', 'info');
       }
       closeCameraPreviewModal(m);
+      // Pokud šlo o výběr víc fotek z telefonu najednou (camQueue),
+      // pokračuje se na další — každá se upraví/potvrdí zvlášť.
+      processNextQueuedPhoto();
     } catch (e) {
       console.error('Nahrání vyfocené fotky selhalo:', e);
       if (typeof showToast === 'function') showToast('Nepodařilo se zpracovat/nahrát fotku. Zkus to znovu.', 'error');
