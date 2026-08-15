@@ -160,6 +160,19 @@
       background: linear-gradient(90deg, var(--ember), var(--nova));
       -webkit-background-clip: text; background-clip: text; color: transparent;
     }
+    /* ★ NOVÉ: drobná zmínka o čerstvém milníku timeline — záměrně jen
+       jeden tenký řádek, žádný nový panel/barva/animace. Web má na
+       homepage už dost vizuálních prvků (plovoucí citáty, panely) — tohle
+       má být skoro neviditelné, dokud si ho člověk nevšimne sám. Zobrazí
+       se, jen když existuje milník (viz JS níž), jinak tam prostě není. */
+    .intro-timeline-note {
+      display: none; margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid rgba(140,150,255,0.14);
+      font-size: 12.5px; color: var(--mist-dim); font-weight: 400;
+    }
+    .intro-timeline-note.visible { display: block; }
+    .intro-timeline-note a { color: var(--mist); text-decoration: none; border-bottom: 1px solid rgba(140,150,255,0.25); }
+    .intro-timeline-note a:hover { color: var(--nova); border-bottom-color: var(--nova); }
 
     .sections-container {
       position: relative; z-index: 10; display: flex; flex-wrap: wrap; justify-content: center;
@@ -497,7 +510,7 @@
       <h3>Poslední aktuality</h3>
       <div class="loading-text">Načítání...</div>
     </div>
-    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...</div>
+    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div></div>
   </div>
   <div class="search-panel">
     <input type="text" id="siteSearchInput" placeholder="🔍 Hledat v článcích…" autocomplete="off">
@@ -620,6 +633,31 @@
         html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       box.innerHTML = html;
+    }
+
+    /* === DROBNÁ ZMÍNKA O ČERSTVÉM MILNÍKU TIMELINE ===
+       Záměrně minimalistické — jeden tenký řádek v panelu "Jsem Zajda",
+       žádný nový panel ani vizuální efekt (homepage má už dost prvků,
+       co soupeří o pozornost s plovoucími citáty, hlavně na mobilu).
+       Zobrazí se JEN pokud je nejnovější milník opravdu čerstvý
+       (posledních 30 dní) — jinak zůstane skrytá a časem sama zmizí,
+       místo aby se stala trvalou ozdobou, co bude za rok zastaralá. */
+    async function loadLatestTimelineNote() {
+      var note = document.getElementById('introTimelineNote');
+      if (!note) return;
+      try {
+        var r = await fetch('/api/timeline/list');
+        if (!r.ok) return;
+        var data = await r.json();
+        var milestones = Array.isArray(data) ? data : [];
+        if (!milestones.length) return;
+        var latest = milestones[milestones.length - 1]; // list.js vrací vzestupně podle data
+        if (!latest || !latest.date) return;
+        var ageDays = (Date.now() - new Date(latest.date).getTime()) / 86400000;
+        if (ageDays > 30 || ageDays < 0) return; // ne čerstvé → radši nic
+        note.innerHTML = '📖 Nový milník na <a href="/about/#milestone-' + encodeURIComponent(latest.id) + '">časové ose</a>: ' + escapeHtml(latest.title || '');
+        note.classList.add('visible');
+      } catch (e) { /* tichý fail — je to jen drobnost navíc, ne nic kritického */ }
     }
 
     var SECTIONS = [
@@ -1075,6 +1113,7 @@
 
     startQuotes();
     loadLatest();
+    loadLatestTimelineNote();
     buildSections();
     initSiteSearch();
     initSectionModal();
