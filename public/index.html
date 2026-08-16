@@ -160,19 +160,29 @@
       background: linear-gradient(90deg, var(--ember), var(--nova));
       -webkit-background-clip: text; background-clip: text; color: transparent;
     }
-    /* ★ NOVÉ: drobná zmínka o čerstvém milníku timeline — záměrně jen
-       jeden tenký řádek, žádný nový panel/barva/animace. Web má na
-       homepage už dost vizuálních prvků (plovoucí citáty, panely) — tohle
-       má být skoro neviditelné, dokud si ho člověk nevšimne sám. Zobrazí
-       se, jen když existuje milník (viz JS níž), jinak tam prostě není. */
+    /* ★ ZMĚNA: dřív jen tenký šedý řádek, skoro neviditelný — teď
+       výraznější "pilulka" s jemně pulzující tečkou (recykluje
+       @keyframes signal-pulse, co už web používá u citátů, ať to
+       vizuálně ladí a nepřidává nový styl navíc). Pořád je to ale jen
+       jeden řádek v rámci existujícího panelu, ne nový panel/sekce. */
     .intro-timeline-note {
-      display: none; margin-top: 10px; padding-top: 10px;
-      border-top: 1px solid rgba(140,150,255,0.14);
-      font-size: 12.5px; color: var(--mist-dim); font-weight: 400;
+      display: none; margin-top: 12px;
     }
     .intro-timeline-note.visible { display: block; }
-    .intro-timeline-note a { color: var(--mist); text-decoration: none; border-bottom: 1px solid rgba(140,150,255,0.25); }
-    .intro-timeline-note a:hover { color: var(--nova); border-bottom-color: var(--nova); }
+    .intro-timeline-note-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,122,69,0.14); border: 1px solid rgba(255,122,69,0.4);
+      border-radius: 20px; padding: 6px 14px 6px 10px;
+      font-size: 13px; color: var(--parchment); font-weight: 500;
+    }
+    .intro-timeline-note-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      background: var(--ember); box-shadow: 0 0 8px var(--ember), 0 0 16px var(--ember-dim);
+      animation: signal-pulse 1.4s ease-in-out infinite;
+    }
+    .intro-timeline-note a { color: var(--nova); text-decoration: none; font-weight: 700; }
+    .intro-timeline-note a:hover { text-decoration: underline; }
+    @media (prefers-reduced-motion: reduce) { .intro-timeline-note-dot { animation: none; } }
 
     .sections-container {
       position: relative; z-index: 10; display: flex; flex-wrap: wrap; justify-content: center;
@@ -655,7 +665,7 @@
         if (!latest || !latest.date) return;
         var ageDays = (Date.now() - new Date(latest.date).getTime()) / 86400000;
         if (ageDays > 30 || ageDays < 0) return; // ne čerstvé → radši nic
-        note.innerHTML = '📖 Nový milník na <a href="/about/#milestone-' + encodeURIComponent(latest.id) + '">časové ose</a>: ' + escapeHtml(latest.title || '');
+        note.innerHTML = '<span class="intro-timeline-note-pill"><span class="intro-timeline-note-dot"></span>📖 Nový milník na <a href="/timeline/#milestone-' + encodeURIComponent(latest.id) + '">časové ose</a>: ' + escapeHtml(latest.title || '') + '</span>';
         note.classList.add('visible');
       } catch (e) { /* tichý fail — je to jen drobnost navíc, ne nic kritického */ }
     }
