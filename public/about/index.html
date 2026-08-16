@@ -357,6 +357,38 @@
       overlay.classList.add('open');
     }
 
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape') return;
+      var overlay = document.getElementById('lightboxOverlay');
+      if (overlay && overlay.classList.contains('open')) overlay.classList.remove('open');
+    });
+
+    async function loadAbout() {
+      try {
+        var aboutRes = await fetch('/api/about/get');
+        var data = await aboutRes.json();
+        document.getElementById('pageTitle').textContent = data.title || 'O Zajdovi';
+        document.title = (data.title || 'O Zajdovi') + ' — Moje diagnóza, můj vesmír';
+        var content = document.getElementById('content');
+        content.classList.remove('loading');
+        if (!data.text) {
+          content.innerHTML = '<p>Zatím žádný obsah.</p>';
+        } else {
+          content.innerHTML = data.text;
+          content.querySelectorAll('img').forEach(function(img) {
+            img.style.cursor = 'pointer';
+            if (!img.hasAttribute('loading')) img.loading = 'lazy';
+            img.addEventListener('click', function() {
+              openLightbox(this.src);
+            });
+          });
+        }
+      } catch (e) {
+        document.getElementById('content').innerHTML =
+          '<p style="color:#ef4444;text-align:center;">Chyba při načítání obsahu.</p>';
+      }
+    }
+
     /* === ČASOVÁ OSA (timeline diagnózy) ===
        Vykreslení, sdílení a kopírování odkazu žije v timeline-core.js
        (sdíleno s /timeline/) — tady se jen zavolá s ID kontejnerů týhle
