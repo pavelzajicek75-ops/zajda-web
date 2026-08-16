@@ -111,8 +111,13 @@
     }
     .timeline-heading {
       font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 1.5rem; font-weight: 600;
-      margin-bottom: 1.75rem; text-align: center; text-shadow: 0 0 15px rgba(255,122,69,0.25);
+      margin-bottom: 0.5rem; text-align: center; text-shadow: 0 0 15px rgba(255,122,69,0.25);
     }
+    .timeline-standalone-link {
+      display: block; text-align: center; margin-bottom: 1.5rem;
+      font-size: 0.8rem; color: var(--mist-dim); text-decoration: none;
+    }
+    .timeline-standalone-link:hover { color: var(--nova); }
     .timeline-track { position: relative; padding-left: 44px; }
     .timeline-track::before {
       content: ''; position: absolute; left: 14px; top: 6px; bottom: 6px; width: 2px;
@@ -329,6 +334,7 @@
 
   <div class="timeline-section" id="timelineSection" style="display:none">
     <h2 class="timeline-heading">📖 Časová osa</h2>
+    <a href="/timeline/" class="timeline-standalone-link">Zobrazit celou časovou osu samostatně →</a>
     <div class="timeline-track" id="timelineTrack"></div>
   </div>
 
@@ -341,6 +347,7 @@
   </div>
 
   <script src="/shared.js"></script>
+  <script src="/timeline-core.js"></script>
   <script>
 
     function openLightbox(src) {
@@ -350,139 +357,12 @@
       overlay.classList.add('open');
     }
 
-    /* === SDÍLENÍ MILNÍKU ===
-       navigator.share() je nativní systémová nabídka (na mobilu typicky
-       zahrnuje Messenger, WhatsApp, SMS, e-mail... podle toho, co má
-       čtenář nainstalované) — přesně to, co pokrývá "poslat přes
-       Messenger i WhatsApp" nejlíp, bez nutnosti řešit Messengeru
-       vlastní webový dialog (ten vyžaduje Facebook App ID, které
-       nemáme). WhatsApp odkaz vedle toho zůstává jako explicitní
-       fallback i na desktopu, kde navigator.share obvykle není. */
-    function shareMilestone(text, url) {
-      if (navigator.share) {
-        navigator.share({ title: text, url: url }).catch(function () { /* uživatel zavřel nabídku — nic se neděje */ });
-      }
-    }
-
-    function copyMilestoneLink(btn, url) {
-      var done = function () {
-        var original = btn.textContent;
-        btn.textContent = '✅ Zkopírováno';
-        btn.classList.add('copied');
-        setTimeout(function () { btn.textContent = original; btn.classList.remove('copied'); }, 2000);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(done).catch(function () { prompt('Zkopíruj odkaz ručně:', url); });
-      } else {
-        prompt('Zkopíruj odkaz ručně:', url);
-      }
-    }
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key !== 'Escape') return;
-      var overlay = document.getElementById('lightboxOverlay');
-      if (overlay && overlay.classList.contains('open')) overlay.classList.remove('open');
-    });
-
-    async function loadAbout() {
-      try {
-        var aboutRes = await fetch('/api/about/get');
-        var data = await aboutRes.json();
-        document.getElementById('pageTitle').textContent = data.title || 'O Zajdovi';
-        document.title = (data.title || 'O Zajdovi') + ' — Moje diagnóza, můj vesmír';
-        var content = document.getElementById('content');
-        content.classList.remove('loading');
-        if (!data.text) {
-          content.innerHTML = '<p>Zatím žádný obsah.</p>';
-        } else {
-          content.innerHTML = data.text;
-          content.querySelectorAll('img').forEach(function(img) {
-            img.style.cursor = 'pointer';
-            if (!img.hasAttribute('loading')) img.loading = 'lazy';
-            img.addEventListener('click', function() {
-              openLightbox(this.src);
-            });
-          });
-        }
-      } catch (e) {
-        document.getElementById('content').innerHTML =
-          '<p style="color:#ef4444;text-align:center;">Chyba při načítání obsahu.</p>';
-      }
-    }
-
     /* === ČASOVÁ OSA (timeline diagnózy) ===
-       Data z /api/timeline/list (spravuje se v administraci, záložka
-       "📖 Timeline"). Vrací se už seřazené vzestupně podle data. Pokud
-       zatím žádné milníky nejsou, sekce zůstane skrytá (display:none). */
+       Vykreslení, sdílení a kopírování odkazu žije v timeline-core.js
+       (sdíleno s /timeline/) — tady se jen zavolá s ID kontejnerů týhle
+       konkrétní stránky. */
     async function loadTimeline() {
-      try {
-        var r = await fetch('/api/timeline/list');
-        if (!r.ok) return;
-        var data = await r.json();
-        var milestones = Array.isArray(data) ? data : [];
-        if (!milestones.length) return;
-
-        document.getElementById('timelineSection').style.display = 'block';
-        var track = document.getElementById('timelineTrack');
-        track.innerHTML = milestones.map(function (m) {
-          var dateStr = '';
-          try {
-            dateStr = m.date ? new Date(m.date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-          } catch (e) {}
-          var photos = (m.photos && m.photos.length) ? m.photos : (m.photoUrl ? [m.photoUrl] : []);
-          var photoHtml = '';
-          if (photos.length === 1) {
-            photoHtml = '<img src="' + escapeHtml(photos[0]) + '" alt="" loading="lazy">';
-          } else if (photos.length > 1) {
-            photoHtml = '<div class="timeline-photo-grid" style="--tl-photo-count:' + photos.length + '">' +
-              photos.map(function (u) { return '<img src="' + escapeHtml(u) + '" alt="" loading="lazy">'; }).join('') +
-              '</div>';
-          }
-          var textHtml = m.text ? '<p>' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</p>' : '';
-          var mTitle = m.title || '';
-          var shareUrl = window.location.origin + '/about/#milestone-' + encodeURIComponent(m.id);
-          var shareText = mTitle + ' — Moje diagnóza, můj vesmír';
-          var shareHtml = '<div class="timeline-share">' +
-            '<button type="button" class="milestone-share-native" onclick="shareMilestone(\'' + escapeHtml(shareText) + '\', \'' + escapeHtml(shareUrl) + '\')">📤 Sdílet</button>' +
-            '<a class="wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>' +
-            '<button type="button" onclick="copyMilestoneLink(this, \'' + escapeHtml(shareUrl) + '\')">🔗 Kopírovat odkaz</button>' +
-            '</div>';
-          return '<div class="timeline-item" id="milestone-' + escapeHtml(String(m.id)) + '"><div class="timeline-dot"></div><div class="timeline-card">' +
-            (dateStr ? '<span class="timeline-date">' + escapeHtml(dateStr) + '</span>' : '') +
-            '<h3>' + escapeHtml(mTitle) + '</h3>' +
-            photoHtml + textHtml + shareHtml +
-            '</div></div>';
-        }).join('');
-
-        // "📤 Sdílet" (nativní sdílení systému — na mobilu nabídne
-        // Messenger, WhatsApp, SMS, e-mail atd. podle nainstalovaných
-        // aplikací) se zobrazí jen tam, kde ho prohlížeč umí — na
-        // desktopu bez podpory ho radši schováme, ať tam netrčí tlačítko,
-        // co nic neudělá. WhatsApp odkaz a kopírování zůstávají vždy.
-        if (!navigator.share) {
-          track.querySelectorAll('.milestone-share-native').forEach(function (btn) { btn.remove(); });
-        }
-
-        // Fotky v milnících otevřít v lightboxu, stejně jako zbytek stránky.
-        track.querySelectorAll('img').forEach(function (img) {
-          img.addEventListener('click', function () { openLightbox(this.src); });
-        });
-
-        // Postupné odhalení karet při scrollování — v duchu "hvězd", co
-        // se objevují na obloze jedna po druhé, ne celá timeline naráz.
-        if ('IntersectionObserver' in window) {
-          var obs = new IntersectionObserver(function (entries) {
-            entries.forEach(function (entry) {
-              if (entry.isIntersecting) { entry.target.classList.add('in-view'); obs.unobserve(entry.target); }
-            });
-          }, { threshold: 0.15 });
-          track.querySelectorAll('.timeline-item').forEach(function (el) { obs.observe(el); });
-        } else {
-          track.querySelectorAll('.timeline-item').forEach(function (el) { el.classList.add('in-view'); });
-        }
-      } catch (e) {
-        console.error('Timeline:', e);
-      }
+      await TimelineCore.render({ trackId: 'timelineTrack', sectionId: 'timelineSection' });
     }
 
     var cachedArticles = null;
