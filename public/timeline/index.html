@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Časová osa — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Časová osa — klíčové milníky, jeden po druhém.">
+  <link rel="canonical" href="https://zajda-web.pages.dev/timeline/">
+
+  <!-- Open Graph — ať sdílený odkaz ukáže smysluplný náhled, ne
+       obecnou/prázdnou kartu. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Moje diagnóza, můj vesmír">
+  <meta property="og:title" content="Časová osa — Moje diagnóza, můj vesmír">
+  <meta property="og:description" content="Klíčové milníky, jeden po druhém.">
+  <meta property="og:url" content="https://zajda-web.pages.dev/timeline/">
+  <meta property="og:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
+  <meta property="og:locale" content="cs_CZ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Časová osa — Moje diagnóza, můj vesmír">
+  <meta name="twitter:description" content="Klíčové milníky, jeden po druhém.">
+  <meta name="twitter:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; color: #dcdce8; line-height: 1.7; }
+
+    .back-link {
+      position: relative; z-index: 10; pointer-events: none;
+      max-width: 800px; margin: 0 auto; padding: 1.5rem 1.5rem 0;
+    }
+    .back-link a {
+      pointer-events: auto;
+      color: var(--mist); font-size: 0.85rem; text-decoration: none;
+      transition: color 0.3s, text-shadow 0.3s;
+    }
+    .back-link a:hover { color: var(--ember); text-shadow: 0 0 10px rgba(255,122,69,0.4); }
+
+    .title-block { position: relative; z-index: 10; text-align: center; padding: 1rem 1.5rem 0.5rem; pointer-events: none; }
+    .title-block h1 {
+      font-family: 'Space Grotesk', sans-serif; font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(90deg, var(--parchment) 0%, var(--ember) 40%, var(--nova) 70%, var(--aurora) 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 40px rgba(255,122,69,0.3);
+      animation: title-shimmer 8s ease-in-out infinite;
+    }
+    @keyframes title-shimmer { 0%, 100% { background-position: 0% center; } 50% { background-position: 100% center; } }
+    .title-block p { color: var(--mist-dim); font-size: 0.9rem; margin-top: 0.4rem; }
+    @media (prefers-reduced-motion: reduce) { .title-block h1 { animation: none !important; } }
+
+    /* === ČASOVÁ OSA — identické styly jako vložená verze na /about/,
+       zkopírováno záměrně (viz shared.css: rozvržení jednotlivých
+       stránek zůstává v jejich vlastních <style> blocích). Vykreslovací
+       LOGIKA (JS) sdílená je — viz timeline-core.js. === */
+    .timeline-section {
+      max-width: 800px; margin: 0 auto; padding: 1.5rem 1.5rem 4rem; position: relative; z-index: 10;
+    }
+    .timeline-track { position: relative; padding-left: 44px; }
+    .timeline-track::before {
+      content: ''; position: absolute; left: 14px; top: 6px; bottom: 6px; width: 2px;
+      background: linear-gradient(180deg, var(--ember), var(--nova), var(--aurora));
+      opacity: 0.5;
+    }
+    .timeline-item {
+      position: relative; margin-bottom: 1.15rem;
+      opacity: 0; transform: translateY(16px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .timeline-item:last-child { margin-bottom: 0; }
+    .timeline-item.in-view { opacity: 1; transform: translateY(0); }
+    .timeline-dot {
+      position: absolute; left: -44px; top: 6px; width: 16px; height: 16px; border-radius: 50%;
+      background: radial-gradient(circle, #fff 0%, var(--ember) 45%, transparent 75%);
+      box-shadow: 0 0 10px var(--ember), 0 0 22px var(--ember-dim);
+      border: 2px solid rgba(255,255,255,0.85);
+    }
+    .timeline-card {
+      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+      padding: 1rem 1.25rem; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 14px 34px rgba(0,0,0,0.35);
+    }
+    .timeline-date {
+      font-family: 'Space Grotesk', sans-serif; color: var(--nova); font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 0.3rem; display: block;
+    }
+    .timeline-card h3 {
+      font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 1.02rem; font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+    .timeline-card img {
+      width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px;
+      margin: 0.6rem 0; display: block; cursor: zoom-in;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5); transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .timeline-card img:hover { transform: scale(1.02); box-shadow: 0 6px 24px rgba(255,122,69,0.25); }
+    .timeline-photo-grid {
+      display: grid; grid-template-columns: repeat(var(--tl-photo-count, 2), 1fr);
+      gap: 6px; margin: 0.6rem 0;
+    }
+    .timeline-photo-grid img {
+      width: 100%; height: 130px; object-fit: cover; border-radius: 8px;
+      margin: 0; display: block; cursor: zoom-in;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.45); transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .timeline-photo-grid img:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(255,122,69,0.25); }
+    .timeline-card p { color: var(--mist); font-size: 0.9rem; line-height: 1.6; margin: 0; font-weight: 300; }
+    .timeline-share {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0.9rem; padding-top: 0.75rem;
+      border-top: 1px solid rgba(140,150,255,0.12);
+    }
+    .timeline-share button, .timeline-share a {
+      background: var(--panel-solid, rgba(28,29,48,0.92)); border: 1px solid rgba(255,122,69,0.3);
+      color: var(--parchment); padding: 5px 12px; border-radius: 20px; cursor: pointer;
+      font-size: 11.5px; font-weight: 600; text-decoration: none; transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 5px; font-family: 'Inter', sans-serif;
+    }
+    .timeline-share button:hover, .timeline-share a:hover { border-color: var(--ember); background: rgba(255,122,69,0.15); }
+    .timeline-share a.wa { color: #4fe0a3; border-color: rgba(79,224,163,0.4); }
+    .timeline-share a.wa:hover { background: rgba(79,224,163,0.15); border-color: #4fe0a3; }
+    .timeline-share button.copied { color: var(--nova); border-color: var(--nova); background: rgba(47,230,201,0.14); }
+    @media (prefers-reduced-motion: reduce) {
+      .timeline-item { opacity: 1; transform: none; transition: none; }
+    }
+    @media (max-width: 640px) {
+      .timeline-track { padding-left: 34px; }
+      .timeline-track::before { left: 10px; }
+      .timeline-dot { left: -34px; }
+      .timeline-card { padding: 1rem 1.15rem; }
+    }
+
+    .timeline-empty { text-align: center; padding: 3rem 1.5rem; color: var(--mist-dim); position: relative; z-index: 10; }
+  </style>
+</head>
+<body>
+  <a href="#timelineTrack" class="skip-link">Přeskočit na obsah</a>
+
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
+
+  <div class="back-link">
+    <a href="/about/">← Zpět na O Zajdovi</a>
+  </div>
+
+  <div class="title-block">
+    <h1>Časová osa</h1>
+    <p>Klíčové milníky, jeden po druhém — nejnovější nahoře.</p>
+  </div>
+
+  <div class="timeline-section" id="timelineSection">
+    <div class="timeline-track" id="timelineTrack"></div>
+  </div>
+
+  <script src="/shared.js"></script>
+  <script src="/timeline-core.js"></script>
+  <script>
+    function openLightbox(src) {
+      var overlay = document.getElementById('lightboxOverlay');
+      if (!overlay) return;
+      overlay.innerHTML = '<img src="' + src + '" alt="">';
+      overlay.classList.add('open');
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var overlay = document.getElementById('lightboxOverlay');
+      if (overlay && overlay.classList.contains('open')) overlay.classList.remove('open');
+    });
+
+    document.addEventListener('DOMContentLoaded', async function () {
+      // Jen hvězdné pozadí, BEZ plovoucích citátů (startQuotes()) — tahle
+      // stránka je zamýšlená jako fokusovaná, čistá pro sdílení, žádné
+      // rozptylující prvky navíc.
+      initStarfield(150);
+      initStarfieldParallax();
+
+      await TimelineCore.render({ trackId: 'timelineTrack' });
+
+      var track = document.getElementById('timelineTrack');
+      if (!track.children.length) {
+        document.getElementById('timelineSection').innerHTML =
+          '<div class="timeline-empty"><p>Zatím tu nejsou žádné milníky.</p></div>';
+      }
+    });
+  </script>
+</body>
+</html>
