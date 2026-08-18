@@ -67,6 +67,11 @@
         '<div class="form-row">' +
         '<textarea id="tlText" class="form-input" rows="4" placeholder="Text — co se stalo, jak jsi se cítil, co to znamenalo…" style="resize:vertical;flex:1"></textarea>' +
         '</div>' +
+        '<div class="form-row">' +
+        '<select id="tlLinkedArticle" class="form-select" style="flex:1">' +
+        '<option value="">— Propojit s článkem (nepovinné) —</option>' +
+        '</select>' +
+        '</div>' +
         '<div class="form-row" style="align-items:flex-start;flex-wrap:wrap;gap:0.6rem">' +
         '<label style="min-width:110px;padding-top:6px">Fotky (max 3)</label>' +
         '<div style="flex:1;min-width:200px">' +
@@ -85,6 +90,34 @@
         '</div>' +
         '<div id="timelineList" style="margin-top:1rem"></div>';
       main.appendChild(section);
+      loadArticlesForLinking();
+    }
+  }
+
+  /* === PROPOJENÍ S ČLÁNKEM ===
+     Natáhne seznam článků jednou a naplní <select>, ať jde milník
+     volitelně propojit s tím, o kterém píše víc. */
+  var articlesForLinkingCache = null;
+  async function loadArticlesForLinking() {
+    var select = $('tlLinkedArticle');
+    if (!select) return;
+    try {
+      var r = await fetch('/api/articles/list');
+      if (!r.ok) return;
+      var data = await r.json();
+      var arr = Array.isArray(data) ? data : [];
+      articlesForLinkingCache = arr.filter(function (a) { return a && a.published !== false; });
+      articlesForLinkingCache.sort(function (a, b) {
+        var da = a.date || a.created || '', db = b.date || b.created || '';
+        return da < db ? 1 : da > db ? -1 : 0;
+      });
+      var options = '<option value="">— Propojit s článkem (nepovinné) —</option>' +
+        articlesForLinkingCache.map(function (a) {
+          return '<option value="' + a.id + '">' + escapeHtml(a.title || 'Bez názvu') + '</option>';
+        }).join('');
+      select.innerHTML = options;
+    } catch (e) {
+      console.error('Nepodařilo se natáhnout seznam článků pro propojení:', e);
     }
   }
 
