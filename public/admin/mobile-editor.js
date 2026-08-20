@@ -67,6 +67,15 @@
         background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.25));
         margin-top: -14px;
       }
+      /* Zaškrtávací pole při výběru VÍC fotek najednou (vkládání do
+         článku) — na dotykovém displeji byla 20×20px moc malá na
+         přesné trefení prstem. */
+      .img-picker-check {
+        width: 28px !important;
+        height: 28px !important;
+        top: 8px !important;
+        left: 8px !important;
+      }
     `;
     document.head.appendChild(style);
   }
