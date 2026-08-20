@@ -93,6 +93,12 @@
         }
         var textHtml = m.text ? '<p>' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</p>' : '';
         var mTitle = m.title || '';
+        // ★ NOVÉ: nepovinné propojení s článkem — jednoduchý odkaz pod
+        // textem milníku. Nepotřebuje znát název článku (žádný další
+        // fetch navíc) — text odkazu je obecný a stačí.
+        var linkedHtml = m.linkedArticleId
+          ? '<a class="timeline-linked-article" href="/article?id=' + encodeURIComponent(m.linkedArticleId) + '">O týhle cestě víc píšu tady →</a>'
+          : '';
         var shareUrl = window.location.origin + SHARE_BASE_PATH + '#milestone-' + encodeURIComponent(m.id);
         var shareText = mTitle + ' — Moje diagnóza, můj vesmír';
         var shareHtml = '<div class="timeline-share">' +
@@ -103,7 +109,7 @@
         return '<div class="timeline-item" id="milestone-' + escapeHtml(String(m.id)) + '"><div class="timeline-dot"></div><div class="timeline-card">' +
           (dateStr ? '<span class="timeline-date">' + escapeHtml(dateStr) + '</span>' : '') +
           '<h3>' + escapeHtml(mTitle) + '</h3>' +
-          photoHtml + textHtml + shareHtml +
+          photoHtml + textHtml + linkedHtml + shareHtml +
           '</div></div>';
       }).join('');
 
