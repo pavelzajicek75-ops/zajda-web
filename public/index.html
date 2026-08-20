@@ -665,7 +665,7 @@
         if (!latest || !latest.date) return;
         var ageDays = (Date.now() - new Date(latest.date).getTime()) / 86400000;
         if (ageDays > 30 || ageDays < 0) return; // ne čerstvé → radši nic
-        note.innerHTML = '<span class="intro-timeline-note-pill"><span class="intro-timeline-note-dot"></span>📖 Nový milník na <a href="/timeline/#milestone-' + encodeURIComponent(latest.id) + '">časové ose</a>: ' + escapeHtml(latest.title || '') + '</span>';
+        note.innerHTML = '<span class="intro-timeline-note-pill"><span class="intro-timeline-note-dot"></span>📖 Nové v <a href="/timeline/#milestone-' + encodeURIComponent(latest.id) + '">A mezitím se semlelo...</a>: ' + escapeHtml(latest.title || '') + '</span>';
         note.classList.add('visible');
       } catch (e) { /* tichý fail — je to jen drobnost navíc, ne nic kritického */ }
     }
