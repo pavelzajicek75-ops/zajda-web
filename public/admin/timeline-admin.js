@@ -155,13 +155,16 @@
       box.innerHTML = '<div style="color:#64748b;padding:1rem;text-align:center">Zatím žádné milníky — přidej první výše.</div>';
       return;
     }
-    // V administraci se hodí vidět nejnovější přidané nahoře (na
-    // veřejné timeline se pak řadí chronologicky vzestupně, viz
-    // frontend) — tady jde hlavně o rychlou orientaci při editaci.
-    var sorted = arr.slice().sort(function (a, b) {
-      var da = a.date || '', db = b.date || '';
-      return da < db ? 1 : da > db ? -1 : 0;
-    });
+    // V administraci se pořadí řídí stejným klíčem jako na veřejné
+    // timeline ("order", s fallbackem na datum) — nahoře v adminu =
+    // zobrazí se jako první i na webu. Přetažením za úchyt ⠿ jde
+    // pořadí ručně přepsat mimo chronologii (viz initTimelineDragReorder).
+    function timelineSortKey(m) {
+      if (typeof m.order === 'number' && isFinite(m.order)) return m.order;
+      var parsed = m.date ? Date.parse(m.date) : NaN;
+      return isFinite(parsed) ? parsed : 0;
+    }
+    var sorted = arr.slice().sort(function (a, b) { return timelineSortKey(b) - timelineSortKey(a); });
     box.innerHTML = sorted.map(function (m) {
       var dateStr = '';
       try { dateStr = m.date ? new Date(m.date).toLocaleDateString('cs') : ''; } catch (e) {}
@@ -170,8 +173,10 @@
         ? '<img src="' + firstPhoto + '" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">'
         : '';
       var excerpt = (m.text || '').replace(/<[^>]+>/g, '').substring(0, 140);
-      return '<div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px">' +
-        '<div style="display:flex;gap:0.9rem">' + thumb +
+      return '<div class="card timeline-card-admin" data-id="' + m.id + '" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px">' +
+        '<div style="display:flex;gap:0.7rem;align-items:flex-start">' +
+        '<span class="tl-drag-handle" title="Přetáhni pro změnu pořadí" style="cursor:grab;color:#64748b;font-size:20px;line-height:1;padding:4px 2px;user-select:none;touch-action:none;flex-shrink:0">⠿</span>' +
+        thumb +
         '<div style="flex:1;min-width:0">' +
         '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem">' +
         '<h4 style="color:#ffc857;margin:0">' + escapeHtml(m.title || 'Bez názvu') + '</h4>' +
@@ -183,6 +188,80 @@
         '<button onclick="deleteTimelineMilestone(\'' + m.id + '\')" class="btn btn-red btn-sm">🗑 Smazat</button>' +
         '</div></div></div></div>';
     }).join('');
+    initTimelineDragReorder(box);
+  }
+
+  /* === ŘAZENÍ TAŽENÍM (mimo chronologické pořadí) ===
+     Pointer eventy (ne HTML5 drag&drop) — funguje stejně na myš i
+     dotyk, takže jde přetahovat i na tabletu. Tažení se zahajuje jen
+     z úchytu ⠿ (ne z celé karty), ať to nekoliduje s tlačítky Upravit/
+     Smazat ani s výběrem textu v ukázce. Po puštění se nové pořadí
+     uloží — každé kartě se přepíše "order" podle aktuální pozice
+     (nahoře = nejvyšší číslo = zobrazí se jako první i na webu). */
+  function initTimelineDragReorder(box) {
+    var draggingCard = null;
+
+    box.querySelectorAll('.tl-drag-handle').forEach(function (handle) {
+      handle.addEventListener('pointerdown', function (e) {
+        var card = handle.closest('.timeline-card-admin');
+        if (!card) return;
+        e.preventDefault();
+        draggingCard = card;
+        card.style.opacity = '0.55';
+        card.style.boxShadow = '0 8px 24px rgba(0,0,0,0.5)';
+        try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+      });
+    });
+
+    box.addEventListener('pointermove', function (e) {
+      if (!draggingCard) return;
+      e.preventDefault();
+      var el = document.elementFromPoint(e.clientX, e.clientY);
+      var targetCard = el ? el.closest('.timeline-card-admin') : null;
+      if (targetCard && targetCard !== draggingCard && box.contains(targetCard)) {
+        var rect = targetCard.getBoundingClientRect();
+        var before = (e.clientY - rect.top) < rect.height / 2;
+        box.insertBefore(draggingCard, before ? targetCard : targetCard.nextSibling);
+      }
+    });
+
+    function endDrag() {
+      if (!draggingCard) return;
+      draggingCard.style.opacity = '';
+      draggingCard.style.boxShadow = '';
+      draggingCard = null;
+      persistTimelineOrder(box);
+    }
+    box.addEventListener('pointerup', endDrag);
+    box.addEventListener('pointercancel', endDrag);
+  }
+
+  async function persistTimelineOrder(box) {
+    var cards = Array.prototype.slice.call(box.querySelectorAll('.timeline-card-admin'));
+    var n = cards.length;
+    var updates = [];
+    cards.forEach(function (card, index) {
+      var id = card.getAttribute('data-id');
+      var newOrder = n - index; // nahoře v seznamu = nejvyšší číslo
+      var m = timelineCache.find(function (x) { return String(x.id) === String(id); });
+      if (m && m.order !== newOrder) {
+        m.order = newOrder;
+        updates.push({ id: id, order: newOrder });
+      }
+    });
+    if (!updates.length) return;
+    try {
+      for (var i = 0; i < updates.length; i++) {
+        await fetch('/api/timeline/update', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: updates[i].id, order: updates[i].order })
+        });
+      }
+      if (typeof showToast === 'function') showToast('Pořadí uloženo', 'success');
+    } catch (e) {
+      console.error('Uložení pořadí selhalo:', e);
+      if (typeof showToast === 'function') showToast('Pořadí se nepodařilo uložit', 'error');
+    }
   }
 
   window.createTimelineMilestone = async function () {
@@ -196,7 +275,8 @@
       date: date,
       title: title,
       text: $('tlText') ? $('tlText').value.trim() : '',
-      photos: tlPhotos.slice(0, 3)
+      photos: tlPhotos.slice(0, 3),
+      linkedArticleId: $('tlLinkedArticle') ? ($('tlLinkedArticle').value || null) : null
     };
     try {
       var r = await fetch('/api/timeline/create', {
@@ -218,6 +298,7 @@
     if ($('tlDate')) $('tlDate').value = m.date || '';
     if ($('tlTitle')) $('tlTitle').value = m.title || '';
     if ($('tlText')) $('tlText').value = m.text || '';
+    if ($('tlLinkedArticle')) $('tlLinkedArticle').value = m.linkedArticleId || '';
     // Zpětná kompatibilita se staršími milníky, co mají jen photoUrl
     // (jedna fotka) místo nového pole photos.
     tlPhotos = (m.photos && m.photos.length) ? m.photos.slice(0, 3) : (m.photoUrl ? [m.photoUrl] : []);
@@ -239,7 +320,8 @@
       date: $('tlDate') ? $('tlDate').value : '',
       title: $('tlTitle') ? $('tlTitle').value.trim() : '',
       text: $('tlText') ? $('tlText').value.trim() : '',
-      photos: tlPhotos.slice(0, 3)
+      photos: tlPhotos.slice(0, 3),
+      linkedArticleId: $('tlLinkedArticle') ? ($('tlLinkedArticle').value || null) : null
     };
     if (!payload.title || !payload.date) {
       if (typeof showToast === 'function') showToast('Vyplň aspoň datum a název.', 'info');
@@ -279,6 +361,7 @@
     if ($('tlDate')) $('tlDate').value = '';
     if ($('tlTitle')) $('tlTitle').value = '';
     if ($('tlText')) $('tlText').value = '';
+    if ($('tlLinkedArticle')) $('tlLinkedArticle').value = '';
     tlPhotos = [];
     camQueue = [];
     renderTlPhotosPreview();
