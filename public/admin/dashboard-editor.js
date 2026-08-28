@@ -1662,95 +1662,188 @@ document.addEventListener('click', e => {
   }
 });
 
-function insertImgTo(editorId, align) {
-  if (!G.photos || !G.photos.length) { showToast('Nejdřív nahraj fotky do galerie.', 'info'); return; }
+/* === SDÍLENÝ PICKER FOTEK Z GALERIE (složky + řazení) ===
+   Jedna komponenta pro výběr fotek z galerie, použitá na několika
+   místech napříč adminem: vkládání do článků (insertImgTo), cover
+   sekce/podsekce (pickSectionCover/pickSubsectionCover), a přes
+   timeline-admin.js i pro fotky u milníků Timeline. Dřív měl každé
+   z těch míst svoje vlastní kopii kódu (plochý seznam bez filtru
+   složky, bez řazení) — teď jde o jedno místo, jedna oprava/vylepšení
+   platí všude.
+
+   options:
+     title        — nadpis modalu (string)
+     multiSelect  — true = zaškrtávání víc fotek + tlačítko "Hotovo",
+                    false (výchozí) = klik na fotku rovnou vybere a zavře
+     selectedUrls — (jen multiSelect) pole URL, co už jsou vybrané předem
+     maxSelect    — (jen multiSelect) volitelný limit počtu
+     onSelect(url)         — (jen single-select) zavolá se po kliknutí
+     onToggle(url, isNowSelected) — (jen multiSelect) při každém zaškrtnutí/odškrtnutí
+     onDone(selectedUrls)  — (jen multiSelect) při zavření (tlačítko Hotovo i klik mimo modal) */
+function openGalleryPickerModal(options) {
+  options = options || {};
+  if (!window.G || !G.photos || !G.photos.length) {
+    if (typeof showToast === 'function') showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info');
+    else alert('Galerie je prázdná. Nejprve nahraj fotky.');
+    return;
+  }
+  const multi = !!options.multiSelect;
+  const selected = new Set(options.selectedUrls || []);
+  const folders = typeof getAllFolders === 'function' ? getAllFolders() : [];
+
   const m = document.createElement('div');
   m.className = 'modal';
-  const folders = typeof getAllFolders === 'function' ? getAllFolders() : [];
+  m.setAttribute('role', 'dialog');
+  m.setAttribute('aria-modal', 'true');
+  m.setAttribute('aria-label', options.title || 'Vybrat fotku');
   m.innerHTML = `
-    <div style="background:var(--surface);border-radius:var(--r-lg);max-width:90vw;width:700px;max-height:82vh;display:flex;flex-direction:column;border:1px solid var(--border-soft);padding:0">
+    <div style="background:var(--surface,#131a2c);border-radius:var(--r-lg,12px);max-width:90vw;width:700px;max-height:82vh;display:flex;flex-direction:column;border:1px solid var(--border-soft,#263252);padding:0">
       <div style="padding:1.5rem 1.5rem 0.75rem;flex-shrink:0">
-        <h3 style="margin-bottom:0.3rem;color:var(--text)">Vložit fotky</h3>
-        <p style="color:var(--text-muted);font-size:12px;margin:0 0 0.75rem">Klikni na jednu, nebo zaškrtni víc a vlož je najednou (ve zvoleném pořadí).</p>
-        <select id="imgPickerFolder" class="form-select" style="max-width:220px" onchange="renderImgPickerGrid('${editorId}','${align}')">
-          <option value="">📁 Všechny složky</option>
-          <option value="__none__">— Bez složky —</option>
-          ${folders.map(f => `<option value="${f.replace(/"/g, '&quot;')}">📁 ${f}</option>`).join('')}
-        </select>
+        <h3 style="margin-bottom:0.3rem;color:var(--text,#eef1f8)">${escapeHtml(options.title || 'Vybrat fotku')}</h3>
+        ${multi ? `<p id="gpCountLabel" style="color:var(--text-muted,#92a0bc);font-size:12px;margin:0 0 0.75rem"></p>` : `<div style="margin-bottom:0.75rem"></div>`}
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <select id="gpFolderFilter" class="form-select" style="max-width:200px">
+            <option value="">📁 Všechny složky</option>
+            <option value="__none__">— Bez složky —</option>
+            ${folders.map(f => `<option value="${escapeHtml(f)}">📁 ${escapeHtml(f)}</option>`).join('')}
+          </select>
+          <select id="gpSortMode" class="form-select" style="max-width:170px">
+            <option value="newest">Nejnovější</option>
+            <option value="oldest">Nejstarší</option>
+            <option value="name">Podle názvu</option>
+          </select>
+        </div>
       </div>
       <div style="flex:1;overflow-y:auto;padding:0 1.5rem">
-        <div id="imgPickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem"></div>
+        <div id="gpGrid"></div>
       </div>
-      <div style="padding:1rem 1.5rem;flex-shrink:0;border-top:1px solid var(--border-soft);display:flex;gap:0.5rem;justify-content:center">
-        <button onclick="insertSelectedImages('${editorId}','${align}')" class="btn btn-blue">✅ Vložit vybrané</button>
-        <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
+      <div style="padding:1rem 1.5rem;flex-shrink:0;border-top:1px solid var(--border-soft,#263252);display:flex;gap:0.5rem;justify-content:center">
+        ${multi ? `<button id="gpDoneBtn" class="btn btn-blue">✅ Hotovo</button>` : ''}
+        <button id="gpCloseBtn" class="btn btn-red">Zavřít</button>
       </div>
     </div>`;
-  m.onclick = e => { if (e.target === m) m.remove(); };
   document.body.appendChild(m);
-  renderImgPickerGrid(editorId, align);
+
+  let finished = false;
+  function finish() {
+    if (finished) return;
+    finished = true;
+    m.remove();
+    if (multi && options.onDone) options.onDone([...selected]);
+  }
+  m.onclick = e => { if (e.target === m) finish(); };
+  m.querySelector('#gpCloseBtn').onclick = finish;
+  const doneBtn = m.querySelector('#gpDoneBtn');
+  if (doneBtn) doneBtn.onclick = finish;
+
+  function currentSortedPhotos() {
+    const mode = m.querySelector('#gpSortMode')?.value || 'newest';
+    let arr = [...G.photos];
+    if (mode === 'newest') arr.sort((a, b) => new Date(b.uploaded || b.date || 0) - new Date(a.uploaded || a.date || 0));
+    else if (mode === 'oldest') arr.sort((a, b) => new Date(a.uploaded || a.date || 0) - new Date(b.uploaded || b.date || 0));
+    else if (mode === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return arr;
+  }
+
+  function updateCountLabel() {
+    const label = m.querySelector('#gpCountLabel');
+    if (!label) return;
+    label.textContent = options.maxSelect ? `Vybráno ${selected.size}/${options.maxSelect}` : `Vybráno ${selected.size}`;
+  }
+
+  function renderGrid() {
+    const grid = m.querySelector('#gpGrid');
+    if (!grid) return;
+    const folderSel = m.querySelector('#gpFolderFilter')?.value || '';
+    let photos = currentSortedPhotos();
+    if (typeof getPhotoFolder === 'function') {
+      if (folderSel === '__none__') photos = photos.filter(p => !getPhotoFolder(p));
+      else if (folderSel) photos = photos.filter(p => getPhotoFolder(p) === folderSel);
+    }
+    if (!photos.length) {
+      grid.style.display = 'block';
+      grid.innerHTML = '<div style="text-align:center;color:var(--text-muted,#92a0bc);padding:1.5rem;font-size:13px">V téhle složce nejsou žádné fotky.</div>';
+      return;
+    }
+
+    const tile = p => {
+      const isSel = selected.has(p.url);
+      return `
+      <div class="gp-tile" data-url="${escapeHtml(p.url)}" style="position:relative;cursor:pointer">
+        <img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;opacity:${isSel ? '0.55' : '1'}">
+        ${isSel ? `<span style="position:absolute;top:6px;right:6px;background:var(--gold,#ffc857);color:#000;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">✓</span>` : ''}
+      </div>`;
+    };
+
+    if (folderSel) {
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fill,minmax(140px,1fr))';
+      grid.style.gap = '0.75rem';
+      grid.innerHTML = photos.map(tile).join('');
+    } else {
+      const groups = new Map();
+      photos.forEach(p => {
+        const f = (typeof getPhotoFolder === 'function' ? getPhotoFolder(p) : null) || '';
+        if (!groups.has(f)) groups.set(f, []);
+        groups.get(f).push(p);
+      });
+      const sortedFolders = [...groups.keys()].sort((a, b) => { if (!a) return 1; if (!b) return -1; return a.localeCompare(b); });
+      grid.style.display = 'block';
+      grid.innerHTML = sortedFolders.map(f => `
+        <div style="margin-bottom:1.1rem">
+          <div style="font-size:12px;font-weight:700;color:var(--gold,#ffc857);margin-bottom:0.5rem;font-family:var(--font-mono,monospace)">
+            ${f ? '📁 ' + escapeHtml(f) : '— Bez složky —'} <span style="color:var(--text-faint,#5b6584);font-weight:400">(${groups.get(f).length})</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
+            ${groups.get(f).map(tile).join('')}
+          </div>
+        </div>`).join('');
+    }
+
+    grid.querySelectorAll('.gp-tile').forEach(el => {
+      el.addEventListener('click', () => {
+        const url = el.dataset.url;
+        if (multi) {
+          if (selected.has(url)) {
+            selected.delete(url);
+            if (options.onToggle) options.onToggle(url, false);
+          } else {
+            if (options.maxSelect && selected.size >= options.maxSelect) {
+              if (typeof showToast === 'function') showToast('Max. ' + options.maxSelect + ' fotek.', 'info');
+              return;
+            }
+            selected.add(url);
+            if (options.onToggle) options.onToggle(url, true);
+          }
+          updateCountLabel();
+          renderGrid();
+        } else {
+          finished = true;
+          m.remove();
+          if (options.onSelect) options.onSelect(url);
+        }
+      });
+    });
+  }
+
+  m.querySelector('#gpFolderFilter').addEventListener('change', renderGrid);
+  m.querySelector('#gpSortMode').addEventListener('change', renderGrid);
+
+  updateCountLabel();
+  renderGrid();
 }
 
-function renderImgPickerGrid(editorId, align) {
-  const grid = $('imgPickerGrid');
-  if (!grid) return;
-  const folderSel = $('imgPickerFolder')?.value || '';
-  let photos = G.photos;
-  if (typeof getPhotoFolder === 'function') {
-    if (folderSel === '__none__') photos = photos.filter(p => !getPhotoFolder(p));
-    else if (folderSel) photos = photos.filter(p => getPhotoFolder(p) === folderSel);
-  }
-  if (!photos.length) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:1.5rem;font-size:13px">V téhle složce nejsou žádné fotky.</div>';
-    return;
-  }
-
-  const photoTile = p => `
-    <div style="position:relative">
-      <input type="checkbox" class="img-picker-check" data-url="${p.url}" style="position:absolute;top:6px;left:6px;z-index:2;width:20px;height:20px;cursor:pointer;accent-color:var(--accent)">
-      <img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="insertImgUrl('${editorId}','${p.url}','${align}');this.closest('.modal').remove()">
-    </div>`;
-
-  /* Pokud je vybraná konkrétní složka (nebo "bez složky"), zobraz prostě
-     plochý seznam. Jinak (Všechny složky) seskup podle složky s nadpisy,
-     ať je vidět struktura na první pohled. */
-  if (folderSel) {
-    grid.innerHTML = photos.map(photoTile).join('');
-    grid.style.display = 'grid';
-    return;
-  }
-
-  const groups = new Map(); // folder name (nebo '' = bez složky) -> photos[]
-  photos.forEach(p => {
-    const f = (typeof getPhotoFolder === 'function' ? getPhotoFolder(p) : null) || '';
-    if (!groups.has(f)) groups.set(f, []);
-    groups.get(f).push(p);
+function insertImgTo(editorId, align) {
+  openGalleryPickerModal({
+    title: 'Vložit fotky',
+    multiSelect: true,
+    onDone: urls => {
+      if (!urls.length) return;
+      urls.forEach(url => insertImgUrl(editorId, url, align, false));
+      setTimeout(() => setupArticleEditors(), 50);
+      showToast(`Vloženo ${urls.length} fotek`, 'success');
+    }
   });
-  const sortedFolders = [...groups.keys()].sort((a, b) => {
-    if (!a) return 1; if (!b) return -1; // "bez složky" na konec
-    return a.localeCompare(b);
-  });
-
-  grid.style.display = 'block';
-  grid.innerHTML = sortedFolders.map(f => `
-    <div style="margin-bottom:1.1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:0.5rem;font-family:var(--font-mono)">
-        ${f ? '📁 ' + f : '— Bez složky —'} <span style="color:var(--text-faint);font-weight:400">(${groups.get(f).length})</span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem">
-        ${groups.get(f).map(photoTile).join('')}
-      </div>
-    </div>`).join('');
-}
-
-function insertSelectedImages(editorId, align) {
-  const checks = Array.from(document.querySelectorAll('.img-picker-check:checked'));
-  if (!checks.length) { showToast('Nejdřív zaškrtni aspoň jednu fotku.', 'info'); return; }
-  checks.forEach(c => insertImgUrl(editorId, c.dataset.url, align, false));
-  const modal = document.querySelector('.modal');
-  if (modal) modal.remove();
-  setTimeout(() => setupArticleEditors(), 50);
-  showToast(`Vloženo ${checks.length} fotek`, 'success');
 }
 
 function insertImgUrl(editorId, url, align, closeModal = true) {
@@ -1817,31 +1910,16 @@ function insertImgUrl(editorId, url, align, closeModal = true) {
    místo okamžitého uložení na server zapíše URL do skrytého pole a
    pošle se až spolu s celým článkem (Vytvořit/Uložit změny). */
 function pickArticleCover() {
-  if (!G.photos || !G.photos.length) { showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info'); return; }
-  const m = document.createElement('div');
-  m.className = 'modal';
-  m.setAttribute('role', 'dialog');
-  m.setAttribute('aria-modal', 'true');
-  m.setAttribute('aria-label', 'Vybrat titulní fotku článku');
-  m.innerHTML = `
-    <div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)">
-      <h3 style="margin-bottom:1rem;color:var(--text)">Titulní fotka článku</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">
-        ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="setArticleCover('${p.url}')">`).join('')}
-      </div>
-      <div style="text-align:center;margin-top:1rem">
-        <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
-      </div>
-    </div>`;
-  m.onclick = e => { if (e.target === m) m.remove(); };
-  document.body.appendChild(m);
+  openGalleryPickerModal({
+    title: 'Titulní fotka článku',
+    onSelect: url => setArticleCover(url)
+  });
 }
 
 function setArticleCover(url) {
   if ($('artCoverUrl')) $('artCoverUrl').value = url;
   const prev = $('artCoverPreview');
   if (prev) prev.style.backgroundImage = `url('${url}')`;
-  document.querySelector('.modal')?.remove();
 }
 
 function clearArticleCover() {
@@ -2603,21 +2681,10 @@ async function deleteSubsection(id) {
 }
 
 async function pickSubsectionCover(id) {
-  if (!G.photos || !G.photos.length) { showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info'); return; }
-  const m = document.createElement('div');
-  m.className = 'modal';
-  m.innerHTML = `
-    <div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)">
-      <h3 style="margin-bottom:1rem;color:var(--text)">Cover podsekce</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">
-        ${G.photos.map(p => `<img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSubsectionCover('${id}','${p.url}')">`).join('')}
-      </div>
-      <div style="text-align:center;margin-top:1rem">
-        <button onclick="this.closest('.modal').remove()" class="btn btn-red">Zavřít</button>
-      </div>
-    </div>`;
-  m.onclick = e => { if (e.target === m) m.remove(); };
-  document.body.appendChild(m);
+  openGalleryPickerModal({
+    title: 'Cover podsekce',
+    onSelect: url => saveSubsectionCover(id, url)
+  });
 }
 
 async function saveSubsectionCover(id, url) {
@@ -2630,8 +2697,6 @@ async function saveSubsectionCover(id, url) {
   } catch {
     showToast('Chyba uložení coveru', 'error');
   } finally {
-    const m = document.querySelector('.modal');
-    if (m) m.remove();
     loadSubsections();
   }
 }
@@ -2665,12 +2730,10 @@ async function loadSectionCovers() {
 }
 
 function pickSectionCover(sectionId) {
-  if (!G.photos || !G.photos.length) { showToast('Galerie je prázdná.', 'info'); return; }
-  const m = document.createElement('div');
-  m.className = 'modal';
-  m.innerHTML = '<div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)"><h3 style="margin-bottom:1rem;color:var(--text)">Cover sekce: ' + escapeHtml(sectionId) + '</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' + G.photos.map(function(p) { return '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="saveSectionCover(\'' + sectionId + '\',\'' + p.url + '\')">'; }).join('') + '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove()" class="btn btn-red">Zavřít</button></div></div>';
-  m.onclick = function(e) { if (e.target === m) m.remove(); };
-  document.body.appendChild(m);
+  openGalleryPickerModal({
+    title: 'Cover sekce: ' + sectionId,
+    onSelect: url => saveSectionCover(sectionId, url)
+  });
 }
 
 async function saveSectionCover(sectionId, url) {
@@ -2689,8 +2752,6 @@ async function saveSectionCover(sectionId, url) {
     console.error('Chyba uložení coveru:', e);
     showToast('Nepodařilo se uložit cover: ' + e.message, 'error');
   } finally {
-    var m = document.querySelector('.modal');
-    if (m) m.remove();
     loadSectionCovers();
   }
 }
