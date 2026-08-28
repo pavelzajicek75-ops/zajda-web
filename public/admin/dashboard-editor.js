@@ -1712,6 +1712,7 @@ function openGalleryPickerModal(options) {
             <option value="oldest">Nejstarší</option>
             <option value="name">Podle názvu</option>
           </select>
+          ${multi ? `<button id="gpSelectFolderBtn" class="btn btn-sm btn-blue" style="display:none">📁 Vybrat celou složku</button>` : ''}
         </div>
       </div>
       <div style="flex:1;overflow-y:auto;padding:0 1.5rem">
@@ -1760,6 +1761,19 @@ function openGalleryPickerModal(options) {
       if (folderSel === '__none__') photos = photos.filter(p => !getPhotoFolder(p));
       else if (folderSel) photos = photos.filter(p => getPhotoFolder(p) === folderSel);
     }
+    currentFilteredPhotos = photos; // pro tlačítko "Vybrat celou složku"
+
+    /* Tlačítko "Vybrat celou složku" dává smysl jen když je vybraná
+       KONKRÉTNÍ složka (nebo "Bez složky") — u "Všechny složky" by bylo
+       matoucí, kterou složku by vlastně mělo vzít. */
+    const folderBtn = m.querySelector('#gpSelectFolderBtn');
+    if (folderBtn) {
+      folderBtn.style.display = (multi && folderSel) ? 'inline-flex' : 'none';
+      const folderLabel = folderSel === '__none__' ? 'bez složky' : folderSel;
+      folderBtn.textContent = `📁 Vybrat celou složku (${photos.length})`;
+      folderBtn.title = `Vybere naráz všech ${photos.length} fotek ve složce „${folderLabel}“`;
+    }
+
     if (!photos.length) {
       grid.style.display = 'block';
       grid.innerHTML = '<div style="text-align:center;color:var(--text-muted,#92a0bc);padding:1.5rem;font-size:13px">V téhle složce nejsou žádné fotky.</div>';
@@ -1823,6 +1837,28 @@ function openGalleryPickerModal(options) {
           if (options.onSelect) options.onSelect(url);
         }
       });
+    });
+  }
+
+  let currentFilteredPhotos = [];
+  const folderBtn = m.querySelector('#gpSelectFolderBtn');
+  if (folderBtn) {
+    folderBtn.addEventListener('click', () => {
+      let added = 0, skippedFull = false;
+      for (const p of currentFilteredPhotos) {
+        if (selected.has(p.url)) continue;
+        if (options.maxSelect && selected.size >= options.maxSelect) { skippedFull = true; break; }
+        selected.add(p.url);
+        added++;
+        if (options.onToggle) options.onToggle(p.url, true);
+      }
+      updateCountLabel();
+      renderGrid();
+      if (skippedFull) {
+        if (typeof showToast === 'function') showToast(`Přidáno ${added} fotek, dál už je limit ${options.maxSelect} fotek.`, 'info');
+      } else if (added && typeof showToast === 'function') {
+        showToast(`Přidáno ${added} fotek ze složky`, 'success');
+      }
     });
   }
 
