@@ -155,10 +155,6 @@
       box.innerHTML = '<div style="color:#64748b;padding:1rem;text-align:center">Zatím žádné milníky — přidej první výše.</div>';
       return;
     }
-    // V administraci se pořadí řídí stejným klíčem jako na veřejné
-    // timeline ("order", s fallbackem na datum) — nahoře v adminu =
-    // zobrazí se jako první i na webu. Přetažením za úchyt ⠿ jde
-    // pořadí ručně přepsat mimo chronologii (viz initTimelineDragReorder).
     function timelineSortKey(m) {
       if (typeof m.order === 'number' && isFinite(m.order)) return m.order;
       var parsed = m.date ? Date.parse(m.date) : NaN;
@@ -191,13 +187,6 @@
     initTimelineDragReorder(box);
   }
 
-  /* === ŘAZENÍ TAŽENÍM (mimo chronologické pořadí) ===
-     Pointer eventy (ne HTML5 drag&drop) — funguje stejně na myš i
-     dotyk, takže jde přetahovat i na tabletu. Tažení se zahajuje jen
-     z úchytu ⠿ (ne z celé karty), ať to nekoliduje s tlačítky Upravit/
-     Smazat ani s výběrem textu v ukázce. Po puštění se nové pořadí
-     uloží — každé kartě se přepíše "order" podle aktuální pozice
-     (nahoře = nejvyšší číslo = zobrazí se jako první i na webu). */
   function initTimelineDragReorder(box) {
     var draggingCard = null;
 
@@ -242,7 +231,7 @@
     var updates = [];
     cards.forEach(function (card, index) {
       var id = card.getAttribute('data-id');
-      var newOrder = n - index; // nahoře v seznamu = nejvyšší číslo
+      var newOrder = n - index;
       var m = timelineCache.find(function (x) { return String(x.id) === String(id); });
       if (m && m.order !== newOrder) {
         m.order = newOrder;
@@ -299,8 +288,6 @@
     if ($('tlTitle')) $('tlTitle').value = m.title || '';
     if ($('tlText')) $('tlText').value = m.text || '';
     if ($('tlLinkedArticle')) $('tlLinkedArticle').value = m.linkedArticleId || '';
-    // Zpětná kompatibilita se staršími milníky, co mají jen photoUrl
-    // (jedna fotka) místo nového pole photos.
     tlPhotos = (m.photos && m.photos.length) ? m.photos.slice(0, 3) : (m.photoUrl ? [m.photoUrl] : []);
     renderTlPhotosPreview();
     editingId = id;
@@ -399,71 +386,33 @@
     renderTlPhotosPreview();
   };
 
-  /* === VÝBĚR Z GALERIE WEBU (znovu použije window.G.photos, které
-     naplňuje dashboard-core.js) — teď jde vybrat víc fotek najednou
-     (zaškrtnutím), ne jen jednu s okamžitým zavřením. === */
-  function buildTlGalleryGridHtml(sortedPhotos) {
-    return sortedPhotos.map(function (p) {
-      var selected = tlPhotos.indexOf(p.url) !== -1;
-      return '<div onclick="toggleTlGalleryPhoto(\'' + p.url + '\')" style="position:relative;cursor:pointer">' +
-        '<img src="' + p.url + '" style="width:100%;height:110px;object-fit:cover;border-radius:6px;opacity:' + (selected ? '0.5' : '1') + '">' +
-        (selected ? '<span style="position:absolute;top:6px;right:6px;background:var(--gold,#ffc857);color:#000;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">✓</span>' : '') +
-        '</div>';
-    }).join('');
-  }
-
+  /* === VÝBĚR Z GALERIE WEBU ===
+     Používá sdílený picker openGalleryPickerModal() z dashboard-editor.js
+     (musí se načíst PŘED tímhle souborem) — stejná zkušenost (složky +
+     řazení) jako u vkládání fotek do článků a coverů sekcí/podsekcí,
+     místo dřívější vlastní ploché (jen řazené podle data) kopie. */
   window.pickTimelinePhoto = function () {
-    if (!window.G || !G.photos || !G.photos.length) {
-      if (typeof showToast === 'function') showToast('Galerie je prázdná. Nejprve nahraj fotky.', 'info');
-      return;
-    }
     if (tlPhotos.length >= 3) {
       if (typeof showToast === 'function') showToast('Milník může mít max. 3 fotky.', 'info');
       return;
     }
-    // Nejnovější nahoře — hledáš typicky čerstvě nahranou fotku, ne
-    // něco z galerie starého data.
-    var sortedPhotos = G.photos.slice().sort(function (a, b) {
-      var da = a.uploaded || a.date || 0, db = b.uploaded || b.date || 0;
-      return new Date(db) - new Date(da);
-    });
-    var m = document.createElement('div');
-    m.className = 'modal';
-    m.innerHTML = '<div style="background:var(--surface);padding:1.5rem;border-radius:var(--r-lg);max-width:90vw;max-height:80vh;overflow:auto;border:1px solid var(--border-soft)">' +
-      '<h3 style="margin-bottom:0.3rem;color:var(--text)">Fotky k milníku</h3>' +
-      '<p style="font-size:12px;color:var(--text-faint);margin-bottom:1rem" id="tlGalleryCount">Vyber až 3 fotky (' + tlPhotos.length + '/3)</p>' +
-      '<div id="tlGalleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">' +
-      buildTlGalleryGridHtml(sortedPhotos) +
-      '</div><div style="text-align:center;margin-top:1rem"><button onclick="this.closest(\'.modal\').remove();renderTlPhotosPreview()" class="btn btn-blue">✅ Hotovo</button></div></div>';
-    m._sortedPhotos = sortedPhotos;
-    m.onclick = function (e) { if (e.target === m) { m.remove(); renderTlPhotosPreview(); } };
-    document.body.appendChild(m);
-  };
-
-  window.toggleTlGalleryPhoto = function (url) {
-    var idx = tlPhotos.indexOf(url);
-    if (idx !== -1) {
-      tlPhotos.splice(idx, 1);
-    } else {
-      if (tlPhotos.length >= 3) {
-        if (typeof showToast === 'function') showToast('Milník může mít max. 3 fotky.', 'info');
-        return;
-      }
-      tlPhotos.push(url);
+    if (typeof openGalleryPickerModal !== 'function') {
+      if (typeof showToast === 'function') showToast('Sdílený picker fotek (dashboard-editor.js) není načtený — zkontroluj pořadí <script> tagů.', 'error');
+      return;
     }
-    var modal = document.querySelector('.modal');
-    var grid = $('tlGalleryGrid');
-    var countEl = $('tlGalleryCount');
-    if (grid && modal && modal._sortedPhotos) grid.innerHTML = buildTlGalleryGridHtml(modal._sortedPhotos);
-    if (countEl) countEl.textContent = 'Vyber až 3 fotky (' + tlPhotos.length + '/3)';
+    openGalleryPickerModal({
+      title: 'Fotky k milníku',
+      multiSelect: true,
+      maxSelect: 3,
+      selectedUrls: tlPhotos.slice(),
+      onDone: function (urls) {
+        tlPhotos = urls.slice(0, 3);
+        renderTlPhotosPreview();
+      }
+    });
   };
 
-  /* === VÝBĚR FOTEK PŘÍMO Z TELEFONU (mimo galerii webu) ===
-     input[type=file][multiple] BEZ atributu capture — na mobilu tak
-     otevře knihovnu fotek (Fotky/Galerie v telefonu), ne fotoaparát.
-     Jde vybrat víc fotek najednou; každá se pak jedna po druhé pošle
-     do stejného náhledu s ořezem/jasem/sytostí/kvalitou jako u
-     fotoaparátu (viz camQueue níž). */
+  /* === VÝBĚR FOTEK PŘÍMO Z TELEFONU (mimo galerii webu) === */
   window.pickTimelineFromLibrary = function () {
     if (tlPhotos.length >= 3) {
       if (typeof showToast === 'function') showToast('Milník může mít max. 3 fotky.', 'info');
@@ -496,18 +445,10 @@
     openCameraPreviewModal(file);
   }
 
-  /* === VYFOTIT PŘÍMO Z TELEFONU (mimo galerii) ===
-     input[type=file][capture=environment] otevře na mobilu rovnou
-     fotoaparát (na desktopu klasický výběr souboru — capture se tam
-     prostě ignoruje, žádná újma). Po vyfocení se ukáže náhled s možností
-     otočit (na výšku/na šířku se to z fotoaparátu občas plete) — to je
-     ta "drobná úprava" — a teprve po potvrzení se fotka zmenší na
-     rozumné rozlišení (max. 1600 px) a nahraje do galerie přes stejný
-     /api/photos/upload endpoint, co používá běžné nahrávání. */
   window.captureTimelinePhoto = function () {
     var input = $('tlCameraInput');
     if (!input) return;
-    input.value = ''; // reset, ať jde vyfotit i stejnou scénu podruhé
+    input.value = '';
     input.click();
   };
 
@@ -590,8 +531,8 @@
     m._exposure = 0;
     m._saturation = 0;
     m._cropMode = 'none';
-    m._cropAspect = null; // null = volný poměr, jinak číslo (w/h)
-    m._cropRect = null;   // { x, y, w, h } v ZOBRAZENÝCH pixelech (relativně k <img>)
+    m._cropAspect = null;
+    m._cropRect = null;
     window._camModal = m;
 
     var previewImg = $('camPreviewImg');
@@ -612,14 +553,6 @@
     if (window._camModal === m) window._camModal = null;
   }
 
-  // ★ ZMĚNA: dřív jen odhad ROZMĚRŮ (px) — teď se obrázek se zvolenou
-  // kvalitou/rozlišením/ořezem skutečně vyrenderuje do canvasu a přečte
-  // se REÁLNÁ velikost výsledného souboru (ne odhad), přesně to, co je
-  // vidět při výběru kvality nejužitečnější. Volá se při změně kvality,
-  // rozlišení, nebo po dokončení ořezu (viz initCamCropDragging/
-  // setCamCropMode níž) — ne při tažení posuvníků jasu/sytosti, ty
-  // velikost souboru ovlivňují jen zanedbatelně a přepočet by zbytečně
-  // zatěžoval prohlížeč při každém tiku posuvníku.
   function updateCamSizeHint(m) {
     var hint = $('camSizeHint');
     var img = $('camPreviewImg');
@@ -648,13 +581,10 @@
     ctx.filter = 'brightness(' + (100 + m._exposure) + '%) saturate(' + (100 + m._saturation) + '%)';
     ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, dw, dh);
 
-    // Token proti "race condition" — když uživatel rychle překlikává
-    // kvalitu/rozlišení, ať se nezobrazí zastaralý výsledek pomalejšího
-    // předchozího výpočtu PO tom novějším.
     m._sizeHintToken = (m._sizeHintToken || 0) + 1;
     var myToken = m._sizeHintToken;
     canvas.toBlob(function (blob) {
-      if (myToken !== m._sizeHintToken) return; // zastaralé, zahodit
+      if (myToken !== m._sizeHintToken) return;
       if (!blob) { hint.textContent = dw + '×' + dh + ' px'; return; }
       hint.textContent = 'Výsledek přibližně ' + dw + '×' + dh + ' px · ~' + formatBytesApprox(blob.size);
     }, 'image/jpeg', quality);
@@ -665,9 +595,6 @@
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
-  /* === OTOČENÍ — "zapeče" se rovnou do náhledu (nový <img> src z canvasu),
-     ať se nemusí řešit rotace při výpočtu ořezu později. Ořez se proto
-     po otočení resetuje (rozměry/orientace se změnily). === */
   window.rotateCamPreview = function (deg) {
     var m = window._camModal;
     if (!m) return;
@@ -700,7 +627,6 @@
     if (img) img.style.filter = 'brightness(' + (100 + m._exposure) + '%) saturate(' + (100 + m._saturation) + '%)';
   };
 
-  /* === OŘEZ === */
   window.setCamCropMode = function (mode) {
     var m = window._camModal;
     if (!m) return;
@@ -744,7 +670,7 @@
     var rectEl = $('camCropRect');
     var handle = $('camCropHandle');
     if (!wrap || !rectEl || !handle) return;
-    var dragging = null; // 'move' | 'resize'
+    var dragging = null;
     var startX = 0, startY = 0, startRect = null;
 
     function pointerDown(target, e) {
@@ -798,9 +724,6 @@
       var filename = 'timeline-' + Date.now() + '.jpg';
       var fd = new FormData();
       fd.append('file', blob, filename);
-      // "timeline" je samostatný prostor odděleně od hlavní galerie —
-      // fotky z fotoaparátu se v záložce Galerie neukazují, jsou jen
-      // pro milníky.
       fd.append('galleryId', 'timeline');
       var r = await fetch('/api/photos/upload', { method: 'POST', body: fd });
       if (!r.ok) throw new Error('Nahrání selhalo (HTTP ' + r.status + ')');
@@ -832,8 +755,6 @@
         showToast('Fotka se nahrála, ale nepodařilo se zjistit její adresu — napiš mi prosím, jak vypadá odpověď /api/photos/upload, ať to doladím.', 'info');
       }
       closeCameraPreviewModal(m);
-      // Pokud šlo o výběr víc fotek z telefonu najednou (camQueue),
-      // pokračuje se na další — každá se upraví/potvrdí zvlášť.
       processNextQueuedPhoto();
     } catch (e) {
       console.error('Nahrání vyfocené fotky selhalo:', e);
@@ -842,9 +763,6 @@
     }
   }
 
-  // Aplikuje ořez (pokud je nastavený), jas/sytost (přes canvas filter —
-  // podporováno ve všech moderních prohlížečích) a zmenšení na zvolené
-  // maximální rozlišení. Vrací JPEG blob v ZVOLENÉ kvalitě.
   function processCameraImage(m, quality, maxRes) {
     return new Promise(function (resolve, reject) {
       var previewImg = $('camPreviewImg');
@@ -873,18 +791,12 @@
         }, 'image/jpeg', quality);
       };
       img.onerror = function () { reject(new Error('Obrázek se nepodařilo načíst')); };
-      // Bere se z AKTUÁLNÍHO src náhledu (po případném otočení už jde
-      // o "zapečenou" verzi, viz rotateCamPreview) — ne z původního souboru.
       img.src = previewImg.src;
     });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     injectTimelineUI();
-    // Kdyby byla naposledy aktivní záložka "timeline" (localStorage),
-    // dashboard-core.js by ji při vlastním startu tiše přehodil zpátky
-    // na "galleries" (viz vysvětlení nahoře) — tady se to po jeho
-    // inicializaci opraví zpět, ať to působí jako plnohodnotná záložka.
     setTimeout(function () {
       if (localStorage.getItem('dashActiveTab') === 'timeline') openTimelineTab();
     }, 150);
