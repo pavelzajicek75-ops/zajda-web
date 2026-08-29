@@ -27,8 +27,6 @@
   <!-- RSS -->
   <link rel="alternate" type="application/rss+xml" title="Moje diagnóza, můj vesmír" href="/rss.xml">
 
-  <!-- JSON-LD: WebSite + Person, ať vyhledávače chápou kontext webu
-       (homepage dosud neměla žádné strukturované schéma, jen články). -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -49,24 +47,9 @@
   }
   </script>
 
-  <!-- ★ ZMĚNA: self-hosted fonty místo fonts.googleapis.com/fonts.gstatic.com.
-       Stejné fonty (Inter, Space Grotesk), jen servírované z vlastní
-       domény — o request méně na externí servery, žádný přenos IP
-       adresy návštěvníka na Google při načtení stránky, a s
-       font-display:swap ani rychlejší první vykreslení textu. -->
   <link rel="stylesheet" href="/fonts.css">
   <link rel="stylesheet" href="/shared.css">
   <style>
-    /* Proměnné (--void, --ember, --nova...) i box-sizing reset jsou už
-       v shared.css a jsou identické pro celý web — tady se nemají
-       duplikovat podruhé, jinak se snadno rozjedou při budoucí úpravě
-       jedné kopie a ne druhé. Tenhle blok obsahuje JEN layout, který je
-       specifický pro homepage. */
-
-    /* ============================================================
-       HERO (title + nebula pulse) — beze změny oproti originálu,
-       jen bez opakovaných :root proměnných.
-       ============================================================ */
     .title-block {
       position: relative; z-index: 10; text-align: center;
       padding: 64px 20px 0;
@@ -100,29 +83,10 @@
       color: var(--mist); margin-top: 10px; letter-spacing: 4px; text-transform: uppercase;
     }
 
-    /* ============================================================
-       ★ ZMĚNA OPROTI ORIGINÁLU ★
-       Původně: .latest-panel a .intro-text byly position:absolute
-       s pevným top:150px / top:210px, a .sections-container měl
-       padding-top:320px, aby se pod ně "vešel". Jakmile se změnila
-       délka intro textu nebo výška hero sekce, panely se překrývaly
-       se sekcemi pod nimi — křehké, na přesně vyladěná čísla.
-
-       Teď: hero (title-block) → pod ním normální grid dvou karet
-       (latest / intro) v běžném dokumentovém toku → sections-container
-       normálně navazuje. Žádné magické top/padding hodnoty, layout se
-       sám přizpůsobí obsahu jakékoli délky.
-       ============================================================ */
     .top-grid {
       position: relative; z-index: 10;
-      /* ★ ZMĚNA: stejná šířka jako .sections-container (max-width 1200px,
-         padding 0 20px) — dřív bylo 900px, karty tak byly užší, než
-         karty sekcí pod nimi, a vizuálně web působil nesourodě. */
       max-width: 1200px; margin: 40px auto 0; padding: 0 20px;
       display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-      /* align-items: stretch je výchozí chování gridu, ale píšu to
-         explicitně — obě karty se vždy natáhnou na výšku té vyšší
-         z dvojice, ať mají uvnitř jakkoli dlouhý obsah. */
       align-items: stretch;
     }
     .latest-panel, .intro-text {
@@ -160,11 +124,6 @@
       background: linear-gradient(90deg, var(--ember), var(--nova));
       -webkit-background-clip: text; background-clip: text; color: transparent;
     }
-    /* ★ ZMĚNA: dřív jen tenký šedý řádek, skoro neviditelný — teď
-       výraznější "pilulka" s jemně pulzující tečkou (recykluje
-       @keyframes signal-pulse, co už web používá u citátů, ať to
-       vizuálně ladí a nepřidává nový styl navíc). Pořád je to ale jen
-       jeden řádek v rámci existujícího panelu, ne nový panel/sekce. */
     .intro-timeline-note {
       display: none; margin-top: 12px;
     }
@@ -256,9 +215,6 @@
     .no-articles { color: var(--mist-dim); font-size: 12px; padding: 8px 0; font-style: italic; }
     .loading-text { color: var(--mist-dim); font-size: 12px; padding: 0.5rem 0; }
 
-    /* === O ZAJDOVI odkazuje jinam než ostatní panely (na /about/,
-       ne na modal "Zobrazit vše") — přidán vizuální hint (šipka v rohu),
-       ať je jasné, že se panel chová jinak než sousední tři. === */
     .section-panel.panel-external { cursor: pointer; }
     .section-panel.panel-external::after {
       content: '↗'; position: absolute; top: 10px; right: 12px; z-index: 3;
@@ -274,7 +230,6 @@
       transform: scale(1.08);
     }
 
-    /* === VYHLEDÁVÁNÍ === */
     .search-panel {
       position: relative; z-index: 10; max-width: 480px; margin: 24px auto 0; padding: 0 20px;
     }
@@ -297,7 +252,6 @@
     .search-results .article-link:last-child { border-bottom: none; }
     .search-no-results { padding: 14px 18px; color: var(--mist-dim); font-size: 13px; font-style: italic; }
 
-    /* === "ZOBRAZIT VŠE" — modal na procházení celé sekce === */
     .show-all-link {
       display: block; text-align: center; margin-top: 10px; padding: 8px;
       color: var(--nova); font-size: 12px; font-weight: 600; cursor: pointer;
@@ -305,9 +259,6 @@
       transition: color 0.2s ease, background 0.2s ease; border-radius: 6px;
     }
     .show-all-link:hover, .show-all-link:focus-visible { color: #fff; background: rgba(47,230,201,0.08); }
-    /* Vizuálně stejné jako .show-all-link, ale VLASTNÍ třída — nesmí se
-       jmenovat stejně, protože buildSections() dělá querySelector('.show-all-link')
-       a bral by pak (chybně) tenhle odkaz na mapu místo tlačítka "Zobrazit vše". */
     .travel-map-link {
       display: block; text-align: center; padding: 8px;
       color: var(--nova); font-size: 12px; font-weight: 600; cursor: pointer;
@@ -316,6 +267,33 @@
       text-decoration: none; margin-bottom: 6px;
     }
     .travel-map-link:hover, .travel-map-link:focus-visible { color: #fff; background: rgba(47,230,201,0.08); }
+
+    /* === PŘEPÍNAČ ŘAZENÍ v modalu "Zobrazit vše" ===
+       Malé segmentované tlačítko — stejný princip jako přepínač
+       záložek v adminu (plovoucí pilulka pod aktivní volbou), jen
+       v menším měřítku, protože jde o podřízenou kontrolu uvnitř
+       modalu, ne hlavní navigaci. */
+    .sort-toggle {
+      display: inline-flex; gap: 2px; padding: 3px;
+      background: rgba(140,150,255,0.08); border: 1px solid var(--panel-border);
+      border-radius: 20px; margin-left: auto;
+    }
+    .sort-toggle button {
+      background: transparent; border: none; color: var(--mist-dim);
+      font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600;
+      padding: 5px 11px; border-radius: 16px; cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+      white-space: nowrap;
+    }
+    .sort-toggle button:hover { color: var(--parchment); }
+    .sort-toggle button.active {
+      background: linear-gradient(90deg, var(--ember), var(--nova)); color: #0a0a16;
+    }
+    .pinned-badge {
+      display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
+      background: rgba(255,200,87,0.16); color: #ffc857; border: 1px solid rgba(255,200,87,0.4);
+      border-radius: 20px; padding: 1px 7px; margin-left: 6px; vertical-align: middle;
+    }
 
     .section-modal-overlay {
       position: fixed; inset: 0; z-index: 8000; background: rgba(4,4,10,0.85);
@@ -332,6 +310,7 @@
     .section-modal-header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 1.1rem 1.4rem; border-bottom: 1px solid rgba(140,150,255,0.14); flex-shrink: 0;
+      flex-wrap: wrap; gap: 0.6rem;
     }
     .section-modal-header h2 {
       font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
@@ -352,9 +331,6 @@
     .section-modal-scroll .sub-block { margin-bottom: 0.6rem; }
     .section-modal-scroll .sub-title { font-size: 13.5px; padding: 10px 12px; }
 
-    /* === MAPOVÝ MODAL (mapa cest, otevře se rovnou na stránce) ===
-       Samostatný overlay/box (ne section-modal-overlay) — mapa potřebuje
-       pevnou výšku pro Leaflet, ne scrollovací obsah jako seznam článků. */
     .travel-map-modal-overlay {
       position: fixed; inset: 0; z-index: 8000; background: rgba(4,4,10,0.85);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
@@ -384,7 +360,6 @@
     #travelMapModalMap {
       width: 100%; height: 60vh; min-height: 380px; background: #0a0a16; flex-shrink: 0;
     }
-    /* === DENNÍ / NOČNÍ PŘEPÍNAČ (stejný princip jako mapa.html) === */
     .travel-map-modal-theme-toggle {
       position: absolute; top: 66px; right: 26px; z-index: 900;
       background: var(--panel-solid); border: 1px solid var(--panel-border);
@@ -436,7 +411,6 @@
     .travel-map-modal-empty h3 { font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 18px; }
     .travel-map-modal-empty p { max-width: 380px; font-size: 13.5px; line-height: 1.6; color: var(--mist-dim); }
 
-    /* Leaflet UI přebarvené do tmavého skla webu (stejné jako v mapa.html) */
     .travel-map-modal-box .leaflet-control-zoom a {
       background: var(--panel-solid) !important; color: var(--parchment) !important;
       border-color: var(--panel-border) !important;
@@ -446,8 +420,6 @@
       background: rgba(8,8,15,0.75) !important; color: var(--mist-dim) !important;
     }
 
-    /* ★ ZMĚNA: kontrastnější popisky — plně neprůhledné tmavé pozadí a
-       světlejší text, dřív byly obtížně čitelné (hlavně meta řádek). */
     .travel-map-modal-box .map-point-label {
       background: #14152a !important; border: 1px solid rgba(255,122,69,0.5) !important;
       border-radius: 8px !important; padding: 5px 10px !important;
@@ -479,7 +451,6 @@
     }
     .section-modal-scroll .article-link { font-size: 13px; padding: 8px 10px 8px 16px; }
 
-    /* === PATIČKA (nová) — RSS odkaz viditelně, ne jen v <head> === */
     .site-footer {
       position: relative; z-index: 10; text-align: center;
       padding: 20px 20px 40px; color: var(--mist-dim); font-size: 12.5px;
@@ -537,6 +508,10 @@
     <div class="section-modal-box">
       <div class="section-modal-header">
         <h2 id="sectionModalTitle"></h2>
+        <div class="sort-toggle" id="sectionModalSortToggle" hidden>
+          <button type="button" data-sort="newest" class="active">Nejnovější</button>
+          <button type="button" data-sort="oldest">Nejstarší</button>
+        </div>
         <button class="section-modal-close" id="sectionModalClose" aria-label="Zavřít">✕</button>
       </div>
       <div class="section-modal-scroll" id="sectionModalScroll"></div>
@@ -578,7 +553,6 @@
     overlay.classList.add('open');
   }
 
-  // Escape zavře lightbox — dřív šlo jen kliknout mimo obrázek.
   document.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
     var overlay = document.getElementById('lightboxOverlay');
@@ -586,9 +560,6 @@
   });
 
   document.addEventListener('DOMContentLoaded', function() {
-    // ★ ZMĚNA: 200 hvězd na mobilu zbytečně zatěžuje slabší telefony —
-    // na úzkém viewportu (≤ 640px) jich vykreslíme míň, vizuálně to
-    // není skoro znát, výkonnostně ano.
     var starCount = window.innerWidth <= 640 ? 90 : 200;
     initStarfield(starCount);
     initStarfieldParallax();
@@ -601,31 +572,41 @@
         if (!r.ok) return [];
         var data = await r.json();
         var arr = Array.isArray(data) ? data : [];
-        /* Bezpečnostní pojistka NAVÍC (nezávisle na tom, jestli API sama
-           filtruje) — veřejný web nikdy nemá ukázat skryté/nepublikované
-           koncepty, ani kdyby se z nějakého důvodu objevily v odpovědi
-           /api/articles/list. Jen a.published === false znamená skrytý;
-           chybějící pole (starší články bez příznaku) se bere jako
-           publikováno, ať se nic staršího neschová omylem. */
         cachedArticles = arr.filter(function(a) { return a && a.published !== false; });
         return cachedArticles;
       } catch(e) { return []; }
+    }
+
+    /* === ŘAZENÍ S OHLEDEM NA "PŘIPNUTÉ" ČLÁNKY ===
+       Připnuté (a.pinned === true, nastavuje se v adminu) se vždy
+       zobrazí první, bez ohledu na zvolené řazení — mezi sebou podle
+       a.pinnedOrder (menší = víc nahoře, chybějící = na konec skupiny
+       připnutých). Zbytek se řadí podle data, směr určuje parametr
+       order ('newest' | 'oldest'). Použito jednotně všude na webu
+       (Poslední aktuality, panely sekcí, modal "Zobrazit vše", hledání),
+       ať se připnuté články chovají všude stejně. */
+    function compareArticles(a, b, order) {
+      var ap = !!a.pinned, bp = !!b.pinned;
+      if (ap !== bp) return ap ? -1 : 1;
+      if (ap && bp) {
+        var apo = typeof a.pinnedOrder === 'number' ? a.pinnedOrder : 9999;
+        var bpo = typeof b.pinnedOrder === 'number' ? b.pinnedOrder : 9999;
+        if (apo !== bpo) return apo - bpo;
+      }
+      var da = a.date || a.created || '', db = b.date || b.created || '';
+      if (order === 'oldest') return da < db ? -1 : (da > db ? 1 : 0);
+      return da < db ? 1 : (da > db ? -1 : 0);
+    }
+
+    function sortArticles(articles, order) {
+      return articles.slice().sort(function(a, b) { return compareArticles(a, b, order || 'newest'); });
     }
 
     async function loadLatest() {
       var box = document.getElementById('latestPanel');
       if (!box) return;
       var articles = await getAllArticles();
-      var sorted = articles.slice().sort(function(a, b) {
-        var da = a.date || a.created || '';
-        var db = b.date || b.created || '';
-        if (da < db) return 1;
-        if (da > db) return -1;
-        return 0;
-      });
-      // ★ ZMĚNA: 3 → 2 položky. Karta "Poslední aktuality" tak zůstává
-      // kratší a stejně vysoká karta "Jsem Zajda" ji nemusí uměle
-      // natahovat na výšku, aby to na desktopu vypadalo vyrovnaně.
+      var sorted = sortArticles(articles, 'newest');
       var latest = sorted.slice(0, 2);
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
@@ -640,18 +621,12 @@
         var dateStr = formatDate(date);
         var breadcrumb = await getArticleBreadcrumb(a);
         var meta = [breadcrumb, dateStr].filter(Boolean).join(' • ');
-        html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + '<small>' + escapeHtml(meta) + '</small></a>';
+        var pinTag = a.pinned ? '<span class="pinned-badge">📌 Top</span>' : '';
+        html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + pinTag + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       box.innerHTML = html;
     }
 
-    /* === DROBNÁ ZMÍNKA O ČERSTVÉM MILNÍKU TIMELINE ===
-       Záměrně minimalistické — jeden tenký řádek v panelu "Jsem Zajda",
-       žádný nový panel ani vizuální efekt (homepage má už dost prvků,
-       co soupeří o pozornost s plovoucími citáty, hlavně na mobilu).
-       Zobrazí se JEN pokud je nejnovější milník opravdu čerstvý
-       (posledních 30 dní) — jinak zůstane skrytá a časem sama zmizí,
-       místo aby se stala trvalou ozdobou, co bude za rok zastaralá. */
     async function loadLatestTimelineNote() {
       var note = document.getElementById('introTimelineNote');
       if (!note) return;
@@ -661,13 +636,13 @@
         var data = await r.json();
         var milestones = Array.isArray(data) ? data : [];
         if (!milestones.length) return;
-        var latest = milestones[milestones.length - 1]; // list.js vrací vzestupně podle data
+        var latest = milestones[milestones.length - 1];
         if (!latest || !latest.date) return;
         var ageDays = (Date.now() - new Date(latest.date).getTime()) / 86400000;
-        if (ageDays > 30 || ageDays < 0) return; // ne čerstvé → radši nic
+        if (ageDays > 30 || ageDays < 0) return;
         note.innerHTML = '<span class="intro-timeline-note-pill"><span class="intro-timeline-note-dot"></span>📖 Nové v <a href="/timeline/#milestone-' + encodeURIComponent(latest.id) + '">A mezitím se semlelo...</a>: ' + escapeHtml(latest.title || '') + '</span>';
         note.classList.add('visible');
-      } catch (e) { /* tichý fail — je to jen drobnost navíc, ne nic kritického */ }
+      } catch (e) { }
     }
 
     var SECTIONS = [
@@ -722,15 +697,9 @@
       } catch(e) { return []; }
     }
 
-    function renderArticleList(articles) {
+    function renderArticleList(articles, order) {
       if (!articles.length) return '<div class="no-articles">Žádné články</div>';
-      var sorted = articles.slice().sort(function(a, b) {
-        var da = a.date || a.created || '';
-        var db = b.date || b.created || '';
-        if (da < db) return 1;
-        if (da > db) return -1;
-        return 0;
-      });
+      var sorted = sortArticles(articles, order);
       var html = '';
       for (var i = 0; i < sorted.length; i++) {
         var a = sorted[i];
@@ -741,8 +710,9 @@
         var excerpt = a.excerpt
           ? a.excerpt
           : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '');
+        var pinTag = a.pinned ? '<span class="pinned-badge">📌</span>' : '';
         html += '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
-          '<span class="art-title">' + escapeHtml(title) + '</span>' +
+          '<span class="art-title">' + escapeHtml(title) + pinTag + '</span>' +
           (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
           (excerpt ? '<span class="art-excerpt">' + escapeHtml(excerpt) + '</span>' : '') +
           '</a>';
@@ -750,23 +720,52 @@
       return html;
     }
 
+    /* Stav aktuálně otevřeného modalu sekce — potřeba, aby přepínač
+       řazení věděl, které články má znovu vykreslit. */
+    var currentModalSectionId = null;
+    var currentModalSectionName = null;
+    var currentModalSortOrder = 'newest';
+
     async function openSectionModal(sectionId, sectionName) {
       var overlay = document.getElementById('sectionModalOverlay');
       var titleEl = document.getElementById('sectionModalTitle');
       var scrollEl = document.getElementById('sectionModalScroll');
+      var sortToggle = document.getElementById('sectionModalSortToggle');
       if (!overlay || !titleEl || !scrollEl) return;
+
+      currentModalSectionId = sectionId;
+      currentModalSectionName = sectionName;
+      // Řazení se při každém otevření resetuje na výchozí (nejnovější) —
+      // úmyslně, ať se návštěvník vždycky orientuje ve stejném výchozím
+      // pohledu, ne v tom, co si nastavil minule u úplně jiné sekce.
+      currentModalSortOrder = 'newest';
+      if (sortToggle) {
+        sortToggle.hidden = false;
+        sortToggle.querySelectorAll('button').forEach(function(b) {
+          b.classList.toggle('active', b.dataset.sort === 'newest');
+        });
+      }
 
       titleEl.textContent = sectionName;
       scrollEl.innerHTML = '<div class="loading-text">Načítání...</div>';
       overlay.classList.add('open');
       document.body.style.overflow = 'hidden';
 
+      await renderSectionModalContent();
+    }
+
+    /* Znovu vykreslí obsah aktuálně otevřeného modalu sekce s aktuálním
+       currentModalSortOrder — volá se jak při prvním otevření, tak při
+       přepnutí Nejnovější/Nejstarší. */
+    async function renderSectionModalContent() {
+      var scrollEl = document.getElementById('sectionModalScroll');
+      if (!scrollEl || !currentModalSectionId) return;
+      var sectionId = currentModalSectionId;
+
       var allArticles = await getAllArticles();
       var subs = await loadSubsections(sectionId);
       var html = '';
 
-      // ★ NOVÉ: stejný odkaz na mapu jako v panelu na homepage — i tady
-      // nahoře, jen pro sekci Cestování.
       if (sectionId === 'travel') {
         html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
       }
@@ -777,8 +776,11 @@
           if (secId == null) return false;
           return String(secId) === sectionId;
         });
-        html += renderArticleList(articles);
+        html += renderArticleList(articles, currentModalSortOrder);
       } else {
+        // Podsekce samotné se řadí abecedně jako dřív (řazení tady
+        // ovlivňuje POŘADÍ ČLÁNKŮ UVNITŘ každé podsekce, ne pořadí
+        // podsekcí samotných — to by bylo matoucí měnit).
         for (var i = 0; i < subs.length; i++) {
           var sub = subs[i];
           var subId = sub.id || '';
@@ -792,7 +794,7 @@
           if (!subArticles.length) continue;
           html += '<div class="sub-block">' +
             '<div class="sub-title">' + escapeHtml(subName) + ' (' + subArticles.length + ')</div>' +
-            '<div class="sub-articles">' + renderArticleList(subArticles) + '</div>' +
+            '<div class="sub-articles">' + renderArticleList(subArticles, currentModalSortOrder) + '</div>' +
             '</div>';
         }
         if (!html) html = '<div class="no-articles">Žádné články</div>';
@@ -819,21 +821,29 @@
       var overlay = document.getElementById('sectionModalOverlay');
       if (overlay) overlay.classList.remove('open');
       document.body.style.overflow = '';
+      currentModalSectionId = null;
     }
 
     function initSectionModal() {
       var overlay = document.getElementById('sectionModalOverlay');
       var closeBtn = document.getElementById('sectionModalClose');
+      var sortToggle = document.getElementById('sectionModalSortToggle');
       if (closeBtn) closeBtn.addEventListener('click', closeSectionModal);
       if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSectionModal(); });
       document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSectionModal(); });
+      if (sortToggle) {
+        sortToggle.querySelectorAll('button').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            if (this.classList.contains('active')) return;
+            sortToggle.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            currentModalSortOrder = this.dataset.sort;
+            renderSectionModalContent();
+          });
+        });
+      }
     }
 
-    /* === MAPA CEST — modal přímo na stránce (bez přechodu na /mapa.html) ===
-       Stejná logika jako samostatná stránka mapa.html (seskupení podle
-       podsekce s vlastní barvou/trasou, trvalé popisky, denní podklad),
-       jen vykreslená do modalu, aby se otevřela okamžitě po kliku, ne až
-       po načtení nové stránky. */
     var travelMapInitialized = false;
 
     function formatDateCz(d) {
@@ -851,9 +861,6 @@
         travelMapInitialized = true;
         await buildTravelMapModalContent();
       } else if (window._travelMapInstance) {
-        // Modal se zavíral/otevíral už dřív — Leaflet potřebuje vědět,
-        // že se kontejner mezitím mohl přeměřit (stejný důvod jako u
-        // mapy v administraci).
         setTimeout(function () { window._travelMapInstance.invalidateSize(); }, 50);
       }
     }
@@ -873,9 +880,6 @@
     }
 
     async function buildTravelMapModalContent() {
-      // Veškerá logika (data, shluky, barvy, trasy, legenda, statistiky,
-      // denní/noční přepínač, přehrání trasy) žije v travel-map-core.js —
-      // tady se jen předají ID kontejnerů modalu na týhle stránce.
       var map = await TravelMapCore.render({
         mapId: 'travelMapModalMap',
         legendId: 'travelMapModalLegend',
@@ -886,10 +890,6 @@
       });
       if (map) {
         window._travelMapInstance = map;
-        // Modal se otevírá s display:none → flex až po kliknutí, ale
-        // Leaflet měřil kontejner ještě v okamžiku, kdy mohl mít 0 výšky
-        // (těsně po přepnutí třídy 'open'). Jedno doměření o kousek později
-        // pro jistotu, ať mapa nezůstane "rozbitá" napůl vykreslená.
         setTimeout(function () { map.invalidateSize(); }, 60);
       }
     }
@@ -923,7 +923,10 @@
       var overlay = document.getElementById('sectionModalOverlay');
       var titleEl = document.getElementById('sectionModalTitle');
       var scrollEl = document.getElementById('sectionModalScroll');
+      var sortToggle = document.getElementById('sectionModalSortToggle');
       if (!overlay || !titleEl || !scrollEl) return;
+      currentModalSectionId = null; // uložené nejsou vázané na sekci — přepínač řazení tu nedává smysl
+      if (sortToggle) sortToggle.hidden = true;
       titleEl.textContent = '🔖 Uložené na později';
       scrollEl.innerHTML = renderSavedList();
       overlay.classList.add('open');
@@ -958,10 +961,7 @@
           var title = (a.title || '').toLowerCase();
           var text = (a.content || '').replace(/<[^>]+>/g, '').toLowerCase();
           return title.indexOf(q) !== -1 || text.indexOf(q) !== -1;
-        }).sort(function(a, b) {
-          var da = a.date || a.created || '', db = b.date || b.created || '';
-          return da < db ? 1 : da > db ? -1 : 0;
-        }).slice(0, 8);
+        }).sort(function(a, b) { return compareArticles(a, b, 'newest'); }).slice(0, 8);
 
         if (!matches.length) {
           results.innerHTML = '<div class="search-no-results">Nic jsem nenašel pro „' + escapeHtml(input.value.trim()) + '“</div>';
@@ -994,9 +994,6 @@
           panel.className = 'section-panel';
 
           if (sec.id === 'about') {
-            // ★ ZMĚNA: panel-external třída přidává vizuální ↗ hint,
-            // ať je jasné, že tenhle panel se chová jinak (odkaz na
-            // /about/) než ostatní tři (otevírají modal).
             panel.classList.add('panel-external');
             panel.addEventListener('click', function() {
               window.location.href = '/about/';
@@ -1054,10 +1051,6 @@
             var html = '';
             var totalCount = 0;
 
-            // ★ NOVÉ: odkaz na mapu cest — jen v panelu Cestování, jako
-            // první položka nad seznamem podsekcí/článků. Vede na
-            // /mapa.html (viz mapa.html — čte stejná data z /api/articles/list,
-            // filtruje jen ty s vyplněnými souřadnicemi).
             if (sec.id === 'travel') {
               html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
             }
@@ -1069,7 +1062,7 @@
                 return String(secId) === sec.id;
               });
               totalCount = articles.length;
-              html += renderArticleList(articles);
+              html += renderArticleList(articles, 'newest');
             } else {
               for (var i = 0; i < subs.length; i++) {
                 var sub = subs[i];
@@ -1084,7 +1077,7 @@
                 totalCount += subArticles.length;
                 html += '<div class="sub-block">' +
                   '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
-                  '<div class="sub-articles">' + renderArticleList(subArticles) + '</div>' +
+                  '<div class="sub-articles">' + renderArticleList(subArticles, 'newest') + '</div>' +
                   '</div>';
               }
             }
