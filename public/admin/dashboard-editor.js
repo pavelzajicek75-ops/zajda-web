@@ -2210,15 +2210,19 @@ function renderArticleList(arr) {
     const toggleBtn = a.published
       ? `<button onclick="unpublishArticle('${a.id}')" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">⏸ Skrýt</button>`
       : `<button onclick="publishArticle('${a.id}')" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">👁 Zobrazit</button>`;
+    const pinBadge = a.pinned ? '<span style="color:#ffc857;font-size:12px;font-weight:700">📌 Připnuto</span>' : '';
+    const pinBtn = a.pinned
+      ? `<button onclick="toggleArticlePin('${a.id}', false)" class="btn btn-sm" style="background:#263252;color:#ffc857;border:1px solid #ffc857">📌 Odepnout</button>`
+      : `<button onclick="toggleArticlePin('${a.id}', true)" class="btn btn-sm">📌 Připnout</button>`;
     return `
-    <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid #263252;border-radius:10px;position:relative">
+    <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid ${a.pinned ? '#ffc857' : '#263252'};border-radius:10px;position:relative">
       <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
       <div style="display:flex;gap:0.9rem;padding-left:1.75rem">
         ${coverThumb}
         <div style="flex:1;min-width:0">
-          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem;gap:0.5rem;flex-wrap:wrap">
             <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
-            ${pubStatus}
+            <div style="display:flex;gap:0.5rem;align-items:center">${pinBadge}${pubStatus}</div>
           </div>
           <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem">
             ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
@@ -2228,6 +2232,7 @@ function renderArticleList(arr) {
         <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
         <button onclick="shareArticle('${a.id}')" class="btn btn-blue btn-sm">🔗 Sdílet</button>
         <button onclick="duplicateArticle('${a.id}')" class="btn btn-sm">📋 Duplikovat</button>
+        ${pinBtn}
         ${toggleBtn}
         <button onclick="deleteArticle('${a.id}')" class="btn btn-red btn-sm">🗑 Smazat</button>
           </div>
@@ -2422,6 +2427,38 @@ async function unpublishArticle(id) {
   } catch (e) {
     showToast('Nepodařilo se skrýt článek', 'error');
     console.error(e);
+  }
+}
+
+/* === ČLÁNKY: připnutí nahoru (nezávisle na datu) ===
+   Na veřejném webu (index.html) se připnuté články vždycky zobrazí
+   první, bez ohledu na zvolené řazení nejnovější/nejstarší — mezi
+   sebou podle pinnedOrder (nižší = víc nahoře). Používá stejný
+   /api/articles/update endpoint jako publikovat/skrýt, jen s novými
+   poli — pokud ho backend zpracovává jako obecný merge-update (jak to
+   dělá u "published"), zafunguje to bez jakékoliv úpravy backendu. */
+async function toggleArticlePin(id, pinned) {
+  try {
+    const payload = { id, pinned };
+    if (pinned) {
+      // Nové připnutí jde na konec fronty připnutých (nejvyšší dosavadní
+      // pinnedOrder + 1) — poslední připnutý se tak neprocpe navrchol
+      // před dřív připnuté.
+      const arr = window._articlesCache || [];
+      const maxOrder = arr.reduce((m, a) => a.pinned && typeof a.pinnedOrder === 'number' ? Math.max(m, a.pinnedOrder) : m, 0);
+      payload.pinnedOrder = maxOrder + 1;
+    }
+    const r = await fetch('/api/articles/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    showToast(pinned ? 'Článek připnut nahoru' : 'Článek odepnut', 'success');
+    loadArticles();
+  } catch (e) {
+    console.error('Chyba připnutí článku:', e);
+    showToast('Nepodařilo se změnit připnutí — zkontroluj, že /api/articles/update umí uložit i pole "pinned" (obecný merge-update).', 'error');
   }
 }
 
@@ -2873,6 +2910,7 @@ function initDashboardEditor() {
   function onReady() {
     injectEditorStyles();
     initEditorPanelAccordion();
+    injectShortcutsHelpButton();
     if ($('artEditor')) setupArticleEditors();
     loadGallery().then(() => {
       if ($('articleList')) loadArticles();
@@ -2888,8 +2926,98 @@ function initDashboardEditor() {
         document.querySelectorAll('.modal').forEach(m => m.remove());
         hideImgToolbar();
       }
+
+      /* Ctrl+S / Cmd+S uloží rozepsaný článek — funguje jen když je
+         záložka Články aktivní (jinak by kradlo Ctrl+S ostatním
+         záložkám/prohlížeči zbytečně). */
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        const articlesSection = $('articles');
+        if (articlesSection && articlesSection.classList.contains('active')) {
+          e.preventDefault();
+          const editorEl = $('artEditor');
+          if (editorEl?.dataset?.editId) updateArticle();
+          else createArticle();
+        }
+      }
+
+      /* "?" otevře přehled klávesových zkratek — jen mimo psaní do
+         textového pole/editoru, ať nekoliduje s běžným psaním otazníku. */
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        const tag = document.activeElement?.tagName;
+        const typing = tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+        if (!typing) { e.preventDefault(); showKeyboardShortcutsHelp(); }
+      }
+    });
+
+    /* === VAROVÁNÍ PŘI ODCHODU S NEULOŽENÝMI ZMĚNAMI ===
+       Používá stejný "koncept" mechanismus jako autosave (articleDraftKey)
+       — pokud pro aktuální kontext (nový článek / konkrétní editovaný ID)
+       existuje neuložený koncept v localStorage, prohlížeč se při zavření
+       karty/reloadu zeptá, jestli má strana opravdu odejít. Standardní
+       chování prohlížečů ukazuje jen obecnou hlášku (vlastní text
+       nejde nastavit), to je normální a neopravitelné omezení, ne bug. */
+    window.addEventListener('beforeunload', (e) => {
+      let hasDraft = false;
+      try { hasDraft = !!localStorage.getItem(articleDraftKey()); } catch {}
+      if (hasDraft) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
     });
   }
+}
+
+/* === PŘEHLED KLÁVESOVÝCH ZKRATEK === */
+function injectShortcutsHelpButton() {
+  if (document.getElementById('shortcutsHelpBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'shortcutsHelpBtn';
+  btn.textContent = '?';
+  btn.title = 'Klávesové zkratky (nebo stiskni "?")';
+  btn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:500;width:38px;height:38px;border-radius:50%;background:var(--surface-3,#1c2438);color:var(--text-muted,#92a0bc);border:1px solid var(--border,#334155);font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.35)';
+  btn.onclick = showKeyboardShortcutsHelp;
+  document.body.appendChild(btn);
+}
+
+function showKeyboardShortcutsHelp() {
+  if (document.querySelector('.modal[data-shortcuts]')) return;
+  const groups = [
+    { title: 'Obecné', items: [
+      ['Esc', 'Zavřít okno / zrušit výběr'],
+      ['?', 'Zobrazit tuhle nápovědu']
+    ]},
+    { title: 'Galerie', items: [
+      ['Delete / Backspace', 'Smazat vybrané fotky (do koše)'],
+      ['Esc', 'Zrušit výběr fotek']
+    ]},
+    { title: 'Články', items: [
+      ['Ctrl/Cmd + S', 'Uložit rozepsaný / upravovaný článek'],
+    ]},
+    { title: 'Galerie — drag & drop', items: [
+      ['Přetáhnout soubory', 'Nahrát fotky přímo do galerie'],
+    ]}
+  ];
+  const m = document.createElement('div');
+  m.className = 'modal';
+  m.setAttribute('data-shortcuts', '1');
+  m.innerHTML = `
+    <div class="modal-box" style="max-width:440px">
+      <h3>⌨️ Klávesové zkratky</h3>
+      ${groups.map(g => `
+        <div style="margin-bottom:1rem">
+          <div style="font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:0.4rem">${escapeHtml(g.title)}</div>
+          ${g.items.map(([key, desc]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0;border-bottom:1px solid var(--border-soft)">
+              <span style="color:var(--text-muted);font-size:13px">${escapeHtml(desc)}</span>
+              <kbd style="background:var(--surface-3);border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-family:var(--font-mono);font-size:11.5px;color:var(--gold)">${escapeHtml(key)}</kbd>
+            </div>`).join('')}
+        </div>`).join('')}
+      <div class="modal-actions">
+        <button class="btn btn-red" onclick="this.closest('.modal').remove()">Zavřít</button>
+      </div>
+    </div>`;
+  m.onclick = e => { if (e.target === m) m.remove(); };
+  document.body.appendChild(m);
 }
 
 initDashboardEditor();
