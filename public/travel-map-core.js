@@ -9,6 +9,17 @@
    trasy, legenda, statistiky, denní/noční přepínač, přehrání trasy —
    je společné.
 
+   ★ ZMĚNA (srpen 2026): CARTO nedávno (během posledních dní) změnilo
+   podmínky svých rastrových dlaždic (basemaps.cartocdn.com) — teď
+   vyžadují API klíč a bez něj vrací dlaždice s vodoznakem
+   "API KEY REQUIRED" přes celou mapu. Netýká se to jen tohohle webu,
+   je to čerstvá plošná změna (nahlášeno i u Home Assistant, WordPress
+   pluginů, openHAB atd.). Místo zakládání účtu u CARTO kvůli
+   bezplatnému klíči se použil jiný, trvale bezklíčový poskytovatel:
+   Esri Canvas basemapy (World_Light_Gray_Base / World_Dark_Gray_Base)
+   — vizuálně velmi podobné (jemné, "kartografické" pozadí), zdarma bez
+   registrace, fungují stejně přímo s Leaflet L.tileLayer.
+
    Vyžaduje už načtené: Leaflet, Leaflet.markercluster, shared.js
    (kvůli escapeHtml). Načíst TENTO soubor až po nich.
 
@@ -27,10 +38,24 @@
 (function () {
   var SECTION_NAMES = { travel: 'Cestování', photo: 'Fotografování', projects: 'Projekty', about: 'O Zajdovi' };
   var THEME_COLORS = ['#ff7a45', '#2fe6c9', '#8f6bff'];
+  /* Esri Canvas basemapy — zdarma, bez API klíče, žádná registrace.
+     {y} přichází PŘED {x} (standardní ArcGIS REST adresace dlaždic,
+     jiné pořadí než u XYZ služeb jako CARTO/OSM). Žádné {s}/subdomains
+     (Esri běží z jediné domény), a žádné {r} pro retina @2x varianty —
+     tenhle konkrétní basemap je jen v jednom rozlišení, což je pro
+     mapu bodů/tras plně dostačující. */
   var TILE_THEMES = {
-    day: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', icon: '☀️' },
-    night: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', icon: '🌙' }
+    day: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      icon: '☀️'
+    },
+    night: {
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      icon: '🌙'
+    }
   };
+  var TILE_ATTRIBUTION = 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community';
+  var TILE_MAX_ZOOM = 16; // Esri Canvas basemapy nejdou do tak vysokého přiblížení jako CARTO/OSM
 
   function formatDateCz(d) {
     if (!d) return '';
@@ -53,12 +78,6 @@
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  /* === DATA: články + názvy podsekcí ===
-     Pokud stránka (typicky article.html) už má vlastní seznam článků
-     natažený jinde (window._allArticlesCache), použije se rovnou —
-     ať se nemusí stahovat znovu. Jinak se natáhne a mezipaměť si drží
-     sama pro sebe (opakovaná volání render() na téže stránce nešahají
-     na síť podruhé). */
   var articlesCachePromise = null;
   async function getAllArticlesForMap() {
     if (window._allArticlesCache) return window._allArticlesCache;
@@ -107,7 +126,6 @@
     };
   }
 
-  /* === HLAVNÍ FUNKCE === */
   async function render(options) {
     var opts = options || {};
     var mapEl = document.getElementById(opts.mapId);
@@ -158,11 +176,10 @@
 
     var map = L.map(opts.mapId, { scrollWheelZoom: false });
 
-    // === DENNÍ / NOČNÍ MAPOVÝ PODKLAD (preference v localStorage) ===
     var currentTileTheme = localStorage.getItem('mapTileTheme') === 'night' ? 'night' : 'day';
     var tileLayer = L.tileLayer(TILE_THEMES[currentTileTheme].url, {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 19
+      attribution: TILE_ATTRIBUTION,
+      maxZoom: TILE_MAX_ZOOM
     }).addTo(map);
     if (themeToggleBtn) {
       themeToggleBtn.textContent = TILE_THEMES[currentTileTheme].icon;
@@ -170,8 +187,8 @@
         currentTileTheme = currentTileTheme === 'day' ? 'night' : 'day';
         map.removeLayer(tileLayer);
         tileLayer = L.tileLayer(TILE_THEMES[currentTileTheme].url, {
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          maxZoom: 19
+          attribution: TILE_ATTRIBUTION,
+          maxZoom: TILE_MAX_ZOOM
         }).addTo(map);
         themeToggleBtn.textContent = TILE_THEMES[currentTileTheme].icon;
         localStorage.setItem('mapTileTheme', currentTileTheme);
@@ -181,8 +198,6 @@
     map.on('focus', function () { map.scrollWheelZoom.enable(); });
     map.on('blur', function () { map.scrollWheelZoom.disable(); });
 
-    // Dotyková zařízení: hover neexistuje, takže první ťuknutí na
-    // hvězdičku jen ukáže popisek, teprve druhé naviguje na článek.
     var isTouchDevice = window.matchMedia && window.matchMedia('(hover: none)').matches;
 
     var allLatLngs = [];
@@ -227,9 +242,6 @@
             return;
           }
           if (currentArticleId != null && String(a.id) === String(currentArticleId)) {
-            // Klik na bod ČLÁNKU, který zrovna čteš — nemá smysl ho
-            // "navigovat na sebe". Stránka (article.html) může tuhle
-            // situaci obsloužit vlastním onSelfClick.
             if (typeof opts.onSelfClick === 'function') opts.onSelfClick();
             return;
           }
