@@ -39,7 +39,7 @@
 
   <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
-    <!-- Zobrazení a hledání -->
+    <!-- Vždy viditelné: zobrazení, řazení, hledání -->
     <select id="viewMode" class="ribbon-select" data-key="viewMode" onchange="renderGallery()">
       <option value="grid">Mřížka</option>
       <option value="small">Malé náhledy</option>
@@ -59,45 +59,56 @@
 
     <div class="ribbon-sep" data-key="sep1"></div>
 
-    <!-- Složky -->
-    <select id="folderFilter" class="ribbon-select" data-key="folderFilter" onchange="renderGallery()" title="Filtr podle složky">
-      <option value="">📁 Všechny složky</option>
-    </select>
-    <button class="btn btn-sm" data-key="newFolder" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová složka</button>
-    <button class="btn btn-sm" data-key="deleteFolder" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou složku</button>
-    <button class="btn btn-sm" data-key="moveToFolder" onclick="openMoveToFolderModal()" title="Přesunout vybrané fotky do složky">📁 Přesunout do složky</button>
+    <!-- Skryté za "▾" tlačítky — otevře se panel se vším souvisejícím -->
+    <div class="ribbon-dropdown" data-key="folderDropdown">
+      <button class="btn btn-sm ribbon-dropdown-toggle" type="button" data-panel="folderDropdownPanel" onclick="toggleRibbonDropdown(this)">📁 Složky ▾</button>
+      <div class="ribbon-dropdown-panel" id="folderDropdownPanel" hidden>
+        <select id="folderFilter" class="ribbon-select" onchange="renderGallery()" title="Filtr podle složky">
+          <option value="">📁 Všechny složky</option>
+        </select>
+        <button class="btn btn-sm" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová složka</button>
+        <button class="btn btn-sm" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou složku</button>
+        <button class="btn btn-sm" onclick="openMoveToFolderModal()" title="Přesunout vybrané fotky do složky">📁 Přesunout do složky</button>
+      </div>
+    </div>
 
-    <div class="ribbon-sep" data-key="sep2"></div>
-
-    <!-- Nahrávání -->
-    <select id="upResSelect" class="ribbon-select" data-key="upRes" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
-      <option value="1000">1000 px</option>
-      <option value="2000">2000 px</option>
-      <option value="4000">4000 px</option>
-      <option value="0">Originál</option>
-    </select>
-    <select id="upQualitySelect" class="ribbon-select" data-key="upQuality" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
-      <option value="0.7">70 %</option>
-      <option value="0.85">85 %</option>
-      <option value="0.95">95 %</option>
-      <option value="0.99">99 %</option>
-    </select>
-    <input type="text" id="uploadFolderInput" class="form-input" data-key="uploadFolderInput" list="folderSuggestions" placeholder="📁 Do složky (volitelné)" style="max-width:180px;flex:0 1 180px">
-    <datalist id="folderSuggestions"></datalist>
-    <button class="btn btn-blue btn-sm" data-key="upload" onclick="$('fileInput').click()">⬆️ Nahrát</button>
-    <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
-    <button class="btn btn-sm" data-key="uploadSettings" onclick="openUploadSettings()">⚙️ Nastavení</button>
-
-    <div class="ribbon-sep" data-key="sep3"></div>
-
-    <!-- Hromadné akce s vybranými fotkami -->
-    <button class="btn btn-sm" data-key="bulkEdit" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
-    <button class="btn btn-sm" data-key="findDupes" onclick="findDuplicatePhotos()">🔍 Najít duplicity</button>
-    <button class="btn btn-sm" data-key="downloadZip" onclick="downloadSelectedAsZip()">⬇️ Stáhnout vybrané (ZIP)</button>
-    <button class="btn btn-red btn-sm" data-key="bulkDelete" onclick="bulkDelete()">🗑 Smazat</button>
+    <div class="ribbon-dropdown" data-key="uploadDropdown">
+      <button class="btn btn-blue btn-sm ribbon-dropdown-toggle" type="button" data-panel="uploadDropdownPanel" onclick="toggleRibbonDropdown(this)">⬆️ Nahrát ▾</button>
+      <div class="ribbon-dropdown-panel" id="uploadDropdownPanel" hidden>
+        <select id="upResSelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
+          <option value="1000">1000 px</option>
+          <option value="2000">2000 px</option>
+          <option value="4000">4000 px</option>
+          <option value="0">Originál</option>
+        </select>
+        <select id="upQualitySelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
+          <option value="0.7">70 %</option>
+          <option value="0.85">85 %</option>
+          <option value="0.95">95 %</option>
+          <option value="0.99">99 %</option>
+        </select>
+        <input type="text" id="uploadFolderInput" class="form-input" list="folderSuggestions" placeholder="📁 Do složky (volitelné)" style="max-width:180px;flex:0 1 180px">
+        <datalist id="folderSuggestions"></datalist>
+        <button class="btn btn-blue btn-sm" data-key="upload" onclick="$('fileInput').click()">⬆️ Nahrát z počítače</button>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
+        <button class="btn btn-sm" onclick="openUploadSettings()">⚙️ Nastavení</button>
+      </div>
+    </div>
 
     <div class="ribbon-sep" data-key="sep4"></div>
     <span class="pill" id="galleryCountPill" data-key="countPill">0 fotek</span>
+  </div>
+
+  <!-- Hromadné akce s vybranými fotkami — samostatná kontextová lišta,
+       zobrazí se JEN když je něco vybráno (viz gallery-ribbon-ui.js),
+       ať v ribbonu nezabírají místo natrvalo (90 % času nic vybrané
+       není). -->
+  <div id="galleryBulkBar" class="gallery-bulk-bar" hidden>
+    <span id="galleryBulkCount"></span>
+    <button class="btn btn-sm" onclick="openBulkEditModal()">🔧 Upravit vybrané</button>
+    <button class="btn btn-sm" onclick="findDuplicatePhotos()">🔍 Najít duplicity</button>
+    <button class="btn btn-sm" onclick="downloadSelectedAsZip()">⬇️ Stáhnout (ZIP)</button>
+    <button class="btn btn-red btn-sm" onclick="bulkDelete()">🗑 Smazat</button>
   </div>
 
   <!-- Články -->
@@ -662,5 +673,6 @@
 
 <script src="dashboard-core.js?v=20260729"></script>
 <script src="dashboard-editor.js?v=20260729"></script>
+<script src="gallery-ribbon-ui.js?v=20260901"></script>
 </body>
 </html>
