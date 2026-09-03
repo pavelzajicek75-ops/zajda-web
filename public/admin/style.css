@@ -310,6 +310,49 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 600; letter-spac
 }
 .ribbon-label { color: var(--text-muted); font-size: 13px; }
 
+/* === ROZBALOVACÍ PANELY V RIBBONU ("📁 Složky ▾", "⬆️ Nahrát ▾") ===
+   Místo aby všechny ovládací prvky ležely natrvalo v jedné dlouhé řadě
+   (přes 15 prvků vedle sebe — na mobilu nepřehledné), skryjí se za
+   tlačítko a rozbalí se jako panel PŘÍMO POD ribbonem (ne plovoucí
+   překryv) — na mobilu tak nikdy nejede mimo obrazovku ani se nepřekrývá
+   s obsahem pod ním. */
+.ribbon-dropdown { position: relative; }
+.ribbon-dropdown-toggle.open { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ribbon-dropdown-panel {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.6rem;
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  animation: fadeSlideIn 0.16s var(--ease);
+}
+.ribbon-dropdown-panel[hidden] { display: none; }
+.ribbon-group { position: relative; }
+
+/* === KONTEXTOVÁ LIŠTA HROMADNÝCH AKCÍ (galerie) ===
+   Zobrazí se jen když je aspoň jedna fotka vybraná — přes
+   gallery-ribbon-ui.js, ne natrvalo v ribbonu. */
+.gallery-bulk-bar {
+  position: sticky; top: 108px; z-index: 90;
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  padding: 0.6rem 1.1rem;
+  margin: 0 -1.5rem 1rem;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--accent-soft);
+  box-shadow: var(--shadow-sm);
+  animation: fadeSlideIn 0.18s var(--ease);
+}
+.gallery-bulk-bar[hidden] { display: none; }
+.gallery-bulk-bar #galleryBulkCount {
+  color: var(--gold); font-family: var(--font-mono); font-size: 12.5px; font-weight: 600;
+  margin-right: 0.3rem;
+}
+@media (max-width: 480px) {
+  .gallery-bulk-bar { margin: 0 -0.8rem 0.8rem; padding: 0.5rem 0.8rem; top: 96px; }
+}
+
 /* === BUTTONS === */
 .btn {
   display: inline-flex; align-items: center; gap: 0.4rem;
@@ -612,11 +655,6 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
   box-shadow: inset 3px 0 0 var(--red);
 }
 
-/* === PODSEKCE: responzivní "karty" na mobilu/tabletu (jen tahle tabulka
-   — ostatní data-table v adminu data-label atributy nemají, takže by na
-   nich tenhle trik nefungoval a schválně se jich netýká). Pod 760px se
-   z řádků tabulky stanou samostatné karty, každá buňka dostane popisek
-   z data-label, ať je jasné, co je co i bez záhlaví sloupců. === */
 @media (max-width: 760px) {
   .subsections-table thead { display: none; }
   .subsections-table, .subsections-table tbody, .subsections-table tr, .subsections-table td {
