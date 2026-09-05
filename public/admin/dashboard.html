@@ -39,27 +39,38 @@
 
   <!-- Galerie -->
   <div class="ribbon-group" data-for="galleries">
-    <!-- Vždy viditelné: zobrazení, řazení, hledání -->
-    <select id="viewMode" class="ribbon-select" data-key="viewMode" onchange="renderGallery()">
-      <option value="grid">Mřížka</option>
-      <option value="small">Malé náhledy</option>
-      <option value="list">Seznam</option>
-    </select>
-    <select id="sortMode" class="ribbon-select" data-key="sortMode" onchange="renderGallery()">
-      <option value="newest">Nejnovější</option>
-      <option value="oldest">Nejstarší</option>
-      <option value="name">Podle názvu</option>
-      <option value="size">Podle velikosti</option>
-      <option value="resolution">Podle rozlišení</option>
-    </select>
+    <!-- Základní obrazovka: jen hledání + 3 rozbalovací tlačítka + počítadlo -->
     <input type="text" id="gallerySearch" class="form-input" data-key="gallerySearch" placeholder="🔎 Hledat podle názvu…" oninput="renderGallery()" style="max-width:180px;flex:0 1 180px">
-    <label class="ribbon-label" data-key="exifToggleLabel" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
-      <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 EXIF
-    </label>
 
-    <div class="ribbon-sep" data-key="sep1"></div>
+    <div class="ribbon-dropdown" data-key="viewDropdown">
+      <button class="btn btn-sm ribbon-dropdown-toggle" type="button" data-panel="viewDropdownPanel" onclick="toggleRibbonDropdown(this)">👁 Zobrazit ▾</button>
+      <div class="ribbon-dropdown-panel" id="viewDropdownPanel" hidden>
+        <div class="ribbon-dropdown-row">
+          <span class="ribbon-dropdown-row-label">Styl</span>
+          <select id="viewMode" class="ribbon-select" onchange="renderGallery()">
+            <option value="grid">Mřížka</option>
+            <option value="small">Malé náhledy</option>
+            <option value="list">Seznam</option>
+          </select>
+        </div>
+        <div class="ribbon-dropdown-row">
+          <span class="ribbon-dropdown-row-label">Řazení</span>
+          <select id="sortMode" class="ribbon-select" onchange="renderGallery()">
+            <option value="newest">Nejnovější</option>
+            <option value="oldest">Nejstarší</option>
+            <option value="name">Podle názvu</option>
+            <option value="size">Podle velikosti</option>
+            <option value="resolution">Podle rozlišení</option>
+          </select>
+        </div>
+        <div class="ribbon-dropdown-row">
+          <label class="ribbon-label" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
+            <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 Zobrazovat EXIF údaje
+          </label>
+        </div>
+      </div>
+    </div>
 
-    <!-- Skryté za "▾" tlačítky — otevře se panel se vším souvisejícím -->
     <div class="ribbon-dropdown" data-key="folderDropdown">
       <button class="btn btn-sm ribbon-dropdown-toggle" type="button" data-panel="folderDropdownPanel" onclick="toggleRibbonDropdown(this)">📁 Složky ▾</button>
       <div class="ribbon-dropdown-panel" id="folderDropdownPanel" hidden>
@@ -673,6 +684,6 @@
 
 <script src="dashboard-core.js?v=20260729"></script>
 <script src="dashboard-editor.js?v=20260729"></script>
-<script src="gallery-ribbon-ui.js?v=20260901"></script>
+<script src="gallery-ribbon-ui.js?v=20260902"></script>
 </body>
 </html>
