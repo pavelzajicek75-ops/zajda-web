@@ -331,7 +331,19 @@
     /* Lightbox s listováním */
     .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(4,4,10,0.94); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
     .lightbox-overlay.open { display: flex; }
-    .lightbox-overlay img { max-width: 88vw; max-height: 88vh; border-radius: 8px; box-shadow: 0 0 50px rgba(255,122,69,0.25); cursor: default; user-select: none; }
+    .lightbox-overlay img {
+      max-width: 88vw; max-height: 88vh; border-radius: 8px; box-shadow: 0 0 50px rgba(255,122,69,0.25); cursor: default; user-select: none;
+      transition: transform 0.28s cubic-bezier(.22,1,.36,1), opacity 0.22s ease;
+      touch-action: none; /* gesta (swipe) řešíme ručně, prohlížeč ať nescrolluje/nezooomuje pod prstem */
+      will-change: transform, opacity;
+    }
+    /* Během tažení prstem sledujeme pozici 1:1 bez animace (jinak by to
+       za prstem "zpožďovalo") — animace se zapne až při puštění. */
+    .lightbox-overlay img.lb-dragging { transition: none; }
+    /* Jemné probliknutí při přepnutí fotky šipkou/klávesou (ne při tažení,
+       tam už pohyb sám o sobě dává vizuální zpětnou vazbu). */
+    .lightbox-overlay img.lb-swap { animation: lbSwap 0.32s cubic-bezier(.22,1,.36,1); }
+    @keyframes lbSwap { from { opacity: 0.35; transform: scale(0.985); } to { opacity: 1; transform: scale(1); } }
     .lightbox-overlay:fullscreen { background: #000; }
     .lightbox-overlay:fullscreen img { max-width: 100vw; max-height: 100vh; border-radius: 0; }
     .lightbox-overlay:-webkit-full-screen { background: #000; }
@@ -365,8 +377,13 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
 
+    .lightbox-close:active, .lightbox-fullscreen:active, .lightbox-arrow:active { transform: scale(0.9); }
+    .lightbox-arrow.prev:active { transform: translateY(-50%) scale(0.9); }
+    .lightbox-arrow.next:active { transform: translateY(-50%) scale(0.9); }
+
     @media (prefers-reduced-motion: reduce) {
       .back-btn, .share-btn, .article-body img { transition: none !important; }
+      .lightbox-overlay img, .lightbox-overlay img.lb-swap { animation: none !important; transition: none !important; }
     }
 
     @media (max-width: 700px) {
@@ -510,6 +527,11 @@
     var lbImg = document.getElementById('lightboxImg');
     lbImg.src = img.getAttribute('src');
     lbImg.alt = img.getAttribute('alt') || '';
+    // Krátké probliknutí při KAŽDÉ změně fotky (šipka, klávesa, dokončené
+    // swipe gesto) — animace se restartuje odebráním a přidáním třídy.
+    lbImg.classList.remove('lb-swap');
+    void lbImg.offsetWidth; // vynutí reflow, ať prohlížeč animaci opravdu spustí znovu
+    lbImg.classList.add('lb-swap');
     var counter = document.getElementById('lightboxCounter');
     var multi = galleryImages.length > 1;
     document.getElementById('lightboxPrev').style.display = multi ? 'flex' : 'none';
@@ -588,7 +610,108 @@
       else if (e.key === 'ArrowRight') showNextImage();
       else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
     });
+
+    initLightboxGestures(overlay);
   });
+
+  /* === SWIPE GESTA V LIGHTBOXU (mobil/tablet) ===
+     - Tažení doleva/doprava mezi fotkami — obrázek sleduje prst 1:1,
+       při puštění buď doklouže na sousední fotku, nebo se vrátí zpátky
+       (podle toho, jak daleko/rychle se táhlo).
+     - Tažení dolů zavře lightbox — obrázek se zmenšuje a pozadí
+       postupně mizí, přesně podle polohy prstu (jako Instagram/Fotky).
+     Funguje vedle stávajících šipek/kláves, nic z toho nenahrazuje. */
+  function initLightboxGestures(overlay) {
+    var img = document.getElementById('lightboxImg');
+    if (!img) return;
+
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var SWIPE_COMMIT_PX = 70;     // od kolika px vodorovného tažení se to počítá jako "chci další/předchozí"
+    var CLOSE_COMMIT_PX = 110;    // od kolika px tažení dolů se to počítá jako "chci zavřít"
+    var CLOSE_FADE_RANGE = 260;   // za kolik px tažení dolů je pozadí už úplně průhledné
+
+    var startX = 0, startY = 0, dx = 0, dy = 0;
+    var dragging = false, axis = null; // axis: 'x' (mezi fotkami) nebo 'y' (zavření)
+
+    function reset() {
+      img.classList.remove('lb-dragging');
+      img.style.transform = '';
+      img.style.opacity = '';
+      overlay.style.background = '';
+      dragging = false; axis = null; dx = 0; dy = 0;
+    }
+
+    img.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      var t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
+      dx = 0; dy = 0; dragging = true; axis = null;
+      img.classList.add('lb-dragging');
+    }, { passive: true });
+
+    img.addEventListener('touchmove', function (e) {
+      if (!dragging || e.touches.length !== 1) return;
+      var t = e.touches[0];
+      dx = t.clientX - startX;
+      dy = t.clientY - startY;
+
+      // Směr gesta (vodorovný vs. svislý) se určí až po pár pixelech
+      // pohybu, ať drobné chvění prstu na místě nerozhodne špatně.
+      if (!axis) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        // Svislé gesto zavírá jen tažením DOLŮ, ne nahoru — nahoru se nic neděje.
+        if (axis === 'y' && dy < 0) axis = null;
+      }
+      if (!axis) return;
+
+      e.preventDefault(); // od tohoto momentu gesto patří nám, ne scrollu stránky pod prstem
+
+      if (axis === 'x') {
+        var atEdge = galleryImages.length <= 1;
+        var resisted = atEdge ? dx * 0.25 : dx; // jediná fotka v článku — jemný "odpor", ne volný posun
+        img.style.transform = 'translateX(' + resisted + 'px)';
+      } else {
+        var progress = Math.min(1, Math.max(0, dy) / CLOSE_FADE_RANGE);
+        var scale = 1 - progress * 0.14;
+        img.style.transform = 'translateY(' + dy + 'px) scale(' + scale + ')';
+        img.style.opacity = String(1 - progress * 0.5);
+        overlay.style.background = 'rgba(4,4,10,' + (0.94 * (1 - progress * 0.85)) + ')';
+      }
+    }, { passive: false });
+
+    function finishDrag() {
+      if (!dragging) return;
+      img.classList.remove('lb-dragging');
+
+      if (axis === 'x' && galleryImages.length > 1 && Math.abs(dx) > SWIPE_COMMIT_PX) {
+        var goingNext = dx < 0;
+        // Fotka doklouže úplně mimo obrazovku ve směru tažení, pak se
+        // vymění a nová se objeví jemným crossfade (viz updateLightboxImage).
+        img.style.transform = 'translateX(' + (goingNext ? '-120%' : '120%') + ')';
+        img.style.opacity = '0';
+        setTimeout(function () {
+          if (goingNext) showNextImage(); else showPrevImage();
+          reset();
+        }, reduceMotion ? 0 : 180);
+        return;
+      }
+
+      if (axis === 'y' && dy > CLOSE_COMMIT_PX) {
+        img.style.transform = 'translateY(120%) scale(0.8)';
+        img.style.opacity = '0';
+        overlay.style.background = 'rgba(4,4,10,0)';
+        setTimeout(function () { closeLightbox(); reset(); }, reduceMotion ? 0 : 180);
+        return;
+      }
+
+      // Gesto nebylo dost výrazné — vše se plynule vrátí na místo.
+      reset();
+    }
+
+    img.addEventListener('touchend', finishDrag);
+    img.addEventListener('touchcancel', reset);
+  }
 
   function getArticleId() {
     var params = new URLSearchParams(window.location.search);
