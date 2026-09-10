@@ -1441,6 +1441,98 @@ function initBlockDragSystem(editorId) {
     indicator.style.display = 'none';
     handle.style.display = 'none';
   });
+
+  /* === STEJNÁ FUNKCE PRO DOTYK (mobil/tablet) — DLOUHÝ STISK ===
+     Úchyt ⠿ výše se dřív ukazoval jen po najetí myší (mousemove), což na
+     dotykovém displeji nikdy nenastane — přesun textových bloků tam
+     proto nešel použít vůbec. Řeší se to jinak: DLOUHÝ STISK (~450 ms
+     beze pohybu) přímo na bloku rovnou spustí přetahování, stejně jako
+     to znají uživatelé z mobilních seznamů úkolů/poznámek. Krátký/
+     normální dotek (psaní, umístění kurzoru) dál funguje úplně stejně
+     jako dřív, protože se během něj drag vůbec nespustí.
+
+     Obrázky (img.editor-img) mají VLASTNÍ fungující přímý drag na dotyk
+     (viz initImageDirectDrag níže) — ten se dlouhým stiskem nezdvojuje,
+     tady se řeší jen ostatní bloky (odstavce, nadpisy, seznamy...). */
+  let pressTimer = null;
+  let pressBlock = null;
+  let pressStartX = 0, pressStartY = 0;
+  let touchDragging = null;
+  const LONG_PRESS_MS = 450;
+  const MOVE_CANCEL_PX = 10;
+
+  function cancelPress() {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+    if (pressBlock) pressBlock.classList.remove('block-longpress-charge');
+    pressBlock = null;
+  }
+
+  ed.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || ed._imgDragActive) return;
+    const t = e.touches[0];
+    if (t.target && t.target.closest && t.target.closest('img.editor-img')) return; // obrázky řeší svůj vlastní drag
+    const block = topLevelBlockFromPoint(t.clientX, t.clientY);
+    if (!block) return;
+    pressBlock = block;
+    pressStartX = t.clientX; pressStartY = t.clientY;
+    pressBlock.classList.add('block-longpress-charge');
+    pressTimer = setTimeout(() => {
+      if (!pressBlock) return;
+      pressBlock.classList.remove('block-longpress-charge');
+      touchDragging = pressBlock;
+      touchDragging.classList.add('block-dragging');
+      positionHandle(touchDragging);
+      handle.classList.add('grabbing');
+      if (navigator.vibrate) navigator.vibrate(12); // jemná hmatová odezva, pokud ji zařízení umí
+      pressBlock = null;
+    }, LONG_PRESS_MS);
+  }, { passive: true });
+
+  ed.addEventListener('touchmove', e => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (pressTimer && !touchDragging) {
+      // Pohyb prstem dřív, než dlouhý stisk doběhl, znamená, že uživatel
+      // chtěl scrollovat/vybírat text, ne přesouvat blok — zrušit.
+      if (Math.abs(t.clientX - pressStartX) > MOVE_CANCEL_PX || Math.abs(t.clientY - pressStartY) > MOVE_CANCEL_PX) {
+        cancelPress();
+      }
+      return;
+    }
+    if (!touchDragging) return;
+    e.preventDefault(); // až teď (aktivní tažení) bránit stránce ve scrollu
+    handle.style.left = (t.clientX - 12) + 'px';
+    handle.style.top = (t.clientY - 12) + 'px';
+    const target = topLevelBlockFromPoint(t.clientX, t.clientY);
+    if (target && target !== touchDragging) {
+      const r = target.getBoundingClientRect();
+      dropBefore = t.clientY < r.top + r.height / 2;
+      dropTarget = target;
+      indicator.style.display = 'block';
+      indicator.style.left = r.left + 'px';
+      indicator.style.width = r.width + 'px';
+      indicator.style.top = (dropBefore ? r.top - 2 : r.bottom + 2) + 'px';
+    }
+  }, { passive: false });
+
+  function finishTouchDrag() {
+    cancelPress();
+    if (!touchDragging) return;
+    if (dropTarget && dropTarget !== touchDragging && ed.contains(dropTarget)) {
+      if (dropBefore) dropTarget.parentNode.insertBefore(touchDragging, dropTarget);
+      else dropTarget.parentNode.insertBefore(touchDragging, dropTarget.nextSibling);
+    }
+    touchDragging.classList.remove('block-dragging');
+    handle.classList.remove('grabbing');
+    touchDragging = null;
+    dropTarget = null;
+    indicator.style.display = 'none';
+    handle.style.display = 'none';
+  }
+
+  ed.addEventListener('touchend', finishTouchDrag);
+  ed.addEventListener('touchcancel', finishTouchDrag);
 }
 
 /* === PŘÍMÉ TAŽENÍ OBRÁZKŮ MYŠÍ (živé obtékání textu) ===
@@ -2216,8 +2308,8 @@ function renderArticleList(arr) {
       : `<button onclick="toggleArticlePin('${a.id}', true)" class="btn btn-sm">📌 Připnout</button>`;
     return `
     <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid ${a.pinned ? '#ffc857' : '#263252'};border-radius:10px;position:relative">
-      <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
-      <div style="display:flex;gap:0.9rem;padding-left:1.75rem">
+      <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:24px;height:24px;cursor:pointer;accent-color:var(--accent)">
+      <div style="display:flex;gap:0.9rem;padding-left:2.25rem">
         ${coverThumb}
         <div style="flex:1;min-width:0">
           <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem;gap:0.5rem;flex-wrap:wrap">
