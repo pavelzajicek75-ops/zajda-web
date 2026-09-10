@@ -588,6 +588,17 @@ h3 { font-family: var(--font-display); color: var(--gold); font-size: 1.05rem; f
 .block-drag-handle:hover { background: var(--accent); color: #fff; transform: scale(1.08); }
 .block-drag-handle.grabbing { cursor: grabbing; background: var(--accent); color: #fff; }
 .block-dragging { opacity: 0.35; }
+.block-longpress-charge {
+  animation: blockLongpressCharge 0.45s linear forwards;
+  border-radius: 6px;
+}
+@keyframes blockLongpressCharge {
+  from { background: transparent; }
+  to { background: var(--accent-soft, rgba(59,130,246,0.18)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .block-longpress-charge { animation: none; background: var(--accent-soft, rgba(59,130,246,0.18)); }
+}
 .block-drop-indicator {
   position: fixed;
   display: none;
