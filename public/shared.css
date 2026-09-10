@@ -138,7 +138,10 @@ body {
    tu si definuje sama, protože je funkčně jiná, ne jen jinak stylovaná) === */
 .lightbox-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(4,4,10,0.92); display: none; align-items: center; justify-content: center; cursor: zoom-out; }
 .lightbox-overlay.open { display: flex; }
-.lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 0 50px rgba(140,150,255,0.25); }
+.lightbox-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 10px; box-shadow: 0 0 50px rgba(140,150,255,0.25); touch-action: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .lightbox-overlay img { transition: transform 0.22s cubic-bezier(.22,1,.36,1), opacity 0.18s ease; }
+}
 
 :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
 
@@ -235,4 +238,30 @@ body {
   .quote-inner { opacity: 1 !important; transform: none !important; }
   .constellation-layer { display: none; }
   .quote-star::after { display: none; }
+}
+
+/* === DOTYKOVÁ ZPĚTNÁ VAZBA (":active") ===
+   Hover efekty (:hover) na mobilu/tabletu nikdy nenaskočí — dotykové
+   zařízení nemá kurzor, který by nad prvkem "visel". Tenhle blok proto
+   doplňuje jemnou, okamžitou odezvu na samotné stisknutí prstem u karet
+   a tlačítek, co ji dosud vůbec neměly. Netýká se to obyčejných textových
+   odkazů (ty svou zpětnou vazbu dostávají podtržením/barvou při :hover,
+   scale by tam naopak působilo rušivě). */
+@media (prefers-reduced-motion: no-preference) {
+  .section-panel,
+  .latest-item,
+  .section-modal-close,
+  .travel-map-modal-close,
+  .travel-map-modal-theme-toggle,
+  .travel-map-modal-play-btn,
+  .sort-toggle button {
+    transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+  }
+  .section-panel:active { transform: scale(0.98); }
+  .latest-item:active { transform: scale(0.99); }
+  .section-modal-close:active,
+  .travel-map-modal-close:active,
+  .travel-map-modal-theme-toggle:active,
+  .travel-map-modal-play-btn:active { transform: scale(0.9); }
+  .sort-toggle button:active { transform: scale(0.94); }
 }
