@@ -172,6 +172,61 @@
       overlay.classList.add('open');
     }
 
+    /* Swipe dolů zavře fotku — stejné chování jako na homepage. */
+    (function initSimpleLightboxSwipe() {
+      var overlay = document.getElementById('lightboxOverlay');
+      if (!overlay) return;
+      var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var CLOSE_COMMIT_PX = 110, FADE_RANGE = 260;
+      var startY = 0, dy = 0, dragging = false;
+
+      overlay.addEventListener('touchstart', function (e) {
+        if (e.touches.length !== 1) return;
+        startY = e.touches[0].clientY; dy = 0; dragging = true;
+      }, { passive: true });
+
+      overlay.addEventListener('touchmove', function (e) {
+        if (!dragging || e.touches.length !== 1) return;
+        dy = e.touches[0].clientY - startY;
+        if (dy < 0) { dy = 0; return; }
+        e.preventDefault();
+        var img = overlay.querySelector('img');
+        if (!img) return;
+        var progress = Math.min(1, dy / FADE_RANGE);
+        img.style.transition = 'none';
+        img.style.transform = 'translateY(' + dy + 'px) scale(' + (1 - progress * 0.14) + ')';
+        overlay.style.background = 'rgba(4,4,10,' + (0.92 * (1 - progress * 0.85)) + ')';
+      }, { passive: false });
+
+      overlay.addEventListener('touchend', function () {
+        if (!dragging) return;
+        dragging = false;
+        var img = overlay.querySelector('img');
+        if (dy > CLOSE_COMMIT_PX) {
+          if (img) {
+            img.style.transition = reduceMotion ? 'none' : 'transform 0.18s ease, opacity 0.18s ease';
+            img.style.transform = 'translateY(120%) scale(0.85)';
+            img.style.opacity = '0';
+          }
+          overlay.style.background = 'rgba(4,4,10,0)';
+          setTimeout(function () {
+            overlay.classList.remove('open');
+            overlay.style.background = '';
+            overlay.innerHTML = '';
+          }, reduceMotion ? 0 : 180);
+        } else if (img) {
+          img.style.transition = reduceMotion ? 'none' : 'transform 0.25s cubic-bezier(.22,1,.36,1)';
+          img.style.transform = '';
+          overlay.style.background = '';
+        }
+      });
+
+      overlay.addEventListener('touchcancel', function () {
+        dragging = false;
+        overlay.style.background = '';
+      });
+    })();
+
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       var overlay = document.getElementById('lightboxOverlay');
