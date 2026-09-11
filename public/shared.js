@@ -273,3 +273,15 @@ function removeSavedArticle(id) {
   setSavedArticles(list);
   return list;
 }
+
+/* === REGISTRACE SERVICE WORKERU (PWA) ===
+   Až po úplném načtení stránky (window.load), ať registrace nesoutěží
+   o síť/výkon s vlastním obsahem stránky. Tichý fail v prohlížečích bez
+   podpory (nebo přes http:// v běžném vývoji) nikomu nevadí. */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function (e) {
+      console.warn('Service worker se nepodařilo zaregistrovat:', e);
+    });
+  });
+}
