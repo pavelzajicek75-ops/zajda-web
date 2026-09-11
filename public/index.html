@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>Moje diagnóza, můj vesmír</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="description" content="Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou. Cestování, fotografování a projekty na jednom místě.">
   <link rel="canonical" href="https://zajda-web.pages.dev/">
 
@@ -532,18 +536,59 @@
     </div>
   </div>
 
-  <!-- Leaflet — lehká open-source mapová knihovna, žádný API klíč. -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
-          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.css">
-  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.Default.css">
-  <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js"></script>
+  <!-- Leaflet (mapová knihovna) se už NENAČÍTÁ tady natvrdo — homepage ji
+       potřebuje jen když někdo klikne na "🗺️ Mapa cest", takže se stahuje
+       až za běhu přes loadLeafletAssets() (viz níže), ne při každé
+       návštěvě stránky. -->
 
   <script src="/shared.js"></script>
   <script src="/travel-map-core.js"></script>
   <script>
+  /* === LÍNÉ NAČTENÍ LEAFLETU ===
+     Mapa cest je schovaná za tlačítkem v modalu — dřív se ale Leaflet.js
+     + Leaflet.markercluster (CSS i JS) stahovaly při KAŽDÉ návštěvě
+     homepage, i když mapu nikdo neotevřel. Teď se natáhnou až v okamžiku
+     prvního otevření modalu. Funkce je bezpečná zavolat víckrát — podruhé
+     už jen vrátí stejný (už vyřešený) Promise.
+     Volá se z openTravelMapModal() níže, PŘED TravelMapCore.render(). */
+  var _leafletLoadPromise = null;
+  function loadLeafletAssets() {
+    if (window.L) return Promise.resolve();
+    if (_leafletLoadPromise) return _leafletLoadPromise;
+
+    function addCss(href) {
+      if (document.querySelector('link[href="' + href + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    }
+    function addScript(src, integrity) {
+      return new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src;
+        if (integrity) { s.integrity = integrity; s.crossOrigin = ''; }
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error('Nepodařilo se načíst ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+
+    addCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css');
+    addCss('/vendor/leaflet.markercluster/MarkerCluster.css');
+    addCss('/vendor/leaflet.markercluster/MarkerCluster.Default.css');
+
+    // markercluster.js za běhu očekává hotové window.L — proto se načítá
+    // AŽ PO doběhnutí leaflet.js, ne souběžně s ním.
+    _leafletLoadPromise = addScript(
+      'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+      'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='
+    ).then(function () {
+      return addScript('/vendor/leaflet.markercluster/leaflet.markercluster.js');
+    });
+    return _leafletLoadPromise;
+  }
+
   document.getElementById('footerYear').textContent = new Date().getFullYear();
 
   function openLightbox(src) {
@@ -916,6 +961,16 @@
       document.body.style.overflow = 'hidden';
       if (!travelMapInitialized) {
         travelMapInitialized = true;
+        var mapEl = document.getElementById('travelMapModalMap');
+        if (mapEl) mapEl.innerHTML = '<div class="travel-map-modal-empty" style="opacity:0.7">Načítání mapy…</div>';
+        try {
+          await loadLeafletAssets();
+        } catch (e) {
+          console.error('Nepodařilo se načíst Leaflet:', e);
+          if (mapEl) mapEl.innerHTML = '<div class="travel-map-modal-empty">Mapu se nepodařilo načíst. Zkontroluj připojení a zkus to znovu.</div>';
+          travelMapInitialized = false; // umožní zkusit to příště znovu
+          return;
+        }
         await buildTravelMapModalContent();
       } else if (window._travelMapInstance) {
         setTimeout(function () { window._travelMapInstance.invalidateSize(); }, 50);
