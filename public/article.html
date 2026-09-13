@@ -726,6 +726,29 @@
     return null;
   }
 
+  /* === POČÍTADLO ZOBRAZENÍ ČLÁNKU ===
+     Zavolá se jednou po úspěšném zobrazení článku. sessionStorage brání
+     tomu, aby si stejný návštěvník ve STEJNÉ kartě/relaci nafoukl počet
+     opakovaným obnovováním stránky (F5) — nový záznam se počítá znovu
+     až po zavření karty / v nové relaci. Nejde o dokonalou ochranu proti
+     zneužití (to by vyžadovalo řešení na serveru), jen proti běžnému
+     nechtěnému nafukování čísel. Selhání volání (offline, výpadek) se
+     tiše ignoruje — počítadlo není nic kritického, nemá smysl kvůli
+     němu ukazovat chybu čtenáři.               */
+  function recordArticleView(articleId) {
+    if (!articleId) return;
+    var sessionKey = 'articleViewed:' + articleId;
+    try {
+      if (sessionStorage.getItem(sessionKey)) return;
+      sessionStorage.setItem(sessionKey, '1');
+    } catch (e) { /* sessionStorage nedostupné (privátní režim atd.) — počítej i tak */ }
+    fetch('/api/articles/view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: articleId })
+    }).catch(function () { /* tichý fail — počítadlo není kritické */ });
+  }
+
   var SECTION_NAMES = {
     'travel': 'Cestování',
     'photo': 'Fotografování',
@@ -762,6 +785,7 @@
       try {
         var publishedArticles = allArticles.filter(function(a) { return a && a.published !== false; });
         renderArticle(article, publishedArticles);
+        recordArticleView(article.id);
       } catch (renderErr) {
         console.error('Chyba renderování článku:', renderErr);
         container.innerHTML = '<div class="article-notfound"><h2>Chyba zobrazení</h2><p>Článek se podařilo načíst, ale nastala chyba při jeho zobrazení.</p></div>';
