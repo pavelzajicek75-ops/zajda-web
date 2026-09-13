@@ -2306,6 +2306,8 @@ function renderArticleList(arr) {
     const pinBtn = a.pinned
       ? `<button onclick="toggleArticlePin('${a.id}', false)" class="btn btn-sm" style="background:#263252;color:#ffc857;border:1px solid #ffc857">📌 Odepnout</button>`
       : `<button onclick="toggleArticlePin('${a.id}', true)" class="btn btn-sm">📌 Připnout</button>`;
+    const viewCount = a.views || 0;
+    const viewsBadge = `<span style="color:#92a0bc;font-size:12px" title="Počet zobrazení stránky článku">👀 ${viewCount.toLocaleString('cs')}</span>`;
     return `
     <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid ${a.pinned ? '#ffc857' : '#263252'};border-radius:10px;position:relative">
       <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:24px;height:24px;cursor:pointer;accent-color:var(--accent)">
@@ -2314,7 +2316,7 @@ function renderArticleList(arr) {
         <div style="flex:1;min-width:0">
           <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.3rem;gap:0.5rem;flex-wrap:wrap">
             <h4 style="color:#ffc857;margin:0">${escapeHtml(a.title)}</h4>
-            <div style="display:flex;gap:0.5rem;align-items:center">${pinBadge}${pubStatus}</div>
+            <div style="display:flex;gap:0.5rem;align-items:center">${viewsBadge}${pinBadge}${pubStatus}</div>
           </div>
           <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem">
             ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
