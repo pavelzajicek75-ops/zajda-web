@@ -1004,12 +1004,28 @@ function injectTrashUI() {
 
 /* === SLOŽKY — čistě klientská správa (žádné síťové volání, žádná
    závislost na tom, jak backend zachází s názvy souborů při uploadu).
-   Přiřazení fotka → složka žije jen v localStorage tohoto prohlížeče. */
+   Přiřazení fotka → složka žije primárně v localStorage tohoto
+   prohlížeče, ale KAŽDÁ změna se navíc automaticky (s malým zpožděním)
+   potichu zálohuje na server — viz scheduleFolderAutoSave() níže. Díky
+   tomu se composie na jiném zařízení/prohlížeči objeví samy, bez
+   ručního klikání na "Uložit/Načíst ze serveru" (ta tlačítka pořád
+   fungují jako záložní/ruční varianta, kdyby automatika z nějakého
+   důvodu selhala — např. offline). */
+let folderAutoSaveTimer = null;
+let _suppressFolderAutoSave = false;
+
+function scheduleFolderAutoSave() {
+  if (_suppressFolderAutoSave) return; // probíhá zápis dat STAŽENÝCH ze serveru — nemá smysl je hned poslat zpátky
+  clearTimeout(folderAutoSaveTimer);
+  folderAutoSaveTimer = setTimeout(() => saveFoldersToServer(true), 1500);
+}
+
 function getPhotoFolderMap() {
   try { return JSON.parse(localStorage.getItem('photoFolderMap') || '{}'); } catch { return {}; }
 }
 function savePhotoFolderMap(map) {
   localStorage.setItem('photoFolderMap', JSON.stringify(map));
+  scheduleFolderAutoSave();
 }
 
 function getPhotoFolder(p) {
@@ -1096,6 +1112,7 @@ function getManualFolders() {
 
 function saveManualFolders(list) {
   localStorage.setItem('manualFolders', JSON.stringify([...new Set(list)]));
+  scheduleFolderAutoSave();
 }
 
 /* === PŘENOS SLOŽEK MEZI ZAŘÍZENÍMI (export/import kódu) ===
@@ -1161,9 +1178,9 @@ function importFolderDataFromFile(input) {
    Uloží/načte stejná data (photoFolderMap + manualFolders) přes malý
    backendový endpoint /api/data/folders — funguje odkudkoliv, bez
    ručního kopírování souboru/kódu mezi zařízeními. */
-async function saveFoldersToServer() {
+async function saveFoldersToServer(silent) {
   const status = $('folderSyncStatus');
-  if (status) status.textContent = 'Ukládám…';
+  if (status && !silent) status.textContent = 'Ukládám…';
   try {
     const payload = {
       photoFolderMap: getPhotoFolderMap(),
@@ -1177,33 +1194,58 @@ async function saveFoldersToServer() {
     const bodyText = await r.clone().text().catch(() => '');
     if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
     const d = JSON.parse(bodyText);
-    showToast('Složky uloženy na server', 'success');
-    if (status) status.textContent = d.updated ? 'Uloženo ' + new Date(d.updated).toLocaleString('cs') : '';
+    if (!silent) showToast('Složky uloženy na server', 'success');
+    if (status) status.textContent = d.updated ? (silent ? '☁️ Auto-zálohováno ' : 'Uloženo ') + new Date(d.updated).toLocaleString('cs') : '';
   } catch (e) {
     console.error('/api/data/folders (POST) selhalo:', e);
-    showToast('Nepodařilo se uložit složky: ' + e.message, 'error');
-    if (status) status.textContent = '';
+    // Tichý auto-save při chybě NEotravuje toastem — offline moment se
+    // sám vyřeší při další změně/reloadu. Ruční tlačítko chybu pořád hlásí.
+    if (!silent) showToast('Nepodařilo se uložit složky: ' + e.message, 'error');
+    if (status && !silent) status.textContent = '';
   }
 }
 
-async function loadFoldersFromServer() {
+async function loadFoldersFromServer(silent) {
   const status = $('folderSyncStatus');
-  if (status) status.textContent = 'Načítám…';
+  if (status && !silent) status.textContent = 'Načítám…';
   try {
     const r = await fetch('/api/data/folders');
     const bodyText = await r.clone().text().catch(() => '');
     if (!r.ok) throw new Error('HTTP ' + r.status + (bodyText ? ' — ' + bodyText.slice(0, 200) : ''));
     const d = JSON.parse(bodyText);
-    if (d.photoFolderMap) savePhotoFolderMap(d.photoFolderMap);
-    if (d.manualFolders) saveManualFolders(d.manualFolders);
+    // Potlačit auto-save po dobu zápisu — jinak by se data, co jsme
+    // právě stáhli ZE serveru, hned poslala zbytečně zase ZPÁTKY.
+    _suppressFolderAutoSave = true;
+    try {
+      if (d.photoFolderMap) savePhotoFolderMap(d.photoFolderMap);
+      if (d.manualFolders) saveManualFolders(d.manualFolders);
+    } finally {
+      _suppressFolderAutoSave = false;
+    }
     refreshFolderControls();
     renderGallery();
-    showToast('Složky načteny ze serveru', 'success');
-    if (status) status.textContent = d.updated ? 'Naposled uloženo ' + new Date(d.updated).toLocaleString('cs') : 'Server zatím nic neukládal';
+    if (!silent) showToast('Složky načteny ze serveru', 'success');
+    if (status) status.textContent = d.updated ? 'Naposled uloženo ' + new Date(d.updated).toLocaleString('cs') : (silent ? '' : 'Server zatím nic neukládal');
+    return d;
   } catch (e) {
     console.error('/api/data/folders (GET) selhalo:', e);
-    showToast('Nepodařilo se načíst složky: ' + e.message, 'error');
-    if (status) status.textContent = '';
+    if (!silent) showToast('Nepodařilo se načíst složky: ' + e.message, 'error');
+    if (status && !silent) status.textContent = '';
+    return null;
+  }
+}
+
+/* === AUTOMATICKÉ NAČTENÍ SLOŽEK PŘI STARTU ===
+   Zavolá se jednou při načtení adminu (viz initDashboardEditor). Potichu
+   stáhne poslední stav ze serveru — pokud tam nějaký je — a použije ho
+   místo lokálních dat. Díky tomu se složky "samy objeví" i na zařízení/
+   prohlížeči, kde ještě nikdy nebyly ručně synchronizované. Pokud server
+   ještě nic neukládal (úplně první použití), nechá se beze změny lokální
+   (prázdný) stav — není co stahovat. */
+async function autoLoadFoldersOnStartup() {
+  const d = await loadFoldersFromServer(true);
+  if (d && d.updated) {
+    console.log('Složky automaticky načteny ze serveru (naposled uloženo ' + new Date(d.updated).toLocaleString('cs') + ')');
   }
 }
 
