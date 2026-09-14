@@ -153,22 +153,36 @@
     if (!placeEl) return;
     const row = placeEl.closest('.form-row') || placeEl.parentElement;
     if (!row || !row.parentElement) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'form-row';
+    const wrap = document.createElement('details');
+    wrap.className = 'form-row editor-panel';
     wrap.id = 'artLocationRow';
     wrap.style.cssText = 'display:block;width:100%;margin:0.6rem 0 1rem';
     wrap.innerHTML =
-      '<label style="display:block;margin-bottom:6px">📍 Poloha na mapě <span style="font-weight:400;color:var(--text-faint)">(nepovinné — vyplň, ať se článek objeví na Mapě cest)</span></label>' +
-      '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;max-width:520px">' +
+      '<summary id="artLocationSummary">📍 Poloha na mapě <span id="artLocationSummaryHint" style="font-weight:400;color:var(--text-faint);margin-left:0.4em">(nepovinné — klikni pro otevření)</span></summary>' +
+      '<div class="editor-panel-body">' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;max-width:520px">' +
       '<button type="button" id="artGeocodeBtn" class="btn btn-sm" onclick="geocodeArticlePlace()" title="Zkusí najít souřadnice podle textu v poli Místo výše">🔍 Najít podle názvu</button>' +
       '</div>' +
-      '<div style="display:flex;gap:8px;margin-bottom:8px;max-width:420px">' +
+      '<div style="display:flex;gap:8px;max-width:420px">' +
       '<input type="number" id="artLat" class="form-input" placeholder="Šířka (lat)" step="any" style="flex:1;min-width:0" oninput="syncLocationMapFromInputs()">' +
       '<input type="number" id="artLng" class="form-input" placeholder="Délka (lng)" step="any" style="flex:1;min-width:0" oninput="syncLocationMapFromInputs()">' +
       '<button type="button" class="btn btn-sm" onclick="clearArticleLocation()" title="Smazat polohu" style="flex:0 0 auto">✕</button>' +
       '</div>' +
-      '<div id="artLocationMap" style="display:block;width:100%;height:300px;border-radius:10px;overflow:hidden;border:1px solid var(--border-soft,#263252)"></div>';
+      '<div id="artLocationMap" style="display:block;width:100%;height:300px;border-radius:10px;overflow:hidden;border:1px solid var(--border-soft,#263252)"></div>' +
+      '</div>';
     row.after(wrap);
+
+    // Mapa (a s ní Leaflet, viz loadLeaflet výše) se natáhne a inicializuje
+    // AŽ při skutečném otevření panelu — ne při pouhém přepnutí na
+    // záložku Články, jak to dělala starší (vždy viditelná) verze.
+    wrap.addEventListener('toggle', function () {
+      if (wrap.open) {
+        requestAnimationFrame(function () {
+          if (!mapInstance) initMap();
+          else mapInstance.invalidateSize();
+        });
+      }
+    });
   }
 
   if (typeof window.editArticle === 'function') {
@@ -180,9 +194,14 @@
         if (r.ok) {
           const a = await r.json();
           injectUI();
-          if (Number.isFinite(a.lat) && Number.isFinite(a.lng)) {
+          const hasLocation = Number.isFinite(a.lat) && Number.isFinite(a.lng);
+          if (hasLocation) {
             if ($('artLat')) $('artLat').value = a.lat;
             if ($('artLng')) $('artLng').value = a.lng;
+            // Článek už polohu má — rovnou rozbalit panel, ať ji admin
+            // uvidí, aniž by musel tušit, že se schovává v panelu.
+            const panel = $('artLocationRow');
+            if (panel && !panel.open) panel.open = true;
             if (mapInstance) setMarker(a.lat, a.lng, true);
             else await initMap();
           } else {
@@ -201,6 +220,8 @@
     window.resetArticleForm = function () {
       const result = originalResetArticleForm.apply(this, arguments);
       window.clearArticleLocation();
+      const panel = $('artLocationRow');
+      if (panel) panel.open = false; // nový/vyresetovaný formulář vždy začíná sbalený
       return result;
     };
   }
@@ -211,10 +232,15 @@
       const result = originalShowTab.apply(this, arguments);
       if (name === 'articles') {
         injectUI();
-        requestAnimationFrame(function () {
-          if (!mapInstance) initMap();
-          else mapInstance.invalidateSize();
-        });
+        // Mapa se sama inicializuje/přepočítá velikost přes 'toggle'
+        // listener v injectUI() — tady jen dořešit případ, že panel byl
+        // už předtím otevřený (např. z editace článku s polohou) a
+        // přepnutím na jinou záložku a zpět by Leaflet potřeboval
+        // přepočítat rozměry kontejneru.
+        const panel = $('artLocationRow');
+        if (panel && panel.open && mapInstance) {
+          requestAnimationFrame(function () { mapInstance.invalidateSize(); });
+        }
       }
       return result;
     };
