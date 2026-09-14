@@ -3006,6 +3006,7 @@ function initDashboardEditor() {
     initEditorPanelAccordion();
     injectShortcutsHelpButton();
     if ($('artEditor')) setupArticleEditors();
+    if (typeof autoLoadFoldersOnStartup === 'function') autoLoadFoldersOnStartup();
     loadGallery().then(() => {
       if ($('articleList')) loadArticles();
       if ($('quoteTableBody')) loadQuotes();
