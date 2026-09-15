@@ -51,6 +51,10 @@
   }
   </script>
 
+  <!-- Preload jen ty řezy, co se použijí hned na první obrazovce (nadpisy
+       + běžný text) — zbytek dotáhne fonts.css sám, až bude potřeba. -->
+  <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts.css">
   <link rel="stylesheet" href="/shared.css">
   <style>
@@ -218,6 +222,19 @@
     .article-link .art-excerpt { font-size: 10px; color: var(--mist-dim); display: block; margin-top: 1px; }
     .no-articles { color: var(--mist-dim); font-size: 12px; padding: 8px 0; font-style: italic; }
     .loading-text { color: var(--mist-dim); font-size: 12px; padding: 0.5rem 0; }
+    .loading-skeleton { display: flex; flex-direction: column; gap: 10px; padding: 0.5rem 0 0.75rem; }
+    .loading-skeleton .sk-line {
+      height: 14px; border-radius: 6px; width: 100%;
+      background: linear-gradient(90deg, rgba(140,150,255,0.08) 25%, rgba(140,150,255,0.18) 37%, rgba(140,150,255,0.08) 63%);
+      background-size: 400% 100%;
+      animation: sk-shimmer 1.6s ease-in-out infinite;
+    }
+    .loading-skeleton .sk-line.w60 { width: 60%; }
+    .loading-skeleton .sk-line.w80 { width: 80%; }
+    @keyframes sk-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .loading-skeleton .sk-line { animation: none; background: rgba(140,150,255,0.12); }
+    }
 
     .section-panel.panel-external { cursor: pointer; }
     .section-panel.panel-external::after {
@@ -493,7 +510,7 @@
   <div class="top-grid">
     <div class="latest-panel" id="latestPanel">
       <h3>Poslední aktuality</h3>
-      <div class="loading-text">Načítání...</div>
+      <div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>
     </div>
     <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div></div>
   </div>
@@ -849,7 +866,7 @@
       }
 
       titleEl.textContent = sectionName;
-      scrollEl.innerHTML = '<div class="loading-text">Načítání...</div>';
+      scrollEl.innerHTML = '<div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>';
       overlay.classList.add('open');
       document.body.style.overflow = 'hidden';
 
@@ -1151,7 +1168,7 @@
 
           var scroll = document.createElement('div');
           scroll.className = 'panel-scroll';
-          scroll.innerHTML = '<div class="loading-text">Načítání...</div>';
+          scroll.innerHTML = '<div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>';
 
           body.appendChild(scroll);
           panel.appendChild(img);
