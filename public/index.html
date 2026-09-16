@@ -263,6 +263,29 @@
     }
     .search-panel input:focus { border-color: var(--panel-border-hover); }
     .search-panel input::placeholder { color: var(--mist-dim); }
+
+    .fun-actions-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    .fun-action-btn {
+      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border); color: var(--mist); font-size: 13px; font-family: 'Inter', sans-serif;
+      padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer;
+    }
+    .fun-action-btn:hover, .fun-action-btn:focus-visible { border-color: var(--panel-border-hover); color: #fff; }
+    @media (prefers-reduced-motion: no-preference) { .fun-action-btn { transition: transform 0.15s ease, border-color 0.2s ease, color 0.2s ease; } }
+    .fun-action-btn:active { transform: scale(0.95); }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 4px 0 18px; }
+    .stat-card {
+      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+      padding: 1rem; text-align: center;
+    }
+    .stat-card .stat-number {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.9rem; font-weight: 700;
+      background: var(--hairline); -webkit-background-clip: text; background-clip: text; color: transparent;
+      display: block; line-height: 1.1;
+    }
+    .stat-card .stat-label { color: var(--mist-dim); font-size: 12px; margin-top: 4px; display: block; }
+    .stats-footnote { color: var(--mist-dim); font-size: 12px; text-align: center; line-height: 1.6; }
     .search-results {
       margin-top: 8px; max-height: 340px; overflow-y: auto;
       background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -518,12 +541,26 @@
     <input type="text" id="siteSearchInput" placeholder="🔍 Hledat v článcích…" autocomplete="off">
     <div class="search-results" id="searchResults"></div>
     <div style="text-align:center;margin-top:12px" id="savedLinkWrap"></div>
+    <div class="fun-actions-row">
+      <button type="button" class="fun-action-btn" id="statsModalTrigger" onclick="openStatsModal()">🌌 Moje čísla</button>
+      <button type="button" class="fun-action-btn" id="surpriseMeBtn" onclick="surpriseMe()">🎲 Překvap mě</button>
+    </div>
   </div>
   <div class="sections-container" id="sectionsContainer" tabindex="-1"></div>
 
   <footer class="site-footer">
     <a href="/rss.xml">📡 RSS feed</a> · © <span id="footerYear"></span> Zajda
   </footer>
+
+  <div class="section-modal-overlay" id="statsModalOverlay">
+    <div class="section-modal-box" style="max-width:480px">
+      <div class="section-modal-header">
+        <h2>🌌 Moje čísla</h2>
+        <button class="section-modal-close" id="statsModalClose" aria-label="Zavřít">✕</button>
+      </div>
+      <div class="section-modal-scroll" id="statsModalScroll"></div>
+    </div>
+  </div>
 
   <div class="section-modal-overlay" id="sectionModalOverlay">
     <div class="section-modal-box">
@@ -943,6 +980,117 @@
       currentModalSectionId = null;
     }
 
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      var R = 6371;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLon = (lon2 - lon1) * Math.PI / 180;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    /* === "PŘEKVAP MĚ" — náhodný článek z archivu === */
+    async function surpriseMe() {
+      var btn = document.getElementById('surpriseMeBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '🎲 Hledám…'; }
+      try {
+        var arr = await getAllArticles();
+        if (!arr.length) { if (btn) { btn.disabled = false; btn.textContent = '🎲 Překvap mě'; } return; }
+        var pick = arr[Math.floor(Math.random() * arr.length)];
+        window.location.href = '/article?id=' + encodeURIComponent(pick.id);
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = '🎲 Překvap mě'; }
+      }
+    }
+
+    /* === "MOJE ČÍSLA" — statistiky z dat, co web už tak jako tak má ===
+       Vzdálenost je součet úseků mezi místy SEŘAZENÝMI CHRONOLOGICKY podle
+       data článku (jako by ses spojoval bod po bodu tak, jak jsi je
+       navštěvoval) — ne vzdušná čára mezi všemi kombinacemi míst navzájem,
+       to by číslo zbytečně nafouklo a nedávalo smysl jako "cesta". */
+    async function openStatsModal() {
+      var overlay = document.getElementById('statsModalOverlay');
+      var scroll = document.getElementById('statsModalScroll');
+      if (!overlay || !scroll) return;
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      scroll.innerHTML = '<div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>';
+
+      var arr = await getAllArticles();
+      var withLocation = arr.filter(function (a) {
+        return typeof a.lat === 'number' && typeof a.lng === 'number' && !isNaN(a.lat) && !isNaN(a.lng);
+      });
+
+      var sortedByDate = withLocation.slice().sort(function (a, b) {
+        var da = a.date || a.created || '', db = b.date || b.created || '';
+        return da < db ? -1 : (da > db ? 1 : 0);
+      });
+      var totalKm = 0;
+      for (var i = 1; i < sortedByDate.length; i++) {
+        totalKm += haversineKm(sortedByDate[i - 1].lat, sortedByDate[i - 1].lng, sortedByDate[i].lat, sortedByDate[i].lng);
+      }
+
+      // Zaokrouhlením souřadnic na ~1 km se stejné/velmi blízké místo
+      // z víc článků nepočítá jako víc "navštívených míst".
+      var placesSeen = {};
+      withLocation.forEach(function (a) { placesSeen[Math.round(a.lat * 100) + ':' + Math.round(a.lng * 100)] = true; });
+      var uniquePlaces = Object.keys(placesSeen).length;
+
+      var sectionsUsed = {};
+      arr.forEach(function (a) { if (a.sectionId) sectionsUsed[a.sectionId] = true; });
+
+      var photosCount = null;
+      try {
+        var pr = await fetch('/api/photos/list?galleryId=main');
+        if (pr.ok) { var photos = await pr.json(); photosCount = Array.isArray(photos) ? photos.length : null; }
+      } catch (e) { /* fotky jsou jen bonus číslo — bez nich se panel pořád ukáže */ }
+
+      var earliestDate = null;
+      arr.forEach(function (a) {
+        var d = a.date || a.created;
+        if (d && (!earliestDate || d < earliestDate)) earliestDate = d;
+      });
+
+      function plural(n, one, few, many) { return n === 1 ? one : (n >= 2 && n <= 4 ? few : many); }
+
+      var cards = [
+        { n: arr.length, label: plural(arr.length, 'článek', 'články', 'článků') },
+        { n: uniquePlaces, label: plural(uniquePlaces, 'navštívené místo', 'navštívená místa', 'navštívených míst') },
+        { n: Math.round(totalKm).toLocaleString('cs'), label: 'km propojených cest' },
+        { n: Object.keys(sectionsUsed).length, label: 'rozjeté sekce' }
+      ];
+      if (photosCount != null) {
+        cards.push({ n: photosCount, label: plural(photosCount, 'fotka v galerii', 'fotky v galerii', 'fotek v galerii') });
+      }
+
+      var html = '<div class="stats-grid">' + cards.map(function (c) {
+        return '<div class="stat-card"><span class="stat-number">' + c.n + '</span><span class="stat-label">' + escapeHtml(c.label) + '</span></div>';
+      }).join('') + '</div>';
+
+      if (earliestDate) {
+        html += '<p class="stats-footnote">📍 Na webu cestuješ od ' + formatDate(earliestDate) + '.' +
+          (totalKm > 0 ? ' Kdyby ses po těch místech vydal/a v pořadí, jak jsi o nich psal/a, našlapal/a bys vzdušnou čarou přibližně ' + Math.round(totalKm).toLocaleString('cs') + ' km.' : '') + '</p>';
+      }
+
+      scroll.innerHTML = arr.length ? html : '<p class="stats-footnote">Zatím není z čeho počítat — přidej první článek.</p>';
+    }
+
+    function closeStatsModal() {
+      var overlay = document.getElementById('statsModalOverlay');
+      if (overlay) overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function initStatsModal() {
+      var overlay = document.getElementById('statsModalOverlay');
+      var closeBtn = document.getElementById('statsModalClose');
+      if (closeBtn) closeBtn.addEventListener('click', closeStatsModal);
+      if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeStatsModal(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeStatsModal(); });
+    }
+
     function initSectionModal() {
       var overlay = document.getElementById('sectionModalOverlay');
       var closeBtn = document.getElementById('sectionModalClose');
@@ -1251,6 +1399,7 @@
     buildSections();
     initSiteSearch();
     initSectionModal();
+    initStatsModal();
     initTravelMapModal();
     updateSavedLinkLabel();
   });
