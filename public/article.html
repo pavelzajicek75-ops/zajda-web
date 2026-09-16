@@ -1062,6 +1062,19 @@
 
     container.innerHTML = html;
 
+    // Fotky v textu článku se jemně "vsunou", jak k nim čtenář scrolluje
+    // — titulní fotka (article-hero) zůstává beze změny, tu je žádoucí
+    // vidět hned. Zpoždění je omezené na prvních pár fotek, ať dlouhý
+    // článek se spoustou obrázků nepůsobí uměle rozkouskovaně.
+    var bodyImgs = document.querySelectorAll('#articleBody img');
+    bodyImgs.forEach(function (img, i) {
+      img.classList.add('reveal-on-scroll');
+      img.style.transitionDelay = (Math.min(i, 4) * 70) + 'ms';
+    });
+    if (bodyImgs.length && typeof initScrollReveal === 'function') {
+      initScrollReveal('#articleBody .reveal-on-scroll');
+    }
+
     // === Inicializace miniatury mapy (jen pokud má článek souřadnice) ===
     if (hasLocation) {
       var miniMapEl = document.getElementById('articleMiniMap');
