@@ -1120,7 +1120,8 @@
       for (var s = 0; s < SECTIONS.length; s++) {
         (function(sec) {
           var panel = document.createElement('div');
-          panel.className = 'section-panel';
+          panel.className = 'section-panel reveal-on-scroll';
+          panel.style.transitionDelay = (s * 90) + 'ms';
 
           if (sec.id === 'about') {
             panel.classList.add('panel-external');
@@ -1241,6 +1242,7 @@
           })();
         })(SECTIONS[s]);
       }
+      initScrollReveal('.section-panel.reveal-on-scroll');
     }
 
     startQuotes();
