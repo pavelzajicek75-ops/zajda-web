@@ -265,3 +265,16 @@ body {
   .travel-map-modal-play-btn:active { transform: scale(0.9); }
   .sort-toggle button:active { transform: scale(0.94); }
 }
+
+/* === SCROLL-REVEAL ===
+   Výchozí (neodhalený) stav — jemně posunuté dolů a průhledné. Jakmile
+   JS přidá třídu "revealed" (viz initScrollReveal v shared.js), plynule
+   se to "vsune" na místo. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-on-scroll {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.22,1,.36,1);
+  }
+  .reveal-on-scroll.revealed { opacity: 1; transform: translateY(0); }
+}
