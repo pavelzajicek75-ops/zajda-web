@@ -26,6 +26,32 @@ function formatDate(dateStr) {
   } catch (e) { return ''; }
 }
 
+/* === SCROLL-REVEAL ANIMACE ===
+   Prvky s třídou "reveal-on-scroll" se při prvním objevení ve viewportu
+   jemně "vsunou" (fade + posun nahoru) místo aby byly vidět hned od
+   začátku. Jde o JEDNORÁZOVÝ efekt na prvek (jakmile se odhalí, přestane
+   se sledovat — neschovává se zpátky při odscrollování pryč, to by na
+   dlouhé stránce spíš otravovalo než pomáhalo).
+   Respektuje prefers-reduced-motion — v tom případě se rovnou všechno
+   ukáže bez animace, žádný IntersectionObserver se ani nezakládá. */
+function initScrollReveal(selector) {
+  var els = document.querySelectorAll(selector || '.reveal-on-scroll');
+  if (!els.length) return;
+  if (__reduceMotion || !('IntersectionObserver' in window)) {
+    els.forEach(function (el) { el.classList.add('revealed'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('revealed');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+  els.forEach(function (el) { io.observe(el); });
+}
+
 /* Vygeneruje `count` blikajících hvězd do #stars. Volat po DOMContentLoaded
    (nebo kdykoliv po vykreslení <div id="stars">). */
 function initStarfield(count) {
