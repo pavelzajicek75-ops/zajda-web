@@ -542,8 +542,8 @@
     <div class="search-results" id="searchResults"></div>
     <div style="text-align:center;margin-top:12px" id="savedLinkWrap"></div>
     <div class="fun-actions-row">
-      <button type="button" class="fun-action-btn" id="statsModalTrigger" onclick="openStatsModal()">🌌 Moje čísla</button>
-      <button type="button" class="fun-action-btn" id="surpriseMeBtn" onclick="surpriseMe()">🎲 Překvap mě</button>
+      <button type="button" class="fun-action-btn" id="statsModalTrigger">🌌 Moje čísla</button>
+      <button type="button" class="fun-action-btn" id="surpriseMeBtn">🎲 Překvap mě</button>
     </div>
   </div>
   <div class="sections-container" id="sectionsContainer" tabindex="-1"></div>
@@ -1089,6 +1089,15 @@
       if (closeBtn) closeBtn.addEventListener('click', closeStatsModal);
       if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeStatsModal(); });
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeStatsModal(); });
+
+      // Tlačítka mají v HTML schválně BEZ onclick="" atributu — celý tenhle
+      // skript běží uvnitř DOMContentLoaded posluchače (viz úplně dole),
+      // takže openStatsModal/surpriseMe jsou lokální funkce, ne globální
+      // window.* — inline onclick="openStatsModal()" by je vůbec nenašel.
+      var statsBtn = document.getElementById('statsModalTrigger');
+      if (statsBtn) statsBtn.addEventListener('click', openStatsModal);
+      var surpriseBtn = document.getElementById('surpriseMeBtn');
+      if (surpriseBtn) surpriseBtn.addEventListener('click', surpriseMe);
     }
 
     function initSectionModal() {
