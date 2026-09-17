@@ -293,12 +293,14 @@
 
     .reaction-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
     .reaction-btn {
-      display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 7px;
       background: var(--panel); border: 1px solid var(--panel-border); border-radius: 20px;
-      padding: 0.4rem 0.75rem; cursor: pointer; color: var(--mist); font-size: 13px; font-family: 'Inter', sans-serif;
+      padding: 0.45rem 0.85rem; cursor: pointer; color: var(--mist); font-size: 13px; font-family: 'Inter', sans-serif;
+      white-space: nowrap;
     }
     .reaction-btn .reaction-emoji { font-size: 15px; }
-    .reaction-btn .reaction-count { font-family: 'Space Grotesk', sans-serif; font-weight: 600; min-width: 1ch; }
+    .reaction-btn .reaction-label { color: inherit; }
+    .reaction-btn .reaction-count { font-family: 'Space Grotesk', sans-serif; font-weight: 600; min-width: 1ch; opacity: 0.85; }
     .reaction-btn:hover, .reaction-btn:focus-visible { border-color: var(--panel-border-hover); color: #fff; }
     .reaction-btn.active { border-color: var(--ember); color: #fff; background: rgba(255,122,69,0.12); }
     @media (prefers-reduced-motion: no-preference) {
@@ -883,10 +885,10 @@
      sítích. Číslo u reakce je počet přes VŠECHNY čtenáře (ukládá se na
      serveru), ne jen tenhle prohlížeč. */
   var REACTION_TYPES = [
-    { key: 'rocket', emoji: '⏱️', label: 'Hele, ten nemá vůbec čas' },
-    { key: 'bunny', emoji: '🔊', label: 'To bude pěknej rachot' },
-    { key: 'laugh', emoji: '💡', label: 'Tak ten je úplně jasnej' },
-    { key: 'mindblown', emoji: '🎈', label: 'To by mi prasknul ...' },
+    { key: 'rocket', emoji: '🐇', label: 'Ten nemá čas' },
+    { key: 'bunny', emoji: '🧨', label: 'To bude rachot' },
+    { key: 'laugh', emoji: '🎯', label: 'Ten je úplně jasnej' },
+    { key: 'mindblown', emoji: '🤯', label: 'To by mi prasknul' },
     { key: 'touched', emoji: '🔁', label: 'Čtu si to znovu' }
   ];
 
@@ -902,8 +904,9 @@
       var n = counts[r.key] || 0;
       return '<button type="button" class="reaction-btn' + (active ? ' active' : '') + '" ' +
         'data-reaction="' + r.key + '" data-article-id="' + escapeHtml(String(article.id)) + '" ' +
-        'onclick="toggleReaction(this)" title="' + escapeHtml(r.label) + '">' +
+        'onclick="toggleReaction(this)">' +
         '<span class="reaction-emoji">' + r.emoji + '</span>' +
+        '<span class="reaction-label">' + escapeHtml(r.label) + '</span>' +
         '<span class="reaction-count">' + n + '</span></button>';
     }).join('');
     return '<div class="reaction-bar">' + buttons + '</div>';
