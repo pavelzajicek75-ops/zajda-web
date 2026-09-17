@@ -2227,6 +2227,11 @@ function injectArticleFilterBar() {
       <option value="published">✅ Publikované</option>
       <option value="hidden">⏸ Skryté</option>
     </select>
+    <select id="articleSortMode" class="form-select" style="max-width:170px" onchange="filterAndRenderArticles()" title="Řazení — hodí se pro vyhodnocení, co lidi nejvíc baví">
+      <option value="newest">🕐 Nejnovější</option>
+      <option value="reactions">❤️ Nejoblíbenější (reakce)</option>
+      <option value="views">👀 Nejčtenější (zobrazení)</option>
+    </select>
   `;
   box.parentElement.insertBefore(bar, box);
 }
@@ -2236,13 +2241,26 @@ function getFilteredArticles() {
   const q = ($('articleSearch')?.value || '').trim().toLowerCase();
   const sectionFilter = $('articleFilterSection')?.value || '';
   const statusFilter = $('articleFilterStatus')?.value || '';
-  return arr.filter(a => {
+  const sortMode = $('articleSortMode')?.value || 'newest';
+  const filtered = arr.filter(a => {
     if (q && !(a.title || '').toLowerCase().includes(q)) return false;
     if (sectionFilter && (a.sectionId || a.section) !== sectionFilter) return false;
     if (statusFilter === 'published' && !a.published) return false;
     if (statusFilter === 'hidden' && a.published) return false;
     return true;
   });
+  function totalReactions(a) {
+    const r = a.reactions || {};
+    return Object.keys(r).reduce((sum, k) => sum + (r[k] || 0), 0);
+  }
+  if (sortMode === 'reactions') {
+    filtered.sort((a, b) => totalReactions(b) - totalReactions(a));
+  } else if (sortMode === 'views') {
+    filtered.sort((a, b) => (b.views || 0) - (a.views || 0));
+  } else {
+    filtered.sort((a, b) => new Date(b.date || b.created || 0) - new Date(a.date || a.created || 0));
+  }
+  return filtered;
 }
 
 function filterAndRenderArticles() {
@@ -2308,6 +2326,24 @@ function renderArticleList(arr) {
       : `<button onclick="toggleArticlePin('${a.id}', true)" class="btn btn-sm">📌 Připnout</button>`;
     const viewCount = a.views || 0;
     const viewsBadge = `<span style="color:#92a0bc;font-size:12px" title="Počet zobrazení stránky článku">👀 ${viewCount.toLocaleString('cs')}</span>`;
+    // Stejné emoji/klíče jako REACTION_TYPES v public/article.html — když
+    // se tam změní, je potřeba přepsat i tady, ať sedí.
+    const REACTION_ADMIN_TYPES = [
+      { key: 'rocket', emoji: '🐇', label: 'Ten nemá čas' },
+      { key: 'bunny', emoji: '🧨', label: 'To bude rachot' },
+      { key: 'laugh', emoji: '🎯', label: 'Ten je úplně jasnej' },
+      { key: 'mindblown', emoji: '🤯', label: 'To by mi prasknul' },
+      { key: 'touched', emoji: '🔁', label: 'Čtu si to znovu' }
+    ];
+    const reactionCounts = a.reactions || {};
+    const totalReactions = REACTION_ADMIN_TYPES.reduce((sum, r) => sum + (reactionCounts[r.key] || 0), 0);
+    const reactionsBadge = totalReactions
+      ? `<span style="display:inline-flex;gap:6px;align-items:center" title="Reakce čtenářů pod článkem">` +
+        REACTION_ADMIN_TYPES.map(r => {
+          const n = reactionCounts[r.key] || 0;
+          return `<span style="font-size:12px;${n ? '' : 'opacity:0.3'}" title="${escapeHtml(r.label)}: ${n}">${r.emoji} ${n}</span>`;
+        }).join('') + `</span>`
+      : `<span style="color:#5b6584;font-size:12px">Zatím bez reakcí</span>`;
     return `
     <div class="card" style="margin-bottom:1rem;padding:1rem;background:#131a2c;border:1px solid ${a.pinned ? '#ffc857' : '#263252'};border-radius:10px;position:relative">
       <input type="checkbox" class="article-check" data-id="${a.id}" onchange="updateArticleBulkBar()" style="position:absolute;top:1rem;left:1rem;width:24px;height:24px;cursor:pointer;accent-color:var(--accent)">
@@ -2321,6 +2357,7 @@ function renderArticleList(arr) {
           <p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem">
             ${a.section || ''} ${a.subsection || ''} • ${a.place || ''} • ${new Date(a.date || a.created).toLocaleDateString('cs')}
           </p>
+          <p style="margin-bottom:0.5rem">${reactionsBadge}</p>
           ${excerpt ? `<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5">${escapeHtml(excerpt)}</p>` : ''}
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
         <button onclick="editArticle('${a.id}')" class="btn btn-blue btn-sm">✏️ Upravit</button>
