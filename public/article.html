@@ -303,6 +303,8 @@
     .reaction-btn .reaction-count { font-family: 'Space Grotesk', sans-serif; font-weight: 600; min-width: 1ch; opacity: 0.85; }
     .reaction-btn:hover, .reaction-btn:focus-visible { border-color: var(--panel-border-hover); color: #fff; }
     .reaction-btn.active { border-color: var(--ember); color: #fff; background: rgba(255,122,69,0.12); }
+    .reaction-btn:disabled { cursor: default; }
+    .reaction-btn:disabled:hover { border-color: var(--ember); color: #fff; }
     @media (prefers-reduced-motion: no-preference) {
       .reaction-btn { transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease; }
       .reaction-btn.reaction-pulse { animation: reactionPulse 0.45s ease; }
@@ -903,6 +905,7 @@
       try { active = !!localStorage.getItem(reactionStorageKey(article.id, r.key)); } catch (e) {}
       var n = counts[r.key] || 0;
       return '<button type="button" class="reaction-btn' + (active ? ' active' : '') + '" ' +
+        (active ? 'disabled ' : '') +
         'data-reaction="' + r.key + '" data-article-id="' + escapeHtml(String(article.id)) + '" ' +
         'onclick="toggleReaction(this)">' +
         '<span class="reaction-emoji">' + r.emoji + '</span>' +
@@ -912,47 +915,47 @@
     return '<div class="reaction-bar">' + buttons + '</div>';
   }
 
+  /* Reakce je JEDNORÁZOVÁ a TRVALÁ — jakmile čtenář jednou klikne, tlačítko
+     se zamkne (disabled) a zůstane tak i při dalších návštěvách (hlídá
+     localStorage). Nejde vzít zpět kliknutím podruhé — to je schválně,
+     ať číslo pod článkem odráží upřímný první dojem, ne přehazování. */
   function toggleReaction(btn) {
+    if (btn.disabled || btn.classList.contains('active')) return;
     var reactionKey = btn.dataset.reaction;
     var articleId = btn.dataset.articleId;
     var storageKey = reactionStorageKey(articleId, reactionKey);
-    var wasActive = btn.classList.contains('active');
-    var action = wasActive ? 'remove' : 'add';
     var countEl = btn.querySelector('.reaction-count');
     var current = parseInt(countEl.textContent, 10) || 0;
 
-    // Optimistické okamžité přepnutí — nečeká se na odpověď serveru,
-    // ať je to na dotek/klik cítit pružně. Při chybě se to o pár řádků
-    // níž tiše vrátí zpátky.
-    btn.classList.toggle('active', !wasActive);
-    countEl.textContent = Math.max(0, current + (wasActive ? -1 : 1));
+    // Optimistické okamžité zamknutí — nečeká se na odpověď serveru, ať
+    // je klik cítit okamžitě. Při chybě se o pár řádků níž tiše odemkne
+    // zpátky, ať čtenář může zkusit znovu.
+    btn.classList.add('active');
+    btn.disabled = true;
+    countEl.textContent = current + 1;
     btn.classList.add('reaction-pulse');
-    setTimeout(function () { btn.classList.remove('reaction-pulse'); }, 400);
-    try {
-      if (wasActive) localStorage.removeItem(storageKey); else localStorage.setItem(storageKey, '1');
-    } catch (e) {}
+    setTimeout(function () { btn.classList.remove('reaction-pulse'); }, 450);
+    try { localStorage.setItem(storageKey, '1'); } catch (e) {}
 
     fetch('/api/articles/react', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: articleId, emoji: reactionKey, action: action })
+      body: JSON.stringify({ id: articleId, emoji: reactionKey, action: 'add' })
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function (data) {
-      // Server má poslední slovo o přesném čísle (jiní čtenáři mezitím
-      // taky mohli reagovat) — tiše dorovnat, pokud se lišší.
       if (data && data.reactions && typeof data.reactions[reactionKey] === 'number') {
         countEl.textContent = data.reactions[reactionKey];
       }
     }).catch(function () {
-      // Server nedostupný — vrátit tlačítko do původního stavu, ať
-      // neukazuje reakci, která se ve skutečnosti neuložila.
-      btn.classList.toggle('active', wasActive);
+      // Server nedostupný — odemknout zpátky, ať to čtenář může zkusit
+      // znovu, místo aby mu navždy zůstalo tlačítko zamčené na reakci,
+      // která se ve skutečnosti nikam neuložila.
+      btn.classList.remove('active');
+      btn.disabled = false;
       countEl.textContent = current;
-      try {
-        if (wasActive) localStorage.setItem(storageKey, '1'); else localStorage.removeItem(storageKey);
-      } catch (e) {}
+      try { localStorage.removeItem(storageKey); } catch (e) {}
     });
   }
 
