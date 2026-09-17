@@ -290,6 +290,30 @@
       display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
     }
     .share-bar-inline { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .reaction-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .reaction-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 20px;
+      padding: 0.4rem 0.75rem; cursor: pointer; color: var(--mist); font-size: 13px; font-family: 'Inter', sans-serif;
+    }
+    .reaction-btn .reaction-emoji { font-size: 15px; }
+    .reaction-btn .reaction-count { font-family: 'Space Grotesk', sans-serif; font-weight: 600; min-width: 1ch; }
+    .reaction-btn:hover, .reaction-btn:focus-visible { border-color: var(--panel-border-hover); color: #fff; }
+    .reaction-btn.active { border-color: var(--ember); color: #fff; background: rgba(255,122,69,0.12); }
+    @media (prefers-reduced-motion: no-preference) {
+      .reaction-btn { transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease; }
+      .reaction-btn.reaction-pulse { animation: reactionPulse 0.45s ease; }
+      @keyframes reactionPulse {
+        0% { transform: scale(1) rotate(0deg); }
+        20% { transform: scale(1.25) rotate(-8deg); }
+        40% { transform: scale(1.1) rotate(6deg); }
+        60% { transform: scale(1.2) rotate(-4deg); }
+        80% { transform: scale(1.05) rotate(2deg); }
+        100% { transform: scale(1) rotate(0deg); }
+      }
+    }
+    .reaction-btn:active { transform: scale(0.92); }
     .share-btn {
       background: var(--panel-solid); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255,122,69,0.3); color: var(--parchment); padding: 9px 18px;
@@ -851,6 +875,84 @@
     update();
   }
 
+  /* === VTIPNÉ REAKCE NA ČLÁNEK ===
+     Místo jednoho obyčejného srdíčka pět reakcí sedících k tónu webu.
+     Každý čtenář může každou reakci "zapnout" jen jednou (localStorage
+     na tomto zařízení/prohlížeči si pamatuje, co už kliknul) — druhé
+     kliknutí ji zase odebere (toggle), stejně jako lajk na sociálních
+     sítích. Číslo u reakce je počet přes VŠECHNY čtenáře (ukládá se na
+     serveru), ne jen tenhle prohlížeč. */
+  var REACTION_TYPES = [
+    { key: 'rocket', emoji: '⏱️', label: 'Hele, ten nemá vůbec čas' },
+    { key: 'bunny', emoji: '🔊', label: 'To bude pěknej rachot' },
+    { key: 'laugh', emoji: '💡', label: 'Tak ten je úplně jasnej' },
+    { key: 'mindblown', emoji: '🎈', label: 'To by mi prasknul ...' },
+    { key: 'touched', emoji: '🔁', label: 'Čtu si to znovu' }
+  ];
+
+  function reactionStorageKey(articleId, reactionKey) {
+    return 'articleReaction:' + articleId + ':' + reactionKey;
+  }
+
+  function renderReactionBar(article) {
+    var counts = article.reactions || {};
+    var buttons = REACTION_TYPES.map(function (r) {
+      var active = false;
+      try { active = !!localStorage.getItem(reactionStorageKey(article.id, r.key)); } catch (e) {}
+      var n = counts[r.key] || 0;
+      return '<button type="button" class="reaction-btn' + (active ? ' active' : '') + '" ' +
+        'data-reaction="' + r.key + '" data-article-id="' + escapeHtml(String(article.id)) + '" ' +
+        'onclick="toggleReaction(this)" title="' + escapeHtml(r.label) + '">' +
+        '<span class="reaction-emoji">' + r.emoji + '</span>' +
+        '<span class="reaction-count">' + n + '</span></button>';
+    }).join('');
+    return '<div class="reaction-bar">' + buttons + '</div>';
+  }
+
+  function toggleReaction(btn) {
+    var reactionKey = btn.dataset.reaction;
+    var articleId = btn.dataset.articleId;
+    var storageKey = reactionStorageKey(articleId, reactionKey);
+    var wasActive = btn.classList.contains('active');
+    var action = wasActive ? 'remove' : 'add';
+    var countEl = btn.querySelector('.reaction-count');
+    var current = parseInt(countEl.textContent, 10) || 0;
+
+    // Optimistické okamžité přepnutí — nečeká se na odpověď serveru,
+    // ať je to na dotek/klik cítit pružně. Při chybě se to o pár řádků
+    // níž tiše vrátí zpátky.
+    btn.classList.toggle('active', !wasActive);
+    countEl.textContent = Math.max(0, current + (wasActive ? -1 : 1));
+    btn.classList.add('reaction-pulse');
+    setTimeout(function () { btn.classList.remove('reaction-pulse'); }, 400);
+    try {
+      if (wasActive) localStorage.removeItem(storageKey); else localStorage.setItem(storageKey, '1');
+    } catch (e) {}
+
+    fetch('/api/articles/react', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: articleId, emoji: reactionKey, action: action })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function (data) {
+      // Server má poslední slovo o přesném čísle (jiní čtenáři mezitím
+      // taky mohli reagovat) — tiše dorovnat, pokud se lišší.
+      if (data && data.reactions && typeof data.reactions[reactionKey] === 'number') {
+        countEl.textContent = data.reactions[reactionKey];
+      }
+    }).catch(function () {
+      // Server nedostupný — vrátit tlačítko do původního stavu, ať
+      // neukazuje reakci, která se ve skutečnosti neuložila.
+      btn.classList.toggle('active', wasActive);
+      countEl.textContent = current;
+      try {
+        if (wasActive) localStorage.setItem(storageKey, '1'); else localStorage.removeItem(storageKey);
+      } catch (e) {}
+    });
+  }
+
   function copyArticleLink(btn) {
     var url = window.location.href;
     var done = function () {
@@ -1018,6 +1120,7 @@
     var shareUrl = window.location.href;
     var shareText = title + ' — Moje diagnóza, můj vesmír';
     html += '<div class="article-footer">';
+    html += renderReactionBar(article);
     html += '<div class="share-bar-inline">';
     html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
     html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>';
