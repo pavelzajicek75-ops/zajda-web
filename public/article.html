@@ -803,7 +803,11 @@
     }
 
     try {
-      var r = await fetch('/api/articles/list');
+      var articlesPromise = fetch('/api/articles/list');
+      var reactionConfigPromise = fetch('/api/reactions/config')
+        .then(function (cr) { return cr.ok ? cr.json() : { reactions: [] }; })
+        .catch(function () { return { reactions: [] }; }); // reakce jsou "bonus", nesmí shodit načtení článku
+      var r = await articlesPromise;
       if (!r.ok) throw new Error('API chyba');
       var allArticles = await r.json();
       if (!Array.isArray(allArticles)) throw new Error('Neplatná data');
@@ -816,7 +820,8 @@
       }
       try {
         var publishedArticles = allArticles.filter(function(a) { return a && a.published !== false; });
-        renderArticle(article, publishedArticles);
+        var reactionConfigData = await reactionConfigPromise;
+        renderArticle(article, publishedArticles, reactionConfigData.reactions);
         recordArticleView(article.id);
       } catch (renderErr) {
         console.error('Chyba renderování článku:', renderErr);
@@ -880,13 +885,17 @@
   }
 
   /* === VTIPNÉ REAKCE NA ČLÁNEK ===
-     Místo jednoho obyčejného srdíčka pět reakcí sedících k tónu webu.
-     Každý čtenář může každou reakci "zapnout" jen jednou (localStorage
-     na tomto zařízení/prohlížeči si pamatuje, co už kliknul) — druhé
-     kliknutí ji zase odebere (toggle), stejně jako lajk na sociálních
-     sítích. Číslo u reakce je počet přes VŠECHNY čtenáře (ukládá se na
-     serveru), ne jen tenhle prohlížeč. */
-  var REACTION_TYPES = [
+     Seznam reakcí (emoji + text) se stahuje z /api/reactions/config —
+     nastavuje se v adminu na záložce "😀 Reakce", NENÍ už natvrdo daný
+     tady v kódu. DEFAULT_REACTION_TYPES níž je jen záložní sada pro
+     případ, že by se stažení configu z nějakého důvodu nepovedlo
+     (výpadek sítě apod.) — ať stránka nezůstane bez reakcí úplně.
+
+     Kliknutí je JEDNORÁZOVÉ a TRVALÉ (viz toggleReaction níž) — jakmile
+     čtenář jednou klikne, tlačítko se zamkne a zůstane tak i při dalších
+     návštěvách (hlídá localStorage). Číslo u reakce je počet přes
+     VŠECHNY čtenáře (ukládá se na serveru), ne jen tenhle prohlížeč. */
+  var DEFAULT_REACTION_TYPES = [
     { key: 'rocket', emoji: '🐇', label: 'Ten nemá čas' },
     { key: 'bunny', emoji: '🧨', label: 'To bude rachot' },
     { key: 'laugh', emoji: '🎯', label: 'Ten je úplně jasnej' },
@@ -898,9 +907,10 @@
     return 'articleReaction:' + articleId + ':' + reactionKey;
   }
 
-  function renderReactionBar(article) {
+  function renderReactionBar(article, reactionConfig) {
+    var types = (reactionConfig && reactionConfig.length) ? reactionConfig : DEFAULT_REACTION_TYPES;
     var counts = article.reactions || {};
-    var buttons = REACTION_TYPES.map(function (r) {
+    var buttons = types.map(function (r) {
       var active = false;
       try { active = !!localStorage.getItem(reactionStorageKey(article.id, r.key)); } catch (e) {}
       var n = counts[r.key] || 0;
@@ -1071,7 +1081,7 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTravelMapModal(); });
   }
 
-  function renderArticle(article, allArticles) {
+  function renderArticle(article, allArticles, reactionConfig) {
     // Uloženo pro mapový modal (viz níž) — ať se při otevření mapy z
     // miniatury nemusí články stahovat znovu, když je má tahle stránka
     // už jednou natažené.
@@ -1126,7 +1136,7 @@
     var shareUrl = window.location.href;
     var shareText = title + ' — Moje diagnóza, můj vesmír';
     html += '<div class="article-footer">';
-    html += renderReactionBar(article);
+    html += renderReactionBar(article, reactionConfig);
     html += '<div class="share-bar-inline">';
     html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
     html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>';
