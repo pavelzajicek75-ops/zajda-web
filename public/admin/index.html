@@ -26,6 +26,7 @@
   <button class="ribbon-tab" data-tab="quotes" onclick="showTab('quotes')">💬 Citáty</button>
   <button class="ribbon-tab" data-tab="subsections" onclick="showTab('subsections')">📂 Podsekce</button>
   <button class="ribbon-tab" data-tab="about" onclick="showTab('about')">👤 O Zajdovi</button>
+  <button class="ribbon-tab" data-tab="reactions" onclick="showTab('reactions')">😀 Reakce</button>
   <button class="ribbon-tab" data-tab="admin" onclick="showTab('admin')">🛠️ ADMIN</button>
 </nav>
 
@@ -392,6 +393,36 @@
     <div id="aboutPreview" class="form-card"></div>
   </section>
 
+  <section id="reactions" class="section">
+    <h3 style="margin-bottom:0.5rem">😀 Nastavení reakcí</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:1rem">
+      Tyhle reakce se zobrazují pod každým článkem na veřejném webu. "Klíč" je interní
+      identifikátor (nezobrazuje se nikde návštěvníkům) — pokud u existující reakce
+      změníš jen emoji nebo text, dosavadní nasbírané počty zůstanou zachované. Pokud
+      klíč smažeš/změníš, začíná se počítat od nuly.
+    </p>
+    <div id="reactionConfigList" class="form-card"></div>
+    <div style="display:flex;gap:0.5rem;margin:0.75rem 0 2rem">
+      <button class="btn btn-sm" onclick="addReactionRow()">➕ Přidat reakci</button>
+      <button class="btn btn-blue" onclick="saveReactionConfig()">💾 Uložit reakce</button>
+      <span id="reactionConfigStatus" style="color:var(--text-faint);font-size:12px;align-self:center;font-family:var(--font-mono)"></span>
+    </div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">📊 Statistiky reakcí</h3>
+    <div id="reactionStatsSummary" class="usage-cards"></div>
+    <div class="form-card" style="margin-top:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <span style="color:var(--text-muted);font-size:13px">Vývoj reakcí v čase</span>
+        <select id="reactionStatsRange" class="form-select" style="max-width:150px" onchange="loadReactionStats()">
+          <option value="14">Posledních 14 dní</option>
+          <option value="30" selected>Posledních 30 dní</option>
+          <option value="90">Posledních 90 dní</option>
+        </select>
+      </div>
+      <div id="reactionStatsChart"></div>
+    </div>
+  </section>
+
   <section id="admin" class="section">
     <h3 style="margin-bottom:0.75rem">📊 Využití (Cloudflare)</h3>
     <div id="adminUsageCards" class="usage-cards"></div>
@@ -750,5 +781,6 @@
 <script src="timeline-admin.js?v=20260813"></script>
 <script src="mobile-editor.js?v=20260817"></script>
 <script src="gallery-mobile-menu.js?v=20260910"></script>
+<script src="reactions-admin.js?v=20260917"></script>
 </body>
 </html>
