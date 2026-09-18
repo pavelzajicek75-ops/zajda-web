@@ -218,7 +218,7 @@ async function logout() {
 }
 
 /* === NAVIGACE (ribbon) === */
-const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about', 'admin'];
+const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about', 'reactions', 'admin'];
 
 function showTab(name) {
   if (!RIBBON_TABS.includes(name)) name = 'galleries';
