@@ -265,6 +265,30 @@
     .search-panel input::placeholder { color: var(--mist-dim); }
 
     .fun-actions-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+    .reaction-ticker {
+      position: fixed; left: 16px; bottom: 16px; z-index: 400;
+      display: flex; align-items: center; gap: 8px;
+      max-width: min(340px, calc(100vw - 32px));
+      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border); border-radius: 14px;
+      padding: 0.6rem 0.9rem; text-decoration: none; color: var(--parchment);
+      font-size: 12.5px; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      opacity: 0; transform: translateY(10px); pointer-events: none;
+    }
+    .reaction-ticker.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .reaction-ticker:hover, .reaction-ticker:focus-visible { border-color: var(--panel-border-hover); }
+    .reaction-ticker .rt-icon { font-size: 16px; flex-shrink: 0; }
+    .reaction-ticker .rt-icon img { width: 18px; height: 18px; object-fit: cover; border-radius: 4px; display: block; }
+    .reaction-ticker .rt-text { min-width: 0; }
+    .reaction-ticker .rt-text b { color: #fff; }
+    .reaction-ticker .rt-title { color: var(--mist); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (prefers-reduced-motion: no-preference) {
+      .reaction-ticker { transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.22,1,.36,1); }
+    }
+    @media (max-width: 560px) {
+      .reaction-ticker { left: 10px; right: 10px; bottom: 10px; max-width: none; }
+    }
     .fun-action-btn {
       background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--panel-border); color: var(--mist); font-size: 13px; font-family: 'Inter', sans-serif;
@@ -551,6 +575,8 @@
   <footer class="site-footer">
     <a href="/rss.xml">📡 RSS feed</a> · © <span id="footerYear"></span> Zajda
   </footer>
+
+  <a href="#" class="reaction-ticker" id="reactionTicker" hidden></a>
 
   <div class="section-modal-overlay" id="statsModalOverlay">
     <div class="section-modal-box" style="max-width:480px">
@@ -1407,6 +1433,76 @@
     loadLatestTimelineNote();
     buildSections();
     initSiteSearch();
+    /* === ŽIVÝ TIKER REAKCÍ ===
+       Bublina vlevo dole, co se postupně protáčí přes posledních pár
+       reakcí napříč celým webem — "🚀 Někdo právě reagoval na ...".
+       Načte se jednou při startu stránky, dál se jen dokola protáčí
+       lokálně (žádné další síťové volání). Když web nemá žádné reakce,
+       bublina se prostě vůbec nezobrazí — žádná prázdná/otravná
+       "0 reakcí" hláška. */
+    var tickerItems = [];
+    var tickerIndex = 0;
+    var tickerTimer = null;
+
+    function relativeTickerTime(timestamp) {
+      var diffMs = Date.now() - timestamp;
+      var minutes = diffMs / 60000;
+      if (minutes < 15) return 'Právě teď';
+      if (minutes < 60 * 24) return 'Dnes';
+      return 'Nedávno';
+    }
+
+    function showTickerItem(item) {
+      var el = document.getElementById('reactionTicker');
+      if (!el) return;
+      var iconHtml = item.iconUrl
+        ? '<img src="' + item.iconUrl + '" alt="">'
+        : (item.emoji || '💬');
+      el.innerHTML =
+        '<span class="rt-icon">' + iconHtml + '</span>' +
+        '<span class="rt-text"><b>' + relativeTickerTime(item.timestamp) + '</b> někdo zareagoval' + (item.label ? ' (' + escapeHtml(item.label) + ')' : '') +
+        '<span class="rt-title">' + escapeHtml(item.articleTitle) + '</span></span>';
+      el.href = '/article?id=' + encodeURIComponent(item.articleId);
+      el.hidden = false;
+      requestAnimationFrame(function () { el.classList.add('show'); });
+    }
+
+    function tickTicker() {
+      if (!tickerItems.length) return;
+      showTickerItem(tickerItems[tickerIndex]);
+      tickerTimer = setTimeout(function () {
+        var el = document.getElementById('reactionTicker');
+        if (el) el.classList.remove('show');
+        tickerIndex = (tickerIndex + 1) % tickerItems.length;
+        tickerTimer = setTimeout(tickTicker, 1200); // pauza mezi zmizením a další bublinou
+      }, 5000); // jak dlouho je bublina vidět
+    }
+
+    async function initReactionTicker() {
+      try {
+        var r = await fetch('/api/reactions/recent');
+        if (!r.ok) return;
+        var data = await r.json();
+        tickerItems = Array.isArray(data.items) ? data.items : [];
+        if (!tickerItems.length) return;
+        // Malé zpoždění po načtení stránky, ať bublina nesoutěží se
+        // vším ostatním, co se snaží načíst hned na začátku.
+        setTimeout(tickTicker, 3000);
+      } catch (e) {
+        // Tiker je čistě bonusová věc — tichý fail, nic se neděje.
+      }
+    }
+
+    (function initReactionTickerClickHandler() {
+      var el = document.getElementById('reactionTicker');
+      if (!el) return;
+      el.addEventListener('click', function () {
+        clearTimeout(tickerTimer); // odchodem ze stránky stejně přestane vadit, ale ať to nezůstává viset zbytečně
+      });
+    })();
+
+    initReactionTicker();
+
     initSectionModal();
     initStatsModal();
     initTravelMapModal();
