@@ -100,6 +100,14 @@
     if (pill) toggleWrap.appendChild(pill); // počítadlo zůstává viditelné i zavřené
 
     toolbar.insertBefore(toggleWrap, group);
+    // Viditelnost se od teď řídí přes showTab() (viz níž) — tady se jen
+    // nastaví počáteční stav podle toho, jaká záložka je PRÁVĚ aktivní
+    // v okamžiku, kdy se lišta poprvé sbaluje (nemusí to nutně být
+    // Galerie, pokud admin otevřel jinou záložku a teprve pak zúžil okno).
+    var currentActiveTab = document.querySelector('.ribbon-tab.active');
+    if (currentActiveTab && currentActiveTab.dataset.tab !== 'galleries') {
+      toggleWrap.style.display = 'none';
+    }
 
     var drawer = document.createElement('div');
     drawer.className = 'gmm-drawer';
@@ -155,6 +163,30 @@
   function sync() {
     injectStyles();
     if (mq.matches) wrap(); else unwrap();
+  }
+
+  /* === SCHOVAT TLAČÍTKO MIMO ZÁLOŽKU GALERIE ===
+     Tlačítko "☰ Nástroje galerie" žije mimo obvyklý systém
+     .ribbon-group/.active (je to samostatný prvek přidaný vedle, ne
+     galerie sama), takže se bez tohohle háčku po přepnutí na jinou
+     záložku (třeba Reakce) klidně dál zobrazovalo — vůbec nevědělo, že
+     přestalo být na řadě. Volá se to jen když je lišta skutečně sbalená
+     (wrapped) — na širší obrazovce viditelnost řeší normálně původní
+     .ribbon-group.active mechanismus beze změny. */
+  if (typeof window.showTab === 'function') {
+    var originalShowTabForGmm = window.showTab;
+    window.showTab = function (name) {
+      var result = originalShowTabForGmm.apply(this, arguments);
+      if (wrapped) {
+        var toggleWrap = document.getElementById('gmmToggleWrap');
+        if (toggleWrap) toggleWrap.style.display = (name === 'galleries') ? '' : 'none';
+        if (name !== 'galleries') {
+          var drawer = document.getElementById('gmmDrawer');
+          if (drawer) drawer.classList.remove('open'); // zavřít, kdyby náhodou zůstal otevřený z galerie
+        }
+      }
+      return result;
+    };
   }
 
   document.addEventListener('DOMContentLoaded', function () {
