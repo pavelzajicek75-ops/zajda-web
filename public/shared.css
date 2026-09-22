@@ -278,3 +278,42 @@ body {
   }
   .reveal-on-scroll.revealed { opacity: 1; transform: translateY(0); }
 }
+
+/* === PLYNULÝ PŘECHOD MEZI STRÁNKAMI (View Transitions API) ===
+   Nativní funkce prohlížeče pro "cross-document" přechody — funguje
+   mezi klasickými přechody stránek (homepage → článek, článek →
+   homepage, → about, → mapa...), ne jen uvnitř jedné SPA stránky.
+   Bez tohohle je přechod mezi stránkami okamžitý/tvrdý (starý obsah
+   zmizí, nový se objeví bez přechodu). S tímhle prohlížeč automaticky
+   vyfotí starou i novou stránku a mezi nimi plynule prolne.
+
+   Podpora v prohlížečích: zatím jen Chrome/Edge (novější verze) —
+   v ostatních (Firefox, Safari) se tahle direktiva tiše ignoruje a
+   přechod zůstává stejný jako dřív (okamžitý). Není co "opravovat",
+   nejde o chybu, jen o postupné rozšiřování podpory v prohlížečích.
+
+   Vlastní jemná animace (posun nahoru + prolnutí) místo výchozího
+   obyčejného prolnutí prohlížeče — sedí líp k tónu webu. Respektuje
+   prefers-reduced-motion: v tom případě se navigation vůbec nezapne,
+   takže přechod zůstane okamžitý, žádná animace navíc. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  ::view-transition-old(root) {
+    animation: page-transition-out 0.28s cubic-bezier(.4,0,1,1) both;
+  }
+  ::view-transition-new(root) {
+    animation: page-transition-in 0.32s cubic-bezier(.22,1,.36,1) both;
+  }
+
+  @keyframes page-transition-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(-10px) scale(0.99); }
+  }
+  @keyframes page-transition-in {
+    from { opacity: 0; transform: translateY(14px) scale(1.01); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
