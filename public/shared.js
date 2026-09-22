@@ -26,6 +26,27 @@ function formatDate(dateStr) {
   } catch (e) { return ''; }
 }
 
+/* === SKUTEČNÉ NÁHLEDY MÍSTO PLNÝCH FOTEK V MALÝCH DLAŽDICÍCH ===
+   Stejný princip jako v adminu (viz dashboard-core.js) — malé náhledy
+   (souvisejicí články...) stahují místo plné fotky malou verzi
+   uloženou v R2 pod stejným klíčem s prefixem "thumbs/". Fotky nahrané
+   před touhle úpravou náhled mít nebudou — onerror v thumbImgAttrs se
+   pak tiše přepne zpátky na plnou fotku. */
+function deriveThumbUrl(url) {
+  if (!url) return url;
+  var m = String(url).match(/^(.*[?&]key=)([^&]+)(.*)$/);
+  if (!m) return url;
+  var decodedKey = decodeURIComponent(m[2]);
+  if (decodedKey.indexOf('thumbs/') === 0) return url;
+  return m[1] + encodeURIComponent('thumbs/' + decodedKey) + m[3];
+}
+
+function thumbImgAttrs(url) {
+  var thumb = deriveThumbUrl(url);
+  if (!url || thumb === url) return 'src="' + (url || '') + '"';
+  return 'src="' + thumb + '" onerror="this.onerror=null;this.src=\'' + url + '\'"';
+}
+
 /* === SCROLL-REVEAL ANIMACE ===
    Prvky s třídou "reveal-on-scroll" se při prvním objevení ve viewportu
    jemně "vsunou" (fade + posun nahoru) místo aby byly vidět hned od
