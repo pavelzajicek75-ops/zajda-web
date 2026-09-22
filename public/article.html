@@ -1169,7 +1169,7 @@
           var rDate = '';
           try { rDate = new Date(a.date || a.created).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) {}
           // ★ ZMĚNA: alt="" → smysluplný popisek z titulku daného článku
-          var cover = a.coverUrl ? '<img src="' + a.coverUrl + '" alt="' + escapeHtml(a.title || 'Náhledová fotografie článku') + '" loading="lazy">' : '';
+          var cover = a.coverUrl ? '<img ' + thumbImgAttrs(a.coverUrl) + ' alt="' + escapeHtml(a.title || 'Náhledová fotografie článku') + '" loading="lazy">' : '';
           html += '<a class="related-card" href="/article?id=' + encodeURIComponent(a.id) + '">' + cover +
             '<div class="related-body"><h3>' + escapeHtml(a.title || 'Bez názvu') + '</h3>' +
             (rDate ? '<div class="related-date">' + escapeHtml(rDate) + '</div>' : '') +
