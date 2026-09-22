@@ -2,6 +2,38 @@
    DASHBOARD CORE — auth, navigace, galerie, upload
    ========================================================= */
 
+/* === SKUTEČNÉ NÁHLEDY MÍSTO PLNÝCH FOTEK V MALÝCH DLAŽDICÍCH ===
+   Malé náhledy (mřížka galerie, výběr fotky, 64px u článku v seznamu...)
+   dřív stahovaly STEJNĚ VELKÝ soubor jako plné zobrazení — zbytečně
+   nafukovalo přenesená data hlavně na mobilu. Upload teď (viz
+   uploadFiles/uploadOne níž) nahrává vedle plné fotky i malý náhled,
+   uložený v R2 pod stejným klíčem, jen s prefixem "thumbs/". Díky téhle
+   konvenci nejde o žádné volání serveru navíc — adresa náhledu se dá
+   spočítat přímo z adresy plné fotky.
+
+   Fotky nahrané PŘED touhle úpravou žádný náhled mít nebudou — pro ty
+   se použije onerror fallback přímo v <img> tagu (viz thumbImgAttrs),
+   co se tiše přepne zpátky na plnou fotku, když náhled na serveru
+   neexistuje (HTTP 404). Žádná rozbitá dlaždice, jen o trochu větší
+   přenos dat u starších fotek — přesně jako to bylo dřív. */
+function deriveThumbUrl(url) {
+  if (!url) return url;
+  const m = String(url).match(/^(.*[?&]key=)([^&]+)(.*)$/);
+  if (!m) return url; // neznámý formát URL (např. cizí doména) — nechat beze změny
+  const decodedKey = decodeURIComponent(m[2]);
+  if (decodedKey.indexOf('thumbs/') === 0) return url; // uz je to náhled
+  return m[1] + encodeURIComponent('thumbs/' + decodedKey) + m[3];
+}
+
+/* Vrátí rovnou hotové "src=... onerror=..." pro vložení do <img> tagu.
+   Když deriveThumbUrl nedokáže URL rozpoznat (thumb === plná adresa),
+   žádný zbytečný onerror handler se nepřidává. */
+function thumbImgAttrs(url) {
+  const thumb = deriveThumbUrl(url);
+  if (!url || thumb === url) return `src="${url || ''}"`;
+  return `src="${thumb}" onerror="this.onerror=null;this.src='${url}'"`;
+}
+
 /* === AUTOMATICKÉ PŘIPOJENÍ PŘIHLAŠOVACÍHO TOKENU KE VŠEM VOLÁNÍM ===
    Web ukládá přihlašovací token do localStorage (ne do cookie) a backend
    ho čeká jako "Authorization: Bearer <token>" hlavičku (viz /admin/index.js
@@ -1431,7 +1463,7 @@ function renderGallery() {
       <input type="checkbox" class="item-checkbox" ${checked} onclick="event.stopPropagation();toggleSel('${p.id}')">
       ${topBadge}
       ${used && !viewingTrash ? `<span class="used-in-article-badge" title="Fotka je použitá v článku — neupravuj ji, radši vlož novou kopii">📄 V článku</span>` : ''}
-      <img src="${p.url}" alt="${escapeHtml(p.name || '')}" loading="lazy" ${viewingTrash ? `onclick="openLightbox('${p.url}')"` : `onclick="openEditor('${p.id}')"`}>
+      <img ${thumbImgAttrs(p.url)} alt="${escapeHtml(p.name || '')}" loading="lazy" ${viewingTrash ? `onclick="openLightbox('${p.url}')"` : `onclick="openEditor('${p.id}')"`}>
       <div class="item-meta">
         <div class="item-name">${escapeHtml(p.name || '')}</div>
         <div>${fmtBytes(p.size)}${mode === 'list' ? ` · <span class="item-dim">${dim ? dim.w + '×' + dim.h : '…'}</span>` : ''}</div>
@@ -1679,7 +1711,7 @@ async function findDuplicatePhotos() {
           return `
           <div style="text-align:center;position:relative">
             <input type="checkbox" class="dupe-check" data-key="${p.key || ''}" data-id="${p.id}" style="position:absolute;top:4px;left:4px;z-index:2;width:18px;height:18px;cursor:pointer;accent-color:var(--red)">
-            <img src="${p.url}" style="width:90px;height:90px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openLightbox('${p.url}')">
+            <img ${thumbImgAttrs(p.url)} style="width:90px;height:90px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="openLightbox('${p.url}')">
             <div style="font-size:10px;color:var(--text-faint);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p.name || '')}</div>
             ${used ? '<div style="font-size:9.5px;color:#06281f;background:var(--green);border-radius:4px;padding:1px 4px;margin-top:2px;font-weight:700">📄 V ČLÁNKU</div>' : ''}
           </div>`;
@@ -1999,11 +2031,12 @@ function fmtSpeed(bytesPerSec) {
   return Math.round(bytesPerSec) + ' B/s';
 }
 
-function uploadOne(blob, filename) {
+function uploadOne(blob, thumbBlob, filename) {
   return new Promise((resolve, reject) => {
     const fd = new FormData();
     fd.append('file', blob, filename);
     fd.append('galleryId', 'main');
+    if (thumbBlob) fd.append('thumb', thumbBlob, filename);
     const xhr = new XMLHttpRequest();
     let lastLoaded = 0, lastTime = Date.now();
     xhr.upload.onprogress = (e) => {
@@ -2049,7 +2082,17 @@ async function uploadFileList(files) {
     if ($('upSpeed')) $('upSpeed').textContent = '';
     try {
       const compressed = await compressImage(file, settings);
-      await uploadOne(compressed, file.name);
+      // Malý náhled se generuje VŽDY stejně (320px, nižší kvalita) bez
+      // ohledu na to, jaké rozlišení/kvalitu má admin nastavené pro
+      // plnou fotku — na dlaždici 64–160px stejně nikdo rozdíl nepozná,
+      // tak ať je přenos dat co nejmenší.
+      let thumb = null;
+      try {
+        thumb = await compressImage(file, { maxRes: 320, quality: 0.72, autoRotate: settings.autoRotate });
+      } catch (thumbErr) {
+        console.warn('Náhled se nepodařilo vygenerovat, nahraje se jen plná fotka:', thumbErr);
+      }
+      await uploadOne(compressed, thumb, file.name);
       uploadedNames.push(file.name);
     } catch (e) {
       console.error('Chyba nahrávání souboru', file.name, e);
