@@ -1063,11 +1063,29 @@ async function saveEditor(mode) {
     ctx.fillRect(0, 0, dim.w, dim.h);
   }
   const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+
+  // Náhled se kreslí ze STEJNÉHO už upraveného plátna (out) — má tedy
+  // všechny filtry/ořez už hotové, ne jen zmenšeninu originálu před
+  // úpravami. JPEG místo PNG, ať je soubor pro dlaždici co nejmenší.
+  let thumbBlob = null;
+  try {
+    const thumbMax = 320;
+    const thumbScale = Math.min(1, thumbMax / Math.max(out.width, out.height));
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = Math.max(1, Math.round(out.width * thumbScale));
+    thumbCanvas.height = Math.max(1, Math.round(out.height * thumbScale));
+    thumbCanvas.getContext('2d').drawImage(out, 0, 0, thumbCanvas.width, thumbCanvas.height);
+    thumbBlob = await new Promise(r => thumbCanvas.toBlob(r, 'image/jpeg', 0.72));
+  } catch (thumbErr) {
+    console.warn('Náhled se nepodařilo vygenerovat, uloží se jen plná fotka:', thumbErr);
+  }
+
   const fd = new FormData();
   fd.append('file', blob, ED.photo.name || 'edited.png');
   fd.append('galleryId', 'main');
   fd.append('oldKey', ED.photo.key);
   fd.append('mode', mode);
+  if (thumbBlob) fd.append('thumb', thumbBlob, 'thumb.jpg');
   try {
     await uploadWithRetry(fd, 3);
   } catch (e) {
@@ -1876,7 +1894,7 @@ function openGalleryPickerModal(options) {
       const isSel = selected.has(p.url);
       return `
       <div class="gp-tile" data-url="${escapeHtml(p.url)}" style="position:relative;cursor:pointer">
-        <img src="${p.url}" style="width:100%;height:110px;object-fit:cover;border-radius:6px;opacity:${isSel ? '0.55' : '1'}">
+        <img ${thumbImgAttrs(p.url)} style="width:100%;height:110px;object-fit:cover;border-radius:6px;opacity:${isSel ? '0.55' : '1'}">
         ${isSel ? `<span style="position:absolute;top:6px;right:6px;background:var(--gold,#ffc857);color:#000;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">✓</span>` : ''}
       </div>`;
     };
@@ -2312,7 +2330,7 @@ function renderArticleList(arr) {
       ? a.excerpt
       : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '');
     const coverThumb = a.coverUrl
-      ? `<img src="${a.coverUrl}" style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">`
+      ? `<img ${thumbImgAttrs(a.coverUrl)} style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">`
       : '';
     const pubStatus = a.published
       ? '<span style="color:#22c55e;font-size:12px">✅ Publikováno</span>'
