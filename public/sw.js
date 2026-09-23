@@ -31,17 +31,24 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v1';
+const SW_VERSION = 'v2';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
+
+// POZOR: shared.css/js, fonts.css, travel-map-core.js a timeline-core.js
+// se v HTML načítají s "?v=YYYYMMDD" (cache-busting). Když se některý z
+// těchto souborů příště změní, zvyš datum v HTML tagách (a klidně i tady
+// dole) — jinak zůstanou tyhle přesné URL v cache navždy (cache-first).
+const ASSET_VERSION = '20260923';
 
 const SHELL_URLS = [
   '/',
   '/manifest.json',
-  '/shared.css',
-  '/shared.js',
-  '/travel-map-core.js',
-  '/timeline-core.js',
+  '/fonts.css?v=' + ASSET_VERSION,
+  '/shared.css?v=' + ASSET_VERSION,
+  '/shared.js?v=' + ASSET_VERSION,
+  '/travel-map-core.js?v=' + ASSET_VERSION,
+  '/timeline-core.js?v=' + ASSET_VERSION,
   '/icon-192.png',
   '/icon-512.png',
   '/favicon-32.png',
