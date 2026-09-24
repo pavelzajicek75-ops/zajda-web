@@ -8,6 +8,7 @@ export async function onRequestPost(context) {
   if (body.name !== undefined) data.name = body.name;
   if (body.coverUrl !== undefined) data.coverUrl = body.coverUrl;
   if (body.order !== undefined) data.order = body.order;
+  if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder;
   await env.SUBSECTIONS.put(key, JSON.stringify(data));
   return Response.json(data);
 }
