@@ -781,12 +781,24 @@
     }).catch(function () { /* tichý fail — počítadlo není kritické */ });
   }
 
+  // Záložní mapa pro případ, že by /api/sections/list selhalo — SECTION_NAMES
+  // se jinak přepíše dynamickým seznamem v loadSectionNames() níž.
   var SECTION_NAMES = {
     'travel': 'Cestování',
     'photo': 'Fotografování',
     'projects': 'Projekty',
     'about': 'O Zajdovi'
   };
+
+  async function loadSectionNames() {
+    try {
+      var r = await fetch('/api/sections/list');
+      if (!r.ok) return;
+      var sections = await r.json();
+      if (!Array.isArray(sections)) return;
+      sections.forEach(function(s) { if (s && s.id) SECTION_NAMES[s.id] = s.name; });
+    } catch (e) { /* necháme fallback mapu */ }
+  }
 
   document.addEventListener('DOMContentLoaded', async function() {
     var starCount = window.innerWidth <= 640 ? 90 : 150;
@@ -804,10 +816,12 @@
 
     try {
       var articlesPromise = fetch('/api/articles/list');
+      var sectionNamesPromise = loadSectionNames();
       var reactionConfigPromise = fetch('/api/reactions/config')
         .then(function (cr) { return cr.ok ? cr.json() : { reactions: [] }; })
         .catch(function () { return { reactions: [] }; }); // reakce jsou "bonus", nesmí shodit načtení článku
       var r = await articlesPromise;
+      await sectionNamesPromise;
       if (!r.ok) throw new Error('API chyba');
       var allArticles = await r.json();
       if (!Array.isArray(allArticles)) throw new Error('Neplatná data');

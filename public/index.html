@@ -851,12 +851,33 @@
       } catch (e) { }
     }
 
+    // Hlavní sekce se dřív daly jen natvrdo tyhle 4 — teď se první tři
+    // (Cestování/Fotografování/Projekty a cokoliv admin přidá navíc) tahají
+    // dynamicky z /api/sections/list, "O Zajdovi" zůstává napevno přidaná
+    // na konec, protože má vlastní stránku a nejde ji přes admin spravovat
+    // ani smazat. Dokud se dynamický seznam nenačte (nebo když API selže),
+    // použije se stará natvrdo daná trojice, ať homepage nikdy nezůstane prázdná.
     var SECTIONS = [
       { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
       { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
       { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
       { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
     ];
+
+    async function loadMainSections() {
+      try {
+        var r = await fetch('/api/sections/list');
+        if (!r.ok) return SECTIONS;
+        var dynamic = await r.json();
+        if (!Array.isArray(dynamic) || !dynamic.length) return SECTIONS;
+        dynamic.sort(function(a, b) { return (a.order || 0) - (b.order || 0); });
+        dynamic.push({ id: 'about', name: 'O Zajdovi', nameEn: 'About' });
+        SECTIONS = dynamic;
+        return SECTIONS;
+      } catch (e) {
+        return SECTIONS;
+      }
+    }
 
     function getSectionName(id) {
       for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].id === id) return SECTIONS[i].name;
@@ -1491,9 +1512,11 @@
     }
 
     startQuotes();
-    loadLatest();
-    loadLatestTimelineNote();
-    buildSections();
+    loadMainSections().then(function() {
+      loadLatest();
+      loadLatestTimelineNote();
+      buildSections();
+    });
     initSiteSearch();
     /* === ŽIVÝ TIKER REAKCÍ ===
        Bublina vlevo dole, co se postupně protáčí přes posledních pár
