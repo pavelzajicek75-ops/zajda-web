@@ -984,13 +984,22 @@
     }
   }
 
+  /* Sjednotí a.date (text z adminu) a a.created (číslo) na jedno
+     srovnatelné číslo (ms) — stejná oprava jako na homepage, aby se
+     řazení nerozsypalo, když se v jedné sekci potkají starší články
+     (jen "created") s novějšími (mají i "date"). */
+  function articleTimestamp(a) {
+    if (a.date) {
+      var t = new Date(a.date).getTime();
+      if (!isNaN(t)) return t;
+    }
+    return typeof a.created === 'number' ? a.created : 0;
+  }
+
   function findPrevNext(article, allArticles) {
     var sameSection = allArticles
       .filter(function (a) { return String(a.sectionId) === String(article.sectionId); })
-      .sort(function (a, b) {
-        var da = a.date || a.created || '', db = b.date || b.created || '';
-        return da < db ? 1 : da > db ? -1 : 0;
-      });
+      .sort(function (a, b) { return articleTimestamp(b) - articleTimestamp(a); });
     var idx = sameSection.findIndex(function (a) { return String(a.id) === String(article.id); });
     if (idx === -1) return { prev: null, next: null };
     return {
@@ -1002,10 +1011,7 @@
   function findRelated(article, allArticles, excludeIds) {
     return allArticles
       .filter(function (a) { return String(a.sectionId) === String(article.sectionId) && String(a.id) !== String(article.id) && excludeIds.indexOf(String(a.id)) === -1; })
-      .sort(function (a, b) {
-        var da = a.date || a.created || '', db = b.date || b.created || '';
-        return da < db ? 1 : da > db ? -1 : 0;
-      })
+      .sort(function (a, b) { return articleTimestamp(b) - articleTimestamp(a); })
       .slice(0, 3);
   }
 
