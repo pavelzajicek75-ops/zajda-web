@@ -441,6 +441,7 @@ function loadSection(name) {
   } else if (name === 'quotes') {
     if (typeof loadQuotes === 'function') loadQuotes();
   } else if (name === 'subsections') {
+    if (typeof loadMainSections === 'function') loadMainSections();
     if (typeof loadSubsections === 'function') loadSubsections();
     if (typeof loadSectionCovers === 'function') loadSectionCovers();
   } else if (name === 'about') {
@@ -2157,6 +2158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const saved = localStorage.getItem('dashActiveTab') || 'galleries';
   showTab(saved);
+  if (typeof loadMainSections === 'function') loadMainSections();
   initRibbonDragReorder();
   initGalleryDropZone();
   purgeExpiredTrash();

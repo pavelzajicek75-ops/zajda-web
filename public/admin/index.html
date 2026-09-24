@@ -192,9 +192,6 @@
       <div class="form-row">
         <select id="artSection" class="form-select" onchange="loadArtSubsections()">
           <option value="">— Sekce —</option>
-          <option value="travel">Cestování</option>
-          <option value="photo">Fotografování</option>
-          <option value="projects">Projekty</option>
           <option value="about">O Zajdovi</option>
         </select>
         <select id="artSubsection" class="form-select">
@@ -300,13 +297,27 @@
   </section>
 
   <section id="subsections" class="section">
+    <h3 style="color:#ffcc66;margin:0 0 0.75rem">Hlavní sekce</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">
+      "O Zajdovi" tady záměrně není — má vlastní stránku a nejde smazat ani přejmenovat odsud.
+      Sekci, ve které jsou ještě podsekce nebo články, nejde smazat — nejdřív je přesuň jinam.
+    </p>
     <div class="form-card">
+      <div class="form-row">
+        <input type="text" id="msName" class="form-input" placeholder="Název sekce (česky)">
+        <input type="text" id="msNameEn" class="form-input" placeholder="Název anglicky (nepovinné)">
+        <button class="btn btn-blue" onclick="createMainSection()">➕ Přidat sekci</button>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Název</th><th>Anglicky</th><th>Pořadí</th><th></th></tr></thead>
+      <tbody id="mainSectionTableBody"></tbody>
+    </table>
+
+    <div class="form-card" style="margin-top:1.5rem">
       <div class="form-row">
         <select id="ssSection" class="form-select">
           <option value="">— Sekce —</option>
-          <option value="travel">Cestování</option>
-          <option value="photo">Fotografování</option>
-          <option value="projects">Projekty</option>
           <option value="about">O Zajdovi</option>
         </select>
         <input type="text" id="ssName" class="form-input" placeholder="Název podsekce">

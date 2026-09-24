@@ -2235,9 +2235,6 @@ function injectArticleFilterBar() {
     <input type="text" id="articleSearch" class="form-input" placeholder="🔍 Hledat podle nadpisu…" style="flex:1;min-width:180px" oninput="filterAndRenderArticles()">
     <select id="articleFilterSection" class="form-select" style="max-width:170px" onchange="filterAndRenderArticles()">
       <option value="">Všechny sekce</option>
-      <option value="travel">Cestování</option>
-      <option value="photo">Fotografování</option>
-      <option value="projects">Projekty</option>
       <option value="about">O Zajdovi</option>
     </select>
     <select id="articleFilterStatus" class="form-select" style="max-width:150px" onchange="filterAndRenderArticles()">
@@ -2252,6 +2249,7 @@ function injectArticleFilterBar() {
     </select>
   `;
   box.parentElement.insertBefore(bar, box);
+  if (typeof populateSectionSelects === 'function') populateSectionSelects();
 }
 
 function getFilteredArticles() {
@@ -2782,6 +2780,159 @@ async function deleteQuote(key) {
   }
 }
 
+/* === HLAVNÍ SEKCE (Cestování/Fotografování/Projekty a cokoliv admin přidá) ===
+   Dřív byly natvrdo 4, teď se dají přidávat/přejmenovávat/mazat tady.
+   "about" (O Zajdovi) mezi nimi záměrně není — spravuje se jinde (má
+   vlastní stránku), ale i tak se počítá do výběru sekcí ve formulářích
+   a do coverů, proto se všude, kde se seznam sekcí použije pro výběr,
+   ještě ručně přidává na konec. */
+let lastLoadedMainSections = [];
+
+async function loadMainSections() {
+  try {
+    const r = await fetch('/api/sections/list');
+    if (r.ok) lastLoadedMainSections = await r.json();
+  } catch (e) {
+    console.error('Nepodařilo se načíst hlavní sekce:', e);
+  }
+  renderMainSectionsTable();
+  populateSectionSelects();
+  return lastLoadedMainSections;
+}
+
+/* Zajistí, že lastLoadedMainSections je naplněné, než ho něco jiného
+   použije (třeba loadSubsections/loadSectionCovers otevřené jako první,
+   ještě dřív než stihne doběhnout loadMainSections() ze startu adminu). */
+async function ensureMainSectionsLoaded() {
+  if (!lastLoadedMainSections.length) await loadMainSections();
+  return lastLoadedMainSections;
+}
+
+function renderMainSectionsTable() {
+  const tbody = $('mainSectionTableBody');
+  if (!tbody) return;
+  if (!lastLoadedMainSections.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;padding:1rem">Načítám…</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lastLoadedMainSections.map((s, i) => {
+    const prev = lastLoadedMainSections[i - 1];
+    const next = lastLoadedMainSections[i + 1];
+    return `
+    <tr>
+      <td data-label="Název"><input type="text" class="form-input" style="min-width:140px" id="msName_${s.id}" value="${escapeHtml(s.name)}"></td>
+      <td data-label="Anglicky"><input type="text" class="form-input" style="min-width:120px" id="msNameEn_${s.id}" value="${escapeHtml(s.nameEn || '')}"></td>
+      <td data-label="Pořadí">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="moveMainSection('${s.id}','up')" class="btn btn-sm" ${prev ? '' : 'disabled'} title="Posunout nahoru" style="padding:2px 8px;line-height:1">▲</button>
+          <button onclick="moveMainSection('${s.id}','down')" class="btn btn-sm" ${next ? '' : 'disabled'} title="Posunout dolů" style="padding:2px 8px;line-height:1">▼</button>
+        </div>
+      </td>
+      <td data-label="Akce">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button onclick="saveMainSection('${s.id}')" class="btn btn-blue btn-sm">Uložit</button>
+          <button onclick="deleteMainSection('${s.id}')" class="btn btn-red btn-sm">Smazat</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* Naplní oba výběry sekcí (u článků a u podsekcí) aktuálním dynamickým
+   seznamem + napevno přidanou "O Zajdovi" na konec. Zachová dosavadní
+   vybranou hodnotu, pokud pořád v seznamu existuje. */
+function populateSectionSelects() {
+  const dynamicOpts = lastLoadedMainSections.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('') +
+    '<option value="about">O Zajdovi</option>';
+  [{ id: 'artSection', placeholder: '— Sekce —' }, { id: 'ssSection', placeholder: '— Sekce —' }].forEach(({ id, placeholder }) => {
+    const sel = $(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = `<option value="">${placeholder}</option>` + dynamicOpts;
+    if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+  });
+  const filterSel = $('articleFilterSection');
+  if (filterSel) {
+    const prev = filterSel.value;
+    filterSel.innerHTML = '<option value="">Všechny sekce</option>' + dynamicOpts;
+    if (prev && [...filterSel.options].some(o => o.value === prev)) filterSel.value = prev;
+  }
+}
+
+async function createMainSection() {
+  const name = $('msName')?.value.trim();
+  const nameEn = $('msNameEn')?.value.trim();
+  if (!name) return showToast('Zadej název sekce', 'info');
+  try {
+    const r = await fetch('/api/sections/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, nameEn })
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || ('HTTP ' + r.status)); }
+    $('msName').value = '';
+    $('msNameEn').value = '';
+    showToast('Sekce přidána', 'success');
+    loadMainSections();
+  } catch (e) {
+    showToast('Chyba: ' + e.message, 'error');
+  }
+}
+
+async function saveMainSection(id) {
+  const name = $('msName_' + id)?.value.trim();
+  const nameEn = $('msNameEn_' + id)?.value.trim();
+  if (!name) return showToast('Název nesmí být prázdný', 'info');
+  try {
+    const r = await fetch('/api/sections/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, nameEn })
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || ('HTTP ' + r.status)); }
+    showToast('Uloženo', 'success');
+    loadMainSections();
+  } catch (e) {
+    showToast('Chyba: ' + e.message, 'error');
+  }
+}
+
+async function moveMainSection(id, direction) {
+  const arr = lastLoadedMainSections;
+  const idx = arr.findIndex(s => s.id === id);
+  if (idx === -1) return;
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= arr.length) return;
+
+  const tmp = arr[idx];
+  arr[idx] = arr[swapIdx];
+  arr[swapIdx] = tmp;
+
+  try {
+    await Promise.all(arr.map((s, i) => fetch('/api/sections/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: s.id, order: i })
+    })));
+  } catch {
+    showToast('Chyba při změně pořadí', 'error');
+  } finally {
+    loadMainSections();
+  }
+}
+
+async function deleteMainSection(id) {
+  if (!(await showConfirm('Smazat celou sekci "' + id + '"? Jde to jen když v ní nejsou podsekce ani články.', { danger: true, confirmText: 'Smazat' }))) return;
+  try {
+    const r = await fetch('/api/sections/delete?id=' + id, { method: 'DELETE' });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || ('HTTP ' + r.status)); }
+    showToast('Sekce smazána', 'success');
+    loadMainSections();
+  } catch (e) {
+    showToast('Nejde smazat: ' + e.message, 'error');
+  }
+}
+
 /* === PODSEKCE === */
 /* === PODSEKCE + POČET ČLÁNKŮ ===
    Dřív bylo z tabulky vidět jen název/slug/pořadí podsekce — nešlo
@@ -2796,7 +2947,8 @@ async function loadSubsections() {
   if (!tbody) return;
   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:1rem">Načítám…</td></tr>';
 
-  const secs = ['travel', 'photo', 'projects', 'about'];
+  await ensureMainSectionsLoaded();
+  const secs = lastLoadedMainSections.map(s => s.id).concat('about');
   const all = [];
   for (const sid of secs) {
     try {
@@ -3001,12 +3153,8 @@ async function saveSubsectionSortOrder(id, sortOrder) {
 async function loadSectionCovers() {
   const box = $('sectionCovers');
   if (!box) return;
-  const secs = [
-    { id: 'travel', n: 'Cestování' },
-    { id: 'photo', n: 'Fotografování' },
-    { id: 'projects', n: 'Projekty' },
-    { id: 'about', n: 'O Zajdovi' }
-  ];
+  await ensureMainSectionsLoaded();
+  const secs = lastLoadedMainSections.map(s => ({ id: s.id, n: s.name })).concat([{ id: 'about', n: 'O Zajdovi' }]);
   var ts = Date.now();
   var html = '<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem">';
   for (const s of secs) {
