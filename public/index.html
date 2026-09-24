@@ -907,6 +907,10 @@
     var currentModalSectionId = null;
     var currentModalSectionName = null;
     var currentModalSortOrder = 'newest';
+    // true jakmile návštěvník sám klikne na přepínač Nejnovější/Nejstarší
+    // — do té doby má každá podsekce svoje VLASTNÍ řazení (viz sub.sortOrder,
+    // nastavuje se v adminu), ruční klik ho pro tenhle pohled přebije všude.
+    var modalSortOverridden = false;
 
     async function openSectionModal(sectionId, sectionName) {
       var overlay = document.getElementById('sectionModalOverlay');
@@ -921,6 +925,7 @@
       // úmyslně, ať se návštěvník vždycky orientuje ve stejném výchozím
       // pohledu, ne v tom, co si nastavil minule u úplně jiné sekce.
       currentModalSortOrder = 'newest';
+      modalSortOverridden = false;
       if (sortToggle) {
         sortToggle.hidden = false;
         sortToggle.querySelectorAll('button').forEach(function(b) {
@@ -974,9 +979,10 @@
             return String(aSec) === String(sectionId) && String(aSub) === String(subId);
           });
           if (!subArticles.length) continue;
+          var subOrder = modalSortOverridden ? currentModalSortOrder : (sub.sortOrder || 'newest');
           html += '<div class="sub-block">' +
             '<div class="sub-title">' + escapeHtml(subName) + ' (' + subArticles.length + ')</div>' +
-            '<div class="sub-articles">' + renderArticleList(subArticles, currentModalSortOrder) + '</div>' +
+            '<div class="sub-articles">' + renderArticleList(subArticles, subOrder) + '</div>' +
             '</div>';
         }
         if (!html) html = '<div class="no-articles">Žádné články</div>';
@@ -1140,6 +1146,7 @@
             sortToggle.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
             this.classList.add('active');
             currentModalSortOrder = this.dataset.sort;
+            modalSortOverridden = true;
             renderSectionModalContent();
           });
         });
@@ -1390,7 +1397,7 @@
                 totalCount += subArticles.length;
                 html += '<div class="sub-block">' +
                   '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
-                  '<div class="sub-articles">' + renderArticleList(subArticles, 'newest') + '</div>' +
+                  '<div class="sub-articles">' + renderArticleList(subArticles, sub.sortOrder || 'newest') + '</div>' +
                   '</div>';
               }
             }
