@@ -1,1520 +1,787 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <title>Moje diagnóza, můj vesmír</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#08080f">
-  <link rel="icon" href="/favicon-32.png" sizes="32x32">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <meta name="description" content="Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou. Cestování, fotografování a projekty na jednom místě.">
-  <link rel="canonical" href="https://zajda-web.pages.dev/">
-
-  <!-- Open Graph (náhled při sdílení na Facebooku, WhatsAppu, Messengeru...) -->
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Moje diagnóza, můj vesmír">
-  <meta property="og:title" content="Moje diagnóza, můj vesmír">
-  <meta property="og:description" content="Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou.">
-  <meta property="og:url" content="https://zajda-web.pages.dev/">
-  <meta property="og:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:locale" content="cs_CZ">
-
-  <!-- Twitter/X karta -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Moje diagnóza, můj vesmír">
-  <meta name="twitter:description" content="Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou.">
-  <meta name="twitter:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
-
-  <!-- RSS -->
-  <link rel="alternate" type="application/rss+xml" title="Moje diagnóza, můj vesmír" href="/rss.xml">
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "name": "Moje diagnóza, můj vesmír",
-        "url": "https://zajda-web.pages.dev/",
-        "inLanguage": "cs-CZ",
-        "description": "Osobní blog Zajdy — zápisky z cest, fotky a příběhy ze života s diagnózou."
-      },
-      {
-        "@type": "Person",
-        "name": "Zajda",
-        "url": "https://zajda-web.pages.dev/about/"
-      }
-    ]
-  }
-  </script>
-
-  <!-- Preload jen ty řezy, co se použijí hned na první obrazovce (nadpisy
-       + běžný text) — zbytek dotáhne fonts.css sám, až bude potřeba. -->
-  <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/fonts.css?v=20260923">
-  <link rel="stylesheet" href="/shared.css?v=20260923">
-  <style>
-    .title-block {
-      position: relative; z-index: 10; text-align: center;
-      padding: 64px 20px 0;
-    }
-    .title-block::before {
-      content: ''; position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
-      width: 360px; height: 360px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,122,69,0.28), transparent 70%);
-      filter: blur(10px); z-index: -1; pointer-events: none;
-      animation: nebula-pulse 6s ease-in-out infinite;
-    }
-    @keyframes nebula-pulse {
-      0%, 100% { opacity: 0.75; transform: translateX(-50%) scale(1); }
-      50% { opacity: 1; transform: translateX(-50%) scale(1.12); }
-    }
-    .cz-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(30px, 5vw, 54px); font-weight: 700; letter-spacing: -0.5px;
-      background: linear-gradient(90deg, var(--parchment) 0%, var(--ember) 40%, var(--nova) 70%, var(--aurora) 100%);
-      background-size: 200% auto;
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-      text-shadow: 0 0 50px rgba(255,122,69,0.35);
-      animation: title-shimmer 8s ease-in-out infinite;
-    }
-    @keyframes title-shimmer {
-      0%, 100% { background-position: 0% center; }
-      50% { background-position: 100% center; }
-    }
-    .en-title {
-      font-family: 'Inter', sans-serif; font-size: clamp(13px, 2vw, 16px); font-weight: 500;
-      color: var(--mist); margin-top: 10px; letter-spacing: 4px; text-transform: uppercase;
-    }
-
-    .top-grid {
-      position: relative; z-index: 10;
-      max-width: 1200px; margin: 40px auto 0; padding: 0 20px;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-      align-items: stretch;
-    }
-    .latest-panel, .intro-text {
-      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--panel-border); border-radius: 16px; padding: 1.3rem;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
-      height: 100%;
-    }
-    .latest-panel h3 {
-      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
-      color: var(--parchment); font-size: 17px; margin-bottom: 0.9rem;
-      display: flex; align-items: center; gap: 8px; letter-spacing: 0.2px;
-    }
-    .latest-panel h3::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 8px var(--ember-dim); }
-    .latest-item {
-      display: block; color: #dcdcec; text-decoration: none; padding: 0.7rem 0.5rem;
-      border-bottom: 1px solid rgba(140,150,255,0.12); font-size: 14px;
-      transition: all 0.25s ease; border-radius: 6px;
-    }
-    .latest-item:hover, .latest-item:focus-visible {
-      color: var(--parchment); padding-left: 12px; background: rgba(140,150,255,0.08);
-    }
-    .latest-item:last-child { border-bottom: none; }
-    .latest-item small { color: var(--mist-dim); font-size: 11.5px; display: block; margin-top: 3px; letter-spacing: 0.2px; }
-    .latest-empty { color: var(--mist-dim); font-size: 13px; padding: 0.5rem 0; font-style: italic; }
-
-    .intro-text {
-      border-left: 3px solid var(--ember);
-      color: var(--mist); font-size: 15.5px; line-height: 1.7; text-align: left; font-weight: 300;
-      display: flex; flex-direction: column; justify-content: center;
-    }
-    .intro-highlight {
-      display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 21px;
-      letter-spacing: -0.3px; margin-bottom: 8px;
-      background: linear-gradient(90deg, var(--ember), var(--nova));
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-    }
-    .intro-timeline-note {
-      display: none; margin-top: 12px;
-    }
-    .intro-timeline-note.visible { display: block; }
-    .intro-timeline-note-pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(255,122,69,0.14); border: 1px solid rgba(255,122,69,0.4);
-      border-radius: 20px; padding: 6px 14px 6px 10px;
-      font-size: 13px; color: var(--parchment); font-weight: 500;
-    }
-    .intro-timeline-note-dot {
-      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-      background: var(--ember); box-shadow: 0 0 8px var(--ember), 0 0 16px var(--ember-dim);
-      animation: signal-pulse 1.4s ease-in-out infinite;
-    }
-    .intro-timeline-note a { color: var(--nova); text-decoration: none; font-weight: 700; }
-    .intro-timeline-note a:hover { text-decoration: underline; }
-    @media (prefers-reduced-motion: reduce) { .intro-timeline-note-dot { animation: none; } }
-
-    .sections-container {
-      position: relative; z-index: 10; display: flex; flex-wrap: wrap; justify-content: center;
-      gap: 20px; padding: 60px 20px 110px; max-width: 1200px; margin: 0 auto;
-      pointer-events: none;
-    }
-    .section-panel {
-      flex: 1 1 180px; min-width: 160px; max-width: 280px;
-      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--panel-border); border-radius: 18px; overflow: hidden;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.45); transition: border-color 0.35s, box-shadow 0.35s, transform 0.35s;
-      display: flex; flex-direction: column; position: relative;
-      pointer-events: auto;
-    }
-    .section-panel::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 2;
-      background: linear-gradient(90deg, var(--ember), var(--nova), var(--aurora)); opacity: 0.9;
-    }
-    .section-panel:hover {
-      border-color: var(--panel-border-hover); transform: translateY(-4px);
-      box-shadow: 0 26px 60px rgba(0,0,0,0.5), 0 0 34px rgba(255,122,69,0.2);
-    }
-    .panel-cover {
-      width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
-      border-bottom: 1px solid rgba(140,150,255,0.14); flex-shrink: 0;
-      filter: saturate(0.95) brightness(0.94); transition: filter 0.4s;
-    }
-    .section-panel:hover .panel-cover { filter: saturate(1.25) brightness(1.08); }
-    .panel-body { padding: 0.9rem 1.1rem 1.1rem; display: flex; flex-direction: column; flex: 1; min-height: 0; }
-    .panel-body h3 {
-      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
-      color: var(--parchment); font-size: 16px; margin-bottom: 0.7rem;
-      display: flex; align-items: center; gap: 7px;
-      border-bottom: 1px solid rgba(140,150,255,0.14); padding-bottom: 0.6rem; flex-shrink: 0;
-    }
-    .panel-body h3::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--nova); box-shadow: 0 0 8px var(--nova-dim); }
-    .panel-body h3 .en { font-family: 'Inter', sans-serif; color: var(--mist-dim); font-size: 10.5px; font-weight: 500; margin-left: auto; letter-spacing: 1.5px; text-transform: uppercase; }
-    .panel-scroll {
-      max-height: 260px; overflow-y: auto; scrollbar-width: thin;
-      scrollbar-color: var(--nova) rgba(20,21,38,0.3); flex: 1;
-    }
-    .panel-scroll::-webkit-scrollbar { width: 5px; }
-    .panel-scroll::-webkit-scrollbar-track { background: rgba(20,21,38,0.3); border-radius: 3px; }
-    .panel-scroll::-webkit-scrollbar-thumb { background: var(--nova); border-radius: 3px; }
-    .sub-block { margin-bottom: 4px; }
-    .sub-title {
-      color: var(--ember); font-size: 12.5px; font-weight: 600; padding: 8px 8px;
-      cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 1px solid rgba(140,150,255,0.1); transition: all 0.25s; border-radius: 5px;
-      user-select: none; letter-spacing: 0.2px;
-    }
-    .sub-title:hover, .sub-title:focus-visible {
-      color: var(--parchment); background: rgba(255,154,107,0.1); padding-left: 12px;
-    }
-    .sub-title::after { content: '▾'; font-size: 10px; color: var(--mist-dim); transition: transform 0.25s; }
-    .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
-    .sub-articles { max-height: 200px; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s; opacity: 1; }
-    .sub-block.collapsed .sub-articles { max-height: 0; opacity: 0; overflow: hidden; }
-    .article-link {
-      display: block; padding: 6px 8px 6px 14px; color: #d6d7e8; text-decoration: none;
-      font-size: 12px; border-left: 2px solid rgba(140,150,255,0.25); transition: all 0.25s;
-      white-space: normal; line-height: 1.4; margin: 2px 0; border-radius: 0 6px 6px 0; cursor: pointer;
-    }
-    .article-link:hover, .article-link:focus-visible {
-      color: var(--parchment); border-left-color: var(--ember); padding-left: 18px;
-      background: rgba(255,154,107,0.08);
-    }
-    .article-link .art-title { font-weight: 600; }
-    .article-link .art-date { font-size: 10px; color: var(--mist); display: block; margin-top: 1px; }
-    .article-link .art-excerpt { font-size: 10px; color: var(--mist-dim); display: block; margin-top: 1px; }
-    .no-articles { color: var(--mist-dim); font-size: 12px; padding: 8px 0; font-style: italic; }
-    .loading-text { color: var(--mist-dim); font-size: 12px; padding: 0.5rem 0; }
-    .loading-skeleton { display: flex; flex-direction: column; gap: 10px; padding: 0.5rem 0 0.75rem; }
-    .loading-skeleton .sk-line {
-      height: 14px; border-radius: 6px; width: 100%;
-      background: linear-gradient(90deg, rgba(140,150,255,0.08) 25%, rgba(140,150,255,0.18) 37%, rgba(140,150,255,0.08) 63%);
-      background-size: 400% 100%;
-      animation: sk-shimmer 1.6s ease-in-out infinite;
-    }
-    .loading-skeleton .sk-line.w60 { width: 60%; }
-    .loading-skeleton .sk-line.w80 { width: 80%; }
-    @keyframes sk-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-    @media (prefers-reduced-motion: reduce) {
-      .loading-skeleton .sk-line { animation: none; background: rgba(140,150,255,0.12); }
-    }
-
-    .section-panel.panel-external { cursor: pointer; }
-    .section-panel.panel-external::after {
-      content: '↗'; position: absolute; top: 10px; right: 12px; z-index: 3;
-      width: 26px; height: 26px; border-radius: 50%;
-      background: rgba(8,8,15,0.55); backdrop-filter: blur(4px);
-      color: var(--parchment); font-size: 14px; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--panel-border);
-      transition: background 0.25s, border-color 0.25s, transform 0.25s;
-    }
-    .section-panel.panel-external:hover::after {
-      background: rgba(255,122,69,0.35); border-color: var(--ember);
-      transform: scale(1.08);
-    }
-
-    .search-panel {
-      position: relative; z-index: 10; max-width: 480px; margin: 24px auto 0; padding: 0 20px;
-    }
-    .search-panel input {
-      width: 100%; padding: 0.85rem 1.2rem; border-radius: 30px;
-      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--panel-border); color: var(--parchment); font-size: 14.5px;
-      font-family: 'Inter', sans-serif; outline: none; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      transition: border-color 0.25s ease;
-    }
-    .search-panel input:focus { border-color: var(--panel-border-hover); }
-    .search-panel input::placeholder { color: var(--mist-dim); }
-
-    .fun-actions-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
-
-    .reaction-ticker {
-      position: fixed; left: 16px; bottom: 16px; z-index: 400;
-      display: flex; align-items: center; gap: 8px;
-      max-width: min(340px, calc(100vw - 32px));
-      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--panel-border); border-radius: 14px;
-      padding: 0.6rem 0.9rem; text-decoration: none; color: var(--parchment);
-      font-size: 12.5px; font-family: 'Inter', sans-serif; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      opacity: 0; transform: translateY(10px); pointer-events: none;
-    }
-    .reaction-ticker.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .reaction-ticker:hover, .reaction-ticker:focus-visible { border-color: var(--panel-border-hover); }
-    .reaction-ticker .rt-icon { font-size: 16px; flex-shrink: 0; }
-    .reaction-ticker .rt-icon img { width: 18px; height: 18px; object-fit: cover; border-radius: 4px; display: block; }
-    .reaction-ticker .rt-text { min-width: 0; }
-    .reaction-ticker .rt-text b { color: #fff; }
-    .reaction-ticker .rt-title { color: var(--mist); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    @media (prefers-reduced-motion: no-preference) {
-      .reaction-ticker { transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.22,1,.36,1); }
-    }
-    @media (max-width: 560px) {
-      .reaction-ticker { left: 10px; right: 10px; bottom: 10px; max-width: none; }
-    }
-    .fun-action-btn {
-      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--panel-border); color: var(--mist); font-size: 13px; font-family: 'Inter', sans-serif;
-      padding: 0.5rem 1rem; border-radius: 20px; cursor: pointer;
-    }
-    .fun-action-btn:hover, .fun-action-btn:focus-visible { border-color: var(--panel-border-hover); color: #fff; }
-    @media (prefers-reduced-motion: no-preference) { .fun-action-btn { transition: transform 0.15s ease, border-color 0.2s ease, color 0.2s ease; } }
-    .fun-action-btn:active { transform: scale(0.95); }
-
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 4px 0 18px; }
-    .stat-card {
-      background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
-      padding: 1rem; text-align: center;
-    }
-    .stat-card .stat-number {
-      font-family: 'Space Grotesk', sans-serif; font-size: 1.9rem; font-weight: 700;
-      background: var(--hairline); -webkit-background-clip: text; background-clip: text; color: transparent;
-      display: block; line-height: 1.1;
-    }
-    .stat-card .stat-label { color: var(--mist-dim); font-size: 12px; margin-top: 4px; display: block; }
-    .stats-footnote { color: var(--mist-dim); font-size: 12px; text-align: center; line-height: 1.6; }
-    .search-results {
-      margin-top: 8px; max-height: 340px; overflow-y: auto;
-      background: var(--panel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--panel-border); border-radius: 14px; display: none;
-    }
-    .search-results.open { display: block; }
-    .search-results .article-link { border-left: none; padding: 10px 16px; margin: 0; border-radius: 0; border-bottom: 1px solid rgba(140,150,255,0.08); }
-    .search-results .article-link:last-child { border-bottom: none; }
-    .search-no-results { padding: 14px 18px; color: var(--mist-dim); font-size: 13px; font-style: italic; }
-
-    .show-all-link {
-      display: block; text-align: center; margin-top: 10px; padding: 8px;
-      color: var(--nova); font-size: 12px; font-weight: 600; cursor: pointer;
-      border-top: 1px solid rgba(140,150,255,0.12); letter-spacing: 0.3px;
-      transition: color 0.2s ease, background 0.2s ease; border-radius: 6px;
-    }
-    .show-all-link:hover, .show-all-link:focus-visible { color: #fff; background: rgba(47,230,201,0.08); }
-    .travel-map-link {
-      display: block; text-align: center; padding: 8px;
-      color: var(--nova); font-size: 12px; font-weight: 600; cursor: pointer;
-      border-bottom: 1px solid rgba(140,150,255,0.12); letter-spacing: 0.3px;
-      transition: color 0.2s ease, background 0.2s ease; border-radius: 6px;
-      text-decoration: none; margin-bottom: 6px;
-    }
-    .travel-map-link:hover, .travel-map-link:focus-visible { color: #fff; background: rgba(47,230,201,0.08); }
-
-    /* === PŘEPÍNAČ ŘAZENÍ v modalu "Zobrazit vše" ===
-       Malé segmentované tlačítko — stejný princip jako přepínač
-       záložek v adminu (plovoucí pilulka pod aktivní volbou), jen
-       v menším měřítku, protože jde o podřízenou kontrolu uvnitř
-       modalu, ne hlavní navigaci. */
-    .sort-toggle {
-      display: inline-flex; gap: 2px; padding: 3px;
-      background: rgba(140,150,255,0.08); border: 1px solid var(--panel-border);
-      border-radius: 20px; margin-left: auto;
-    }
-    .sort-toggle button {
-      background: transparent; border: none; color: var(--mist-dim);
-      font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 600;
-      padding: 5px 11px; border-radius: 16px; cursor: pointer;
-      transition: background 0.2s ease, color 0.2s ease;
-      white-space: nowrap;
-    }
-    .sort-toggle button:hover { color: var(--parchment); }
-    .sort-toggle button.active {
-      background: linear-gradient(90deg, var(--ember), var(--nova)); color: #0a0a16;
-    }
-    .pinned-badge {
-      display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
-      background: rgba(255,200,87,0.16); color: #ffc857; border: 1px solid rgba(255,200,87,0.4);
-      border-radius: 20px; padding: 1px 7px; margin-left: 6px; vertical-align: middle;
-    }
-
-    .section-modal-overlay {
-      position: fixed; inset: 0; z-index: 8000; background: rgba(4,4,10,0.85);
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-      display: none; align-items: center; justify-content: center; padding: 20px;
-    }
-    .section-modal-overlay.open { display: flex; }
-    .section-modal-box {
-      width: 100%; max-width: 640px; max-height: 82vh;
-      background: var(--void-2); border: 1px solid var(--panel-border);
-      border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-    .section-modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 1.1rem 1.4rem; border-bottom: 1px solid rgba(140,150,255,0.14); flex-shrink: 0;
-      flex-wrap: wrap; gap: 0.6rem;
-    }
-    .section-modal-header h2 {
-      font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
-    }
-    .section-modal-close {
-      background: rgba(140,150,255,0.1); border: 1px solid var(--panel-border); color: var(--parchment);
-      width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px;
-      display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
-    }
-    .section-modal-close:hover { border-color: var(--panel-border-hover); background: rgba(255,122,69,0.12); }
-    .section-modal-scroll {
-      flex: 1; overflow-y: scroll; padding: 1rem 0.5rem 1.4rem 1.4rem;
-      scrollbar-width: auto; scrollbar-color: var(--nova) rgba(20,21,38,0.4);
-    }
-    .section-modal-scroll::-webkit-scrollbar { width: 10px; }
-    .section-modal-scroll::-webkit-scrollbar-track { background: rgba(20,21,38,0.4); border-radius: 5px; }
-    .section-modal-scroll::-webkit-scrollbar-thumb { background: var(--nova); border-radius: 5px; }
-    .section-modal-scroll .sub-block { margin-bottom: 0.6rem; }
-    .section-modal-scroll .sub-title { font-size: 13.5px; padding: 10px 12px; }
-
-    .travel-map-modal-overlay {
-      position: fixed; inset: 0; z-index: 8000; background: rgba(4,4,10,0.85);
-      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-      display: none; align-items: center; justify-content: center; padding: 20px;
-    }
-    .travel-map-modal-overlay.open { display: flex; }
-    .travel-map-modal-box {
-      position: relative;
-      width: 100%; max-width: 960px; max-height: 88vh;
-      background: var(--void-2); border: 1px solid var(--panel-border);
-      border-radius: 20px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-    .travel-map-modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 1.1rem 1.4rem; border-bottom: 1px solid rgba(140,150,255,0.14); flex-shrink: 0;
-    }
-    .travel-map-modal-header h2 {
-      font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
-    }
-    .travel-map-modal-close {
-      background: rgba(140,150,255,0.1); border: 1px solid var(--panel-border); color: var(--parchment);
-      width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px;
-      display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
-    }
-    .travel-map-modal-close:hover { border-color: var(--panel-border-hover); background: rgba(255,122,69,0.12); }
-    #travelMapModalMap {
-      width: 100%; height: 60vh; min-height: 380px; background: #0a0a16; flex-shrink: 0;
-    }
-    .travel-map-modal-theme-toggle {
-      position: absolute; top: 66px; right: 26px; z-index: 900;
-      background: var(--panel-solid); border: 1px solid var(--panel-border);
-      color: var(--parchment); width: 38px; height: 38px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; cursor: pointer;
-      font-size: 17px; box-shadow: 0 6px 18px rgba(0,0,0,0.4);
-      transition: border-color 0.2s, background 0.2s;
-    }
-    .travel-map-modal-theme-toggle:hover, .travel-map-modal-theme-toggle:focus-visible {
-      border-color: var(--panel-border-hover); background: rgba(255,122,69,0.18);
-    }
-    .travel-map-modal-legend {
-      display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap;
-      padding: 12px 16px; font-size: 12px; color: var(--mist-dim);
-      border-top: 1px solid rgba(140,150,255,0.12); flex-shrink: 0;
-    }
-    .travel-map-modal-legend span.legend-item {
-      display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
-      padding: 3px 8px; border-radius: 20px; transition: background 0.2s, opacity 0.2s;
-      user-select: none;
-    }
-    .travel-map-modal-legend span.legend-item:hover, .travel-map-modal-legend span.legend-item:focus-visible {
-      background: rgba(140,150,255,0.1);
-    }
-    .travel-map-modal-legend span.legend-item.legend-off { opacity: 0.4; }
-    .travel-map-modal-legend .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-    .travel-map-modal-stats {
-      display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
-      padding: 10px 16px; font-size: 12.5px; color: var(--parchment);
-      border-bottom: 1px solid rgba(140,150,255,0.12); flex-shrink: 0;
-    }
-    .travel-map-modal-stats strong { color: var(--nova); font-weight: 700; }
-    .travel-map-modal-play-btn {
-      position: absolute; bottom: 14px; left: 14px; z-index: 900;
-      background: var(--panel-solid); border: 1px solid var(--panel-border);
-      color: var(--parchment); padding: 8px 14px; border-radius: 30px; cursor: pointer;
-      font-size: 12.5px; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,0.4);
-      transition: border-color 0.2s, background 0.2s; font-family: 'Inter', sans-serif;
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .travel-map-modal-play-btn:hover, .travel-map-modal-play-btn:focus-visible {
-      border-color: var(--panel-border-hover); background: rgba(255,122,69,0.18);
-    }
-    .travel-map-modal-play-btn:disabled { opacity: 0.6; cursor: default; }
-    .travel-map-modal-empty {
-      display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
-      height: 60vh; min-height: 380px; text-align: center; padding: 20px; color: var(--mist);
-    }
-    .travel-map-modal-empty h3 { font-family: 'Space Grotesk', sans-serif; color: var(--parchment); font-size: 18px; }
-    .travel-map-modal-empty p { max-width: 380px; font-size: 13.5px; line-height: 1.6; color: var(--mist-dim); }
-
-    .travel-map-modal-box .leaflet-control-zoom a {
-      background: var(--panel-solid) !important; color: var(--parchment) !important;
-      border-color: var(--panel-border) !important;
-    }
-    .travel-map-modal-box .leaflet-control-zoom a:hover { background: rgba(255,122,69,0.25) !important; }
-    .travel-map-modal-box .leaflet-control-attribution {
-      background: rgba(8,8,15,0.75) !important; color: var(--mist-dim) !important;
-    }
-
-    .travel-map-modal-box .map-point-label {
-      background: #14152a !important; border: 1px solid rgba(255,122,69,0.5) !important;
-      border-radius: 8px !important; padding: 5px 10px !important;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.55); font-family: 'Inter', sans-serif; line-height: 1.35;
-      pointer-events: none;
-    }
-    .travel-map-modal-box .map-point-label::before { display: none !important; }
-    .travel-map-modal-box .map-label-title { display: block; font-size: 12.5px; font-weight: 700; color: #ffffff; white-space: nowrap; margin-bottom: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
-    .travel-map-modal-box .map-label-meta { display: block; font-size: 10.5px; color: #d7d9ec; font-weight: 500; white-space: nowrap; }
-    .travel-map-modal-box .map-cluster-icon {
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; color: #08080f; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
-      border: 2px solid rgba(255,255,255,0.85);
-    }
-
-    .travel-map-modal-box .star-pin {
-      width: 16px; height: 16px; border-radius: 50%;
-      background: radial-gradient(circle, #fff 0%, var(--ember) 45%, transparent 75%);
-      box-shadow: 0 0 10px var(--ember), 0 0 22px var(--ember-dim);
-      border: 2px solid rgba(255,255,255,0.85);
-      animation: pin-pulse 2.2s ease-in-out infinite;
-      cursor: pointer;
-    }
-    @keyframes pin-pulse { 0%,100% { transform: scale(0.9); } 50% { transform: scale(1.15); } }
-    @media (prefers-reduced-motion: reduce) { .travel-map-modal-box .star-pin { animation: none; } }
-
-    @media (max-width: 700px) {
-      #travelMapModalMap, .travel-map-modal-empty { height: 52vh; }
-    }
-    .section-modal-scroll .article-link { font-size: 13px; padding: 8px 10px 8px 16px; }
-
-    .site-footer {
-      position: relative; z-index: 10; text-align: center;
-      padding: 20px 20px 40px; color: var(--mist-dim); font-size: 12.5px;
-    }
-    .site-footer a {
-      color: var(--mist); text-decoration: none; border-bottom: 1px solid rgba(140,150,255,0.25);
-      transition: color 0.2s;
-    }
-    .site-footer a:hover, .site-footer a:focus-visible { color: var(--nova); }
-
-    @media (prefers-reduced-motion: reduce) {
-      .section-panel, .latest-item, .article-link { transition: none !important; }
-      .title-block::before, .cz-title { animation: none !important; }
-    }
-
-    @media (max-width: 900px) {
-      .top-grid { grid-template-columns: 1fr; margin-top: 28px; }
-      .sections-container { padding: 40px 20px 100px; flex-direction: column; align-items: center; }
-      .section-panel { width: 90%; max-width: 400px; flex: none; }
-      .panel-scroll { max-height: 300px; }
-      .search-panel { max-width: none; }
-      .section-modal-box { max-height: 88vh; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Admin · Zajda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link rel="stylesheet" href="style.css?v=20260918">
 </head>
 <body>
-  <a href="#sectionsContainer" class="skip-link">Přeskočit na obsah</a>
-  <div class="bg"></div>
-  <div class="stars" id="stars"></div>
-  <svg class="constellation-layer" id="constellationLayer"></svg>
-  <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
-  <div class="title-block">
-    <div class="cz-title">Moje diagnóza, můj vesmír</div>
-    <div class="en-title" lang="en">My diagnosis, my universe</div>
-  </div>
-  <div class="top-grid">
-    <div class="latest-panel" id="latestPanel">
-      <h3>Poslední aktuality</h3>
-      <div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>
-    </div>
-    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div></div>
-  </div>
-  <div class="search-panel">
-    <input type="text" id="siteSearchInput" placeholder="🔍 Hledat v článcích…" autocomplete="off">
-    <div class="search-results" id="searchResults"></div>
-    <div style="text-align:center;margin-top:12px" id="savedLinkWrap"></div>
-    <div class="fun-actions-row">
-      <button type="button" class="fun-action-btn" id="statsModalTrigger">🌌 Moje čísla</button>
-      <button type="button" class="fun-action-btn" id="surpriseMeBtn">🎲 Překvap mě</button>
-    </div>
-  </div>
-  <div class="sections-container" id="sectionsContainer" tabindex="-1"></div>
 
-  <footer class="site-footer">
-    <a href="/rss.xml">📡 RSS feed</a> · © <span id="footerYear"></span> Zajda
-  </footer>
+<div class="dash-topbar">
 
-  <a href="#" class="reaction-ticker" id="reactionTicker" hidden></a>
+<header class="dash-header">
+  <div class="brand">📊 Admin</div>
+  <button class="btn btn-red btn-sm" onclick="logout()">🚪 Odhlásit</button>
+</header>
 
-  <div class="section-modal-overlay" id="statsModalOverlay">
-    <div class="section-modal-box" style="max-width:480px">
-      <div class="section-modal-header">
-        <h2>🌌 Moje čísla</h2>
-        <button class="section-modal-close" id="statsModalClose" aria-label="Zavřít">✕</button>
-      </div>
-      <div class="section-modal-scroll" id="statsModalScroll"></div>
-    </div>
-  </div>
+<nav class="ribbon-tabs" id="ribbonTabs">
+  <span class="ribbon-tab-indicator" id="ribbonTabIndicator"></span>
+  <button class="ribbon-tab" data-tab="galleries" onclick="showTab('galleries')">🖼️ Galerie</button>
+  <button class="ribbon-tab" data-tab="articles" onclick="showTab('articles')">📝 Články</button>
+  <button class="ribbon-tab" data-tab="quotes" onclick="showTab('quotes')">💬 Citáty</button>
+  <button class="ribbon-tab" data-tab="subsections" onclick="showTab('subsections')">📂 Podsekce</button>
+  <button class="ribbon-tab" data-tab="about" onclick="showTab('about')">👤 O Zajdovi</button>
+  <button class="ribbon-tab" data-tab="reactions" onclick="showTab('reactions')">😀 Reakce</button>
+  <button class="ribbon-tab" data-tab="admin" onclick="showTab('admin')">🛠️ ADMIN</button>
+</nav>
 
-  <div class="section-modal-overlay" id="sectionModalOverlay">
-    <div class="section-modal-box">
-      <div class="section-modal-header">
-        <h2 id="sectionModalTitle"></h2>
-        <div class="sort-toggle" id="sectionModalSortToggle" hidden>
-          <button type="button" data-sort="newest" class="active">Nejnovější</button>
-          <button type="button" data-sort="oldest">Nejstarší</button>
+<div class="ribbon-toolbar" id="ribbonToolbar">
+
+  <button class="btn btn-sm ribbon-reorder-toggle" id="reorderToggleBtn" onclick="toggleRibbonReorderMode()" title="Přeuspořádat tlačítka v této liště tažením myší, nebo je skrýt">↕️ Uspořádat</button>
+  <button class="btn btn-sm ribbon-reorder-toggle" onclick="restoreAllRibbonItems()" title="Vrátit všechny skryté prvky v této liště">↺ Obnovit vše</button>
+
+  <div class="ribbon-group" data-for="galleries">
+    <!-- Základní obrazovka: jen hledání + rozbalovací tlačítka + počítadlo -->
+    <input type="text" id="gallerySearch" class="form-input" data-key="gallerySearch" placeholder="🔎 Hledat podle názvu…" oninput="renderGallery()" style="max-width:170px;flex:0 1 170px">
+
+    <!-- 1) ZOBRAZENÍ — vše kolem toho, jak se galerie zobrazuje -->
+    <div class="ribbon-dropdown" data-key="viewDropdown">
+      <button class="btn btn-sm ribbon-dropdown-toggle" type="button" data-panel="viewDropdownPanel" onclick="toggleRibbonDropdown(this)">👁 Zobrazení ▾</button>
+      <div class="ribbon-dropdown-panel" id="viewDropdownPanel" hidden>
+        <div class="ribbon-dropdown-row">
+          <span class="ribbon-dropdown-row-label">Styl</span>
+          <select id="viewMode" class="ribbon-select" onchange="renderGallery()">
+            <option value="grid">Mřížka</option>
+            <option value="small">Malé náhledy</option>
+            <option value="list">Seznam</option>
+          </select>
         </div>
-        <button class="section-modal-close" id="sectionModalClose" aria-label="Zavřít">✕</button>
+        <div class="ribbon-dropdown-row">
+          <span class="ribbon-dropdown-row-label">Řazení</span>
+          <select id="sortMode" class="ribbon-select" onchange="renderGallery()">
+            <option value="newest">Nejnovější</option>
+            <option value="oldest">Nejstarší</option>
+            <option value="name">Podle názvu</option>
+            <option value="size">Podle velikosti</option>
+            <option value="resolution">Podle rozlišení</option>
+          </select>
+        </div>
+        <div class="ribbon-dropdown-row">
+          <label class="ribbon-label" style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;user-select:none">
+            <input type="checkbox" id="exifToggle" onchange="toggleExifDisplay()"> 📷 Zobrazovat EXIF údaje
+          </label>
+        </div>
       </div>
-      <div class="section-modal-scroll" id="sectionModalScroll"></div>
     </div>
+
+    <!-- 2) SLOŽKY — vše kolem virtuálních složek -->
+    <div class="ribbon-dropdown" data-key="folderDropdown">
+      <button class="btn btn-sm ribbon-dropdown-toggle" type="button" data-panel="folderDropdownPanel" onclick="toggleRibbonDropdown(this)">📁 Složky ▾</button>
+      <div class="ribbon-dropdown-panel" id="folderDropdownPanel" hidden>
+        <div class="ribbon-dropdown-row">
+          <span class="ribbon-dropdown-row-label">Filtr</span>
+          <select id="folderFilter" class="ribbon-select" onchange="renderGallery()" title="Filtr podle složky">
+            <option value="">📁 Všechny složky</option>
+          </select>
+        </div>
+        <div class="ribbon-dropdown-row" style="flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="openNewFolderModal()" title="Založit novou (prázdnou) složku">➕ Nová</button>
+          <button class="btn btn-sm" onclick="deleteEmptyFolder()" title="Smazat aktuálně vybranou prázdnou složku">🗑 Smazat prázdnou</button>
+          <button class="btn btn-sm" onclick="openMoveToFolderModal()" title="Přesunout vybrané fotky do složky">➡️ Přesunout vybrané sem</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3) NAHRÁT FOTKY — vše kolem nahrávání -->
+    <div class="ribbon-dropdown" data-key="uploadDropdown">
+      <button class="btn btn-blue btn-sm ribbon-dropdown-toggle" type="button" data-panel="uploadDropdownPanel" onclick="toggleRibbonDropdown(this)">⬆️ Nahrát fotky ▾</button>
+      <div class="ribbon-dropdown-panel" id="uploadDropdownPanel" hidden>
+        <div class="ribbon-dropdown-row">
+          <span class="ribbon-dropdown-row-label">Kvalita</span>
+          <select id="upResSelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Max. rozlišení nahrávaných fotek">
+            <option value="1000">1000 px</option>
+            <option value="2000">2000 px</option>
+            <option value="4000">4000 px</option>
+            <option value="0">Originál</option>
+          </select>
+          <select id="upQualitySelect" class="ribbon-select" onchange="quickSaveUploadSetting()" title="Kvalita komprese">
+            <option value="0.7">70 %</option>
+            <option value="0.85">85 %</option>
+            <option value="0.95">95 %</option>
+            <option value="0.99">99 %</option>
+          </select>
+        </div>
+        <div class="ribbon-dropdown-row">
+          <span class="ribbon-dropdown-row-label">Do složky</span>
+          <input type="text" id="uploadFolderInput" class="form-input" list="folderSuggestions" placeholder="Volitelné">
+          <datalist id="folderSuggestions"></datalist>
+        </div>
+        <div class="ribbon-dropdown-row" style="flex-wrap:wrap">
+          <button class="btn btn-blue btn-sm" data-key="upload" onclick="$('fileInput').click()">⬆️ Z počítače</button>
+          <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="uploadFiles(this)">
+          <button class="btn btn-sm" onclick="openUploadSettings()">⚙️ Výchozí nastavení</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4) UPRAVIT — výběr + hromadné úpravy vybraných fotek -->
+    <div class="ribbon-dropdown" data-key="editDropdown">
+      <button class="btn btn-sm ribbon-dropdown-toggle" type="button" data-panel="editDropdownPanel" onclick="toggleRibbonDropdown(this)">✏️ Upravit ▾</button>
+      <div class="ribbon-dropdown-panel" id="editDropdownPanel" hidden>
+        <div class="ribbon-dropdown-row" style="flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="selectAllVisiblePhotos()" title="Vybere všechny fotky podle aktuálního filtru">☑️ Vybrat vše</button>
+          <button class="btn btn-sm" onclick="clearPhotoSelection()">◻️ Zrušit výběr</button>
+        </div>
+        <div class="ribbon-dropdown-row" style="flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="openBulkEditModal()" title="Změnit rozlišení/kvalitu u všech vybraných najednou">🔧 Upravit vybrané (rozlišení/kvalita)</button>
+          <button class="btn btn-sm" onclick="openMoveToFolderModal()" title="Přesunout vybrané fotky do složky">📁 Přesunout do složky</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5) NÁSTROJE — údržba galerie (duplicity, export, mazání) -->
+    <div class="ribbon-dropdown" data-key="toolsDropdown">
+      <button class="btn btn-sm ribbon-dropdown-toggle" type="button" data-panel="toolsDropdownPanel" onclick="toggleRibbonDropdown(this)">🧰 Nástroje ▾</button>
+      <div class="ribbon-dropdown-panel" id="toolsDropdownPanel" hidden>
+        <div class="ribbon-dropdown-row" style="flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="findDuplicatePhotos()" title="Najde fotky se stejnou velikostí souboru">🔍 Najít duplicity</button>
+          <button class="btn btn-sm" onclick="downloadSelectedAsZip()" title="Stáhne vybrané fotky jako jeden ZIP soubor">⬇️ Stáhnout vybrané (ZIP)</button>
+          <button class="btn btn-red btn-sm" onclick="bulkDelete()" title="Smaže vybrané fotky">🗑 Smazat vybrané</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ribbon-sep" data-key="sep4"></div>
+    <span class="pill" id="galleryCountPill" data-key="countPill">0 fotek</span>
   </div>
 
-  <div class="travel-map-modal-overlay" id="travelMapModalOverlay">
-    <div class="travel-map-modal-box">
-      <div class="travel-map-modal-header">
-        <h2>🗺️ Mapa cest</h2>
-        <button class="travel-map-modal-close" id="travelMapModalClose" aria-label="Zavřít">✕</button>
-      </div>
-      <div class="travel-map-modal-stats" id="travelMapModalStats" hidden></div>
-      <div id="travelMapModalMap"></div>
-      <button type="button" class="travel-map-modal-theme-toggle" id="travelMapModalThemeToggle" title="Přepnout denní/noční mapu" aria-label="Přepnout denní/noční mapu">☀️</button>
-      <button type="button" class="travel-map-modal-play-btn" id="travelMapModalPlayBtn" hidden>▶️ Přehrát trasu</button>
-      <div class="travel-map-modal-legend" id="travelMapModalLegend" hidden></div>
-    </div>
+  <div class="ribbon-group" data-for="articles">
+    <button class="btn btn-blue btn-sm" data-key="newArticle" onclick="resetArticleForm()">➕ Nový článek</button>
+    <button class="btn btn-sm" data-key="previewArticle" onclick="previewArticle()">👁 Náhled</button>
+    <button class="btn btn-sm" data-key="selectAllArticles" onclick="selectAllArticles()">☑️ Vybrat vše</button>
+    <button class="btn btn-sm" data-key="selectNoneArticles" onclick="clearArticleSelection()">◻️ Zrušit výběr</button>
   </div>
 
-  <!-- Leaflet (mapová knihovna) se už NENAČÍTÁ tady natvrdo — homepage ji
-       potřebuje jen když někdo klikne na "🗺️ Mapa cest", takže se stahuje
-       až za běhu přes loadLeafletAssets() (viz níže), ne při každé
-       návštěvě stránky. -->
-
-  <script src="/shared.js?v=20260923"></script>
-  <script src="/travel-map-core.js?v=20260923"></script>
-  <script>
-  /* === LÍNÉ NAČTENÍ LEAFLETU ===
-     Mapa cest je schovaná za tlačítkem v modalu — dřív se ale Leaflet.js
-     + Leaflet.markercluster (CSS i JS) stahovaly při KAŽDÉ návštěvě
-     homepage, i když mapu nikdo neotevřel. Teď se natáhnou až v okamžiku
-     prvního otevření modalu. Funkce je bezpečná zavolat víckrát — podruhé
-     už jen vrátí stejný (už vyřešený) Promise.
-     Volá se z openTravelMapModal() níže, PŘED TravelMapCore.render(). */
-  var _leafletLoadPromise = null;
-  function loadLeafletAssets() {
-    if (window.L) return Promise.resolve();
-    if (_leafletLoadPromise) return _leafletLoadPromise;
-
-    function addCss(href) {
-      if (document.querySelector('link[href="' + href + '"]')) return;
-      var link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = href;
-      document.head.appendChild(link);
-    }
-    function addScript(src, integrity) {
-      return new Promise(function (resolve, reject) {
-        var s = document.createElement('script');
-        s.src = src;
-        if (integrity) { s.integrity = integrity; s.crossOrigin = ''; }
-        s.onload = resolve;
-        s.onerror = function () { reject(new Error('Nepodařilo se načíst ' + src)); };
-        document.head.appendChild(s);
-      });
-    }
-
-    addCss('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css');
-    addCss('/vendor/leaflet.markercluster/MarkerCluster.css');
-    addCss('/vendor/leaflet.markercluster/MarkerCluster.Default.css');
-
-    // markercluster.js za běhu očekává hotové window.L — proto se načítá
-    // AŽ PO doběhnutí leaflet.js, ne souběžně s ním.
-    _leafletLoadPromise = addScript(
-      'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
-      'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='
-    ).then(function () {
-      return addScript('/vendor/leaflet.markercluster/leaflet.markercluster.js');
-    });
-    return _leafletLoadPromise;
-  }
-
-  document.getElementById('footerYear').textContent = new Date().getFullYear();
-
-  function openLightbox(src) {
-    var overlay = document.getElementById('lightboxOverlay');
-    if (!overlay) return;
-    overlay.innerHTML = '<img src="' + src + '" alt="">';
-    overlay.classList.add('open');
-  }
-
-  /* Swipe dolů zavře fotku — obrázek sleduje prst, pozadí postupně mizí.
-     Poslouchá se na overlay (ne na <img>), protože se <img> při každém
-     otevření znovu vytváří (viz openLightbox výše). */
-  (function initSimpleLightboxSwipe() {
-    var overlay = document.getElementById('lightboxOverlay');
-    if (!overlay) return;
-    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var CLOSE_COMMIT_PX = 110, FADE_RANGE = 260;
-    var startY = 0, dy = 0, dragging = false;
-
-    overlay.addEventListener('touchstart', function (e) {
-      if (e.touches.length !== 1) return;
-      startY = e.touches[0].clientY; dy = 0; dragging = true;
-    }, { passive: true });
-
-    overlay.addEventListener('touchmove', function (e) {
-      if (!dragging || e.touches.length !== 1) return;
-      dy = e.touches[0].clientY - startY;
-      if (dy < 0) { dy = 0; return; } // reaguje jen na tažení DOLŮ
-      e.preventDefault();
-      var img = overlay.querySelector('img');
-      if (!img) return;
-      var progress = Math.min(1, dy / FADE_RANGE);
-      img.style.transition = 'none';
-      img.style.transform = 'translateY(' + dy + 'px) scale(' + (1 - progress * 0.14) + ')';
-      overlay.style.background = 'rgba(4,4,10,' + (0.92 * (1 - progress * 0.85)) + ')';
-    }, { passive: false });
-
-    overlay.addEventListener('touchend', function () {
-      if (!dragging) return;
-      dragging = false;
-      var img = overlay.querySelector('img');
-      if (dy > CLOSE_COMMIT_PX) {
-        if (img) {
-          img.style.transition = reduceMotion ? 'none' : 'transform 0.18s ease, opacity 0.18s ease';
-          img.style.transform = 'translateY(120%) scale(0.85)';
-          img.style.opacity = '0';
-        }
-        overlay.style.background = 'rgba(4,4,10,0)';
-        setTimeout(function () {
-          overlay.classList.remove('open');
-          overlay.style.background = '';
-          overlay.innerHTML = '';
-        }, reduceMotion ? 0 : 180);
-      } else if (img) {
-        img.style.transition = reduceMotion ? 'none' : 'transform 0.25s cubic-bezier(.22,1,.36,1)';
-        img.style.transform = '';
-        overlay.style.background = '';
-      }
-    });
-
-    overlay.addEventListener('touchcancel', function () {
-      dragging = false;
-      overlay.style.background = '';
-    });
-  })();
-
-  document.addEventListener('keydown', function(e) {
-    if (e.key !== 'Escape') return;
-    var overlay = document.getElementById('lightboxOverlay');
-    if (overlay && overlay.classList.contains('open')) overlay.classList.remove('open');
-  });
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var starCount = window.innerWidth <= 640 ? 90 : 200;
-    initStarfield(starCount);
-    initStarfieldParallax();
-
-    var cachedArticles = null;
-    async function getAllArticles() {
-      if (cachedArticles) return cachedArticles;
-      try {
-        var r = await fetch('/api/articles/list');
-        if (!r.ok) return [];
-        var data = await r.json();
-        var arr = Array.isArray(data) ? data : [];
-        cachedArticles = arr.filter(function(a) { return a && a.published !== false; });
-        return cachedArticles;
-      } catch(e) { return []; }
-    }
-
-    /* === ŘAZENÍ S OHLEDEM NA "PŘIPNUTÉ" ČLÁNKY ===
-       Připnuté (a.pinned === true, nastavuje se v adminu) se vždy
-       zobrazí první, bez ohledu na zvolené řazení — mezi sebou podle
-       a.pinnedOrder (menší = víc nahoře, chybějící = na konec skupiny
-       připnutých). Zbytek se řadí podle data, směr určuje parametr
-       order ('newest' | 'oldest'). Použito jednotně všude na webu
-       (Poslední aktuality, panely sekcí, modal "Zobrazit vše", hledání),
-       ať se připnuté články chovají všude stejně. */
-    function compareArticles(a, b, order) {
-      var ap = !!a.pinned, bp = !!b.pinned;
-      if (ap !== bp) return ap ? -1 : 1;
-      if (ap && bp) {
-        var apo = typeof a.pinnedOrder === 'number' ? a.pinnedOrder : 9999;
-        var bpo = typeof b.pinnedOrder === 'number' ? b.pinnedOrder : 9999;
-        if (apo !== bpo) return apo - bpo;
-      }
-      var da = a.date || a.created || '', db = b.date || b.created || '';
-      if (order === 'oldest') return da < db ? -1 : (da > db ? 1 : 0);
-      return da < db ? 1 : (da > db ? -1 : 0);
-    }
-
-    function sortArticles(articles, order) {
-      return articles.slice().sort(function(a, b) { return compareArticles(a, b, order || 'newest'); });
-    }
-
-    async function loadLatest() {
-      var box = document.getElementById('latestPanel');
-      if (!box) return;
-      var articles = await getAllArticles();
-      var sorted = sortArticles(articles, 'newest');
-      var latest = sorted.slice(0, 2);
-      if (!latest.length) {
-        box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
-        return;
-      }
-      var html = '<h3>Poslední aktuality</h3>';
-      for (var i = 0; i < latest.length; i++) {
-        var a = latest[i];
-        var artId = a.id || '';
-        var title = a.title || 'Bez názvu';
-        var date = a.date || a.created || '';
-        var dateStr = formatDate(date);
-        var breadcrumb = await getArticleBreadcrumb(a);
-        var meta = [breadcrumb, dateStr].filter(Boolean).join(' • ');
-        var pinTag = a.pinned ? '<span class="pinned-badge">📌 Top</span>' : '';
-        html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + pinTag + '<small>' + escapeHtml(meta) + '</small></a>';
-      }
-      box.innerHTML = html;
-    }
-
-    async function loadLatestTimelineNote() {
-      var note = document.getElementById('introTimelineNote');
-      if (!note) return;
-      try {
-        var r = await fetch('/api/timeline/list');
-        if (!r.ok) return;
-        var data = await r.json();
-        var milestones = Array.isArray(data) ? data : [];
-        if (!milestones.length) return;
-        var latest = milestones[milestones.length - 1];
-        if (!latest || !latest.date) return;
-        var ageDays = (Date.now() - new Date(latest.date).getTime()) / 86400000;
-        if (ageDays > 30 || ageDays < 0) return;
-        note.innerHTML = '<span class="intro-timeline-note-pill"><span class="intro-timeline-note-dot"></span>📖 Nové v <a href="/timeline/#milestone-' + encodeURIComponent(latest.id) + '">A mezitím se semlelo...</a>: ' + escapeHtml(latest.title || '') + '</span>';
-        note.classList.add('visible');
-      } catch (e) { }
-    }
-
-    var SECTIONS = [
-      { id: 'travel', name: 'Cestování', nameEn: 'Travel' },
-      { id: 'photo', name: 'Fotografování', nameEn: 'Photo' },
-      { id: 'projects', name: 'Projekty', nameEn: 'Projects' },
-      { id: 'about', name: 'O Zajdovi', nameEn: 'About' }
-    ];
-
-    function getSectionName(id) {
-      for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].id === id) return SECTIONS[i].name;
-      return id || '';
-    }
-
-    var subsectionNameCache = null;
-    async function getSubsectionNameMap() {
-      if (subsectionNameCache) return subsectionNameCache;
-      subsectionNameCache = {};
-      for (var i = 0; i < SECTIONS.length; i++) {
-        var sec = SECTIONS[i];
-        var subs = await loadSubsections(sec.id);
-        subs.forEach(function(sub) {
-          subsectionNameCache[sec.id + ':' + (sub.id || '')] = sub.name || '';
-        });
-      }
-      return subsectionNameCache;
-    }
-
-    async function getArticleBreadcrumb(a) {
-      var secName = getSectionName(a.sectionId);
-      if (!secName) return '';
-      if (!a.subsectionId) return secName;
-      var map = await getSubsectionNameMap();
-      var subName = map[a.sectionId + ':' + a.subsectionId] || '';
-      return subName ? secName + ' › ' + subName : secName;
-    }
-
-    async function loadSectionCover(secId) {
-      try {
-        var r = await fetch('/api/sections/cover?sectionId=' + secId);
-        if (!r.ok) return '';
-        var d = await r.json();
-        return d.url || '';
-      } catch(e) { return ''; }
-    }
-
-    async function loadSubsections(secId) {
-      try {
-        var r = await fetch('/api/subsections/by-section?sectionId=' + secId);
-        if (!r.ok) return [];
-        return await r.json();
-      } catch(e) { return []; }
-    }
-
-    function renderArticleList(articles, order) {
-      if (!articles.length) return '<div class="no-articles">Žádné články</div>';
-      var sorted = sortArticles(articles, order);
-      var html = '';
-      for (var i = 0; i < sorted.length; i++) {
-        var a = sorted[i];
-        var artId = a.id || '';
-        var title = a.title || 'Bez názvu';
-        var date = a.date || a.created || '';
-        var dateStr = formatDate(date);
-        var excerpt = a.excerpt
-          ? a.excerpt
-          : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '');
-        var pinTag = a.pinned ? '<span class="pinned-badge">📌</span>' : '';
-        html += '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
-          '<span class="art-title">' + escapeHtml(title) + pinTag + '</span>' +
-          (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +
-          (excerpt ? '<span class="art-excerpt">' + escapeHtml(excerpt) + '</span>' : '') +
-          '</a>';
-      }
-      return html;
-    }
-
-    /* Stav aktuálně otevřeného modalu sekce — potřeba, aby přepínač
-       řazení věděl, které články má znovu vykreslit. */
-    var currentModalSectionId = null;
-    var currentModalSectionName = null;
-    var currentModalSortOrder = 'newest';
-    // true jakmile návštěvník sám klikne na přepínač Nejnovější/Nejstarší
-    // — do té doby má každá podsekce svoje VLASTNÍ řazení (viz sub.sortOrder,
-    // nastavuje se v adminu), ruční klik ho pro tenhle pohled přebije všude.
-    var modalSortOverridden = false;
-
-    async function openSectionModal(sectionId, sectionName) {
-      var overlay = document.getElementById('sectionModalOverlay');
-      var titleEl = document.getElementById('sectionModalTitle');
-      var scrollEl = document.getElementById('sectionModalScroll');
-      var sortToggle = document.getElementById('sectionModalSortToggle');
-      if (!overlay || !titleEl || !scrollEl) return;
-
-      currentModalSectionId = sectionId;
-      currentModalSectionName = sectionName;
-      // Řazení se při každém otevření resetuje na výchozí (nejnovější) —
-      // úmyslně, ať se návštěvník vždycky orientuje ve stejném výchozím
-      // pohledu, ne v tom, co si nastavil minule u úplně jiné sekce.
-      currentModalSortOrder = 'newest';
-      modalSortOverridden = false;
-      if (sortToggle) {
-        sortToggle.hidden = false;
-        sortToggle.querySelectorAll('button').forEach(function(b) {
-          b.classList.toggle('active', b.dataset.sort === 'newest');
-        });
-      }
-
-      titleEl.textContent = sectionName;
-      scrollEl.innerHTML = '<div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>';
-      overlay.classList.add('open');
-      document.body.style.overflow = 'hidden';
-
-      await renderSectionModalContent();
-    }
-
-    /* Znovu vykreslí obsah aktuálně otevřeného modalu sekce s aktuálním
-       currentModalSortOrder — volá se jak při prvním otevření, tak při
-       přepnutí Nejnovější/Nejstarší. */
-    async function renderSectionModalContent() {
-      var scrollEl = document.getElementById('sectionModalScroll');
-      if (!scrollEl || !currentModalSectionId) return;
-      var sectionId = currentModalSectionId;
-
-      var allArticles = await getAllArticles();
-      var subs = await loadSubsections(sectionId);
-      var html = '';
-
-      if (sectionId === 'travel') {
-        html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
-      }
-
-      if (!subs.length) {
-        var articles = allArticles.filter(function(a) {
-          var secId = a.sectionId;
-          if (secId == null) return false;
-          return String(secId) === sectionId;
-        });
-        html += renderArticleList(articles, currentModalSortOrder);
-      } else {
-        // Podsekce samotné se řadí abecedně jako dřív (řazení tady
-        // ovlivňuje POŘADÍ ČLÁNKŮ UVNITŘ každé podsekce, ne pořadí
-        // podsekcí samotných — to by bylo matoucí měnit).
-        for (var i = 0; i < subs.length; i++) {
-          var sub = subs[i];
-          var subId = sub.id || '';
-          var subName = sub.name || '';
-          var subArticles = allArticles.filter(function(a) {
-            var aSec = a.sectionId;
-            var aSub = a.subsectionId;
-            if (aSec == null || aSub == null) return false;
-            return String(aSec) === String(sectionId) && String(aSub) === String(subId);
-          });
-          if (!subArticles.length) continue;
-          var subOrder = modalSortOverridden ? currentModalSortOrder : (sub.sortOrder || 'newest');
-          html += '<div class="sub-block">' +
-            '<div class="sub-title">' + escapeHtml(subName) + ' (' + subArticles.length + ')</div>' +
-            '<div class="sub-articles">' + renderArticleList(subArticles, subOrder) + '</div>' +
-            '</div>';
-        }
-        if (!html) html = '<div class="no-articles">Žádné články</div>';
-      }
-
-      scrollEl.innerHTML = html;
-      scrollEl.querySelectorAll('.sub-title').forEach(function(titleEl2) {
-        titleEl2.addEventListener('click', function() {
-          var block = this.parentElement;
-          if (block) block.classList.toggle('collapsed');
-        });
-      });
-      var travelLinkInModal = scrollEl.querySelector('.travel-map-link');
-      if (travelLinkInModal) {
-        travelLinkInModal.addEventListener('click', function(e) {
-          e.preventDefault();
-          closeSectionModal();
-          openTravelMapModal();
-        });
-      }
-    }
-
-    function closeSectionModal() {
-      var overlay = document.getElementById('sectionModalOverlay');
-      if (overlay) overlay.classList.remove('open');
-      document.body.style.overflow = '';
-      currentModalSectionId = null;
-    }
-
-    function haversineKm(lat1, lon1, lat2, lon2) {
-      var R = 6371;
-      var dLat = (lat2 - lat1) * Math.PI / 180;
-      var dLon = (lon2 - lon1) * Math.PI / 180;
-      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    }
-
-    /* === "PŘEKVAP MĚ" — náhodný článek z archivu === */
-    async function surpriseMe() {
-      var btn = document.getElementById('surpriseMeBtn');
-      if (btn) { btn.disabled = true; btn.textContent = '🎲 Hledám…'; }
-      try {
-        var arr = await getAllArticles();
-        if (!arr.length) { if (btn) { btn.disabled = false; btn.textContent = '🎲 Překvap mě'; } return; }
-        var pick = arr[Math.floor(Math.random() * arr.length)];
-        window.location.href = '/article?id=' + encodeURIComponent(pick.id);
-      } catch (e) {
-        if (btn) { btn.disabled = false; btn.textContent = '🎲 Překvap mě'; }
-      }
-    }
-
-    /* === "MOJE ČÍSLA" — statistiky z dat, co web už tak jako tak má ===
-       Vzdálenost je součet úseků mezi místy SEŘAZENÝMI CHRONOLOGICKY podle
-       data článku (jako by ses spojoval bod po bodu tak, jak jsi je
-       navštěvoval) — ne vzdušná čára mezi všemi kombinacemi míst navzájem,
-       to by číslo zbytečně nafouklo a nedávalo smysl jako "cesta". */
-    async function openStatsModal() {
-      var overlay = document.getElementById('statsModalOverlay');
-      var scroll = document.getElementById('statsModalScroll');
-      if (!overlay || !scroll) return;
-      overlay.classList.add('open');
-      document.body.style.overflow = 'hidden';
-      scroll.innerHTML = '<div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>';
-
-      var arr = await getAllArticles();
-      var withLocation = arr.filter(function (a) {
-        return typeof a.lat === 'number' && typeof a.lng === 'number' && !isNaN(a.lat) && !isNaN(a.lng);
-      });
-
-      var sortedByDate = withLocation.slice().sort(function (a, b) {
-        var da = a.date || a.created || '', db = b.date || b.created || '';
-        return da < db ? -1 : (da > db ? 1 : 0);
-      });
-      var totalKm = 0;
-      for (var i = 1; i < sortedByDate.length; i++) {
-        totalKm += haversineKm(sortedByDate[i - 1].lat, sortedByDate[i - 1].lng, sortedByDate[i].lat, sortedByDate[i].lng);
-      }
-
-      // Zaokrouhlením souřadnic na ~1 km se stejné/velmi blízké místo
-      // z víc článků nepočítá jako víc "navštívených míst".
-      var placesSeen = {};
-      withLocation.forEach(function (a) { placesSeen[Math.round(a.lat * 100) + ':' + Math.round(a.lng * 100)] = true; });
-      var uniquePlaces = Object.keys(placesSeen).length;
-
-      var sectionsUsed = {};
-      arr.forEach(function (a) { if (a.sectionId) sectionsUsed[a.sectionId] = true; });
-
-      var photosCount = null;
-      try {
-        var pr = await fetch('/api/photos/list?galleryId=main');
-        if (pr.ok) { var photos = await pr.json(); photosCount = Array.isArray(photos) ? photos.length : null; }
-      } catch (e) { /* fotky jsou jen bonus číslo — bez nich se panel pořád ukáže */ }
-
-      var earliestDate = null;
-      arr.forEach(function (a) {
-        var d = a.date || a.created;
-        if (d && (!earliestDate || d < earliestDate)) earliestDate = d;
-      });
-
-      function plural(n, one, few, many) { return n === 1 ? one : (n >= 2 && n <= 4 ? few : many); }
-
-      var cards = [
-        { n: arr.length, label: plural(arr.length, 'článek', 'články', 'článků') },
-        { n: uniquePlaces, label: plural(uniquePlaces, 'navštívené místo', 'navštívená místa', 'navštívených míst') },
-        { n: Math.round(totalKm).toLocaleString('cs'), label: 'km propojených cest' },
-        { n: Object.keys(sectionsUsed).length, label: 'rozjeté sekce' }
-      ];
-      if (photosCount != null) {
-        cards.push({ n: photosCount, label: plural(photosCount, 'fotka v galerii', 'fotky v galerii', 'fotek v galerii') });
-      }
-
-      var html = '<div class="stats-grid">' + cards.map(function (c) {
-        return '<div class="stat-card"><span class="stat-number">' + c.n + '</span><span class="stat-label">' + escapeHtml(c.label) + '</span></div>';
-      }).join('') + '</div>';
-
-      if (earliestDate) {
-        html += '<p class="stats-footnote">📍 Na webu cestuješ od ' + formatDate(earliestDate) + '.' +
-          (totalKm > 0 ? ' Kdyby ses po těch místech vydal/a v pořadí, jak jsi o nich psal/a, našlapal/a bys vzdušnou čarou přibližně ' + Math.round(totalKm).toLocaleString('cs') + ' km.' : '') + '</p>';
-      }
-
-      scroll.innerHTML = arr.length ? html : '<p class="stats-footnote">Zatím není z čeho počítat — přidej první článek.</p>';
-    }
-
-    function closeStatsModal() {
-      var overlay = document.getElementById('statsModalOverlay');
-      if (overlay) overlay.classList.remove('open');
-      document.body.style.overflow = '';
-    }
-
-    function initStatsModal() {
-      var overlay = document.getElementById('statsModalOverlay');
-      var closeBtn = document.getElementById('statsModalClose');
-      if (closeBtn) closeBtn.addEventListener('click', closeStatsModal);
-      if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeStatsModal(); });
-      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeStatsModal(); });
-
-      // Tlačítka mají v HTML schválně BEZ onclick="" atributu — celý tenhle
-      // skript běží uvnitř DOMContentLoaded posluchače (viz úplně dole),
-      // takže openStatsModal/surpriseMe jsou lokální funkce, ne globální
-      // window.* — inline onclick="openStatsModal()" by je vůbec nenašel.
-      var statsBtn = document.getElementById('statsModalTrigger');
-      if (statsBtn) statsBtn.addEventListener('click', openStatsModal);
-      var surpriseBtn = document.getElementById('surpriseMeBtn');
-      if (surpriseBtn) surpriseBtn.addEventListener('click', surpriseMe);
-    }
-
-    function initSectionModal() {
-      var overlay = document.getElementById('sectionModalOverlay');
-      var closeBtn = document.getElementById('sectionModalClose');
-      var sortToggle = document.getElementById('sectionModalSortToggle');
-      if (closeBtn) closeBtn.addEventListener('click', closeSectionModal);
-      if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSectionModal(); });
-      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSectionModal(); });
-      if (sortToggle) {
-        sortToggle.querySelectorAll('button').forEach(function(btn) {
-          btn.addEventListener('click', function() {
-            if (this.classList.contains('active')) return;
-            sortToggle.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-            this.classList.add('active');
-            currentModalSortOrder = this.dataset.sort;
-            modalSortOverridden = true;
-            renderSectionModalContent();
-          });
-        });
-      }
-    }
-
-    var travelMapInitialized = false;
-
-    function formatDateCz(d) {
-      if (!d) return '';
-      try { return new Date(d).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); }
-      catch (e) { return ''; }
-    }
-
-    async function openTravelMapModal() {
-      var overlay = document.getElementById('travelMapModalOverlay');
-      if (!overlay) return;
-      overlay.classList.add('open');
-      document.body.style.overflow = 'hidden';
-      if (!travelMapInitialized) {
-        travelMapInitialized = true;
-        var mapEl = document.getElementById('travelMapModalMap');
-        if (mapEl) mapEl.innerHTML = '<div class="travel-map-modal-empty" style="opacity:0.7">Načítání mapy…</div>';
-        try {
-          await loadLeafletAssets();
-        } catch (e) {
-          console.error('Nepodařilo se načíst Leaflet:', e);
-          if (mapEl) mapEl.innerHTML = '<div class="travel-map-modal-empty">Mapu se nepodařilo načíst. Zkontroluj připojení a zkus to znovu.</div>';
-          travelMapInitialized = false; // umožní zkusit to příště znovu
-          return;
-        }
-        await buildTravelMapModalContent();
-      } else if (window._travelMapInstance) {
-        setTimeout(function () { window._travelMapInstance.invalidateSize(); }, 50);
-      }
-    }
-
-    function closeTravelMapModal() {
-      var overlay = document.getElementById('travelMapModalOverlay');
-      if (overlay) overlay.classList.remove('open');
-      document.body.style.overflow = '';
-    }
-
-    function initTravelMapModal() {
-      var overlay = document.getElementById('travelMapModalOverlay');
-      var closeBtn = document.getElementById('travelMapModalClose');
-      if (closeBtn) closeBtn.addEventListener('click', closeTravelMapModal);
-      if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeTravelMapModal(); });
-      document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTravelMapModal(); });
-    }
-
-    async function buildTravelMapModalContent() {
-      var map = await TravelMapCore.render({
-        mapId: 'travelMapModalMap',
-        legendId: 'travelMapModalLegend',
-        statsId: 'travelMapModalStats',
-        playBtnId: 'travelMapModalPlayBtn',
-        themeToggleId: 'travelMapModalThemeToggle',
-        emptyClassName: 'travel-map-modal-empty'
-      });
-      if (map) {
-        window._travelMapInstance = map;
-        setTimeout(function () { map.invalidateSize(); }, 60);
-      }
-    }
-
-    function renderSavedList() {
-      var saved = getSavedArticles();
-      if (!saved.length) return '<div class="no-articles">Zatím nic uloženého. Otevři článek a klikni na „☆ Uložit na později".</div>';
-      return saved.map(function(s) {
-        var d = formatDate(s.date);
-        return '<a class="article-link" href="' + s.url + '" style="display:flex;align-items:center;gap:8px">' +
-          '<span style="flex:1;min-width:0"><span class="art-title">' + escapeHtml(s.title) + '</span>' +
-          (d ? '<span class="art-date">' + escapeHtml(d) + '</span>' : '') + '</span>' +
-          '<button type="button" class="remove-saved-btn" title="Odebrat z uložených" onclick="event.preventDefault();event.stopPropagation();removeSavedFromModal(\'' + escapeHtml(String(s.id)) + '\')">✕</button>' +
-          '</a>';
-      }).join('');
-    }
-
-    function updateSavedLinkLabel() {
-      var el = document.getElementById('savedLinkWrap');
-      if (!el) return;
-      var n = getSavedArticles().length;
-      el.innerHTML = '<span class="saved-link" role="button" tabindex="0">🔖 Uložené' + (n ? ' (' + n + ')' : '') + '</span>';
-      var link = el.querySelector('.saved-link');
-      if (link) {
-        link.addEventListener('click', openSavedModal);
-        link.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSavedModal(); } });
-      }
-    }
-
-    function openSavedModal() {
-      var overlay = document.getElementById('sectionModalOverlay');
-      var titleEl = document.getElementById('sectionModalTitle');
-      var scrollEl = document.getElementById('sectionModalScroll');
-      var sortToggle = document.getElementById('sectionModalSortToggle');
-      if (!overlay || !titleEl || !scrollEl) return;
-      currentModalSectionId = null; // uložené nejsou vázané na sekci — přepínač řazení tu nedává smysl
-      if (sortToggle) sortToggle.hidden = true;
-      titleEl.textContent = '🔖 Uložené na později';
-      scrollEl.innerHTML = renderSavedList();
-      overlay.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    }
-
-    window.removeSavedFromModal = function(id) {
-      removeSavedArticle(id);
-      openSavedModal();
-      updateSavedLinkLabel();
-    };
-
-    function initSiteSearch() {
-      var input = document.getElementById('siteSearchInput');
-      var results = document.getElementById('searchResults');
-      if (!input || !results) return;
-      var debounceTimer = null;
-
-      input.addEventListener('input', function() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(runSearch, 220);
-      });
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('.search-panel')) results.classList.remove('open');
-      });
-
-      async function runSearch() {
-        var q = input.value.trim().toLowerCase();
-        if (!q) { results.classList.remove('open'); results.innerHTML = ''; return; }
-        var articles = await getAllArticles();
-        var matches = articles.filter(function(a) {
-          var title = (a.title || '').toLowerCase();
-          var text = (a.content || '').replace(/<[^>]+>/g, '').toLowerCase();
-          return title.indexOf(q) !== -1 || text.indexOf(q) !== -1;
-        }).sort(function(a, b) { return compareArticles(a, b, 'newest'); }).slice(0, 8);
-
-        if (!matches.length) {
-          results.innerHTML = '<div class="search-no-results">Nic jsem nenašel pro „' + escapeHtml(input.value.trim()) + '“</div>';
-        } else {
-          var rendered = await Promise.all(matches.map(async function(a) {
-            var artId = a.id || '';
-            var title = a.title || 'Bez názvu';
-            var dateStr = formatDate(a.date || a.created || '');
-            var breadcrumb = await getArticleBreadcrumb(a);
-            var meta = [breadcrumb, dateStr].filter(Boolean).join(' • ');
-            return '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
-              '<span class="art-title">' + escapeHtml(title) + '</span>' +
-              (meta ? '<span class="art-date">' + escapeHtml(meta) + '</span>' : '') +
-              '</a>';
-          }));
-          results.innerHTML = rendered.join('');
-        }
-        results.classList.add('open');
-      }
-    }
-
-    async function buildSections() {
-      var container = document.getElementById('sectionsContainer');
-      if (!container) return;
-      container.innerHTML = '';
-      var allArticles = await getAllArticles();
-      for (var s = 0; s < SECTIONS.length; s++) {
-        (function(sec) {
-          var panel = document.createElement('div');
-          panel.className = 'section-panel reveal-on-scroll';
-          panel.style.transitionDelay = (s * 90) + 'ms';
-
-          if (sec.id === 'about') {
-            panel.classList.add('panel-external');
-            panel.addEventListener('click', function() {
-              window.location.href = '/about/';
-            });
-
-            var img = document.createElement('img');
-            img.className = 'panel-cover';
-            img.alt = 'Fotografie Zajdy — ' + sec.name;
-            img.src = '/images/placeholder.jpg';
-            img.onerror = function() { this.src = '/images/placeholder.jpg'; };
-            loadSectionCover(sec.id).then(function(url) {
-              if (url) img.src = url;
-            });
-
-            var body = document.createElement('div');
-            body.className = 'panel-body';
-            body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>';
-
-            var scroll = document.createElement('div');
-            scroll.className = 'panel-scroll';
-            scroll.innerHTML = '<div style="color:#cbd5e1;font-size:13px;line-height:1.6;padding:8px 0">Jsem Zajda. Trochu cvok a občasný zapisovatel vlastního života...</div>' +
-              '<div style="text-align:center;margin-top:1rem"><span style="color:#ff6600;font-size:13px;font-weight:600;text-shadow:0 0 12px rgba(255,102,0,0.4)">Číst více →</span></div>';
-
-            body.appendChild(scroll);
-            panel.appendChild(img);
-            panel.appendChild(body);
-            container.appendChild(panel);
-            return;
-          }
-
-          var img = document.createElement('img');
-          img.className = 'panel-cover';
-          img.alt = 'Titulní fotografie sekce ' + sec.name;
-          img.src = '/images/placeholder.jpg';
-          img.onerror = function() { this.src = '/images/placeholder.jpg'; };
-          loadSectionCover(sec.id).then(function(url) {
-            if (url) img.src = url;
-          });
-
-          var body = document.createElement('div');
-          body.className = 'panel-body';
-          body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>';
-
-          var scroll = document.createElement('div');
-          scroll.className = 'panel-scroll';
-          scroll.innerHTML = '<div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>';
-
-          body.appendChild(scroll);
-          panel.appendChild(img);
-          panel.appendChild(body);
-          container.appendChild(panel);
-
-          (async function() {
-            var subs = await loadSubsections(sec.id);
-            var html = '';
-            var totalCount = 0;
-
-            if (sec.id === 'travel') {
-              html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
-            }
-
-            if (!subs.length) {
-              var articles = allArticles.filter(function(a) {
-                var secId = a.sectionId;
-                if (secId == null) return false;
-                return String(secId) === sec.id;
-              });
-              totalCount = articles.length;
-              html += renderArticleList(articles, 'newest');
-            } else {
-              for (var i = 0; i < subs.length; i++) {
-                var sub = subs[i];
-                var subId = sub.id || '';
-                var subName = sub.name || '';
-                var subArticles = allArticles.filter(function(a) {
-                  var aSec = a.sectionId;
-                  var aSub = a.subsectionId;
-                  if (aSec == null || aSub == null) return false;
-                  return String(aSec) === String(sec.id) && String(aSub) === String(subId);
-                });
-                totalCount += subArticles.length;
-                html += '<div class="sub-block">' +
-                  '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
-                  '<div class="sub-articles">' + renderArticleList(subArticles, sub.sortOrder || 'newest') + '</div>' +
-                  '</div>';
-              }
-            }
-
-            if (totalCount > 0) {
-              html += '<div class="show-all-link" tabindex="0" role="button" data-section-id="' + escapeHtml(sec.id) + '" data-section-name="' + escapeHtml(sec.name) + '">Zobrazit vše (' + totalCount + ') →</div>';
-            }
-
-            scroll.innerHTML = html;
-
-            scroll.querySelectorAll('.sub-title').forEach(function(titleEl) {
-              titleEl.addEventListener('click', function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                var block = this.parentElement;
-                if (block) block.classList.toggle('collapsed');
-              });
-            });
-
-            var showAllEl = scroll.querySelector('.show-all-link');
-            if (showAllEl) {
-              var openThisModal = function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                openSectionModal(sec.id, sec.name);
-              };
-              showAllEl.addEventListener('click', openThisModal);
-              showAllEl.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') openThisModal(e);
-              });
-            }
-          })();
-        })(SECTIONS[s]);
-      }
-      initScrollReveal('.section-panel.reveal-on-scroll');
-    }
-
-    startQuotes();
-    loadLatest();
-    loadLatestTimelineNote();
-    buildSections();
-    initSiteSearch();
-    /* === ŽIVÝ TIKER REAKCÍ ===
-       Bublina vlevo dole, co se postupně protáčí přes posledních pár
-       reakcí napříč celým webem — "🚀 Někdo právě reagoval na ...".
-       Načte se jednou při startu stránky, dál se jen dokola protáčí
-       lokálně (žádné další síťové volání). Když web nemá žádné reakce,
-       bublina se prostě vůbec nezobrazí — žádná prázdná/otravná
-       "0 reakcí" hláška. */
-    var tickerItems = [];
-    var tickerIndex = 0;
-    var tickerTimer = null;
-
-    function relativeTickerTime(timestamp) {
-      var diffMs = Date.now() - timestamp;
-      var minutes = diffMs / 60000;
-      if (minutes < 15) return 'Právě teď';
-      if (minutes < 60 * 24) return 'Dnes';
-      return 'Nedávno';
-    }
-
-    function showTickerItem(item) {
-      var el = document.getElementById('reactionTicker');
-      if (!el) return;
-      var iconHtml = item.iconUrl
-        ? '<img src="' + item.iconUrl + '" alt="">'
-        : (item.emoji || '💬');
-      el.innerHTML =
-        '<span class="rt-icon">' + iconHtml + '</span>' +
-        '<span class="rt-text"><b>' + relativeTickerTime(item.timestamp) + '</b> někdo zareagoval' + (item.label ? ' (' + escapeHtml(item.label) + ')' : '') +
-        '<span class="rt-title">' + escapeHtml(item.articleTitle) + '</span></span>';
-      el.href = '/article?id=' + encodeURIComponent(item.articleId);
-      el.hidden = false;
-      requestAnimationFrame(function () { el.classList.add('show'); });
-    }
-
-    function tickTicker() {
-      if (!tickerItems.length) return;
-      showTickerItem(tickerItems[tickerIndex]);
-      tickerTimer = setTimeout(function () {
-        var el = document.getElementById('reactionTicker');
-        if (el) el.classList.remove('show');
-        tickerIndex = (tickerIndex + 1) % tickerItems.length;
-        tickerTimer = setTimeout(tickTicker, 1200); // pauza mezi zmizením a další bublinou
-      }, 5000); // jak dlouho je bublina vidět
-    }
-
-    async function initReactionTicker() {
-      try {
-        var r = await fetch('/api/reactions/recent');
-        if (!r.ok) return;
-        var data = await r.json();
-        tickerItems = Array.isArray(data.items) ? data.items : [];
-        if (!tickerItems.length) return;
-        // Malé zpoždění po načtení stránky, ať bublina nesoutěží se
-        // vším ostatním, co se snaží načíst hned na začátku.
-        setTimeout(tickTicker, 3000);
-      } catch (e) {
-        // Tiker je čistě bonusová věc — tichý fail, nic se neděje.
-      }
-    }
-
-    (function initReactionTickerClickHandler() {
-      var el = document.getElementById('reactionTicker');
-      if (!el) return;
-      el.addEventListener('click', function () {
-        clearTimeout(tickerTimer); // odchodem ze stránky stejně přestane vadit, ale ať to nezůstává viset zbytečně
-      });
-    })();
-
-    initReactionTicker();
-
-    initSectionModal();
-    initStatsModal();
-    initTravelMapModal();
-    updateSavedLinkLabel();
-  });
-  </script>
+  <div class="ribbon-group" data-for="quotes">
+    <span class="ribbon-label" data-key="quotesLabel">Správa citátů</span>
+  </div>
+
+  <div class="ribbon-group" data-for="subsections">
+    <span class="ribbon-label" data-key="subsectionsLabel">Správa podsekcí a coverů</span>
+  </div>
+
+  <div class="ribbon-group" data-for="about">
+    <button class="btn btn-green btn-sm" data-key="saveAbout" onclick="saveAbout()">💾 Uložit</button>
+  </div>
+
+  <div class="ribbon-group" data-for="admin">
+    <button class="btn btn-sm" data-key="refreshAdmin" onclick="loadAdminPanel()">🔄 Obnovit</button>
+    <span class="ribbon-label" data-key="adminLabel">Cloudflare metriky a správa přístupů</span>
+  </div>
+
+</div>
+
+</div>
+
+<main class="dash-content">
+
+  <section id="galleries" class="section">
+    <div id="galleryGrid" class="gallery-grid"></div>
+  </section>
+
+  <section id="articles" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <input type="text" id="artTitle" class="form-input" placeholder="Nadpis článku">
+      </div>
+      <div class="form-row">
+        <select id="artSection" class="form-select" onchange="loadArtSubsections()">
+          <option value="">— Sekce —</option>
+          <option value="travel">Cestování</option>
+          <option value="photo">Fotografování</option>
+          <option value="projects">Projekty</option>
+          <option value="about">O Zajdovi</option>
+        </select>
+        <select id="artSubsection" class="form-select">
+          <option value="">— Podsekce —</option>
+        </select>
+        <input type="date" id="artDate" class="form-input">
+        <input type="text" id="artPlace" class="form-input" placeholder="Místo">
+      </div>
+      <div class="form-row">
+        <textarea id="artExcerpt" class="form-input" rows="2" placeholder="Krátký popis (pro seznam článků, sdílení a vyhledávače — nepovinné, jinak se použije začátek textu)" style="resize:vertical;flex:1"></textarea>
+      </div>
+      <div class="form-row" style="align-items:center">
+        <label style="min-width:110px">Titulní fotka</label>
+        <div id="artCoverPreview" style="width:90px;height:60px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border-soft);background-size:cover;background-position:center;flex-shrink:0"></div>
+        <button type="button" class="btn btn-sm" onclick="pickArticleCover()">🖼️ Vybrat z galerie</button>
+        <button type="button" class="btn btn-sm" onclick="clearArticleCover()">✖ Zrušit</button>
+        <input type="hidden" id="artCoverUrl" value="">
+      </div>
+
+      <div class="editor-toolbar" data-for="wysiwyg" data-for="wysiwyg">
+        <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+        <div class="sep"></div>
+        <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
+          <option value="">Velikost</option>
+          <option value="1">Malé</option>
+          <option value="3">Normální</option>
+          <option value="5">Velké</option>
+          <option value="7">Obří</option>
+        </select>
+        <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
+          <option value="">Formát</option>
+          <option value="P">Odstavec</option>
+          <option value="H1">Nadpis 1</option>
+          <option value="H2">Nadpis 2</option>
+          <option value="H3">Nadpis 3</option>
+          <option value="BLOCKQUOTE">Citace</option>
+          <option value="PRE">Kód</option>
+        </select>
+        <div class="sep"></div>
+        <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
+        <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
+        <div class="sep"></div>
+        <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
+        <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
+        <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
+        <div class="sep"></div>
+        <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
+        <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <div class="sep"></div>
+        <button data-key="imgLeft" onclick="insertImgTo('artEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button data-key="imgCenter" onclick="insertImgTo('artEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button data-key="imgRight" onclick="insertImgTo('artEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <div class="sep"></div>
+        <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <div class="sep"></div>
+        <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
+        <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
+        <div class="sep"></div>
+        <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat nebo skrýt tlačítka">↕️ Uspořádat</button>
+        <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺ Obnovit</button>
+      </div>
+      <div id="artEditor" contenteditable="true"></div>
+      <div id="articleWordCount" style="font-size:11.5px;color:var(--text-faint);font-family:var(--font-mono);margin:0.4rem 0 0 2px"></div>
+
+      <div class="form-row" style="margin-top:1rem">
+        <button id="artSubmitBtn" class="btn btn-blue" onclick="createArticle()">Vytvořit článek</button>
+      </div>
+    </div>
+
+    <div id="articleBulkBar" class="hidden" style="display:none;align-items:center;gap:0.5rem;margin-top:1.5rem;padding:0.75rem 1rem;background:var(--surface-2);border-radius:var(--r-md);border:1px solid var(--border-soft)">
+      <span id="articleBulkCount" style="color:var(--text-muted);font-size:13px;font-family:var(--font-mono)"></span>
+      <button class="btn btn-green btn-sm" onclick="bulkPublishArticles(true)">✅ Publikovat vybrané</button>
+      <button class="btn btn-sm" onclick="bulkPublishArticles(false)">⏸ Skrýt vybrané</button>
+      <button class="btn btn-red btn-sm" onclick="bulkDeleteArticles()">🗑 Smazat vybrané</button>
+    </div>
+    <div id="articleList" style="margin-top:1rem"></div>
+  </section>
+
+  <section id="quotes" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <input type="text" id="qText" class="form-input" placeholder="Text citátu" style="flex:2">
+        <input type="text" id="qAuthor" class="form-input" placeholder="Autor">
+        <button class="btn btn-blue" onclick="createQuote()">➕ Přidat</button>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>Citát</th><th>Autor</th><th></th></tr></thead>
+      <tbody id="quoteTableBody"></tbody>
+    </table>
+  </section>
+
+  <section id="subsections" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <select id="ssSection" class="form-select">
+          <option value="">— Sekce —</option>
+          <option value="travel">Cestování</option>
+          <option value="photo">Fotografování</option>
+          <option value="projects">Projekty</option>
+          <option value="about">O Zajdovi</option>
+        </select>
+        <input type="text" id="ssName" class="form-input" placeholder="Název podsekce">
+        <input type="number" id="ssOrder" class="form-input" placeholder="Pořadí" value="0" style="max-width:100px">
+        <button class="btn btn-blue" onclick="createSubsection()">➕ Přidat</button>
+      </div>
+    </div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">Covery sekcí</h3>
+    <div id="sectionCovers"></div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">Podsekce</h3>
+    <div id="subsectionsSummary" style="color:var(--text-muted);font-size:13px;margin-bottom:0.75rem;font-family:var(--font-mono)"></div>
+    <table class="data-table subsections-table">
+      <thead><tr><th>Sekce</th><th>Podsekce</th><th>Slug</th><th>Pořadí</th><th>Řazení článků</th><th>Články</th><th></th></tr></thead>
+      <tbody id="subsectionTableBody"></tbody>
+    </table>
+  </section>
+
+  <section id="about" class="section">
+    <div class="form-card">
+      <div class="form-row">
+        <input type="text" id="aboutTitle" class="form-input" placeholder="Nadpis">
+      </div>
+
+      <div class="editor-toolbar" data-for="wysiwyg">
+        <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
+        <button data-key="italic" onclick="toggleItalic()" title="Kurzíva"><i>I</i></button>
+        <button data-key="underline" onclick="toggleUnderline()" title="Podtržení"><u>U</u></button>
+        <button data-key="strike" onclick="toggleStrike()" title="Přeškrtnuté"><s>S</s></button>
+        <div class="sep"></div>
+        <select data-key="fontSize" onchange="setFontSize(this.value)" title="Velikost">
+          <option value="">Velikost</option>
+          <option value="1">Malé</option>
+          <option value="3">Normální</option>
+          <option value="5">Velké</option>
+          <option value="7">Obří</option>
+        </select>
+        <select data-key="heading" onchange="setHeading(this.value)" title="Formát">
+          <option value="">Formát</option>
+          <option value="P">Odstavec</option>
+          <option value="H1">Nadpis 1</option>
+          <option value="H2">Nadpis 2</option>
+          <option value="H3">Nadpis 3</option>
+          <option value="BLOCKQUOTE">Citace</option>
+          <option value="PRE">Kód</option>
+        </select>
+        <div class="sep"></div>
+        <input type="color" onchange="setForeColor(this.value)" title="Barva textu" class="color-picker">
+        <input type="color" onchange="setBackColor(this.value)" title="Barva pozadí" class="color-picker">
+        <div class="sep"></div>
+        <button data-key="alignLeft" onclick="alignLeft()" title="Vlevo">⬅️</button>
+        <button data-key="alignCenter" onclick="alignCenter()" title="Na střed">↔️</button>
+        <button data-key="alignRight" onclick="alignRight()" title="Vpravo">➡️</button>
+        <button data-key="alignJustify" onclick="alignJustify()" title="Do bloku">☰</button>
+        <div class="sep"></div>
+        <button data-key="bullet" onclick="insertBullet()" title="Odrážky">• List</button>
+        <button data-key="number" onclick="insertNumber()" title="Číslovaný seznam">1. List</button>
+        <button data-key="indentLess" onclick="indentLess()" title="Zmenšit odsazení">⇤</button>
+        <button data-key="indentMore" onclick="indentMore()" title="Zvětšit odsazení">⇥</button>
+        <div class="sep"></div>
+        <button data-key="imgLeft" onclick="insertImgTo('aboutEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
+        <button data-key="imgCenter" onclick="insertImgTo('aboutEditor','center')" title="Obrázek na střed">🖼️↔</button>
+        <button data-key="imgRight" onclick="insertImgTo('aboutEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
+        <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
+        <button data-key="moveImgDown" onclick="moveImageDown()" title="Obrázek dolů">🖼️↓</button>
+        <div class="sep"></div>
+        <button data-key="link" onclick="insertLink()" title="Vložit odkaz">🔗</button>
+        <button data-key="unlink" onclick="unlink()" title="Zrušit odkaz">🔗✖</button>
+        <button data-key="hr" onclick="insertHR()" title="Vodorovná čára">―</button>
+        <button data-key="clearFormat" onclick="clearFormat()" title="Vymazat formátování">🧹</button>
+        <div class="sep"></div>
+        <button data-key="undo" onclick="editorUndo()" title="Zpět">↶</button>
+        <button data-key="redo" onclick="editorRedo()" title="Vpřed">↷</button>
+        <div class="sep"></div>
+        <button class="toolbar-reorder-btn" onclick="toggleToolbarReorderMode(this.closest('.editor-toolbar'))" title="Přeuspořádat nebo skrýt tlačítka">↕️ Uspořádat</button>
+        <button class="toolbar-reorder-btn" onclick="restoreAllToolbarItems('wysiwyg')" title="Vrátit všechna skrytá tlačítka">↺ Obnovit</button>
+      </div>
+      <div id="aboutEditor" contenteditable="true"></div>
+    </div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">Náhled</h3>
+    <div id="aboutPreview" class="form-card"></div>
+  </section>
+
+  <section id="reactions" class="section">
+    <h3 style="margin-bottom:0.5rem">😀 Nastavení reakcí</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:1rem">
+      Tyhle reakce se zobrazují pod každým článkem na veřejném webu. "Klíč" je interní
+      identifikátor (nezobrazuje se nikde návštěvníkům) — pokud u existující reakce
+      změníš jen emoji nebo text, dosavadní nasbírané počty zůstanou zachované. Pokud
+      klíč smažeš/změníš, začíná se počítat od nuly.
+    </p>
+    <div id="reactionConfigList" class="form-card"></div>
+    <div style="display:flex;gap:0.5rem;margin:0.75rem 0 2rem">
+      <button class="btn btn-sm" onclick="addReactionRow()">➕ Přidat reakci</button>
+      <button class="btn btn-blue" onclick="saveReactionConfig()">💾 Uložit reakce</button>
+      <span id="reactionConfigStatus" style="color:var(--text-faint);font-size:12px;align-self:center;font-family:var(--font-mono)"></span>
+    </div>
+
+    <h3 style="color:#ffcc66;margin:1.5rem 0 0.75rem">📊 Statistiky reakcí</h3>
+    <div id="reactionStatsSummary" class="usage-cards"></div>
+    <div class="form-card" style="margin-top:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+        <span style="color:var(--text-muted);font-size:13px">Vývoj reakcí v čase</span>
+        <select id="reactionStatsRange" class="form-select" style="max-width:150px" onchange="loadReactionStats()">
+          <option value="14">Posledních 14 dní</option>
+          <option value="30" selected>Posledních 30 dní</option>
+          <option value="90">Posledních 90 dní</option>
+        </select>
+      </div>
+      <div id="reactionStatsChart"></div>
+    </div>
+  </section>
+
+  <section id="admin" class="section">
+    <h3 style="margin-bottom:0.75rem">📊 Využití (Cloudflare)</h3>
+    <div id="adminUsageCards" class="usage-cards"></div>
+
+    <h3 style="margin-bottom:0.75rem">👥 Přístupy dalších lidí</h3>
+    <div class="form-card">
+      <div class="form-row">
+        <input type="email" id="adminInviteEmail" class="form-input" placeholder="E-mail nové osoby">
+        <select id="adminInviteRole" class="form-select" style="max-width:160px">
+          <option value="editor">Editor</option>
+          <option value="viewer">Jen náhled</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn btn-blue" onclick="inviteAdminUser()">➕ Pozvat</button>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead><tr><th>E-mail</th><th>Role</th><th>Přidán</th><th></th></tr></thead>
+      <tbody id="adminUsersTableBody"></tbody>
+    </table>
+
+    <h3 style="margin:1.75rem 0 0.75rem">🔗 Užitečné odkazy</h3>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.75rem">
+      <a href="https://claude.ai" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none">🤖 Claude</a>
+      <a href="https://github.com" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none">🐙 GitHub</a>
+      <a href="https://dash.cloudflare.com" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none">☁️ Cloudflare Dashboard</a>
+      <a href="https://search.google.com/search-console?resource_id=https%3A%2F%2Fzajda-web.pages.dev%2F" target="_blank" rel="noopener" class="btn btn-sm" style="text-decoration:none">🔍 Google Search Console</a>
+    </div>
+    <p style="color:var(--text-faint);font-size:11.5px;margin-top:-1rem;margin-bottom:1.75rem">Claude/GitHub/Cloudflare míří na obecné vstupní stránky — pokud chceš rovnou konkrétní repo/účet, dej vědět a doplním přesné URL. Search Console už míří rovnou na přehled tohoto konkrétního webu.</p>
+
+    <h3 style="margin-bottom:0.75rem">📁 Přenos složek mezi zařízeními</h3>
+    <div class="form-card">
+      <p style="color:var(--text-faint);font-size:12px;margin-bottom:0.75rem">Složky se pamatují jen v tomto prohlížeči/zařízení. Nejjednodušší je <strong style="color:var(--text-muted)">☁️ Uložit na server</strong> na jednom zařízení a <strong style="color:var(--text-muted)">☁️ Načíst ze serveru</strong> na druhém — funguje odkudkoliv, bez kopírování čehokoliv. Soubor/kód jsou záloha navíc, kdyby server nebyl po ruce.</p>
+      <div class="form-row">
+        <button class="btn btn-sm" onclick="exportFolderData()">📋 Kopírovat kód</button>
+        <button class="btn btn-blue btn-sm" onclick="exportFolderDataAsFile()">⬇️ Stáhnout jako soubor (.txt)</button>
+        <button class="btn btn-sm" onclick="openImportFolderModal()">⬆️ Importovat</button>
+        <div class="ribbon-sep" style="height:auto;align-self:stretch"></div>
+        <button class="btn btn-green btn-sm" onclick="saveFoldersToServer()">☁️ Uložit na server</button>
+        <button class="btn btn-blue btn-sm" onclick="loadFoldersFromServer()">☁️ Načíst ze serveru</button>
+        <span id="folderSyncStatus" style="color:var(--text-faint);font-size:11.5px;font-family:var(--font-mono);align-self:center"></span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="importFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Importovat kód složek">
+  <div class="modal-box">
+    <h3>⬆️ Importovat kód složek</h3>
+    <div class="form-row">
+      <textarea id="importFolderCode" class="form-input" rows="5" placeholder="Sem vlož kód/JSON, nebo použij tlačítko níže pro nahrání souboru…" style="font-family:var(--font-mono);font-size:12px;resize:vertical"></textarea>
+    </div>
+    <div class="form-row">
+      <label style="min-width:auto">nebo</label>
+      <input type="file" accept=".txt,.json" onchange="importFolderDataFromFile(this)" class="form-input">
+    </div>
+    <p style="color:var(--text-faint);font-size:12px;margin-top:0.5rem">Přepíše aktuální přiřazení složek v tomto prohlížeči.</p>
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="importFolderData()">✅ Importovat</button>
+      <button class="btn btn-red" onclick="$('importFolderModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<div id="uploadSettingsModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Nastavení nahrávání">
+  <div class="modal-box">
+    <h3>⚙️ Nastavení nahrávání</h3>
+    <div class="form-row">
+      <label>Max. rozlišení</label>
+      <select id="usMaxRes" class="form-select">
+        <option value="1000">1000 px</option>
+        <option value="2000">2000 px</option>
+        <option value="4000">4000 px</option>
+        <option value="0">Originál</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Kvalita</label>
+      <select id="usQuality" class="form-select">
+        <option value="0.7">70 %</option>
+        <option value="0.85">85 %</option>
+        <option value="0.95">95 %</option>
+        <option value="0.99">99 %</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Auto-rotace</label>
+      <select id="usAutoRotate" class="form-select">
+        <option value="1">Zapnuto</option>
+        <option value="0">Vypnuto</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-blue" onclick="saveUploadSettings()">💾 Uložit</button>
+      <button class="btn btn-red" onclick="$('uploadSettingsModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<div id="newFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Nová složka">
+  <div class="modal-box">
+    <h3>➕ Nová složka</h3>
+    <div class="form-row">
+      <input type="text" id="newFolderName" class="form-input" placeholder="Název složky (např. Dovolená 2024)" onkeydown="if(event.key==='Enter')createNewFolder()">
+    </div>
+    <p style="color:var(--text-faint);font-size:12px;margin-top:0.5rem">Založí prázdnou složku — hned se nabídne ve filtru i při nahrávání. Naplní se, až do ní něco nahraješ nebo přesuneš.</p>
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="createNewFolder()">✅ Založit</button>
+      <button class="btn btn-red" onclick="$('newFolderModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<div id="moveToFolderModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Přesunout do složky">
+  <div class="modal-box">
+    <h3>📁 Přesunout do složky</h3>
+    <p id="moveFolderCount" style="color:var(--text-muted);font-size:13px;margin-bottom:0.75rem"></p>
+    <div class="form-row">
+      <input type="text" id="moveFolderName" class="form-input" list="folderSuggestions" placeholder="Název složky (nebo prázdné = bez složky)">
+    </div>
+    <p style="color:var(--text-faint);font-size:12px;margin-top:0.5rem">Fotky se přejmenují (obsah beze změny). Prázdný název vyjme fotky z jakékoliv složky.</p>
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="applyMoveToFolder()">✅ Přesunout</button>
+      <button class="btn btn-red" onclick="$('moveToFolderModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<div id="bulkEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Hromadná úprava vybraných fotek">
+  <div class="modal-box">
+    <h3>🔧 Hromadná úprava vybraných fotek</h3>
+    <p id="bulkEditCount" style="color:#94a3b8;font-size:13px;margin-bottom:0.75rem"></p>
+    <div class="form-row">
+      <label>Max. rozlišení</label>
+      <select id="beMaxRes" class="form-select">
+        <option value="800">800 px</option>
+        <option value="1000">1000 px</option>
+        <option value="1500">1500 px</option>
+        <option value="2000" selected>2000 px</option>
+        <option value="0">Beze změny rozlišení</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Kvalita JPG</label>
+      <select id="beQuality" class="form-select">
+        <option value="0.6">60 %</option>
+        <option value="0.7" selected>70 %</option>
+        <option value="0.8">80 %</option>
+        <option value="0.9">90 %</option>
+        <option value="0.99">99 %</option>
+      </select>
+    </div>
+    <p style="color:#64748b;font-size:12px;margin-top:0.5rem">Fotky se převedou na JPG (max. kvalita 99&nbsp;%) a přepíší se originály v galerii (nevratné).</p>
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="applyBulkEdit()">✅ Použít na vybrané</button>
+      <button class="btn btn-red" onclick="$('bulkEditModal').classList.add('hidden')">Zrušit</button>
+    </div>
+  </div>
+</div>
+
+<div id="editorModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Editor fotografie">
+  <div class="editor-box">
+    <div class="editor-body">
+
+      <div class="editor-sidebar">
+
+        <details class="editor-panel" open>
+          <summary>🎨 Předvolby</summary>
+          <div class="editor-panel-body">
+            <div id="presetSwatches" class="preset-swatches"></div>
+            <div class="tool-row filter-row">
+              <label>Síla stylu <span id="presetIntensityVal">100%</span></label>
+              <input type="range" id="presetIntensitySlider" min="0" max="150" value="100" oninput="setPresetIntensity(this.value)">
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-panel">
+          <summary>✂️ Ořez</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row crop-mode-row">
+              <button class="btn btn-sm btn-blue" onclick="setCrop('free')">Volný</button>
+              <button class="btn btn-sm" onclick="setCrop('1:1')">1:1</button>
+              <button class="btn btn-sm" onclick="setCrop('4:3')">4:3</button>
+              <button class="btn btn-sm" onclick="setCrop('3:4')">3:4</button>
+              <button class="btn btn-sm" onclick="setCrop('16:9')">16:9</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="applyCrop()">✂️ Použít ořez</button>
+            </div>
+            <p style="font-size:11px;color:var(--text-faint);margin:0">Pro ořez musí být rotace i narovnání horizontu na 0°.</p>
+          </div>
+        </details>
+
+        <details class="editor-panel">
+          <summary>🔄 Transformace</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="rotateEditor(-90)">⟲ 90°</button>
+              <button class="btn btn-sm" onclick="rotateEditor(90)">⟳ 90°</button>
+            </div>
+            <div class="tool-row filter-row">
+              <label>🌅 Narovnat horizont <span id="fval-straighten">0°</span></label>
+              <input type="range" id="fslider-straighten" min="-45" max="45" step="0.5" value="0" oninput="setStraighten(this.value)">
+            </div>
+            <div class="tool-row">
+              <label style="width:100%;display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-family:var(--font-mono)">
+                <input type="checkbox" id="gridToggle" onchange="toggleStraightenGrid(this.checked)"> Vodicí mřížka
+              </label>
+            </div>
+            <div class="tool-row filter-row">
+              <label>Zoom</label>
+              <input type="range" id="zoomSlider" min="0.1" max="4" step="0.01" value="1" oninput="editorSetZoom(this.value)">
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-panel" open>
+          <summary>✨ Automaticky</summary>
+          <div class="editor-panel-body">
+            <p style="font-size:11px;color:var(--text-faint);margin:0 0 0.2rem">Skutečná analýza fotky (histogram, ostrost, horizont) — ne pevný filtr.</p>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoStraighten()" title="Najde vodorovnou linii a narovná horizont">📐 Horizont</button>
+              <button class="btn btn-sm" onclick="autoExposure()" title="Posune jas ke střední šedé">☀️ Expozice</button>
+              <button class="btn btn-sm" onclick="autoContrast()" title="Natáhne histogram (auto levels)">◐ Kontrast</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoWhiteBalance()" title="Gray-world vyvážení bílé">⚪ Bílá</button>
+              <button class="btn btn-sm" onclick="autoSharpen()" title="Podle míry rozostření fotky">🔍 Doostření</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm btn-blue" style="width:100%;justify-content:center" onclick="autoEnhanceAll()">✨ Vylepšit vše najednou</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="undoFilterChange()">↶ Zpět (styl)</button>
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-panel" open>
+          <summary>☀️ Světlo</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row filter-row">
+              <label>Expozice <span id="fval-exposure">0</span></label>
+              <input type="range" id="fslider-exposure" min="-100" max="100" value="0" oninput="setFilter('exposure', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Kontrast <span id="fval-contrast">0</span></label>
+              <input type="range" id="fslider-contrast" min="-100" max="100" value="0" oninput="setFilter('contrast', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Stíny <span id="fval-shadows">0</span></label>
+              <input type="range" id="fslider-shadows" min="-100" max="100" value="0" oninput="setFilter('shadows', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Světla <span id="fval-highlights">0</span></label>
+              <input type="range" id="fslider-highlights" min="-100" max="100" value="0" oninput="setFilter('highlights', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Černý bod <span id="fval-blackPoint">0</span></label>
+              <input type="range" id="fslider-blackPoint" min="0" max="120" value="0" oninput="setFilter('blackPoint', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Bílý bod <span id="fval-whitePoint">255</span></label>
+              <input type="range" id="fslider-whitePoint" min="135" max="255" value="255" oninput="setFilter('whitePoint', this.value)">
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-panel">
+          <summary>🎨 Barva</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row filter-row">
+              <label>Sytost <span id="fval-saturation">0</span></label>
+              <input type="range" id="fslider-saturation" min="-100" max="100" value="0" oninput="setFilter('saturation', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Živost <span id="fval-vibrance">0</span></label>
+              <input type="range" id="fslider-vibrance" min="-100" max="100" value="0" oninput="setFilter('vibrance', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Teplota <span id="fval-temp">0</span></label>
+              <input type="range" id="fslider-temp" min="-100" max="100" value="0" oninput="setFilter('temp', this.value)">
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-panel">
+          <summary>💫 Efekty</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row filter-row">
+              <label>Vinětace <span id="fval-vignette">0</span></label>
+              <input type="range" id="fslider-vignette" min="0" max="100" value="0" oninput="setFilter('vignette', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Doostření <span id="fval-sharpen">0</span></label>
+              <input type="range" id="fslider-sharpen" min="0" max="100" value="0" oninput="setFilter('sharpen', this.value)">
+            </div>
+            <div class="tool-row filter-row">
+              <label>Odšumění <span id="fval-denoise">0</span></label>
+              <input type="range" id="fslider-denoise" min="0" max="100" value="0" oninput="setFilter('denoise', this.value)">
+            </div>
+          </div>
+        </details>
+
+        <details class="editor-panel">
+          <summary>📤 Export</summary>
+          <div class="editor-panel-body">
+            <div class="tool-row">
+              <button class="btn btn-sm btn-blue" id="ex-max" onclick="setExport('max')">Max</button>
+              <button class="btn btn-sm" id="ex-2000" onclick="setExport('2000')">2000 px</button>
+              <button class="btn btn-sm" id="ex-fullhd" onclick="setExport('fullhd')">Full HD</button>
+            </div>
+          </div>
+        </details>
+
+      </div>
+
+      <div class="editor-preview" id="editPreview">
+        <img id="editImg" src="" alt="">
+        <div class="crop-layer" id="cropLayer" style="display:none">
+          <div class="crop-mask" id="maskTop"></div>
+          <div class="crop-mask" id="maskBottom"></div>
+          <div class="crop-mask" id="maskLeft"></div>
+          <div class="crop-mask" id="maskRight"></div>
+          <div class="crop-rect" id="cropRect">
+            <div class="crop-grid"></div>
+            <div class="crop-handle" data-dir="nw"></div>
+            <div class="crop-handle" data-dir="n"></div>
+            <div class="crop-handle" data-dir="ne"></div>
+            <div class="crop-handle" data-dir="w"></div>
+            <div class="crop-handle" data-dir="e"></div>
+            <div class="crop-handle" data-dir="sw"></div>
+            <div class="crop-handle" data-dir="s"></div>
+            <div class="crop-handle" data-dir="se"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="editor-footer">
+      <button class="btn" style="margin-right:auto" onmousedown="showBeforePreview(true)" onmouseup="showBeforePreview(false)" onmouseleave="showBeforePreview(false)" ontouchstart="showBeforePreview(true)" ontouchend="showBeforePreview(false)" title="Podrž pro zobrazení originálu bez úprav">👁 Podržet = Před</button>
+      <button class="btn btn-green" onclick="saveEditor('replace')">💾 Přepsat originál</button>
+      <button class="btn btn-blue" onclick="saveEditor('new')">💾 Uložit jako novou</button>
+      <button class="btn btn-red" onclick="closeEditor()">Zavřít</button>
+    </div>
+  </div>
+</div>
+
+<script src="dashboard-core.js?v=20260918"></script>
+<script src="dashboard-editor.js?v=20260918"></script>
+<script src="gallery-ribbon-ui.js?v=20260910"></script>
+<script src="article-map-picker.js?v=20260918"></script>
+<script src="timeline-admin.js?v=20260813"></script>
+<script src="mobile-editor.js?v=20260817"></script>
+<script src="gallery-mobile-menu.js?v=20260918"></script>
+<script src="reactions-admin.js?v=20260918"></script>
+<script src="admin-nav-mobile.js?v=20260918"></script>
 </body>
 </html>
