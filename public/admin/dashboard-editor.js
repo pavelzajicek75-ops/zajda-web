@@ -2789,6 +2789,8 @@ async function deleteQuote(key) {
    ručně kontrolovat přes filtr v Článcích. Teď se u každé podsekce
    spočítá a zobrazí počet, a prázdné se výrazně označí (červený rámeček
    + ⚠️ odznak), ať jde na první pohled najít, co smazat/sloučit. */
+let lastLoadedSubsections = [];
+
 async function loadSubsections() {
   const tbody = $('subsectionTableBody');
   if (!tbody) return;
@@ -2802,6 +2804,7 @@ async function loadSubsections() {
       if (r.ok) { const arr = await r.json(); all.push(...arr); }
     } catch {}
   }
+  lastLoadedSubsections = all;
   if (!all.length) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:1rem">Žádné podsekce.</td></tr>';
     updateSubsectionsSummary(0, 0);
@@ -2827,7 +2830,7 @@ async function loadSubsections() {
   ).length;
 
   let emptyCount = 0;
-  tbody.innerHTML = all.map(s => {
+  tbody.innerHTML = all.map((s, i) => {
     const count = countFor(s.sectionId, s.id);
     const isEmpty = count === 0;
     if (isEmpty) emptyCount++;
@@ -2835,6 +2838,13 @@ async function loadSubsections() {
     const countBadge = isEmpty
       ? `<span class="count-badge count-badge-empty">⚠️ Prázdná</span>`
       : `<span class="count-badge">${count} ${countLabel}</span>`;
+    // Šipky nahoru/dolů fungují jen v rámci stejné sekce (mezi sekcemi
+    // se pořadí neprolíná) — proto se soused hledá jen mezi řádky se
+    // stejným sectionId, ne prostě předchozí/další řádek v tabulce.
+    const prev = all[i - 1];
+    const next = all[i + 1];
+    const canMoveUp = !!prev && prev.sectionId === s.sectionId;
+    const canMoveDown = !!next && next.sectionId === s.sectionId;
     return `
     <tr class="${isEmpty ? 'row-flag-empty' : ''}">
       <td data-label="Sekce">${escapeHtml(s.sectionId)}</td>
@@ -2845,7 +2855,12 @@ async function loadSubsections() {
         </div>
       </td>
       <td data-label="Slug">${escapeHtml(s.slug)}</td>
-      <td data-label="Pořadí">${s.order || 0}</td>
+      <td data-label="Pořadí">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="moveSubsection('${s.id}','up')" class="btn btn-sm" ${canMoveUp ? '' : 'disabled'} title="Posunout nahoru" style="padding:2px 8px;line-height:1">▲</button>
+          <button onclick="moveSubsection('${s.id}','down')" class="btn btn-sm" ${canMoveDown ? '' : 'disabled'} title="Posunout dolů" style="padding:2px 8px;line-height:1">▼</button>
+        </div>
+      </td>
       <td data-label="Řazení článků">
         <select class="form-select" style="min-width:150px" onchange="saveSubsectionSortOrder('${s.id}', this.value)">
           <option value="newest" ${s.sortOrder !== 'oldest' ? 'selected' : ''}>Nejnovější první</option>
@@ -2863,6 +2878,41 @@ async function loadSubsections() {
   }).join('');
 
   updateSubsectionsSummary(all.length, emptyCount);
+}
+
+/* Posun podsekce nahoru/dolů v rámci její sekce. Nejen prohodí "order"
+   se sousedem (to by nic nezměnilo, když obě mají stejnou/nulovou
+   hodnotu — časté u podsekcí, které se v adminu ještě nikdy neřadily),
+   ale přečísluje celou sekci 0..n podle nové pozice, takže výsledek je
+   vždy spolehlivý bez ohledu na to, co bylo v "order" předtím. */
+async function moveSubsection(id, direction) {
+  const arr = lastLoadedSubsections;
+  const idx = arr.findIndex(s => s.id === id);
+  if (idx === -1) return;
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  const swap = arr[swapIdx];
+  if (!swap || swap.sectionId !== arr[idx].sectionId) return;
+
+  const tmp = arr[idx];
+  arr[idx] = arr[swapIdx];
+  arr[swapIdx] = tmp;
+
+  const sectionId = tmp.sectionId;
+  const updates = arr
+    .filter(s => s.sectionId === sectionId)
+    .map((s, i) => ({ id: s.id, order: i }));
+
+  try {
+    await Promise.all(updates.map(u => fetch('/api/subsections/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(u)
+    })));
+  } catch {
+    showToast('Chyba při změně pořadí', 'error');
+  } finally {
+    loadSubsections();
+  }
 }
 
 /* Krátký souhrn nad tabulkou — na mobilu, kde se scrolluje hodně dolů,
