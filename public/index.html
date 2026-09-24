@@ -362,10 +362,10 @@
        ovládací věc v panelu, tak je čitelnější/dotykově pohodlnější
        a zarovnaná doprava pod název sekce. */
     .panel-sort-toggle {
-      align-self: flex-end; margin: 0.5rem 0 0.6rem;
+      align-self: flex-end; margin: 0.4rem 0 0.5rem;
     }
     .panel-sort-toggle button {
-      padding: 7px 13px; font-size: 12px;
+      padding: 4px 10px; font-size: 10.5px;
     }
     .pinned-badge {
       display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
@@ -777,6 +777,19 @@
        order ('newest' | 'oldest'). Použito jednotně všude na webu
        (Poslední aktuality, panely sekcí, modal "Zobrazit vše", hledání),
        ať se připnuté články chovají všude stejně. */
+    /* Sjednotí a.date (text z adminu, např. "2025-07-17") a a.created
+       (číslo — kdy byl článek uložen) na jedno srovnatelné číslo (ms).
+       Bez tohohle se v seznamu, kde se potkají oba typy (starší články
+       mívají jen "created", bez zadaného data), řazení rozsypalo —
+       string datum vs. číslo se v JS nedá spolehlivě porovnat. */
+    function articleTimestamp(a) {
+      if (a.date) {
+        var t = new Date(a.date).getTime();
+        if (!isNaN(t)) return t;
+      }
+      return typeof a.created === 'number' ? a.created : 0;
+    }
+
     function compareArticles(a, b, order) {
       var ap = !!a.pinned, bp = !!b.pinned;
       if (ap !== bp) return ap ? -1 : 1;
@@ -785,9 +798,9 @@
         var bpo = typeof b.pinnedOrder === 'number' ? b.pinnedOrder : 9999;
         if (apo !== bpo) return apo - bpo;
       }
-      var da = a.date || a.created || '', db = b.date || b.created || '';
-      if (order === 'oldest') return da < db ? -1 : (da > db ? 1 : 0);
-      return da < db ? 1 : (da > db ? -1 : 0);
+      var da = articleTimestamp(a), db = articleTimestamp(b);
+      if (order === 'oldest') return da - db;
+      return db - da;
     }
 
     function sortArticles(articles, order) {
