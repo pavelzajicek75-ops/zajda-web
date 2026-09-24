@@ -357,6 +357,16 @@
     .sort-toggle button.active {
       background: linear-gradient(90deg, var(--ember), var(--nova)); color: #0a0a16;
     }
+    /* Přepínač řazení přímo v panelu sekce na homepage — na rozdíl od
+       toho v modalu (podřízená kontrola vedle nadpisu) je tohle jediná
+       ovládací věc v panelu, tak je čitelnější/dotykově pohodlnější
+       a zarovnaná doprava pod název sekce. */
+    .panel-sort-toggle {
+      align-self: flex-end; margin: 0.5rem 0 0.6rem;
+    }
+    .panel-sort-toggle button {
+      padding: 7px 13px; font-size: 12px;
+    }
     .pinned-badge {
       display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
       background: rgba(255,200,87,0.16); color: #ffc857; border: 1px solid rgba(255,200,87,0.4);
@@ -1355,7 +1365,11 @@
 
           var body = document.createElement('div');
           body.className = 'panel-body';
-          body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>';
+          body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>' +
+            '<div class="sort-toggle panel-sort-toggle" hidden>' +
+            '<button type="button" data-sort="newest" class="active">🕐 Nejnovější</button>' +
+            '<button type="button" data-sort="oldest">Nejstarší</button>' +
+            '</div>';
 
           var scroll = document.createElement('div');
           scroll.className = 'panel-scroll';
@@ -1368,65 +1382,92 @@
 
           (async function() {
             var subs = await loadSubsections(sec.id);
-            var html = '';
-            var totalCount = 0;
+            // Řazení, které si návštěvník sám zvolí kliknutím na přepínač
+            // v panelu, přebije výchozí řazení podsekce z adminu — pro
+            // CELOU sekci najednou, ne jen pro jednu podsekci zvlášť.
+            var visitorOverride = null;
 
-            if (sec.id === 'travel') {
-              html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
-            }
+            function renderPanelArticles(order) {
+              var html = '';
+              var totalCount = 0;
 
-            if (!subs.length) {
-              var articles = allArticles.filter(function(a) {
-                var secId = a.sectionId;
-                if (secId == null) return false;
-                return String(secId) === sec.id;
-              });
-              totalCount = articles.length;
-              html += renderArticleList(articles, 'newest');
-            } else {
-              for (var i = 0; i < subs.length; i++) {
-                var sub = subs[i];
-                var subId = sub.id || '';
-                var subName = sub.name || '';
-                var subArticles = allArticles.filter(function(a) {
-                  var aSec = a.sectionId;
-                  var aSub = a.subsectionId;
-                  if (aSec == null || aSub == null) return false;
-                  return String(aSec) === String(sec.id) && String(aSub) === String(subId);
-                });
-                totalCount += subArticles.length;
-                html += '<div class="sub-block">' +
-                  '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
-                  '<div class="sub-articles">' + renderArticleList(subArticles, sub.sortOrder || 'newest') + '</div>' +
-                  '</div>';
+              if (sec.id === 'travel') {
+                html += '<a href="/mapa.html" class="travel-map-link">🗺️ Zobrazit na mapě →</a>';
               }
-            }
 
-            if (totalCount > 0) {
-              html += '<div class="show-all-link" tabindex="0" role="button" data-section-id="' + escapeHtml(sec.id) + '" data-section-name="' + escapeHtml(sec.name) + '">Zobrazit vše (' + totalCount + ') →</div>';
-            }
+              if (!subs.length) {
+                var articles = allArticles.filter(function(a) {
+                  var secId = a.sectionId;
+                  if (secId == null) return false;
+                  return String(secId) === sec.id;
+                });
+                totalCount = articles.length;
+                html += renderArticleList(articles, order);
+              } else {
+                for (var i = 0; i < subs.length; i++) {
+                  var sub = subs[i];
+                  var subId = sub.id || '';
+                  var subName = sub.name || '';
+                  var subArticles = allArticles.filter(function(a) {
+                    var aSec = a.sectionId;
+                    var aSub = a.subsectionId;
+                    if (aSec == null || aSub == null) return false;
+                    return String(aSec) === String(sec.id) && String(aSub) === String(subId);
+                  });
+                  totalCount += subArticles.length;
+                  var subOrder = visitorOverride || sub.sortOrder || order;
+                  html += '<div class="sub-block">' +
+                    '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
+                    '<div class="sub-articles">' + renderArticleList(subArticles, subOrder) + '</div>' +
+                    '</div>';
+                }
+              }
 
-            scroll.innerHTML = html;
+              if (totalCount > 0) {
+                html += '<div class="show-all-link" tabindex="0" role="button" data-section-id="' + escapeHtml(sec.id) + '" data-section-name="' + escapeHtml(sec.name) + '">Zobrazit vše (' + totalCount + ') →</div>';
+              }
 
-            scroll.querySelectorAll('.sub-title').forEach(function(titleEl) {
-              titleEl.addEventListener('click', function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                var block = this.parentElement;
-                if (block) block.classList.toggle('collapsed');
+              scroll.innerHTML = html;
+
+              scroll.querySelectorAll('.sub-title').forEach(function(titleEl) {
+                titleEl.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  var block = this.parentElement;
+                  if (block) block.classList.toggle('collapsed');
+                });
               });
-            });
 
-            var showAllEl = scroll.querySelector('.show-all-link');
-            if (showAllEl) {
-              var openThisModal = function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                openSectionModal(sec.id, sec.name);
-              };
-              showAllEl.addEventListener('click', openThisModal);
-              showAllEl.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') openThisModal(e);
+              var showAllEl = scroll.querySelector('.show-all-link');
+              if (showAllEl) {
+                var openThisModal = function(e) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  openSectionModal(sec.id, sec.name);
+                };
+                showAllEl.addEventListener('click', openThisModal);
+                showAllEl.addEventListener('keydown', function(e) {
+                  if (e.key === 'Enter' || e.key === ' ') openThisModal(e);
+                });
+              }
+
+              return totalCount;
+            }
+
+            var totalCount = renderPanelArticles('newest');
+
+            var panelToggle = body.querySelector('.panel-sort-toggle');
+            if (panelToggle && totalCount > 1) {
+              panelToggle.hidden = false;
+              panelToggle.querySelectorAll('button').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  if (this.classList.contains('active')) return;
+                  panelToggle.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+                  this.classList.add('active');
+                  visitorOverride = this.dataset.sort;
+                  renderPanelArticles(visitorOverride);
+                });
               });
             }
           })();
