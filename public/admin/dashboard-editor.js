@@ -2846,6 +2846,12 @@ async function loadSubsections() {
       </td>
       <td data-label="Slug">${escapeHtml(s.slug)}</td>
       <td data-label="Pořadí">${s.order || 0}</td>
+      <td data-label="Řazení článků">
+        <select class="form-select" style="min-width:150px" onchange="saveSubsectionSortOrder('${s.id}', this.value)">
+          <option value="newest" ${s.sortOrder !== 'oldest' ? 'selected' : ''}>Nejnovější první</option>
+          <option value="oldest" ${s.sortOrder === 'oldest' ? 'selected' : ''}>Nejstarší první</option>
+        </select>
+      </td>
       <td data-label="Články">${countBadge}</td>
       <td data-label="Akce">
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
@@ -2920,6 +2926,24 @@ async function saveSubsectionCover(id, url) {
     showToast('Chyba uložení coveru', 'error');
   } finally {
     loadSubsections();
+  }
+}
+
+/* Řazení článků UVNITŘ jedné podsekce na webu — nezávislé na globálním
+   přepínači Nejnovější/Nejstarší v modalu sekce (ten podsekci s vlastním
+   nastavením přebije, jen když ho návštěvník sám ručně klikne).
+   Typicky užitečné třeba pro "deník z cesty", kde chceš články číst
+   chronologicky od nejstaršího, ne nejnovější nahoře. */
+async function saveSubsectionSortOrder(id, sortOrder) {
+  try {
+    await fetch('/api/subsections/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, sortOrder })
+    });
+    showToast('Řazení uloženo', 'success');
+  } catch {
+    showToast('Chyba uložení řazení', 'error');
   }
 }
 
