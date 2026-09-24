@@ -365,7 +365,8 @@
       align-self: flex-end; margin: 0.3rem 0 0.4rem;
     }
     .panel-sort-toggle button {
-      padding: 3px 8px; font-size: 9.5px;
+      padding: 0; width: 22px; height: 22px; font-size: 12px;
+      display: inline-flex; align-items: center; justify-content: center;
     }
     .pinned-badge {
       display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px;
@@ -1380,8 +1381,8 @@
           body.className = 'panel-body';
           body.innerHTML = '<h3>' + escapeHtml(sec.name) + '<span class="en">' + escapeHtml(sec.nameEn) + '</span></h3>' +
             '<div class="sort-toggle panel-sort-toggle" hidden>' +
-            '<button type="button" data-sort="newest" class="active">🕐 Nejnovější</button>' +
-            '<button type="button" data-sort="oldest">Nejstarší</button>' +
+            '<button type="button" data-sort="newest" class="active" title="Nejnovější první" aria-label="Nejnovější první">▼</button>' +
+            '<button type="button" data-sort="oldest" title="Nejstarší první" aria-label="Nejstarší první">▲</button>' +
             '</div>';
 
           var scroll = document.createElement('div');
