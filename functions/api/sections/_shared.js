@@ -41,7 +41,10 @@ export async function loadSections(env) {
   const sections = [];
   for (const key of list.keys) {
     const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });
-    if (data) sections.push(data);
+    // "about" sdílí tenhle KV prefix jen kvůli ukládání coveru (viz cover.js),
+    // není to editovatelná hlavní sekce — frontend si "O Zajdovi" přidává
+    // sám navíc, takže kdyby se vracelo i odsud, zdvojilo by se to.
+    if (data && data.id !== 'about') sections.push(data);
   }
   return sections.sort((a, b) => (a.order || 0) - (b.order || 0));
 }
