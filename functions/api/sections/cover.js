@@ -36,7 +36,14 @@ export async function onRequestPost(context) {
 
   // 'about' není v _shared seznamu (má vlastní stránku), ale cover
   // se pro ni ukládá stejně, pod section:about.
-  if (sectionId !== 'about') await ensureSeeded(env);
+  // POZOR: tohle dřív bylo `if (sectionId !== 'about') await ensureSeeded(env);`
+  // — a byla to chyba. Uložení coveru pro "about" mohlo být úplně první
+  // zápis do "section:" prefixu vůbec. Když se tenhle krok přeskočil,
+  // KV přestalo vypadat "prázdné" (obsahovalo section:about), takže se
+  // travel/photo/projects nikdy nezaseedovaly se svými stabilními id —
+  // a další sekce vytvořené přes admin dostaly náhodná id, která
+  // neodpovídají sectionId uloženému u existujících článků.
+  await ensureSeeded(env);
 
   const key = `section:${sectionId}`;
   const existing = (await env.SUBSECTIONS.get(key, { type: 'json' })) || { id: sectionId, name: sectionId, created: Date.now() };
