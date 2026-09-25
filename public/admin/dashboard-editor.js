@@ -2859,6 +2859,24 @@ function populateSectionSelects() {
   }
 }
 
+async function repairMainSections() {
+  if (!(await showConfirm('Spustit jednorázovou opravu hlavních sekcí? Najde sekce s náhodným id (vzniklé kvůli chybě) a přesune jejich název/cover na správné, staré id (travel/photo/projects), aby zase seděly ke stávajícím článkům. Bezpečné spustit i vícekrát.', { confirmText: 'Spustit opravu' }))) return;
+  try {
+    const r = await fetch('/api/sections/repair', { method: 'POST' });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    const parts = [];
+    if (d.restored && d.restored.length) parts.push('Obnoveno: ' + d.restored.map(s => s.id).join(', '));
+    if (d.removedDuplicates && d.removedDuplicates.length) parts.push('Smazané duplikáty: ' + d.removedDuplicates.map(s => s.name).join(', '));
+    if (d.fixedAboutName) parts.push('"O Zajdovi" přejmenováno');
+    if (!parts.length) parts.push('Vše už bylo v pořádku, nic se neměnilo.');
+    showToast(parts.join(' | '), 'success');
+    loadMainSections();
+  } catch (e) {
+    showToast('Chyba: ' + e.message, 'error');
+  }
+}
+
 async function createMainSection() {
   const name = $('msName')?.value.trim();
   const nameEn = $('msNameEn')?.value.trim();
