@@ -31,7 +31,7 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v2';
+const SW_VERSION = 'v3';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
 
