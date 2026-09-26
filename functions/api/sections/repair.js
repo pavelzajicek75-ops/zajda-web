@@ -17,64 +17,69 @@ function norm(s) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  if (!(await requireAdmin(request, env))) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  const list = await env.SUBSECTIONS.list({ prefix: 'section:' });
-  const records = {};
-  for (const key of list.keys) {
-    const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });
-    if (data && data.id) records[data.id] = data;
-  }
-
-  const knownIds = new Set(['travel', 'photo', 'projects', 'about']);
-  const report = { restored: [], removedDuplicates: [], fixedAboutName: false, alreadyOk: [] };
-
-  for (const def of DEFAULT_SECTIONS) {
-    if (records[def.id]) {
-      report.alreadyOk.push(def.id);
-      continue;
+  try {
+    if (!(await requireAdmin(request, env))) {
+      return json({ error: 'Unauthorized' }, 401);
     }
 
-    // Hledáme mezi nezávislými (ne travel/photo/projects/about) záznamy
-    // ten, jehož český nebo anglický název odpovídá výchozí sekci.
-    let dup = null;
-    for (const id in records) {
-      if (knownIds.has(id)) continue;
-      const r = records[id];
-      if (norm(r.name) === norm(def.name) || (r.nameEn && norm(r.nameEn) === norm(def.nameEn))) {
-        dup = r;
-        break;
+    const list = await env.SUBSECTIONS.list({ prefix: 'section:' });
+    const records = {};
+    const unreadable = [];
+    for (const key of list.keys) {
+      try {
+        const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });
+        if (data && data.id) records[data.id] = data;
+      } catch (e) {
+        unreadable.push(key.name);
       }
     }
 
-    const restored = {
-      id: def.id,
-      name: dup ? (dup.name || def.name) : def.name,
-      nameEn: dup ? (dup.nameEn || def.nameEn) : def.nameEn,
-      order: def.order,
-      coverUrl: dup ? (dup.coverUrl || '') : '',
-      created: Date.now()
-    };
-    await env.SUBSECTIONS.put(`section:${def.id}`, JSON.stringify(restored));
-    report.restored.push(restored);
+    const knownIds = new Set(['travel', 'photo', 'projects', 'about']);
+    const report = { restored: [], removedDuplicates: [], fixedAboutName: false, alreadyOk: [], unreadable };
 
-    if (dup) {
-      await env.SUBSECTIONS.delete(`section:${dup.id}`);
-      report.removedDuplicates.push({ id: dup.id, name: dup.name });
-      delete records[dup.id];
+    for (const def of DEFAULT_SECTIONS) {
+      if (records[def.id]) {
+        report.alreadyOk.push(def.id);
+        continue;
+      }
+
+      let dup = null;
+      for (const id in records) {
+        if (knownIds.has(id)) continue;
+        const r = records[id];
+        if (norm(r.name) === norm(def.name) || (r.nameEn && norm(r.nameEn) === norm(def.nameEn))) {
+          dup = r;
+          break;
+        }
+      }
+
+      const restored = {
+        id: def.id,
+        name: dup ? (dup.name || def.name) : def.name,
+        nameEn: dup ? (dup.nameEn || def.nameEn) : def.nameEn,
+        order: def.order,
+        coverUrl: dup ? (dup.coverUrl || '') : '',
+        created: Date.now()
+      };
+      await env.SUBSECTIONS.put(`section:${def.id}`, JSON.stringify(restored));
+      report.restored.push(restored);
+
+      if (dup) {
+        await env.SUBSECTIONS.delete(`section:${dup.id}`);
+        report.removedDuplicates.push({ id: dup.id, name: dup.name });
+        delete records[dup.id];
+      }
     }
-  }
 
-  // "about" mohlo dřív dostat provizorní jméno "about" místo "O Zajdovi"
-  // (viz stará chyba v cover.js) — oprav, pokud tam pořád je.
-  const about = records['about'];
-  if (about && about.name === 'about') {
-    about.name = 'O Zajdovi';
-    await env.SUBSECTIONS.put('section:about', JSON.stringify(about));
-    report.fixedAboutName = true;
-  }
+    const about = records['about'];
+    if (about && about.name === 'about') {
+      about.name = 'O Zajdovi';
+      await env.SUBSECTIONS.put('section:about', JSON.stringify(about));
+      report.fixedAboutName = true;
+    }
 
-  return json(report);
+    return json(report);
+  } catch (e) {
+    return json({ error: 'Repair selhal: ' + (e && e.message ? e.message : String(e)), stack: e && e.stack }, 500);
+  }
 }
