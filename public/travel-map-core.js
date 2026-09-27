@@ -37,6 +37,18 @@
    ========================================================= */
 (function () {
   var SECTION_NAMES = { travel: 'Cestování', photo: 'Fotografování', projects: 'Projekty', about: 'O Zajdovi' };
+  var sectionNamesLoaded = false;
+  async function loadDynamicSectionNames() {
+    if (sectionNamesLoaded) return;
+    sectionNamesLoaded = true; // i při chybě zkusit jen jednou, ať se to netahá opakovaně
+    try {
+      var r = await fetch('/api/sections/list');
+      if (!r.ok) return;
+      var sections = await r.json();
+      if (!Array.isArray(sections)) return;
+      sections.forEach(function (s) { if (s && s.id) SECTION_NAMES[s.id] = s.name; });
+    } catch (e) { /* necháme natvrdo daný fallback výše */ }
+  }
   var THEME_COLORS = ['#ff7a45', '#2fe6c9', '#8f6bff'];
   /* Esri Canvas basemapy — zdarma, bez API klíče, žádná registrace.
      {y} přichází PŘED {x} (standardní ArcGIS REST adresace dlaždic,
@@ -138,6 +150,7 @@
     if (!mapEl) return null;
 
     var articles = await getAllArticlesForMap();
+    await loadDynamicSectionNames();
     var withCoords = articles.filter(function (a) {
       return a && typeof a.lat === 'number' && isFinite(a.lat) &&
         typeof a.lng === 'number' && isFinite(a.lng);
