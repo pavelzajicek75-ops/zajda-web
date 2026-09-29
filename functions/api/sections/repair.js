@@ -30,6 +30,8 @@ export async function onRequestPost(context) {
         const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });
         if (data && data.id) records[data.id] = data;
       } catch (e) {
+        // Jeden poškozený/nevalidní záznam ať nespadne celou opravu —
+        // přeskočí se a nahlásí, zbytek se opraví normálně.
         unreadable.push(key.name);
       }
     }
@@ -43,6 +45,8 @@ export async function onRequestPost(context) {
         continue;
       }
 
+      // Hledáme mezi nezávislými (ne travel/photo/projects/about) záznamy
+      // ten, jehož český nebo anglický název odpovídá výchozí sekci.
       let dup = null;
       for (const id in records) {
         if (knownIds.has(id)) continue;
@@ -71,6 +75,8 @@ export async function onRequestPost(context) {
       }
     }
 
+    // "about" mohlo dřív dostat provizorní jméno "about" místo "O Zajdovi"
+    // (viz stará chyba v cover.js) — oprav, pokud tam pořád je.
     const about = records['about'];
     if (about && about.name === 'about') {
       about.name = 'O Zajdovi';
@@ -80,6 +86,9 @@ export async function onRequestPost(context) {
 
     return json(report);
   } catch (e) {
+    // Nikdy nenechat tenhle endpoint spadnout na neošetřenou výjimku
+    // (to dřív vedlo na neužitečnou obecnou Cloudflare chybovou stránku) —
+    // vždycky vrátit skutečnou chybovou zprávu, ať je vidět, co se stalo.
     return json({ error: 'Repair selhal: ' + (e && e.message ? e.message : String(e)), stack: e && e.stack }, 500);
   }
 }
