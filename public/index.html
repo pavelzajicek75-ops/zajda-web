@@ -55,8 +55,8 @@
        + běžný text) — zbytek dotáhne fonts.css sám, až bude potřeba. -->
   <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/fonts.css?v=20260923">
-  <link rel="stylesheet" href="/shared.css?v=20260923">
+  <link rel="stylesheet" href="/fonts.css?v=20260928">
+  <link rel="stylesheet" href="/shared.css?v=20260928">
   <style>
     .title-block {
       position: relative; z-index: 10; text-align: center;
@@ -499,31 +499,9 @@
       background: rgba(8,8,15,0.75) !important; color: var(--mist-dim) !important;
     }
 
-    .travel-map-modal-box .map-point-label {
-      background: #14152a !important; border: 1px solid rgba(255,122,69,0.5) !important;
-      border-radius: 8px !important; padding: 5px 10px !important;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.55); font-family: 'Inter', sans-serif; line-height: 1.35;
-      pointer-events: none;
-    }
-    .travel-map-modal-box .map-point-label::before { display: none !important; }
-    .travel-map-modal-box .map-label-title { display: block; font-size: 12.5px; font-weight: 700; color: #ffffff; white-space: nowrap; margin-bottom: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
-    .travel-map-modal-box .map-label-meta { display: block; font-size: 10.5px; color: #d7d9ec; font-weight: 500; white-space: nowrap; }
-    .travel-map-modal-box .map-cluster-icon {
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; color: #08080f; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
-      border: 2px solid rgba(255,255,255,0.85);
-    }
-
-    .travel-map-modal-box .star-pin {
-      width: 16px; height: 16px; border-radius: 50%;
-      background: radial-gradient(circle, #fff 0%, var(--ember) 45%, transparent 75%);
-      box-shadow: 0 0 10px var(--ember), 0 0 22px var(--ember-dim);
-      border: 2px solid rgba(255,255,255,0.85);
-      animation: pin-pulse 2.2s ease-in-out infinite;
-      cursor: pointer;
-    }
-    @keyframes pin-pulse { 0%,100% { transform: scale(0.9); } 50% { transform: scale(1.15); } }
-    @media (prefers-reduced-motion: reduce) { .travel-map-modal-box .star-pin { animation: none; } }
+    /* .map-point-label / .map-label-title / .map-label-meta / .map-cluster-icon /
+       pin styl — teď společně v shared.css, ať se to zase nerozjede po stránkách
+       jinam (viz komentář tam). */
 
     @media (max-width: 700px) {
       #travelMapModalMap, .travel-map-modal-empty { height: 52vh; }
@@ -632,8 +610,8 @@
        až za běhu přes loadLeafletAssets() (viz níže), ne při každé
        návštěvě stránky. -->
 
-  <script src="/shared.js?v=20260923"></script>
-  <script src="/travel-map-core.js?v=20260923"></script>
+  <script src="/shared.js?v=20260928"></script>
+  <script src="/travel-map-core.js?v=20260928"></script>
   <script>
   /* === LÍNÉ NAČTENÍ LEAFLETU ===
      Mapa cest je schovaná za tlačítkem v modalu — dřív se ale Leaflet.js

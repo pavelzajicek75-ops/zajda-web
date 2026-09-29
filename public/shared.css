@@ -317,3 +317,89 @@ body {
     to { opacity: 1; transform: translateY(0) scale(1); }
   }
 }
+
+/* =========================================================
+   MAPA CEST — SDÍLENÉ STYLY (index.html, article.html, mapa.html)
+   =========================================================
+   Dřív bylo tohle 3× zkopírované (stejně jako travel-map-core.js
+   bývalo 3× zkopírované v JS) a stačilo přehlédnout jedno místo —
+   přesně tak vznikla nekonzistence, kdy pulzující animace pinu
+   chyběla jen u mini-mapy v článku. Teď je to tu jednou, ať se to
+   nemůže rozjet jinam.
+   ========================================================= */
+
+/* --- pin na mapě (barevná bublinová postavička s očima) --- */
+.map-blob-pin { width: 26px; height: 26px; }
+.map-blob-pin svg { width: 100%; height: 100%; overflow: visible; }
+.map-blob-pin .map-blob-body { transform-origin: center bottom; animation: map-blob-wobble 2.6s ease-in-out infinite; }
+@keyframes map-blob-wobble { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.map-blob-pin:hover .map-blob-body { animation: map-blob-squish .35s ease; }
+@keyframes map-blob-squish { 0% { transform: scale(1,1); } 40% { transform: scale(1.28,0.78); } 100% { transform: scale(1,1); } }
+@media (prefers-reduced-motion: reduce) { .map-blob-pin .map-blob-body { animation: none; } }
+
+/* --- shluk více míst blízko sebe --- */
+.map-cluster-icon {
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-family: 'Comic Sans MS', var(--font-body, sans-serif);
+  border: 3px solid rgba(255,255,255,0.9); box-shadow: 0 0 0 3px rgba(255,255,255,0.12);
+  animation: map-blob-wobble 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .map-cluster-icon { animation: none; } }
+
+/* --- popisek u bodu (comic bublina místo tmavé destičky) --- */
+.map-point-label, .travel-map-modal-box .map-point-label {
+  background: #fff8e7 !important; color: #2a1a3a !important;
+  border: 2.5px solid #1a1030 !important; border-radius: 14px 14px 14px 4px !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.35) !important; padding: 6px 10px !important;
+  font-family: 'Comic Sans MS', var(--font-body, sans-serif) !important;
+}
+.map-point-label::before, .travel-map-modal-box .map-point-label::before { display: none !important; }
+.map-label-title, .travel-map-modal-box .map-label-title { display: block; font-size: 12.5px; font-weight: 800; color: #1a1030; }
+.map-label-meta, .travel-map-modal-box .map-label-meta { display: block; font-size: 10.5px; color: #7a5a9a; font-weight: 600; }
+
+/* --- konfety při zastavení na bodu --- */
+.map-confetti-piece { position: absolute; width: 8px; height: 8px; pointer-events: none; z-index: 9998; border-radius: 2px; }
+
+/* --- bublina s hláškou (reakce cestou) --- */
+.map-speech-bubble {
+  position: absolute; z-index: 10000; pointer-events: none; background: #fff; color: #1a1030;
+  font-weight: 800; font-size: 12.5px; font-family: 'Comic Sans MS', var(--font-body, sans-serif);
+  padding: 5px 10px; border-radius: 12px; border: 2px solid #1a1030; box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+  white-space: nowrap; transform: translate(-50%, -160%);
+  animation: map-bubble-pop .3s cubic-bezier(.34,1.56,.64,1), map-bubble-fade .4s ease-in 1.1s forwards;
+}
+.map-speech-bubble.map-pumpa-bubble { background: var(--ember); color: #1a1030; }
+@keyframes map-bubble-pop { 0% { transform: translate(-50%,-160%) scale(0); } 70% { transform: translate(-50%,-160%) scale(1.15); } 100% { transform: translate(-50%,-160%) scale(1); } }
+@keyframes map-bubble-fade { to { opacity: 0; } }
+
+/* --- ikonka pumpy (jen si tak zastaví, i když je to nesmysl) --- */
+.map-pumpa-pin { width: 26px; height: 26px; animation: map-pumpa-pop .3s cubic-bezier(.34,1.56,.64,1); }
+.map-pumpa-pin svg { width: 100%; height: 100%; }
+@keyframes map-pumpa-pop { 0% { transform: scale(0) rotate(-20deg); } 70% { transform: scale(1.2) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+
+/* --- HUD s kilometry a "baterkou" při Přehrání trasy --- */
+.map-hud { position: absolute; top: 12px; left: 12px; z-index: 900; display: none; flex-direction: column; gap: 6px; }
+.map-hud.show { display: flex; }
+.map-hud-box {
+  background: var(--panel-solid); border: 2px solid var(--ember); border-radius: 12px; padding: 5px 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4); font-family: 'Courier New', monospace;
+  display: flex; align-items: center; gap: 7px; font-size: 12px;
+}
+.map-hud-box .map-hud-icon { font-size: 15px; }
+.map-hud-box .map-hud-val { font-weight: 800; color: var(--ember); }
+.map-hud-box.map-hud-batt { border-color: var(--nova); }
+.map-hud-box.map-hud-batt .map-hud-val { color: var(--nova); }
+.map-hud-box.map-hud-low { border-color: #ff4757; animation: map-hud-blink .5s infinite; }
+.map-hud-box.map-hud-low .map-hud-val { color: #ff4757; }
+@keyframes map-hud-blink { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+.map-hud-bar { width: 42px; height: 7px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden; }
+.map-hud-bar-fill { height: 100%; background: var(--nova); width: 100%; transition: width .15s linear, background .3s; }
+
+.map-rider { position: absolute; pointer-events: none; z-index: 9999; transform: translate(-50%,-100%); font-size: 22px; filter: drop-shadow(2px 3px 0 rgba(0,0,0,0.4)); }
+.map-rider.map-rider-bounce { animation: map-rider-bounce .32s ease-in-out infinite; }
+@keyframes map-rider-bounce { 0%, 100% { transform: translate(-50%,-100%) rotate(-6deg); } 50% { transform: translate(-50%,-100%) rotate(6deg); } }
+@media (prefers-reduced-motion: reduce) { .map-rider.map-rider-bounce { animation: none; } }
+
+/* --- "noční" mapa: OpenStreetMap má zdarma jen jeden (světlý) styl,
+   tak se tma dělá invertováním barev CSS filtrem, ne jinými dlaždicemi --- */
+.map-night-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
