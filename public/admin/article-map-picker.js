@@ -72,11 +72,27 @@
     return leafletPromise;
   }
 
+  function blobPinIcon() {
+    // Admin nenačítá shared.css, proto je vzhled i mini-animace přímo tady inline.
+    const svg = '<svg viewBox="0 0 40 40" style="width:100%;height:100%;overflow:visible">' +
+      '<style>@keyframes abp-drop{0%{transform:translateY(-18px);opacity:0}60%{transform:translateY(2px);opacity:1}100%{transform:translateY(0)}}</style>' +
+      '<g style="animation:abp-drop .45s cubic-bezier(.34,1.56,.64,1)">' +
+      '<ellipse cx="20" cy="34" rx="9" ry="3" fill="rgba(0,0,0,0.35)"/>' +
+      '<circle cx="20" cy="18" r="15" fill="#ff7a45" stroke="#1a1030" stroke-width="2.5"/>' +
+      '<circle cx="14" cy="15" r="2.6" fill="#1a1030"/><circle cx="26" cy="15" r="2.6" fill="#1a1030"/>' +
+      '<circle cx="14.8" cy="14.2" r="0.9" fill="#fff"/><circle cx="26.8" cy="14.2" r="0.9" fill="#fff"/>' +
+      '<path d="M13 22 Q20 28 27 22" stroke="#1a1030" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+      '</g></svg>';
+    return L.divIcon({ className: '', html: svg, iconSize: [34, 34], iconAnchor: [17, 29] });
+  }
+
   function setMarker(lat, lng, skipInputSync) {
     if (!mapInstance) return;
     if (marker) mapInstance.removeLayer(marker);
-    marker = L.marker([lat, lng]).addTo(mapInstance);
-    mapInstance.setView([lat, lng], Math.max(mapInstance.getZoom(), 6));
+    marker = L.marker([lat, lng], { icon: blobPinIcon() }).addTo(mapInstance);
+    const targetZoom = Math.max(mapInstance.getZoom(), 6);
+    if (skipInputSync) mapInstance.setView([lat, lng], targetZoom);
+    else mapInstance.flyTo([lat, lng], targetZoom, { duration: 0.8 });
     if (!skipInputSync) {
       if ($('artLat')) $('artLat').value = lat.toFixed(5);
       if ($('artLng')) $('artLng').value = lng.toFixed(5);
