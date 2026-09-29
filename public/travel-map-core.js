@@ -320,40 +320,79 @@
       });
 
       g.points.forEach(function (a) {
-        var ll = [a.lat, a.lng];
-        groupLatLngs.push(ll);
-        allLatLngs.push(ll);
-        var marker = L.marker(ll, { icon: icon });
-        markerById[a.id] = marker;
+        // "Cesta" (2+ zastávek u jednoho článku) vs "bod" (jedna, jako dřív).
+        var stops = Array.isArray(a.stops) && a.stops.length >= 2
+          ? a.stops.filter(function (s) { return typeof s.lat === 'number' && isFinite(s.lat) && typeof s.lng === 'number' && isFinite(s.lng); })
+          : [{ lat: a.lat, lng: a.lng, place: a.place }];
+        if (stops.length < 1) return;
+
         var title = escapeHtml(a.title || 'Bez názvu');
-        var place = escapeHtml(a.place || '');
         var dateStr = escapeHtml(formatDateCz(a.date || a.created));
         var articleUrl = '/article?id=' + encodeURIComponent(a.id);
-
-        marker.bindTooltip(
-          '<span class="map-label-title">' + title + '</span>' +
-          (place ? '<span class="map-label-meta">' + place + '</span>' : '') +
-          (dateStr ? '<span class="map-label-meta">' + dateStr + '</span>' : ''),
-          { direction: 'top', offset: [0, -22], className: 'map-point-label', opacity: 1 }
-        );
         var tooltipOpenedByTap = false;
-        marker.on('click', function () {
-          if (isTouchDevice && !tooltipOpenedByTap) {
-            tooltipOpenedByTap = true;
-            this.openTooltip();
-            return;
-          }
+
+        function goToArticle() {
           if (currentArticleId != null && String(a.id) === String(currentArticleId)) {
             if (typeof opts.onSelfClick === 'function') opts.onSelfClick();
             return;
           }
           window.location.href = articleUrl;
+        }
+
+        stops.forEach(function (s, si) {
+          var ll = [s.lat, s.lng];
+          groupLatLngs.push(ll);
+          allLatLngs.push(ll);
+
+          // Hlavní (klikací) pin je vždycky jen na PRVNÍ zastávce článku —
+          // u "bodu" je to jediná, u "cesty" ten start. Další zastávky jsou
+          // jen menší tečky na trase (vizuálně "cesta", ne další samostatný bod).
+          if (si === 0) {
+            var marker = L.marker(ll, { icon: icon });
+            markerById[a.id] = marker;
+            var place = escapeHtml(s.place || a.place || '');
+            marker.bindTooltip(
+              '<span class="map-label-title">' + title + (stops.length > 1 ? ' 🛣️' : '') + '</span>' +
+              (place ? '<span class="map-label-meta">' + place + '</span>' : '') +
+              (dateStr ? '<span class="map-label-meta">' + dateStr + '</span>' : ''),
+              { direction: 'top', offset: [0, -22], className: 'map-point-label', opacity: 1 }
+            );
+            marker.on('click', function () {
+              if (isTouchDevice && !tooltipOpenedByTap) { tooltipOpenedByTap = true; this.openTooltip(); return; }
+              goToArticle();
+            });
+            marker.on('add', function () { var el = marker.getElement(); if (el) el.setAttribute('tabindex', '0'); });
+            clusterGroup.addLayer(marker);
+          } else {
+            var waypoint = L.circleMarker(ll, {
+              radius: 5, color: '#1a1030', weight: 1.5, fillColor: g.color, fillOpacity: 1
+            });
+            var wpPlace = escapeHtml(s.place || '');
+            waypoint.bindTooltip(
+              '<span class="map-label-title">' + title + '</span>' +
+              (wpPlace ? '<span class="map-label-meta">' + wpPlace + '</span>' : ''),
+              { direction: 'top', offset: [0, -6], className: 'map-point-label', opacity: 1 }
+            );
+            waypoint.on('click', function () {
+              if (isTouchDevice && !tooltipOpenedByTap) { tooltipOpenedByTap = true; this.openTooltip(); return; }
+              goToArticle();
+            });
+            clusterGroup.addLayer(waypoint);
+          }
         });
-        marker.on('add', function () {
-          var el = marker.getElement();
-          if (el) el.setAttribute('tabindex', '0');
-        });
-        clusterGroup.addLayer(marker);
+
+        // "Cesta" navíc dostane vlastní plnou (nepřerušovanou) čáru mezi
+        // svými zastávkami — jasně odlišenou od tečkované spojnice mezi
+        // různými články v rámci podsekce.
+        if (stops.length > 1) {
+          var routeSegment = L.polyline(stops.map(function (s) { return [s.lat, s.lng]; }), {
+            color: g.color, weight: 4, opacity: 0.9
+          }).addTo(map);
+          routeSegment.bindTooltip(title + ' 🛣️', { sticky: true, className: 'map-point-label' });
+          routeSegment.on('click', goToArticle);
+          if (!g.routeSegments) g.routeSegments = [];
+          g.routeSegments.push(routeSegment);
+        }
       });
 
       var polyline = null;
@@ -387,9 +426,11 @@
           if (g.visible) {
             g.clusterGroup.addTo(map);
             if (g.polyline) g.polyline.addTo(map);
+            (g.routeSegments || []).forEach(function (seg) { seg.addTo(map); });
           } else {
             map.removeLayer(g.clusterGroup);
             if (g.polyline) map.removeLayer(g.polyline);
+            (g.routeSegments || []).forEach(function (seg) { map.removeLayer(seg); });
           }
         }
         item.addEventListener('click', toggle);
