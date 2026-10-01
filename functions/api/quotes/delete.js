@@ -1,8 +1,11 @@
+import { requireAdmin, json } from '../_auth-utils.js';
+
 export async function onRequestDelete(context) {
-  const { env } = context;
+  const { request, env } = context;
+  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const r2 = env.QUOTES_R2;
   if (!r2) return Response.json({ error: 'Chybí QUOTES_R2' }, { status: 500 });
-  const { searchParams } = new URL(context.request.url);
+  const { searchParams } = new URL(request.url);
   const key = searchParams.get('key');
   if (!key) return Response.json({ error: 'Chybí klíč' }, { status: 400 });
   await r2.delete(key);
