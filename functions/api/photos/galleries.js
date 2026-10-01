@@ -1,3 +1,5 @@
+import { requireAdmin, json } from '../_auth-utils.js';
+
 function getR2(env) {
   return env.PHOTOS_R2 || null;
 }
@@ -15,6 +17,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const body = await request.json();
   const id = crypto.randomUUID();
   const gallery = { id, title: body.title || 'Hlavní galerie', desc: '', photos: [], created: Date.now() };
@@ -24,6 +27,7 @@ export async function onRequestPost(context) {
 
 export async function onRequestDelete(context) {
   const { request, env } = context;
+  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   const r2 = getR2(env);
