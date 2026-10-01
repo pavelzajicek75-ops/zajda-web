@@ -1,6 +1,9 @@
 // PUT /api/timeline/update
+import { requireAdmin, json } from '../_auth-utils.js';
+
 export async function onRequestPut(context) {
   const { request, env } = context;
+  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const body = await request.json();
   if (!body.id) return Response.json({ error: 'Chybí id' }, { status: 400 });
   const existing = await env.ARTICLES.get(`timeline:${body.id}`, { type: 'json' });

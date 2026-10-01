@@ -2,8 +2,11 @@
 // Stejný vzor jako /api/articles/create.js — ukládá do stejného KV
 // úložiště (env.ARTICLES), jen s prefixem "timeline:" místo "article:",
 // ať nejsou milníky a články ve stejném seznamu smíchané.
+import { requireAdmin, json } from '../_auth-utils.js';
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const body = await request.json();
   const id = crypto.randomUUID();
   const photos = Array.isArray(body.photos) ? body.photos.filter(Boolean).slice(0, 3) : [];
