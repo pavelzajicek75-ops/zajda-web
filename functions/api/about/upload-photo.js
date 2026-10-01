@@ -1,5 +1,8 @@
+import { requireAdmin, json } from '../_auth-utils.js';
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const formData = await request.formData();
   const file = formData.get('file');
   if (!file) return Response.json({ error: 'No file' }, { status: 400 });
