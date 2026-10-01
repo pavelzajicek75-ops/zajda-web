@@ -167,8 +167,12 @@
   };
 
   window.focusArticleStop = function (i) {
+    // POZOR: tady se NESMÍ volat renderStopRows() — to by přestavělo
+    // celé HTML řádků přesně ve chvíli, kdy uživatel klikl do políčka,
+    // čímž by o fokus okamžitě zase přišel a nešlo by do něj psát ani
+    // písmenko. renderStopsOnMap() je bezpečné, protože se týká jen
+    // Leaflet mapy, ne DOM inputů.
     activeStopIndex = i;
-    renderStopRows();
     renderStopsOnMap();
   };
 

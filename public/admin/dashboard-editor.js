@@ -2859,6 +2859,31 @@ function populateSectionSelects() {
   }
 }
 
+async function downloadBackup() {
+  showToast('Stahuju zálohu, chvíli to potrvá…', 'info');
+  try {
+    const r = await fetch('/api/data/backup');
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || ('HTTP ' + r.status));
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    a.download = m ? m[1] : 'zajda-zaloha.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    showToast('Záloha stažená ✅', 'success');
+  } catch (e) {
+    showToast('Záloha selhala: ' + e.message, 'error');
+  }
+}
+
 async function repairMainSections() {
   if (!(await showConfirm('Spustit jednorázovou opravu hlavních sekcí? Najde sekce s náhodným id (vzniklé kvůli chybě) a přesune jejich název/cover na správné, staré id (travel/photo/projects), aby zase seděly ke stávajícím článkům. Bezpečné spustit i vícekrát.', { confirmText: 'Spustit opravu' }))) return;
   try {
