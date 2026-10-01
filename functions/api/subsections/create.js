@@ -1,5 +1,8 @@
+import { requireAdmin, json } from '../_auth-utils.js';
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+  if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   const body = await request.json();
   const id = crypto.randomUUID();
   const slug = (body.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
