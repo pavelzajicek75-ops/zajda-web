@@ -223,6 +223,68 @@
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  /* Vrátí seznam "cest" — podsekcí, kde dohromady (přes všechny jejich
+     navazující články) vznikne aspoň 2 zastávky. Používá to nová stránka
+     "Mapa cest" (seznam všech výletů) — NE homepage/mapa.html celá, ty dál
+     jedou přes render() beze změny. */
+  async function getJourneys() {
+    var articles = await getAllArticlesForMap();
+    await loadDynamicSectionNames();
+    var withCoords = articles.filter(function (a) {
+      return a && typeof a.lat === 'number' && isFinite(a.lat) && typeof a.lng === 'number' && isFinite(a.lng);
+    });
+
+    var bySub = {};
+    var order = [];
+    withCoords.forEach(function (a) {
+      var key = (a.sectionId || '?') + ':' + (a.subsectionId || '');
+      if (!bySub[key]) { bySub[key] = { sectionId: a.sectionId, subsectionId: a.subsectionId, articles: [] }; order.push(key); }
+      bySub[key].articles.push(a);
+    });
+
+    var journeys = [];
+    for (var oi = 0; oi < order.length; oi++) {
+      var g = bySub[order[oi]];
+      g.articles.sort(function (a, b) {
+        var da = a.date || a.created || '', db = b.date || b.created || '';
+        return da < db ? -1 : da > db ? 1 : 0;
+      });
+
+      var flatPoints = [];
+      g.articles.forEach(function (a) {
+        var stops = Array.isArray(a.stops) && a.stops.length >= 2 ? a.stops : [{ lat: a.lat, lng: a.lng, place: a.place }];
+        stops.forEach(function (s) {
+          if (typeof s.lat === 'number' && isFinite(s.lat) && typeof s.lng === 'number' && isFinite(s.lng)) flatPoints.push(s);
+        });
+      });
+      if (flatPoints.length < 2) continue; // jen osamocený bod, ne "cesta" — do Mapy cest nepatří
+
+      var km = 0;
+      for (var pi = 1; pi < flatPoints.length; pi++) {
+        km += haversineKm(flatPoints[pi - 1].lat, flatPoints[pi - 1].lng, flatPoints[pi].lat, flatPoints[pi].lng);
+      }
+      var dates = g.articles.map(function (a) { return a.date || ''; }).filter(Boolean).sort();
+      var coverArticle = g.articles.slice().reverse().find(function (a) { return a.coverUrl; });
+
+      journeys.push({
+        sectionId: g.sectionId,
+        subsectionId: g.subsectionId,
+        subsectionName: await getSubsectionName(g.sectionId, g.subsectionId) || g.articles[0].place || 'Bez názvu',
+        sectionName: SECTION_NAMES[g.sectionId] || g.sectionId,
+        legsCount: g.articles.length,
+        placesCount: flatPoints.length,
+        totalKm: Math.round(km),
+        dateFrom: dates[0] || '',
+        dateTo: dates[dates.length - 1] || '',
+        coverUrl: (coverArticle && coverArticle.coverUrl) || '',
+        firstArticleId: g.articles[0].id
+      });
+    }
+
+    journeys.sort(function (a, b) { return (b.dateTo || '').localeCompare(a.dateTo || ''); });
+    return journeys;
+  }
+
   async function render(options) {
     var opts = options || {};
     var mapEl = document.getElementById(opts.mapId);
@@ -236,13 +298,21 @@
 
     var articles = await getAllArticlesForMap();
     await loadDynamicSectionNames();
-    var withCoords = articles.filter(function (a) {
+    // Volitelné zúžení na JEDNU podsekci (jednu "cestu") — používá se u mapy
+    // navázané na konkrétní článek, ať se nenatahují trasy ze všech ostatních
+    // sekcí/podsekcí webu. Bez téhle volby (homepage, /mapa.html bez ?subsection=)
+    // se chová úplně stejně jako dřív — celý web najednou.
+    var scopeSubsectionId = opts.subsectionId || null;
+    var sourceArticles = scopeSubsectionId
+      ? articles.filter(function (a) { return String(a.subsectionId || '') === String(scopeSubsectionId); })
+      : articles;
+    var withCoords = sourceArticles.filter(function (a) {
       return a && typeof a.lat === 'number' && isFinite(a.lat) &&
         typeof a.lng === 'number' && isFinite(a.lng);
     });
 
     if (!withCoords.length) {
-      mapEl.outerHTML = '<div class="' + emptyClassName + '" id="' + opts.mapId + '"><h3>Zatím tu nejsou žádná místa</h3><p>Jakmile u některého článku vyplníš souřadnice místa, objeví se tu jako bod na mapě.</p></div>';
+      mapEl.outerHTML = '<div class="' + emptyClassName + '" id="' + opts.mapId + '"><h3>Zatím tu nejsou žádná místa</h3><p>' + (scopeSubsectionId ? 'Tahle cesta zatím nemá vyplněné souřadnice.' : 'Jakmile u některého článku vyplníš souřadnice místa, objeví se tu jako bod na mapě.') + '</p></div>';
       if (legend) legend.hidden = true;
       if (playBtn) playBtn.hidden = true;
       if (statsEl) statsEl.hidden = true;
@@ -583,5 +653,5 @@
     return map;
   }
 
-  window.TravelMapCore = { render: render, getAllArticlesForMap: getAllArticlesForMap };
+  window.TravelMapCore = { render: render, getAllArticlesForMap: getAllArticlesForMap, getJourneys: getJourneys };
 })();

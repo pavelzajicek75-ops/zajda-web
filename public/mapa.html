@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/shared.css?v=20260928">
+  <link rel="stylesheet" href="/shared.css?v=20260930">
 
   <!-- Leaflet — lehká open-source mapová knihovna (~40 kB gzip), žádný
        API klíč, žádné napojení na Google Maps. Načítá se z jsdelivr CDN. -->
@@ -169,8 +169,10 @@
   </div>
 
   <div class="page-header">
-    <h1 class="page-title">Mapa cest</h1>
-    <p class="page-subtitle">Místa, o kterých vyprávím — seřazená podle data jako trasa mezi hvězdami</p>
+    <h1 class="page-title" id="mapPageTitle">Mapa cest</h1>
+    <p class="page-subtitle" id="mapPageSubtitle">Místa, o kterých vyprávím — seřazená podle data jako trasa mezi hvězdami</p>
+    <p class="page-subtitle" id="mapJourneysLink"><a href="/cesty">🧭 Jen velké výlety s víc zastávkami →</a></p>
+    <p class="page-subtitle" id="mapBackToAllLink" hidden><a href="/cesty">← Všechny cesty</a></p>
   </div>
 
   <div class="map-wrap" id="mapWrap" tabindex="-1">
@@ -183,12 +185,29 @@
     </div>
   </div>
 
-  <script src="/shared.js?v=20260928"></script>
-  <script src="/travel-map-core.js?v=20260928"></script>
+  <script src="/shared.js?v=20260930"></script>
+  <script src="/travel-map-core.js?v=20260930"></script>
   <script>
   document.addEventListener('DOMContentLoaded', async function() {
     initStarfield(120);
     initStarfieldParallax();
+
+    // ?subsection=ID zúží mapu jen na JEDNU cestu (podsekci) — odkazuje na
+    // to nová stránka /cesty. Bez parametru se nic nemění, chová se to
+    // přesně jako dřív (celý web najednou).
+    var params = new URLSearchParams(window.location.search);
+    var subsectionId = params.get('subsection');
+
+    if (subsectionId) {
+      document.getElementById('mapJourneysLink').hidden = true;
+      document.getElementById('mapBackToAllLink').hidden = false;
+      document.getElementById('mapPageSubtitle').textContent = 'Zastávky týhle cesty popořadě, jak na sebe navazovaly';
+      try {
+        var journeys = await TravelMapCore.getJourneys();
+        var journey = journeys.find(function (j) { return String(j.subsectionId) === String(subsectionId); });
+        if (journey) document.getElementById('mapPageTitle').textContent = journey.subsectionName;
+      } catch (e) { /* necháme obecný titulek "Mapa cest" */ }
+    }
 
     // Veškerá logika (data, shluky, barvy, trasy, legenda, statistiky,
     // denní/noční přepínač, přehrání trasy) žije v travel-map-core.js —
@@ -199,7 +218,8 @@
       statsId: 'mapStats',
       playBtnId: 'mapPlayBtn',
       themeToggleId: 'mapThemeToggle',
-      emptyClassName: 'map-empty'
+      emptyClassName: 'map-empty',
+      subsectionId: subsectionId || undefined
     });
   });
   </script>

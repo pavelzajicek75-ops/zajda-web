@@ -13,8 +13,8 @@
        + běžný text) — zbytek dotáhne fonts.css sám, až bude potřeba. -->
   <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/fonts.css?v=20260928">
-  <link rel="stylesheet" href="/shared.css?v=20260928">
+  <link rel="stylesheet" href="/fonts.css?v=20260930">
+  <link rel="stylesheet" href="/shared.css?v=20260930">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
@@ -461,8 +461,8 @@
       <div>Načítání článku…</div>
     </div>
   </div>
-  <script src="/shared.js?v=20260928"></script>
-  <script src="/travel-map-core.js?v=20260928"></script>
+  <script src="/shared.js?v=20260930"></script>
+  <script src="/travel-map-core.js?v=20260930"></script>
   <script>
   // --- Lightbox s galerií ---
   var galleryImages = [];
@@ -1039,6 +1039,9 @@
     document.body.style.overflow = 'hidden';
     if (!travelMapInitialized) {
       travelMapInitialized = true;
+      // Mapa u článku se zužuje jen na JEHO podsekci (celou tu konkrétní
+      // cestu/výlet, navazující články v pořadí) — ne na celý web, to by
+      // namíchalo dohromady i nesouvisející cesty a fotobody odjinud.
       var map = await TravelMapCore.render({
         mapId: 'travelMapModalMap',
         legendId: 'travelMapModalLegend',
@@ -1047,6 +1050,7 @@
         themeToggleId: 'travelMapModalThemeToggle',
         emptyClassName: 'travel-map-modal-empty',
         currentArticleId: (window._currentArticle || {}).id,
+        subsectionId: (window._currentArticle || {}).subsectionId,
         onSelfClick: closeTravelMapModal
       });
       if (map) {

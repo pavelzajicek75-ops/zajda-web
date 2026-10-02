@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa cest — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Přehled všech vícezastávkových cest — kolik kilometrů, kolik míst, kolik článků v každé.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20260928">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--panel-solid); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none;
+      transition: all 0.3s; box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .back-btn:hover { border-color: var(--ember); transform: translateX(-3px); background: rgba(255,122,69,0.18); }
+    .nav-title {
+      font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; letter-spacing: 0.3px;
+      background: linear-gradient(90deg, var(--ember), var(--nova));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-decoration: none; filter: drop-shadow(0 0 12px rgba(255,122,69,0.25));
+    }
+    .nav-title:hover { filter: drop-shadow(0 0 18px rgba(47,230,201,0.4)) brightness(1.15); }
+
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 10px 20px 30px; }
+    .page-title {
+      font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700;
+      background: linear-gradient(90deg, var(--parchment) 0%, var(--ember) 45%, var(--nova) 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 40px rgba(255,122,69,0.3);
+    }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+
+    .journeys-wrap { position: relative; z-index: 10; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+    .journeys-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+
+    .journey-card {
+      display: block; text-decoration: none; border-radius: 16px; overflow: hidden;
+      background: var(--panel-solid); border: 1px solid var(--panel-border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: transform 0.25s, border-color 0.25s;
+    }
+    .journey-card:hover { transform: translateY(-4px); border-color: var(--ember); }
+    .journey-cover {
+      height: 140px; background-size: cover; background-position: center;
+      background-color: rgba(143,107,255,0.15);
+      display: flex; align-items: flex-end; padding: 10px 14px;
+      background-image: linear-gradient(180deg, rgba(8,8,15,0) 40%, rgba(8,8,15,0.85) 100%), var(--cover-url, none);
+    }
+    .journey-card:not([data-has-cover]) .journey-cover {
+      background-image: linear-gradient(135deg, rgba(255,122,69,0.25), rgba(47,230,201,0.2));
+    }
+    .journey-section-tag {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--nova); background: rgba(8,8,15,0.6); padding: 3px 9px; border-radius: 999px;
+    }
+    .journey-body { padding: 14px 16px 16px; }
+    .journey-name {
+      font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--parchment);
+      margin-bottom: 6px;
+    }
+    .journey-dates { font-size: 12.5px; color: var(--mist-dim); margin-bottom: 10px; }
+    .journey-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12.5px; color: var(--mist); }
+    .journey-stats strong { color: var(--ember); font-weight: 700; }
+
+    .journeys-empty {
+      text-align: center; color: var(--mist); padding: 60px 20px; font-size: 14.5px;
+      border: 1px dashed var(--panel-border); border-radius: 16px;
+    }
+
+    @media (max-width: 560px) {
+      .nav-bar { padding: 16px 20px; }
+      .journeys-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#journeysWrap" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+
+  <div class="page-header">
+    <h1 class="page-title">Mapa cest</h1>
+    <p class="page-subtitle">Opravdové vícezastávkové výlety — ne jednotlivé fotobody, ale cesty s výjezdem a příjezdem</p>
+  </div>
+
+  <div class="journeys-wrap" id="journeysWrap" tabindex="-1">
+    <div class="journeys-grid" id="journeysGrid"></div>
+    <div class="journeys-empty" id="journeysEmpty" hidden>Zatím tu není žádná cesta se dvěma a víc zastávkami — jakmile nějaký článek dostane víc zastávek (viz editor článku), objeví se tu.</div>
+  </div>
+
+  <script src="/shared.js?v=20260928"></script>
+  <script src="/travel-map-core.js?v=20260928"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    initStarfield(120);
+    initStarfieldParallax();
+
+    var grid = document.getElementById('journeysGrid');
+    var emptyBox = document.getElementById('journeysEmpty');
+
+    var journeys = [];
+    try {
+      journeys = await TravelMapCore.getJourneys();
+    } catch (e) {
+      console.error('Nepodařilo se načíst cesty:', e);
+    }
+
+    if (!journeys.length) {
+      emptyBox.hidden = false;
+      return;
+    }
+
+    grid.innerHTML = journeys.map(function (j) {
+      var dateRange = j.dateFrom === j.dateTo
+        ? formatDate(j.dateFrom)
+        : formatDate(j.dateFrom) + ' – ' + formatDate(j.dateTo);
+      var coverStyle = j.coverUrl ? ' style="--cover-url:url(\'' + j.coverUrl.replace(/'/g, "%27") + '\')"' : '';
+      return (
+        '<a class="journey-card" href="/mapa?subsection=' + encodeURIComponent(j.subsectionId) + '"' + (j.coverUrl ? ' data-has-cover' : '') + '>' +
+        '<div class="journey-cover"' + coverStyle + '><span class="journey-section-tag">' + escapeHtml(j.sectionName) + '</span></div>' +
+        '<div class="journey-body">' +
+        '<div class="journey-name">' + escapeHtml(j.subsectionName) + '</div>' +
+        '<div class="journey-dates">' + dateRange + '</div>' +
+        '<div class="journey-stats">' +
+        '<span>🧭 <strong>' + j.legsCount + '</strong> ' + (j.legsCount === 1 ? 'článek' : j.legsCount < 5 ? 'články' : 'článků') + '</span>' +
+        '<span>📍 <strong>' + j.placesCount + '</strong> míst</span>' +
+        '<span>📏 <strong>~' + j.totalKm.toLocaleString('cs-CZ') + '</strong> km</span>' +
+        '</div></div></a>'
+      );
+    }).join('');
+  });
+  </script>
+</body>
+</html>
