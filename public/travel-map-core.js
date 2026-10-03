@@ -516,9 +516,25 @@
       statsEl.hidden = false;
     }
 
+    // Body k přehrání — VŠECHNY zastávky všech článků (popořadě podle data,
+    // a uvnitř článku popořadě podle zastávek), ne jen jeden bod na článek.
+    // Díky tomu Play funguje i pro "cestu", co je celá v jediném článku
+    // s víc zastávkami (dřív se tlačítko v tomhle případě schovalo, protože
+    // počítalo jen články, ne zastávky — `withCoords.length` u takové cesty
+    // bylo jen 1).
+    var playPoints = [];
+    withCoords.forEach(function (a) {
+      var stops = Array.isArray(a.stops) && a.stops.length >= 2
+        ? a.stops.filter(function (s) { return typeof s.lat === 'number' && isFinite(s.lat) && typeof s.lng === 'number' && isFinite(s.lng); })
+        : [{ lat: a.lat, lng: a.lng, place: a.place }];
+      stops.forEach(function (s, si) {
+        playPoints.push({ lat: s.lat, lng: s.lng, articleId: a.id, isFirstOfArticle: si === 0 });
+      });
+    });
+
     if (playBtn) {
-      playBtn.hidden = withCoords.length <= 1;
-      if (withCoords.length > 1) {
+      playBtn.hidden = playPoints.length <= 1;
+      if (playPoints.length > 1) {
         var isPlaying = false;
         function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
 
@@ -535,8 +551,8 @@
         // Vzdálenost po celé přehrávané sekvenci (napříč trasami, v pořadí podle data).
         var legKms = [0];
         var playTotalKm = 0;
-        for (var li = 1; li < withCoords.length; li++) {
-          var lk = haversineKm(withCoords[li - 1].lat, withCoords[li - 1].lng, withCoords[li].lat, withCoords[li].lng);
+        for (var li = 1; li < playPoints.length; li++) {
+          var lk = haversineKm(playPoints[li - 1].lat, playPoints[li - 1].lng, playPoints[li].lat, playPoints[li].lng);
           legKms.push(lk); playTotalKm += lk;
         }
 
@@ -583,16 +599,16 @@
           rider.className = 'map-rider' + (reduceMotion ? '' : ' map-rider-bounce');
           rider.textContent = '🚲';
           mapEl.appendChild(rider);
-          var p0 = map.latLngToContainerPoint([withCoords[0].lat, withCoords[0].lng]);
+          var p0 = map.latLngToContainerPoint([playPoints[0].lat, playPoints[0].lng]);
           rider.style.left = p0.x + 'px'; rider.style.top = p0.y + 'px';
 
-          for (var i = 0; i < withCoords.length; i++) {
-            var a = withCoords[i];
-            var m = markerById[a.id];
+          for (var i = 0; i < playPoints.length; i++) {
+            var sp = playPoints[i];
+            var m = sp.isFirstOfArticle ? markerById[sp.articleId] : null;
             var pumpaStop = false;
 
             if (i > 0) {
-              var prev = withCoords[i - 1];
+              var prev = playPoints[i - 1];
               var legKm = legKms[i];
               var drain = playTotalKm > 0 ? (legKm / playTotalKm) * 85 : 0; // aspoň 15 % na dramatický závěr
               var veh = vehicleForKm(legKm);
@@ -605,16 +621,16 @@
                 currentVehicle = veh;
               }
               // Zastávka na pumpě: každý 3. přejezd (a nikdy hned ten první), i když je to elektrokolo
-              pumpaStop = (i % 3 === 0) && i < withCoords.length - 1;
-              await rideLeg(rider, [prev.lat, prev.lng], [a.lat, a.lng], kmSoFar, legKm, battery, drain);
+              pumpaStop = (i % 3 === 0) && i < playPoints.length - 1;
+              await rideLeg(rider, [prev.lat, prev.lng], [sp.lat, sp.lng], kmSoFar, legKm, battery, drain);
               kmSoFar += legKm; battery = Math.max(0, battery - drain);
             } else {
-              map.flyTo([a.lat, a.lng], 9, { duration: 1 });
+              map.flyTo([sp.lat, sp.lng], 9, { duration: 1 });
               await sleep(1100);
             }
 
-            var pt = map.latLngToContainerPoint([a.lat, a.lng]);
-            var isLast = i === withCoords.length - 1;
+            var pt = map.latLngToContainerPoint([sp.lat, sp.lng]);
+            var isLast = i === playPoints.length - 1;
             burstConfetti(mapEl, pt.x, pt.y, isLast);
             if (m) { try { m.openTooltip(); } catch (e) {} }
             showBubble(mapEl, pt.x, pt.y - 30, battery < 25 && Math.random() < 0.6 ? pick(LOW_BATT_LINES) : pick(REACTIONS), false);
@@ -622,8 +638,8 @@
             if (m) { try { m.closeTooltip(); } catch (e) {} }
 
             if (pumpaStop) {
-              var pm = L.marker([a.lat, a.lng], { icon: pumpaIcon(), interactive: false, zIndexOffset: 800 }).addTo(map);
-              var pp = map.latLngToContainerPoint([a.lat, a.lng]);
+              var pm = L.marker([sp.lat, sp.lng], { icon: pumpaIcon(), interactive: false, zIndexOffset: 800 }).addTo(map);
+              var pp = map.latLngToContainerPoint([sp.lat, sp.lng]);
               showBubble(mapEl, pp.x, pp.y - 30, pick(currentVehicle.car ? PUMPA_LINES_CAR : PUMPA_LINES), true);
               parky++; koly++;
               hudEl('parky').textContent = parky; hudEl('koly').textContent = koly;
@@ -634,7 +650,8 @@
             }
           }
 
-          var lastPt = map.latLngToContainerPoint([withCoords[withCoords.length - 1].lat, withCoords[withCoords.length - 1].lng]);
+          var lastSp = playPoints[playPoints.length - 1];
+          var lastPt = map.latLngToContainerPoint([lastSp.lat, lastSp.lng]);
           showBubble(mapEl, lastPt.x, lastPt.y - 30,
             'Dojeto! ' + kmSoFar.toFixed(1).replace('.', ',') + ' km · 🌭×' + parky + ' 🥤×' + koly, true);
           await sleep(1800);
