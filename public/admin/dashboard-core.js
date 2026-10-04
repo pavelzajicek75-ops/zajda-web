@@ -250,7 +250,7 @@ async function logout() {
 }
 
 /* === NAVIGACE (ribbon) === */
-const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about', 'reactions', 'admin'];
+const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about', 'reactions', 'stav', 'admin'];
 
 function showTab(name) {
   if (!RIBBON_TABS.includes(name)) name = 'galleries';
@@ -440,6 +440,8 @@ function loadSection(name) {
     if (typeof loadArtSubsections === 'function') loadArtSubsections();
   } else if (name === 'quotes') {
     if (typeof loadQuotes === 'function') loadQuotes();
+  } else if (name === 'stav') {
+    if (typeof loadSystemStatus === 'function') loadSystemStatus();
   } else if (name === 'subsections') {
     if (typeof loadMainSections === 'function') loadMainSections();
     if (typeof loadSubsections === 'function') loadSubsections();
@@ -2057,6 +2059,12 @@ function uploadOne(blob, thumbBlob, filename) {
     };
     xhr.onerror = () => reject(new Error('Chyba sítě'));
     xhr.open('POST', '/api/photos/upload');
+    // ★ OPRAVA: tohle jede přes XMLHttpRequest (kvůli progress baru), ne
+    // přes fetch() — takže ho ten automatický "přilep token" trik výš
+    // vůbec nezasáhne. Proto 401 poté, co nahrávání fotek dostalo admin
+    // zámek. Token je potřeba připojit ručně, přesně tady.
+    const token = localStorage.getItem('token');
+    if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
     xhr.send(fd);
   });
 }
