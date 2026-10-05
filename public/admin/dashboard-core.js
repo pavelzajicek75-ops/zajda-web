@@ -250,7 +250,7 @@ async function logout() {
 }
 
 /* === NAVIGACE (ribbon) === */
-const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about', 'reactions', 'stav', 'admin'];
+const RIBBON_TABS = ['galleries', 'articles', 'quotes', 'subsections', 'about', 'reactions', 'admin'];
 
 function showTab(name) {
   if (!RIBBON_TABS.includes(name)) name = 'galleries';
@@ -440,8 +440,6 @@ function loadSection(name) {
     if (typeof loadArtSubsections === 'function') loadArtSubsections();
   } else if (name === 'quotes') {
     if (typeof loadQuotes === 'function') loadQuotes();
-  } else if (name === 'stav') {
-    if (typeof loadSystemStatus === 'function') loadSystemStatus();
   } else if (name === 'subsections') {
     if (typeof loadMainSections === 'function') loadMainSections();
     if (typeof loadSubsections === 'function') loadSubsections();
@@ -450,6 +448,7 @@ function loadSection(name) {
     if (typeof loadAbout === 'function') loadAbout();
   } else if (name === 'admin') {
     loadAdminPanel();
+    if (typeof loadSystemStatus === 'function') loadSystemStatus();
   }
 }
 

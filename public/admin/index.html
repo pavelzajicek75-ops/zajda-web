@@ -437,6 +437,17 @@
   </section>
 
   <section id="admin" class="section">
+    <h3 style="margin-bottom:0.5rem">🔎 Stav obsahu webu</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">
+      Rychlý přehled "žije všechno?" — kolik čeho je, a jestli se dá na klíčová úložiště vůbec sáhnout.
+      Hodí se hlavně po delším laborování (jako dneska), ať se dá na jeden pohled ověřit, že nic nechybí.
+    </p>
+    <div id="systemStatusCards" class="usage-cards"></div>
+    <div style="display:flex;gap:0.5rem;margin:0.75rem 0 2rem;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="loadSystemStatus()">🔄 Obnovit</button>
+      <button class="btn btn-blue" onclick="downloadBackup()">💾 Stáhnout zálohu všeho</button>
+    </div>
+
     <h3 style="margin-bottom:0.75rem">📊 Využití (Cloudflare)</h3>
     <div id="adminUsageCards" class="usage-cards"></div>
 
@@ -788,7 +799,7 @@
 </div>
 
 <script src="dashboard-core.js?v=20261003"></script>
-<script src="dashboard-editor.js?v=20260918"></script>
+<script src="dashboard-editor.js?v=20261003"></script>
 <script src="gallery-ribbon-ui.js?v=20260910"></script>
 <script src="article-map-picker.js?v=20260918"></script>
 <script src="timeline-admin.js?v=20260813"></script>

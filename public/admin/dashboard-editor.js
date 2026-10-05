@@ -2859,6 +2859,49 @@ function populateSectionSelects() {
   }
 }
 
+async function loadSystemStatus() {
+  const box = $('systemStatusCards');
+  if (!box) return;
+  box.innerHTML = '<div class="usage-card"><div class="usage-card-label">Načítám…</div></div>';
+
+  let d;
+  try {
+    const r = await fetch('/api/data/stats');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    d = await r.json();
+  } catch (e) {
+    box.innerHTML = `<div class="usage-card usage-card-warn">
+      <div class="usage-card-label">⚠️ Nepodařilo se načíst</div>
+      <div class="usage-card-error">${escapeHtml(e.message)}</div>
+    </div>`;
+    return;
+  }
+
+  const bindingsOk = d.bindings && Object.values(d.bindings).every(Boolean);
+  const cards = [
+    { label: '📝 Články', value: d.articles != null ? d.articles.toLocaleString('cs') : '⚠️', warn: d.articles == null },
+    { label: '🧭 Hlavní sekce', value: d.sections != null ? d.sections.toLocaleString('cs') : '⚠️', warn: d.sections == null },
+    { label: '📂 Podsekce', value: d.subsections != null ? d.subsections.toLocaleString('cs') : '⚠️', warn: d.subsections == null },
+    { label: '🕰️ Milníky časové osy', value: d.timeline != null ? d.timeline.toLocaleString('cs') : '⚠️', warn: d.timeline == null },
+    { label: '🖼️ Fotogalerie', value: d.galleries != null ? d.galleries.toLocaleString('cs') : '⚠️', warn: d.galleries == null },
+    { label: '💬 Citáty', value: d.quotes != null ? d.quotes.toLocaleString('cs') : '⚠️', warn: d.quotes == null },
+    {
+      label: '🔌 Úložiště dostupná',
+      value: bindingsOk ? '✅ Všechna' : '⚠️ Chybí',
+      sub: !bindingsOk ? Object.entries(d.bindings || {}).filter(([, ok]) => !ok).map(([k]) => k).join(', ') : '',
+      warn: !bindingsOk
+    },
+    { label: '🕐 Zkontrolováno', value: new Date(d.checkedAt).toLocaleTimeString('cs'), sub: new Date(d.checkedAt).toLocaleDateString('cs') }
+  ];
+
+  box.innerHTML = cards.map(c => `
+    <div class="usage-card${c.warn ? ' usage-card-warn' : ''}">
+      <div class="usage-card-label">${c.label}</div>
+      <div class="usage-card-value">${c.value}</div>
+      ${c.sub ? `<div class="usage-card-sub">${escapeHtml(c.sub)}</div>` : ''}
+    </div>`).join('');
+}
+
 async function downloadBackup() {
   showToast('Stahuju zálohu, chvíli to potrvá…', 'info');
   try {
