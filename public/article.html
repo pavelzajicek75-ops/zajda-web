@@ -13,8 +13,8 @@
        + běžný text) — zbytek dotáhne fonts.css sám, až bude potřeba. -->
   <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/fonts.css?v=20261003">
-  <link rel="stylesheet" href="/shared.css?v=20261003">
+  <link rel="stylesheet" href="/fonts.css?v=20261005">
+  <link rel="stylesheet" href="/shared.css?v=20261005">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
@@ -461,8 +461,8 @@
       <div>Načítání článku…</div>
     </div>
   </div>
-  <script src="/shared.js?v=20261003"></script>
-  <script src="/travel-map-core.js?v=20261003"></script>
+  <script src="/shared.js?v=20261005"></script>
+  <script src="/travel-map-core.js?v=20261005"></script>
   <script>
   // --- Lightbox s galerií ---
   var galleryImages = [];
@@ -1184,6 +1184,13 @@
     bodyImgs.forEach(function (img, i) {
       img.classList.add('reveal-on-scroll');
       img.style.transitionDelay = (Math.min(i, 4) * 70) + 'ms';
+      // ★ ZMĚNA: některé články mají v sobě přes 15 vložených fotek
+      // (viz třeba "Milancholická tornáda") — bez tohohle se všechny
+      // stahovaly hned při načtení stránky, i ty, co čtenář nikdy
+      // nedoscroluje. Prohlížeč teď začne stahovat fotku, až se blíží
+      // k viewportu, ne všechny najednou.
+      if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
+      if (!img.hasAttribute('decoding')) img.setAttribute('decoding', 'async');
     });
     if (bodyImgs.length && typeof initScrollReveal === 'function') {
       initScrollReveal('#articleBody .reveal-on-scroll');
