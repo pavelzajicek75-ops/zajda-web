@@ -1,5 +1,7 @@
+import { jsonCached } from '../_auth-utils.js';
+
 export async function onRequestGet(context) {
-  const { env } = context;
+  const { env, request } = context;
   const list = await env.ARTICLES.list({ prefix: 'article:' });
   const articles = [];
   for (const key of list.keys) {
@@ -10,5 +12,7 @@ export async function onRequestGet(context) {
       articles.push(data);
     }
   }
-  return Response.json(articles.sort((a, b) => (b.created || 0) - (a.created || 0)));
+  // Krátká 30s cache pro běžné návštěvníky (články se mění častěji než
+  // sekce) — admin má díky Authorization hlavičce vždy čerstvá data.
+  return jsonCached(articles.sort((a, b) => (b.created || 0) - (a.created || 0)), request, 30);
 }
