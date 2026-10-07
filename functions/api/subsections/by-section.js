@@ -1,10 +1,12 @@
+import { jsonCached } from '../_auth-utils.js';
+
 export async function onRequestGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
   const sectionId = url.searchParams.get('sectionId');
 
   if (!sectionId) {
-    return Response.json([]);
+    return jsonCached([], request, 60);
   }
 
   let subs = [];
