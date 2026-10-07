@@ -133,3 +133,26 @@ export function json(data, status = 200) {
     headers: { 'Content-Type': 'application/json' }
   });
 }
+
+/* === BEZPEČNÉ CACHOVÁNÍ VEŘEJNÝCH GET ENDPOINTŮ ===
+   Dovolí Cloudflare edge krátce odpovídat sám, bez sáhnutí na KV — to
+   šetří denní limit zápisů/čtení, co nás v září potrápil (viz homepage,
+   co sahá na sekce/podsekce/články při KAŽDÉ návštěvě).
+
+   DŮLEŽITÉ: cachuje se JEN, když požadavek nemá Authorization hlavičku —
+   tedy jen pro běžné návštěvníky. Admin dashboard (dashboard-core.js)
+   posílá tenhle token ke KAŽDÉMU svému volání automaticky, takže ho tahle
+   funkce spolehlivě pozná a cache pro něj zůstane vypnutá. Admin tak
+   nikdy neuvidí zastaralá data hned po vlastní úpravě. */
+export function cacheHeaders(request, maxAgeSeconds) {
+  const hasAuth = !!(request && request.headers && request.headers.get('Authorization'));
+  if (hasAuth) return {};
+  return { 'Cache-Control': 'public, max-age=' + maxAgeSeconds };
+}
+
+export function jsonCached(data, request, maxAgeSeconds, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...cacheHeaders(request, maxAgeSeconds) }
+  });
+}
