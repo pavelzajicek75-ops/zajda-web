@@ -199,6 +199,12 @@
         </select>
         <input type="date" id="artDate" class="form-input">
         <input type="text" id="artPlace" class="form-input" placeholder="Místo">
+        <select id="artStatus" class="form-select" onchange="onArticleStatusChange()" title="Kdy se článek zveřejní">
+          <option value="now">✅ Publikovat hned</option>
+          <option value="draft">📝 Uložit jako koncept (skrytý)</option>
+          <option value="schedule">🕒 Naplánovat publikování</option>
+        </select>
+        <span id="artPublishAtWrap" style="display:none"><input type="datetime-local" id="artPublishAt" class="form-input"></span>
       </div>
       <div class="form-row">
         <textarea id="artExcerpt" class="form-input" rows="2" placeholder="Krátký popis (pro seznam článků, sdílení a vyhledávače — nepovinné, jinak se použije začátek textu)" style="resize:vertical;flex:1"></textarea>
@@ -799,7 +805,7 @@
 </div>
 
 <script src="dashboard-core.js?v=20261003"></script>
-<script src="dashboard-editor.js?v=20261003"></script>
+<script src="dashboard-editor.js?v=20261009"></script>
 <script src="gallery-ribbon-ui.js?v=20260910"></script>
 <script src="article-map-picker.js?v=20260918"></script>
 <script src="timeline-admin.js?v=20260813"></script>

@@ -2261,8 +2261,8 @@ function getFilteredArticles() {
   const filtered = arr.filter(a => {
     if (q && !(a.title || '').toLowerCase().includes(q)) return false;
     if (sectionFilter && (a.sectionId || a.section) !== sectionFilter) return false;
-    if (statusFilter === 'published' && !a.published) return false;
-    if (statusFilter === 'hidden' && a.published) return false;
+    if (statusFilter === 'published' && a.published === false) return false;
+    if (statusFilter === 'hidden' && a.published !== false) return false;
     return true;
   });
   function totalReactions(a) {
@@ -2330,10 +2330,14 @@ function renderArticleList(arr) {
     const coverThumb = a.coverUrl
       ? `<img ${thumbImgAttrs(a.coverUrl)} style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">`
       : '';
-    const pubStatus = a.published
+    const isPub = a.published !== false;
+    const schedTime = (!isPub && a.publishAt) ? new Date(a.publishAt) : null;
+    const pubStatus = isPub
       ? '<span style="color:#22c55e;font-size:12px">✅ Publikováno</span>'
-      : '<span style="color:#ef4444;font-size:12px">⏸ Skryto</span>';
-    const toggleBtn = a.published
+      : (schedTime && !isNaN(schedTime)
+          ? '<span style="color:#60a5fa;font-size:12px">🕒 Naplánováno na ' + schedTime.toLocaleString('cs', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</span>'
+          : '<span style="color:#ef4444;font-size:12px">📝 Koncept (skrytý)</span>');
+    const toggleBtn = isPub
       ? `<button onclick="unpublishArticle('${a.id}')" class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">⏸ Skrýt</button>`
       : `<button onclick="publishArticle('${a.id}')" class="btn btn-sm" style="background:#22c55e;color:#fff;border:none;padding:4px 12px;border-radius:6px;cursor:pointer">👁 Zobrazit</button>`;
     const pinBadge = a.pinned ? '<span style="color:#ffc857;font-size:12px;font-weight:700">📌 Připnuto</span>' : '';
@@ -2404,6 +2408,7 @@ async function editArticle(id) {
     }
     if ($('artDate')) $('artDate').value = a.date ? a.date.split('T')[0] : '';
     if ($('artPlace')) $('artPlace').value = a.place || '';
+    setArticleStatusFields(a);
     if ($('artExcerpt')) $('artExcerpt').value = a.excerpt || '';
     if ($('artCoverUrl')) $('artCoverUrl').value = a.coverUrl || '';
     if ($('artCoverPreview')) $('artCoverPreview').style.backgroundImage = a.coverUrl ? `url('${a.coverUrl}')` : '';
@@ -2431,6 +2436,36 @@ async function editArticle(id) {
   }
 }
 
+
+/* === ČLÁNKY: stav publikování (hned / koncept / naplánovat) === */
+function readArticleStatus() {
+  const mode = $('artStatus')?.value || 'now';
+  if (mode === 'draft') return { published: false, publishAt: '' };
+  if (mode === 'schedule') {
+    const v = $('artPublishAt')?.value;
+    const t = v ? new Date(v) : null;
+    return { published: false, publishAt: (t && !isNaN(t)) ? t.toISOString() : '' };
+  }
+  return { published: true, publishAt: '' };
+}
+function onArticleStatusChange() {
+  const wrap = $('artPublishAtWrap');
+  if (wrap) wrap.style.display = ($('artStatus')?.value === 'schedule') ? '' : 'none';
+}
+function setArticleStatusFields(a) {
+  const sel = $('artStatus'); if (!sel) return;
+  const pub = !a || a.published !== false;
+  if (pub) sel.value = 'now';
+  else if (a.publishAt) {
+    sel.value = 'schedule';
+    const d = new Date(a.publishAt);
+    if (!isNaN(d) && $('artPublishAt')) {
+      const p = n => String(n).padStart(2, '0');
+      $('artPublishAt').value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+  } else sel.value = 'draft';
+  onArticleStatusChange();
+}
 
 /* === ČLÁNKY: vytvoření === */
 /* === NÁHLED ČLÁNKU PŘED ZVEŘEJNĚNÍM ===
@@ -2470,6 +2505,7 @@ async function createArticle() {
   const title = $('artTitle')?.value.trim();
   const content = $('artEditor')?.innerHTML;
   if (!title || !content) return showToast('Vyplň nadpis a obsah', 'info');
+  if (($('artStatus')?.value === 'schedule') && !readArticleStatus().publishAt) return showToast('Vyber datum a čas publikování', 'info');
   const payload = {
     title, content,
     excerpt: $('artExcerpt')?.value.trim() || '',
@@ -2479,7 +2515,7 @@ async function createArticle() {
     subsectionId: $('artSubsection')?.value || null,
     date: $('artDate')?.value || new Date().toISOString().split('T')[0],
     place: $('artPlace')?.value || '',
-    published: true
+    ...readArticleStatus()
   };
   let created = null;
   try {
@@ -2497,7 +2533,7 @@ async function createArticle() {
   }
   resetArticleForm();
   await loadArticles();
-  showToast('Článek vytvořen a publikován', 'success');
+  showToast(payload.published ? 'Článek vytvořen a publikován' : (payload.publishAt ? 'Článek vytvořen a naplánován' : 'Článek uložen jako koncept'), 'success');
 
   // Rovnou nabídne poslání odkazu na nový článek — použije skutečný záznam
   // z čerstvě načteného seznamu (má jistě správné ID z databáze), případně
@@ -2518,6 +2554,7 @@ async function updateArticle() {
   const title = $('artTitle')?.value.trim();
   const content = editorEl?.innerHTML;
   if (!title || !content) return showToast('Vyplň nadpis a obsah', 'info');
+  if (($('artStatus')?.value === 'schedule') && !readArticleStatus().publishAt) return showToast('Vyber datum a čas publikování', 'info');
   const payload = {
     id, title, content,
     excerpt: $('artExcerpt')?.value.trim() || '',
@@ -2527,7 +2564,7 @@ async function updateArticle() {
     subsectionId: $('artSubsection')?.value || null,
     date: $('artDate')?.value || new Date().toISOString().split('T')[0],
     place: $('artPlace')?.value || '',
-    published: true
+    ...readArticleStatus()
   };
   try {
     const r = await fetch('/api/articles/update', {
@@ -2552,7 +2589,7 @@ async function publishArticle(id) {
     const r = await fetch('/api/articles/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, published: true })
+      body: JSON.stringify({ id, published: true, publishAt: '' })
     });
     if (!r.ok) throw new Error('Chyba publikování');
     loadArticles();
@@ -2567,7 +2604,7 @@ async function unpublishArticle(id) {
     const r = await fetch('/api/articles/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, published: false })
+      body: JSON.stringify({ id, published: false, publishAt: '' })
     });
     if (!r.ok) throw new Error('Chyba skrývání');
     loadArticles();
@@ -2619,6 +2656,8 @@ function resetArticleForm() {
   }
   if ($('artDate')) $('artDate').value = '';
   if ($('artPlace')) $('artPlace').value = '';
+  if ($('artPublishAt')) $('artPublishAt').value = '';
+  setArticleStatusFields(null);
   if ($('artExcerpt')) $('artExcerpt').value = '';
   clearArticleCover();
   if ($('artSection')) $('artSection').value = '';
@@ -2658,7 +2697,7 @@ async function bulkPublishArticles(publish) {
       await fetch('/api/articles/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, published: publish })
+        body: JSON.stringify({ id, published: publish, publishAt: '' })
       });
     } catch (e) { console.error('Chyba hromadné akce', id, e); }
   }
@@ -2859,6 +2898,29 @@ function populateSectionSelects() {
   }
 }
 
+/* === Připomínka zálohy (po 30 dnech se zbarví výstražně) === */
+function renderBackupReminder() {
+  const cards = $('systemStatusCards');
+  if (!cards) return;
+  let box = $('backupReminder');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'backupReminder';
+    box.style.cssText = 'margin:0 0 .75rem;padding:.7rem 1rem;border-radius:10px;font-size:14px;border:1px solid;';
+    cards.parentNode.insertBefore(box, cards);
+  }
+  let last = 0;
+  try { last = Number(localStorage.getItem('lastBackupAt')) || 0; } catch (e) {}
+  const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+  const old = days === null || days >= 30;
+  box.style.background = old ? 'rgba(245,158,11,.12)' : 'rgba(34,197,94,.10)';
+  box.style.borderColor = old ? '#f59e0b' : '#22c55e';
+  box.style.color = old ? '#fbbf24' : '#86efac';
+  box.textContent = days === null
+    ? '💾 Zálohu jsi z tohoto zařízení ještě nestahoval — doporučuju to udělat (tlačítko níže).'
+    : (days === 0 ? '💾 Poslední záloha: dnes ✅' : '💾 Poslední záloha před ' + days + ' ' + (days === 1 ? 'dnem' : 'dny') + (old ? ' — čas na novou.' : '.'));
+}
+
 async function loadSystemStatus() {
   const box = $('systemStatusCards');
   if (!box) return;
@@ -2877,6 +2939,7 @@ async function loadSystemStatus() {
     return;
   }
 
+  renderBackupReminder();
   const bindingsOk = d.bindings && Object.values(d.bindings).every(Boolean);
   const cards = [
     { label: '📝 Články', value: d.articles != null ? d.articles.toLocaleString('cs') : '⚠️', warn: d.articles == null },
@@ -2921,7 +2984,9 @@ async function downloadBackup() {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
+    try { localStorage.setItem('lastBackupAt', String(Date.now())); } catch (e) {}
     showToast('Záloha stažená ✅', 'success');
+    if (typeof renderBackupReminder === 'function') renderBackupReminder();
   } catch (e) {
     showToast('Záloha selhala: ' + e.message, 'error');
   }
