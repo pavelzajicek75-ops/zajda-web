@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa fotek — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Fotky z cest na mapě — klikni na místo a podívej se, co se tam povedlo vyfotit.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20261009">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.css">
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.Default.css">
+  <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--panel-solid);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .3s;
+    }
+    .back-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); }
+    .nav-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--ember); text-decoration: none; }
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 0 20px 18px; }
+    .page-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700; color: var(--parchment); }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+    .map-wrap { position: relative; z-index: 10; max-width: 1100px; margin: 0 auto; padding: 0 20px 50px; }
+    #photoMap { height: 68vh; min-height: 380px; border-radius: 16px; border: 1px solid var(--panel-border); overflow: hidden; }
+    .photo-pin {
+      width: 46px; height: 46px; border-radius: 50%; border: 3px solid #fff;
+      object-fit: cover; display: block; box-shadow: 0 4px 14px rgba(0,0,0,.55); background: #1a1a2e;
+    }
+    .photo-count {
+      position: absolute; right: -6px; top: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+      border-radius: 10px; background: var(--ember, #ff7a45); color: #08080f;
+      font: 700 11px/20px 'Space Grotesk', sans-serif; text-align: center;
+    }
+    .photo-pin-wrap { position: relative; }
+    .pp-title { font: 700 15px 'Space Grotesk', sans-serif; margin-bottom: 2px; }
+    .pp-sub { font-size: 12px; opacity: .7; margin-bottom: 8px; }
+    .pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; width: 240px; }
+    .pp-grid a { display: block; aspect-ratio: 1; border-radius: 6px; overflow: hidden; }
+    .pp-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .pp-link { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; }
+    .map-empty { text-align: center; color: var(--mist); padding: 40px 10px; }
+    @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .map-wrap { padding: 0 12px 40px; } }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">📷 Mapa fotek</h1>
+    <p class="page-subtitle" id="photoSub">Fotky z článků tam, kde se staly</p>
+  </div>
+  <div class="map-wrap">
+    <div id="photoMap"></div>
+    <div class="map-empty" id="photoEmpty" hidden>Zatím tu nejsou žádné fotky s místem — stačí, aby měl článek vyplněné místo na mapě a nějakou fotku.</div>
+  </div>
+
+  <script src="/shared.js?v=20261009"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    if (typeof initStarfield === 'function') initStarfield(120);
+
+    // Vytáhne adresy <img> z HTML článku (jen vlastní fotky z webu a http(s)).
+    function extractImages(html) {
+      var out = [], re = /<img[^>]+src=["']([^"']+)["']/gi, m;
+      while ((m = re.exec(html || ''))) {
+        var src = m[1];
+        if (/^(https?:)?\/\//i.test(src) || src.charAt(0) === '/') out.push(src);
+      }
+      return out;
+    }
+    function pointOf(a) {
+      var lat = Number(a.lat), lng = Number(a.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng) && a.lat !== null && a.lng !== null) return [lat, lng];
+      var s = Array.isArray(a.stops) && a.stops[0];
+      if (s && Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng))) return [Number(s.lat), Number(s.lng)];
+      return null;
+    }
+
+    var articles = [];
+    try {
+      var r = await fetch('/api/articles/list');
+      var data = await r.json();
+      articles = (Array.isArray(data) ? data : []).filter(function (a) { return a && a.published !== false; });
+    } catch (e) { console.error(e); }
+
+    var items = [];
+    articles.forEach(function (a) {
+      var pt = pointOf(a); if (!pt) return;
+      var imgs = [];
+      if (a.coverUrl) imgs.push(a.coverUrl);
+      extractImages(a.content).forEach(function (u) { if (imgs.indexOf(u) === -1) imgs.push(u); });
+      if (!imgs.length) return;
+      items.push({ a: a, pt: pt, imgs: imgs });
+    });
+
+    var mapEl = document.getElementById('photoMap');
+    if (!items.length) {
+      mapEl.style.display = 'none';
+      document.getElementById('photoEmpty').hidden = false;
+      return;
+    }
+
+    var total = items.reduce(function (n, it) { return n + it.imgs.length; }, 0);
+    document.getElementById('photoSub').textContent =
+      total + ' fotek z ' + items.length + ' míst — klikni na kolečko';
+
+    var map = L.map(mapEl, { worldCopyJump: true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    var cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 });
+    var bounds = [];
+    items.forEach(function (it) {
+      var cover = it.imgs[0];
+      var icon = L.divIcon({
+        className: '',
+        html: '<div class="photo-pin-wrap"><img class="photo-pin" alt="" ' + thumbImgAttrs(cover) + '>' +
+              (it.imgs.length > 1 ? '<span class="photo-count">' + it.imgs.length + '</span>' : '') + '</div>',
+        iconSize: [46, 46], iconAnchor: [23, 23], popupAnchor: [0, -22]
+      });
+      var thumbs = it.imgs.slice(0, 6).map(function (u) {
+        return '<a href="/article?id=' + encodeURIComponent(it.a.id) + '"><img loading="lazy" alt="" ' + thumbImgAttrs(u) + '></a>';
+      }).join('');
+      var more = it.imgs.length > 6 ? ' (+' + (it.imgs.length - 6) + ' dalších v článku)' : '';
+      var popup = '<div class="pp-title">' + escapeHtml(it.a.title || 'Bez názvu') + '</div>' +
+        '<div class="pp-sub">' + escapeHtml(it.a.place || '') + (it.a.date ? ' · ' + formatDate(it.a.date) : '') + '</div>' +
+        '<div class="pp-grid">' + thumbs + '</div>' +
+        '<a class="pp-link" href="/article?id=' + encodeURIComponent(it.a.id) + '">Číst článek →' + more + '</a>';
+      cluster.addLayer(L.marker(it.pt, { icon: icon }).bindPopup(popup));
+      bounds.push(it.pt);
+    });
+    map.addLayer(cluster);
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
+  });
+  </script>
+</body>
+</html>
