@@ -84,11 +84,38 @@
       }
       return out;
     }
+    // Vzdálenost dvou bodů v km (haversine) — jen na výběr "hlavního cíle".
+    function km(a, b) {
+      var R = 6371, rad = Math.PI / 180;
+      var dLat = (b[0] - a[0]) * rad, dLng = (b[1] - a[1]) * rad;
+      var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+    function validStops(a) {
+      return (Array.isArray(a.stops) ? a.stops : []).filter(function (s) {
+        return s && s.lat !== null && s.lng !== null && Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng));
+      }).map(function (s) { return { place: s.place || '', pt: [Number(s.lat), Number(s.lng)] }; });
+    }
+    // Kam s fotkami článku. U cesty s víc zastávkami NENÍ první zastávka
+    // cíl (je to jen začátek = místo, kde skončil předchozí výlet), takže
+    // fotky patří na zastávku nejvzdálenější od startu — u okruhu
+    // Třeboň → Krkonoše → … → Třeboň jsou to Krkonoše, ne Třeboň.
     function pointOf(a) {
+      var stops = validStops(a);
+      if (stops.length >= 2) {
+        var start = stops[0].pt, best = stops[1], bestKm = -1;
+        stops.forEach(function (s) {
+          var d = km(start, s.pt);
+          if (d > bestKm) { bestKm = d; best = s; }
+        });
+        return { pt: best.pt, place: best.place || a.place || '', route: stops.length };
+      }
       var lat = Number(a.lat), lng = Number(a.lng);
-      if (Number.isFinite(lat) && Number.isFinite(lng) && a.lat !== null && a.lng !== null) return [lat, lng];
-      var s = Array.isArray(a.stops) && a.stops[0];
-      if (s && Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng))) return [Number(s.lat), Number(s.lng)];
+      if (a.lat !== null && a.lng !== null && Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { pt: [lat, lng], place: a.place || '', route: 0 };
+      }
+      if (stops.length === 1) return { pt: stops[0].pt, place: stops[0].place || a.place || '', route: 0 };
       return null;
     }
 
@@ -101,12 +128,12 @@
 
     var items = [];
     articles.forEach(function (a) {
-      var pt = pointOf(a); if (!pt) return;
+      var loc = pointOf(a); if (!loc) return;
       var imgs = [];
       if (a.coverUrl) imgs.push(a.coverUrl);
       extractImages(a.content).forEach(function (u) { if (imgs.indexOf(u) === -1) imgs.push(u); });
       if (!imgs.length) return;
-      items.push({ a: a, pt: pt, imgs: imgs });
+      items.push({ a: a, pt: loc.pt, place: loc.place, route: loc.route, imgs: imgs });
     });
 
     var mapEl = document.getElementById('photoMap');
@@ -140,7 +167,8 @@
       }).join('');
       var more = it.imgs.length > 6 ? ' (+' + (it.imgs.length - 6) + ' dalších v článku)' : '';
       var popup = '<div class="pp-title">' + escapeHtml(it.a.title || 'Bez názvu') + '</div>' +
-        '<div class="pp-sub">' + escapeHtml(it.a.place || '') + (it.a.date ? ' · ' + formatDate(it.a.date) : '') + '</div>' +
+        '<div class="pp-sub">' + escapeHtml(it.place || it.a.place || '') + (it.a.date ? ' · ' + formatDate(it.a.date) : '') +
+        (it.route ? '<br>🛣️ cesta přes ' + it.route + ' zastávek — fotky u hlavního cíle' : '') + '</div>' +
         '<div class="pp-grid">' + thumbs + '</div>' +
         '<a class="pp-link" href="/article?id=' + encodeURIComponent(it.a.id) + '">Číst článek →' + more + '</a>';
       cluster.addLayer(L.marker(it.pt, { icon: icon }).bindPopup(popup));
