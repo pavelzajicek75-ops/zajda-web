@@ -54,6 +54,7 @@
   </style>
 </head>
 <body>
+  <a href="#photoMain" class="skip-link">Přeskočit na mapu</a>
   <div class="bg"></div>
   <div class="stars" id="stars"></div>
   <div class="nav-bar">
@@ -64,10 +65,10 @@
     <h1 class="page-title">📷 Mapa fotek</h1>
     <p class="page-subtitle" id="photoSub">Fotky z článků tam, kde se staly</p>
   </div>
-  <div class="map-wrap">
-    <div id="photoMap"></div>
+  <main class="map-wrap" id="photoMain" tabindex="-1">
+    <div id="photoMap" role="region" aria-label="Mapa s fotkami z cest"></div>
     <div class="map-empty" id="photoEmpty" hidden>Zatím tu nejsou žádné fotky s místem — stačí, aby měl článek vyplněné místo na mapě a nějakou fotku.</div>
-  </div>
+  </main>
 
   <script src="/shared.js?v=20261009"></script>
   <script>
