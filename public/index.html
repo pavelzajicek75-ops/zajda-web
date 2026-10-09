@@ -118,6 +118,7 @@
       color: var(--parchment); padding-left: 12px; background: rgba(140,150,255,0.08);
     }
     .latest-item:last-child { border-bottom: none; }
+    .latest-memory-label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; color: var(--nova); margin-bottom: 2px; }
     .latest-item small { color: var(--mist-dim); font-size: 11.5px; display: block; margin-top: 3px; letter-spacing: 0.2px; }
     .latest-empty { color: var(--mist-dim); font-size: 13px; padding: 0.5rem 0; font-style: italic; }
 
@@ -808,6 +809,20 @@
         var pinTag = a.pinned ? '<span class="pinned-badge">📌 Top</span>' : '';
         html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + pinTag + '<small>' + escapeHtml(meta) + '</small></a>';
       }
+      // Třetí řádek: "Před rokem" / "Z archivu" (viz memory-card.js).
+      try {
+        if (window.MemoryCard) {
+          var mem = window.MemoryCard.pick(articles, new Date());
+          var already = mem && latest.some(function(x) { return String(x.id) === String(mem.a.id); });
+          if (mem && !already) {
+            var mb = await getArticleBreadcrumb(mem.a);
+            var mMeta = [mb, formatDate(mem.a.date || mem.a.created || '')].filter(Boolean).join(' • ');
+            html += '<a class="latest-item latest-memory" href="/article?id=' + encodeURIComponent(mem.a.id) + '">' +
+              '<span class="latest-memory-label">' + mem.label + '</span>' + escapeHtml(mem.a.title || 'Bez názvu') +
+              '<small>' + escapeHtml(mMeta) + '</small></a>';
+          }
+        }
+      } catch (e) { /* karta je jen bonus — chyba nesmí rozbít aktuality */ }
       box.innerHTML = html;
     }
 
@@ -1573,6 +1588,6 @@
   });
   </script>
 <script src="/diagnosis-counter.js?v=2"></script>
-<script src="/memory-card.js?v=1"></script>
+<script src="/memory-card.js?v=2"></script>
 </body>
 </html>
