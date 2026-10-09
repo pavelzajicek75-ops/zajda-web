@@ -42,6 +42,12 @@ export async function onRequestPost(context) {
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
     stops: stops.length >= 2 ? stops : [],
+    excerpt: body.excerpt || '',
+    coverUrl: body.coverUrl || '',
+    slug: body.slug || '',
+    // koncept = published:false; s publishAt se po daném čase zveřejní sám
+    published: body.published !== false,
+    publishAt: body.published === false && body.publishAt ? String(body.publishAt) : '',
     created: Date.now()
   };
   await env.ARTICLES.put(`article:${id}`, JSON.stringify(article));
