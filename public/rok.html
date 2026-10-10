@@ -46,6 +46,13 @@
     .facts a { color: var(--nova); font-weight: 600; text-decoration: none; }
     .facts a:hover { text-decoration: underline; }
     .facts b { color: var(--parchment); }
+    .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .badge { border: 1px solid var(--border-soft, #263252); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--mist); }
+    .badge .ic { font-size: 22px; display: block; }
+    .badge b { color: var(--parchment); display: block; margin: 2px 0; }
+    .badge.done { border-color: var(--nova); }
+    .badge.todo { opacity: .5; filter: grayscale(1); }
+    .badge .pr { font-size: 11px; }
 
     .bars { display: flex; align-items: flex-end; gap: 6px; height: 140px; padding-top: 10px; }
     .bar-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
@@ -72,6 +79,7 @@
     <div class="year-chips" id="yearChips" role="group" aria-label="Vyber rok"></div>
     <div class="stat-grid" id="statGrid"></div>
     <div class="block" id="factsBlock" hidden><h2>✨ Zajímavosti</h2><ul class="facts" id="facts"></ul></div>
+    <div class="block" id="badgeBlock" hidden><h2>🏅 Úspěchy</h2><div class="badges" id="badges"></div></div>
     <div class="block" id="chartBlock" hidden><h2 id="chartTitle">Články</h2><div class="bars" id="bars"></div></div>
     <div class="empty" id="rokEmpty" hidden>Zatím tu není z čeho počítat.</div>
   </main>
@@ -148,6 +156,7 @@
       if (!list.length) {
         grid.innerHTML = ''; empty.hidden = false;
         document.getElementById('factsBlock').hidden = true; document.getElementById('chartBlock').hidden = true;
+        document.getElementById('badgeBlock').hidden = true;
         return;
       }
       empty.hidden = true;
@@ -178,6 +187,32 @@
       var fb = document.getElementById('factsBlock');
       fb.hidden = !facts.length;
       document.getElementById('facts').innerHTML = facts.map(function (f) { return '<li>' + f + '</li>'; }).join('');
+
+      // Úspěchy — jen v pohledu „Celkem“.
+      var bb = document.getElementById('badgeBlock');
+      if (current == null) {
+        var firstT = Math.min.apply(null, all.map(function (a) { var t = new Date(a.date || a.created).getTime(); return isNaN(t) ? Infinity : t; }));
+        var daysBlog = isFinite(firstT) ? Math.floor((Date.now() - firstT) / 86400000) : 0;
+        var defs = [
+          { ic: '✍️', t: 'První článek', v: s.n, g: 1, u: '' },
+          { ic: '📚', t: '10 článků', v: s.n, g: 10, u: '' },
+          { ic: '🗂️', t: '100 článků', v: s.n, g: 100, u: '' },
+          { ic: '📷', t: '100 fotek', v: s.photos, g: 100, u: '' },
+          { ic: '🖼️', t: '500 fotek', v: s.photos, g: 500, u: '' },
+          { ic: '🛣️', t: '100 km na cestách', v: s.km, g: 100, u: ' km' },
+          { ic: '🚗', t: '1 000 km na cestách', v: s.km, g: 1000, u: ' km' },
+          { ic: '🗺️', t: '10 míst na mapě', v: s.places, g: 10, u: '' },
+          { ic: '🧭', t: '5 cest', v: s.trips, g: 5, u: '' },
+          { ic: '📖', t: '10 000 slov', v: s.words, g: 10000, u: '' },
+          { ic: '🎂', t: 'Rok s blogem', v: daysBlog, g: 365, u: ' dní' }
+        ];
+        document.getElementById('badges').innerHTML = defs.map(function (d) {
+          var ok = d.v >= d.g;
+          return '<div class="badge ' + (ok ? 'done' : 'todo') + '"><span class="ic">' + d.ic + '</span><b>' + escapeHtml(d.t) + '</b>' +
+            '<span class="pr">' + (ok ? 'Splněno ✓' : nf(d.v) + ' / ' + nf(d.g) + d.u) + '</span></div>';
+        }).join('');
+        bb.hidden = false;
+      } else bb.hidden = true;
 
       // Sloupcový graf: u roku po měsících, u „Celkem“ po letech.
       var labels, values;

@@ -289,6 +289,14 @@
       }
     }
     .reaction-btn:active { transform: scale(0.92); }
+    .trip-nav { margin: 26px 0 8px; padding: 14px 16px; border-radius: 14px; background: var(--panel-solid); border: 1px solid var(--panel-border); }
+    .trip-nav-head { font: 600 14px 'Space Grotesk', sans-serif; color: var(--nova); margin-bottom: 8px; }
+    .trip-nav-head b { color: var(--parchment); }
+    .trip-name { color: var(--mist); font-weight: 400; margin-left: 6px; }
+    .trip-name:not(:empty)::before { content: '— '; }
+    .trip-nav-links { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .trip-nav-links a { color: var(--parchment); text-decoration: none; font-size: 14px; padding: 6px 0; }
+    .trip-nav-links a:hover, .trip-nav-links a:focus-visible { color: var(--ember); }
     .share-btn {
       background: var(--panel-solid); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255,122,69,0.3); color: var(--parchment); padding: 9px 18px;
@@ -1198,6 +1206,24 @@
         html += '<div class="article-nav-links' + (navParts.length === 1 ? ' single' : '') + '">' + navParts.join('') + '</div>';
       }
 
+      // Výlet (podsekce): "Část 3 z 7" + předchozí/další část v pořadí, jak šly za sebou.
+      if (article.subsectionId) {
+        var trip = allArticles
+          .filter(function (a) { return a && String(a.subsectionId || '') === String(article.subsectionId) && String(a.sectionId || '') === String(article.sectionId || ''); })
+          .sort(function (a, b) { return (articleTimestamp(a) - articleTimestamp(b)) || ((a.created || 0) - (b.created || 0)); });
+        var ti = trip.findIndex(function (a) { return String(a.id) === String(article.id); });
+        if (trip.length >= 2 && ti !== -1) {
+          var tPrev = ti > 0 ? trip[ti - 1] : null, tNext = ti < trip.length - 1 ? trip[ti + 1] : null;
+          html += '<nav class="trip-nav" aria-label="Části výletu" data-section="' + escapeHtml(String(article.sectionId || '')) + '" data-sub="' + escapeHtml(String(article.subsectionId)) + '">' +
+            '<div class="trip-nav-head">🧭 Část <b>' + (ti + 1) + '</b> z <b>' + trip.length + '</b><span class="trip-name"></span></div><div class="trip-nav-links">' +
+            (tPrev ? '<a href="/article?id=' + encodeURIComponent(tPrev.id) + '">← ' + escapeHtml(tPrev.title || 'Předchozí část') + '</a>' : '<span></span>') +
+            (tNext ? '<a href="/article?id=' + encodeURIComponent(tNext.id) + '">' + escapeHtml(tNext.title || 'Další část') + ' →</a>' : '<span></span>') +
+            '</div></nav>';
+          if (tPrev) excludeIds.push(String(tPrev.id));
+          if (tNext) excludeIds.push(String(tNext.id));
+        }
+      }
+
       var related = findRelated(article, allArticles, excludeIds);
       if (related.length) {
         html += '<div class="related-section"><h2>Podobné články</h2><div class="related-grid">';
@@ -1216,6 +1242,20 @@
     }
 
     container.innerHTML = html;
+
+    // Název výletu (podsekce) se dotáhne dodatečně — bez něj blok funguje taky.
+    try {
+      var tripNav = container.querySelector('.trip-nav');
+      if (tripNav) {
+        fetch('/api/subsections/by-section?sectionId=' + encodeURIComponent(tripNav.dataset.section))
+          .then(function (r) { return r.ok ? r.json() : []; })
+          .then(function (subs) {
+            var s = (Array.isArray(subs) ? subs : []).filter(function (x) { return String(x.id) === String(tripNav.dataset.sub); })[0];
+            var nm = tripNav.querySelector('.trip-name');
+            if (s && s.name && nm) nm.textContent = s.name;
+          }).catch(function () {});
+      }
+    } catch (e) { /* jen ozdoba */ }
 
     // Komentáře čtenářů (viz comments.js) — chyba nesmí shodit zobrazení článku.
     try { if (window.ArticleComments) window.ArticleComments.mount(article, container); } catch (e) { console.error('Komentáře:', e); }
