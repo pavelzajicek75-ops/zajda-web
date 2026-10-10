@@ -2116,11 +2116,16 @@ function setArticleUrlPattern(p) {
 }
 
 function getArticlePublicUrl(article) {
-  return getArticleUrlPattern()
+  let url = getArticleUrlPattern()
     .replace('{slug}', article.slug || '')
     .replace('{section}', article.sectionId || article.section || '')
     .replace('{subsection}', article.subsectionId || article.subsection || '')
     .replace('{id}', article.id || '');
+  // Soukromý článek se otevře jen odkazem s tajným tokenem.
+  if (article.unlisted && article.shareToken) {
+    url += (url.indexOf('?') === -1 ? '?' : '&') + 'k=' + encodeURIComponent(article.shareToken);
+  }
+  return url;
 }
 
 function promptArticleUrlPattern() {
@@ -2150,6 +2155,8 @@ function openShareModal(article) {
       <div class="modal-actions" style="flex-wrap:wrap;justify-content:flex-start;gap:0.5rem">
         <button class="btn btn-blue" id="shareNativeBtn" style="display:none">📱 Nabídka aplikací</button>
         <button class="btn btn-blue" id="shareCopyBtn">📋 Kopírovat odkaz</button>
+        <button class="btn" id="shareWaBtn" style="background:#25d366;color:#08210f;border:none">💬 WhatsApp</button>
+        <button class="btn" id="shareMsgBtn" style="background:#0a7cff;color:#fff;border:none">💬 Messenger</button>
       </div>
       <div style="margin-top:1rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem">
         <button class="btn btn-sm" id="shareUrlPatternBtn" title="Uprav formát veřejné URL, pokud neodpovídá tvému webu">⚙️ Formát URL</button>
@@ -2173,6 +2180,23 @@ function openShareModal(article) {
   }
 
   m.querySelector('#shareCopyBtn').onclick = () => copyShareLink(urlInput.value);
+
+  // WhatsApp: wa.me otevře aplikaci (mobil) nebo WhatsApp Web (počítač).
+  m.querySelector('#shareWaBtn').onclick = () => {
+    const msg = 'Nový článek: ' + text + ' ' + urlInput.value;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank', 'noopener');
+  };
+  // Messenger: na mobilu přímo aplikace, na počítači se odkaz zkopíruje
+  // a otevře se messenger.com (stačí vložit do konverzace).
+  m.querySelector('#shareMsgBtn').onclick = () => {
+    const link = urlInput.value;
+    if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      window.location.href = 'fb-messenger://share?link=' + encodeURIComponent(link);
+      return;
+    }
+    copyShareLink(link);
+    window.open('https://www.messenger.com/', '_blank', 'noopener');
+  };
 
   m.querySelector('#shareUrlPatternBtn').onclick = () => {
     promptArticleUrlPattern();
@@ -2331,8 +2355,11 @@ function renderArticleList(arr) {
       ? `<img ${thumbImgAttrs(a.coverUrl)} style="width:64px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #263252">`
       : '';
     const isPub = a.published !== false;
+    const isPrivate = isPub && a.unlisted === true;
     const schedTime = (!isPub && a.publishAt) ? new Date(a.publishAt) : null;
-    const pubStatus = isPub
+    const pubStatus = isPrivate
+      ? '<span style="color:#a78bfa;font-size:12px">🔒 Soukromý — jen přes odkaz</span>'
+      : isPub
       ? '<span style="color:#22c55e;font-size:12px">✅ Publikováno</span>'
       : (schedTime && !isNaN(schedTime)
           ? '<span style="color:#60a5fa;font-size:12px">🕒 Naplánováno na ' + schedTime.toLocaleString('cs', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '</span>'
@@ -2440,13 +2467,15 @@ async function editArticle(id) {
 /* === ČLÁNKY: stav publikování (hned / koncept / naplánovat) === */
 function readArticleStatus() {
   const mode = $('artStatus')?.value || 'now';
-  if (mode === 'draft') return { published: false, publishAt: '' };
+  if (mode === 'draft') return { published: false, publishAt: '', unlisted: false };
   if (mode === 'schedule') {
     const v = $('artPublishAt')?.value;
     const t = v ? new Date(v) : null;
-    return { published: false, publishAt: (t && !isNaN(t)) ? t.toISOString() : '' };
+    return { published: false, publishAt: (t && !isNaN(t)) ? t.toISOString() : '', unlisted: false };
   }
-  return { published: true, publishAt: '' };
+  // soukromý = zveřejněný, ale jen přes tajný odkaz (není ve výpisu, hledání ani RSS)
+  if (mode === 'private') return { published: true, publishAt: '', unlisted: true };
+  return { published: true, publishAt: '', unlisted: false };
 }
 function onArticleStatusChange() {
   const wrap = $('artPublishAtWrap');
@@ -2455,7 +2484,8 @@ function onArticleStatusChange() {
 function setArticleStatusFields(a) {
   const sel = $('artStatus'); if (!sel) return;
   const pub = !a || a.published !== false;
-  if (pub) sel.value = 'now';
+  if (pub && a && a.unlisted) sel.value = 'private';
+  else if (pub) sel.value = 'now';
   else if (a.publishAt) {
     sel.value = 'schedule';
     const d = new Date(a.publishAt);
