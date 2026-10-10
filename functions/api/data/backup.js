@@ -35,6 +35,8 @@ export async function onRequestGet(context) {
     backup.articles = await listAll(env.ARTICLES, 'article:');
     backup.timeline = await listAll(env.ARTICLES, 'timeline:');
     backup.about = await env.ARTICLES.get('about:zajda', { type: 'json' });
+    backup.commentsPending = await env.ARTICLES.get('meta:comments-pending', { type: 'json' });
+    backup.moodLog = await env.ARTICLES.get('meta:mood-log', { type: 'json' });
     backup.sections = await listAll(env.SUBSECTIONS, 'section:');
     backup.subsections = await listAll(env.SUBSECTIONS, 'subsection:');
 
