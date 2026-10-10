@@ -54,11 +54,40 @@
         try {
           await act({ action: b.dataset.act, id: b.dataset.id, articleId: b.dataset.article });
           toast(b.dataset.act === 'approve' ? 'Komentář schválen' : 'Hotovo', 'success');
-          load();
+          load().then(notifyPending);
         } catch (e) { toast('Nepovedlo se: ' + e.message, 'error'); b.disabled = false; }
       };
     });
   }
+
+  // Tichá kontrola po přihlášení: odznak na záložce ADMIN + jednorázový toast.
+  async function notifyPending() {
+    try {
+      var r = await fetch('/api/comments/pending');
+      if (!r.ok) return;
+      var list = await r.json();
+      var n = Array.isArray(list) ? list.length : 0;
+      var tab = document.querySelector('button.ribbon-tab[data-tab="admin"]');
+      if (tab) {
+        var old = tab.querySelector('.cm-badge'); if (old) old.remove();
+        if (n) {
+          var b = document.createElement('span');
+          b.className = 'cm-badge';
+          b.textContent = n;
+          b.title = 'Komentáře čekající na schválení';
+          b.style.cssText = 'background:#f59e0b;color:#000;border-radius:10px;padding:0 6px;margin-left:6px;font-size:11px;font-weight:700';
+          tab.appendChild(b);
+        }
+      }
+      var key = 'cm-notified';
+      var seen = false; try { seen = sessionStorage.getItem(key) === '1'; } catch (e) {}
+      if (n && !seen) {
+        toast('💬 Čeká ' + n + ' ' + (n === 1 ? 'komentář' : (n < 5 ? 'komentáře' : 'komentářů')) + ' na schválení', 'info');
+        try { sessionStorage.setItem(key, '1'); } catch (e) {}
+      }
+    } catch (e) { /* neprihlasen / offline — ticho */ }
+  }
+  window.notifyPendingComments = notifyPending;
 
   function mount() {
     var host = $('admin');
@@ -72,6 +101,8 @@
       '<div id="commentsResult" style="margin-top:.6rem"></div>';
     host.appendChild(box);
     $('commentsBtn').onclick = load;
+    setTimeout(notifyPending, 1500);
+    setTimeout(notifyPending, 6000); // po případném pozdějším přihlášení
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
