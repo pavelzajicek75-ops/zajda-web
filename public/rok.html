@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Můj rok — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Čísla z blogu po letech — články, fotky, kilometry, místa i napsaná slova.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20261010">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--panel-solid);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .3s;
+    }
+    .back-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); }
+    .nav-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--ember); text-decoration: none; }
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 0 20px 18px; }
+    .page-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700; color: var(--parchment); }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+    .wrap { position: relative; z-index: 10; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+    .year-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 4px 0 22px; }
+    .year-chip {
+      font: 600 14px 'Space Grotesk', sans-serif; color: var(--parchment); background: var(--panel-solid);
+      border: 1px solid var(--panel-border); border-radius: 20px; padding: 7px 16px; cursor: pointer; transition: all .2s;
+    }
+    .year-chip:hover { border-color: var(--ember); }
+    .year-chip[aria-pressed="true"] { background: var(--ember); border-color: var(--ember); color: #08080f; }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-bottom: 26px; }
+    .stat-tile { background: var(--panel-solid); border: 1px solid var(--panel-border); border-radius: 14px; padding: 16px 14px; text-align: center; }
+    .stat-tile .n { display: block; font: 700 clamp(24px, 4vw, 32px) 'Space Grotesk', sans-serif; color: var(--ember); }
+    .stat-tile .l { display: block; font-size: 12.5px; color: var(--mist); margin-top: 4px; }
+
+    .block { background: var(--panel-solid); border: 1px solid var(--panel-border); border-radius: 16px; padding: 18px 20px; margin-bottom: 20px; }
+    .block h2 { font: 700 16px 'Space Grotesk', sans-serif; color: var(--parchment); margin-bottom: 12px; }
+    .facts { list-style: none; display: grid; gap: 10px; }
+    .facts li { font-size: 14.5px; color: var(--mist); line-height: 1.45; }
+    .facts a { color: var(--nova); font-weight: 600; text-decoration: none; }
+    .facts a:hover { text-decoration: underline; }
+    .facts b { color: var(--parchment); }
+
+    .bars { display: flex; align-items: flex-end; gap: 6px; height: 140px; padding-top: 10px; }
+    .bar-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+    .bar { width: 100%; max-width: 38px; border-radius: 6px 6px 2px 2px; background: linear-gradient(180deg, var(--ember), rgba(255,122,69,.35)); min-height: 2px; }
+    .bar-val { font-size: 11px; color: var(--mist); margin-bottom: 3px; height: 14px; }
+    .bar-lab { font-size: 11px; color: var(--mist-dim, #8a8fa8); margin-top: 6px; white-space: nowrap; }
+    .empty { text-align: center; color: var(--mist); padding: 30px 10px; }
+    @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } .bar-lab { font-size: 9.5px; } }
+  </style>
+</head>
+<body>
+  <a href="#rokMain" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">📅 Můj rok</h1>
+    <p class="page-subtitle" id="rokSub">Čísla z blogu</p>
+  </div>
+  <main class="wrap" id="rokMain" tabindex="-1">
+    <div class="year-chips" id="yearChips" role="group" aria-label="Vyber rok"></div>
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="block" id="factsBlock" hidden><h2>✨ Zajímavosti</h2><ul class="facts" id="facts"></ul></div>
+    <div class="block" id="chartBlock" hidden><h2 id="chartTitle">Články</h2><div class="bars" id="bars"></div></div>
+    <div class="empty" id="rokEmpty" hidden>Zatím tu není z čeho počítat.</div>
+  </main>
+
+  <script src="/shared.js?v=20261010"></script>
+  <script src="/photo-stops.js?v=1"></script>
+  <script src="/diagnosis-counter.js?v=2"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    if (typeof initStarfield === 'function') initStarfield(120);
+    var MONTHS = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
+
+    var all = [];
+    try {
+      var r = await fetch('/api/articles/list');
+      var data = await r.json();
+      all = (Array.isArray(data) ? data : []).filter(function (a) { return a && a.published !== false; });
+    } catch (e) { console.error(e); }
+
+    function yearOf(a) {
+      var d = new Date(a.date || a.created);
+      return isNaN(d.getTime()) ? null : d.getFullYear();
+    }
+    function monthOf(a) { return new Date(a.date || a.created).getMonth(); }
+    function plain(html) { return String(html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim(); }
+    function words(a) { var t = plain(a.content); return t ? t.split(' ').length : 0; }
+    function nf(n) { return Math.round(n).toLocaleString('cs-CZ'); }
+    function plural(n, one, few, many) { return n === 1 ? one : (n >= 2 && n <= 4 ? few : many); }
+    function link(a) { return '<a href="/article?id=' + encodeURIComponent(a.id) + '">' + escapeHtml(a.title || 'Bez názvu') + '</a>'; }
+
+    // Spočítá všechno za zvolené období (rok nebo null = celkem).
+    function analyze(list) {
+      var photos = 0, wordCount = 0, km = 0, places = {}, placeText = {};
+      var longest = null, mostPhotos = null, longestText = null;
+      list.forEach(function (a) {
+        var ph = PhotoStops.allImages(a).length;
+        var w = words(a), rk = PhotoStops.routeKm(a);
+        photos += ph; wordCount += w; km += rk;
+        PhotoStops.stopsOf(a).forEach(function (s) { places[s.lat.toFixed(2) + ',' + s.lng.toFixed(2)] = true; });
+        var pt = (a.place || '').trim();
+        if (pt) {
+          var k = PhotoStops.norm(pt);
+          if (k) { placeText[k] = placeText[k] || { name: pt, n: 0 }; placeText[k].n++; }
+        }
+        if (rk >= 1 && (!longest || rk > longest.km)) longest = { a: a, km: rk };
+        if (ph > 0 && (!mostPhotos || ph > mostPhotos.n)) mostPhotos = { a: a, n: ph };
+        if (!longestText || w > longestText.n) longestText = { a: a, n: w };
+      });
+      var top = null;
+      Object.keys(placeText).forEach(function (k) { if (placeText[k].n >= 2 && (!top || placeText[k].n > top.n)) top = placeText[k]; });
+      return { n: list.length, photos: photos, words: wordCount, km: km, places: Object.keys(places).length,
+        trips: list.filter(function (a) { return PhotoStops.stopsOf(a).length >= 2; }).length,
+        longest: longest, mostPhotos: mostPhotos, longestText: longestText, topPlace: top };
+    }
+
+    var years = Array.from(new Set(all.map(yearOf).filter(function (y) { return y != null; }))).sort(function (a, b) { return b - a; });
+    var current = null; // null = celkem
+
+    function renderChips() {
+      var box = document.getElementById('yearChips');
+      var chips = [{ y: null, label: 'Celkem' }].concat(years.map(function (y) { return { y: y, label: String(y) }; }));
+      box.innerHTML = chips.map(function (c, i) {
+        return '<button type="button" class="year-chip" data-i="' + i + '" aria-pressed="' + (c.y === current) + '">' + c.label + '</button>';
+      }).join('');
+      box.querySelectorAll('button').forEach(function (b) {
+        b.onclick = function () { current = chips[+b.dataset.i].y; renderChips(); renderStats(); };
+      });
+    }
+
+    function renderStats() {
+      var list = current == null ? all : all.filter(function (a) { return yearOf(a) === current; });
+      var empty = document.getElementById('rokEmpty');
+      var grid = document.getElementById('statGrid');
+      if (!list.length) {
+        grid.innerHTML = ''; empty.hidden = false;
+        document.getElementById('factsBlock').hidden = true; document.getElementById('chartBlock').hidden = true;
+        return;
+      }
+      empty.hidden = true;
+      var s = analyze(list);
+      document.getElementById('rokSub').textContent = current == null ? 'Čísla z celého blogu' : 'Čísla z roku ' + current;
+
+      var tiles = [
+        { n: nf(s.n), l: plural(s.n, 'článek', 'články', 'článků') },
+        { n: nf(s.photos), l: plural(s.photos, 'fotka', 'fotky', 'fotek') },
+        { n: nf(s.words), l: 'napsaných slov' },
+        { n: nf(s.places), l: plural(s.places, 'místo na mapě', 'místa na mapě', 'míst na mapě') },
+        { n: nf(s.km), l: 'km na trasách' },
+        { n: nf(s.trips), l: plural(s.trips, 'cesta', 'cesty', 'cest') }
+      ];
+      if (window.DiagnosisCounter && current == null) {
+        tiles.push({ n: nf(window.DiagnosisCounter.dayFor(new Date())), l: 'dnů od diagnózy' });
+      }
+      grid.innerHTML = tiles.map(function (t) {
+        return '<div class="stat-tile"><span class="n">' + t.n + '</span><span class="l">' + escapeHtml(t.l) + '</span></div>';
+      }).join('');
+
+      var facts = [];
+      if (s.longest) facts.push('🛣️ Nejdelší cesta: ' + link(s.longest.a) + ' — <b>' + nf(s.longest.km) + ' km</b> po trase.');
+      if (s.mostPhotos) facts.push('📷 Nejvíc fotek: ' + link(s.mostPhotos.a) + ' — <b>' + nf(s.mostPhotos.n) + '</b>.');
+      if (s.longestText && s.longestText.n >= 50) facts.push('✍️ Nejdelší text: ' + link(s.longestText.a) + ' — <b>' + nf(s.longestText.n) + ' slov</b>.');
+      if (s.topPlace) facts.push('📍 Nejčastější místo: <b>' + escapeHtml(s.topPlace.name) + '</b> (' + s.topPlace.n + '× v článcích).');
+      if (s.words >= 250) facts.push('📖 To je zhruba <b>' + nf(s.words / 250) + ' stran</b> textu (při 250 slovech na stranu).');
+      var fb = document.getElementById('factsBlock');
+      fb.hidden = !facts.length;
+      document.getElementById('facts').innerHTML = facts.map(function (f) { return '<li>' + f + '</li>'; }).join('');
+
+      // Sloupcový graf: u roku po měsících, u „Celkem“ po letech.
+      var labels, values;
+      if (current == null) {
+        var ys = years.slice().reverse();
+        labels = ys.map(String);
+        values = ys.map(function (y) { return all.filter(function (a) { return yearOf(a) === y; }).length; });
+      } else {
+        labels = MONTHS.slice();
+        values = MONTHS.map(function (_, m) { return list.filter(function (a) { return monthOf(a) === m; }).length; });
+      }
+      var max = Math.max.apply(null, values.concat([1]));
+      document.getElementById('chartTitle').textContent = current == null ? 'Články podle let' : 'Články podle měsíců v roce ' + current;
+      document.getElementById('bars').innerHTML = values.map(function (v, i) {
+        return '<div class="bar-col" title="' + labels[i] + ': ' + v + '"><span class="bar-val">' + (v || '') + '</span>' +
+          '<div class="bar" style="height:' + Math.round((v / max) * 100) + '%"></div><span class="bar-lab">' + labels[i] + '</span></div>';
+      }).join('');
+      document.getElementById('chartBlock').hidden = false;
+    }
+
+    renderChips();
+    renderStats();
+  });
+  </script>
+</body>
+</html>

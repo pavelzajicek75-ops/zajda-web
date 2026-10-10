@@ -528,7 +528,7 @@
         ? a.stops.filter(function (s) { return typeof s.lat === 'number' && isFinite(s.lat) && typeof s.lng === 'number' && isFinite(s.lng); })
         : [{ lat: a.lat, lng: a.lng, place: a.place }];
       stops.forEach(function (s, si) {
-        playPoints.push({ lat: s.lat, lng: s.lng, articleId: a.id, isFirstOfArticle: si === 0 });
+        playPoints.push({ lat: s.lat, lng: s.lng, articleId: a.id, isFirstOfArticle: si === 0, stopIdx: si, article: a });
       });
     });
 
@@ -634,7 +634,25 @@
             burstConfetti(mapEl, pt.x, pt.y, isLast);
             if (m) { try { m.openTooltip(); } catch (e) {} }
             showBubble(mapEl, pt.x, pt.y - 30, battery < 25 && Math.random() < 0.6 ? pick(LOW_BATT_LINES) : pick(REACTIONS), false);
-            await sleep(1300);
+            // Fotky z téhle zastávky (viz photo-stops.js) — jen když je modul
+            // na stránce načtený; bez něj se přehrávání chová jako dřív.
+            var phEl = null, shown = [];
+            try { if (window.PhotoStops && sp.article) shown = window.PhotoStops.photosForStop(sp.article, sp.stopIdx, 3); } catch (e) { shown = []; }
+            if (shown.length) {
+              phEl = document.createElement('div');
+              phEl.className = 'map-play-photos';
+              shown.forEach(function (u) {
+                var im = document.createElement('img');
+                im.alt = '';
+                var th = (typeof deriveThumbUrl === 'function') ? deriveThumbUrl(u) : u;
+                im.src = th;
+                if (th !== u) im.onerror = function () { im.onerror = null; im.src = u; };
+                phEl.appendChild(im);
+              });
+              mapEl.appendChild(phEl);
+            }
+            await sleep(shown.length ? 2600 : 1300);
+            if (phEl) phEl.remove();
             if (m) { try { m.closeTooltip(); } catch (e) {} }
 
             if (pumpaStop) {

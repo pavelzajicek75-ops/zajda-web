@@ -10,7 +10,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="description" content="Fotky z cest na mapě — klikni na místo a podívej se, co se tam povedlo vyfotit.">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/shared.css?v=20261009">
+  <link rel="stylesheet" href="/shared.css?v=20261010">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
@@ -71,53 +71,10 @@
   </main>
 
   <script src="/shared.js?v=20261009"></script>
+  <script src="/photo-stops.js?v=1"></script>
   <script>
   document.addEventListener('DOMContentLoaded', async function () {
     if (typeof initStarfield === 'function') initStarfield(120);
-
-    // Vytáhne adresy <img> z HTML článku (jen vlastní fotky z webu a http(s)).
-    function extractImages(html) {
-      var out = [], re = /<img[^>]+src=["']([^"']+)["']/gi, m;
-      while ((m = re.exec(html || ''))) {
-        var src = m[1];
-        if (/^(https?:)?\/\//i.test(src) || src.charAt(0) === '/') out.push(src);
-      }
-      return out;
-    }
-    // Vzdálenost dvou bodů v km (haversine) — jen na výběr "hlavního cíle".
-    function km(a, b) {
-      var R = 6371, rad = Math.PI / 180;
-      var dLat = (b[0] - a[0]) * rad, dLng = (b[1] - a[1]) * rad;
-      var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-      return 2 * R * Math.asin(Math.sqrt(h));
-    }
-    function validStops(a) {
-      return (Array.isArray(a.stops) ? a.stops : []).filter(function (s) {
-        return s && s.lat !== null && s.lng !== null && Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng));
-      }).map(function (s) { return { place: s.place || '', pt: [Number(s.lat), Number(s.lng)] }; });
-    }
-    // Kam s fotkami článku. U cesty s víc zastávkami NENÍ první zastávka
-    // cíl (je to jen začátek = místo, kde skončil předchozí výlet), takže
-    // fotky patří na zastávku nejvzdálenější od startu — u okruhu
-    // Třeboň → Krkonoše → … → Třeboň jsou to Krkonoše, ne Třeboň.
-    function pointOf(a) {
-      var stops = validStops(a);
-      if (stops.length >= 2) {
-        var start = stops[0].pt, best = stops[1], bestKm = -1;
-        stops.forEach(function (s) {
-          var d = km(start, s.pt);
-          if (d > bestKm) { bestKm = d; best = s; }
-        });
-        return { pt: best.pt, place: best.place || a.place || '', route: stops.length };
-      }
-      var lat = Number(a.lat), lng = Number(a.lng);
-      if (a.lat !== null && a.lng !== null && Number.isFinite(lat) && Number.isFinite(lng)) {
-        return { pt: [lat, lng], place: a.place || '', route: 0 };
-      }
-      if (stops.length === 1) return { pt: stops[0].pt, place: stops[0].place || a.place || '', route: 0 };
-      return null;
-    }
 
     var articles = [];
     try {
@@ -126,14 +83,18 @@
       articles = (Array.isArray(data) ? data : []).filter(function (a) { return a && a.published !== false; });
     } catch (e) { console.error(e); }
 
+    // Fotky článku se rozdělí po zastávkách (viz photo-stops.js). Zastávky
+    // ve stejném místě (start = cíl okruhu) se sloučí do jednoho kolečka.
     var items = [];
     articles.forEach(function (a) {
-      var loc = pointOf(a); if (!loc) return;
-      var imgs = [];
-      if (a.coverUrl) imgs.push(a.coverUrl);
-      extractImages(a.content).forEach(function (u) { if (imgs.indexOf(u) === -1) imgs.push(u); });
-      if (!imgs.length) return;
-      items.push({ a: a, pt: loc.pt, place: loc.place, route: loc.route, imgs: imgs });
+      var gs = PhotoStops.groups(a);
+      if (!gs.length) return;
+      var merged = {};
+      gs.forEach(function (g) {
+        var key = g.lat.toFixed(3) + ',' + g.lng.toFixed(3);
+        if (!merged[key]) { merged[key] = { a: a, pt: [g.lat, g.lng], place: g.place, route: PhotoStops.stopsOf(a).length > 1 ? PhotoStops.stopsOf(a).length : 0, imgs: [] }; items.push(merged[key]); }
+        g.imgs.forEach(function (u) { if (merged[key].imgs.indexOf(u) === -1) merged[key].imgs.push(u); });
+      });
     });
 
     var mapEl = document.getElementById('photoMap');
@@ -168,7 +129,7 @@
       var more = it.imgs.length > 6 ? ' (+' + (it.imgs.length - 6) + ' dalších v článku)' : '';
       var popup = '<div class="pp-title">' + escapeHtml(it.a.title || 'Bez názvu') + '</div>' +
         '<div class="pp-sub">' + escapeHtml(it.place || it.a.place || '') + (it.a.date ? ' · ' + formatDate(it.a.date) : '') +
-        (it.route ? '<br>🛣️ cesta přes ' + it.route + ' zastávek — fotky u hlavního cíle' : '') + '</div>' +
+        (it.route ? '<br>🛣️ cesta přes ' + it.route + ' zastávek' : '') + '</div>' +
         '<div class="pp-grid">' + thumbs + '</div>' +
         '<a class="pp-link" href="/article?id=' + encodeURIComponent(it.a.id) + '">Číst článek →' + more + '</a>';
       cluster.addLayer(L.marker(it.pt, { icon: icon }).bindPopup(popup));

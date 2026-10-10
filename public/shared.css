@@ -403,3 +403,24 @@ body {
 /* --- "noční" mapa: OpenStreetMap má zdarma jen jeden (světlý) styl,
    tak se tma dělá invertováním barev CSS filtrem, ne jinými dlaždicemi --- */
 .map-night-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+
+
+/* === Fotky z výletu při přehrávání trasy (travel-map-core.js) === */
+.map-play-photos {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: flex; gap: 10px; z-index: 1200; pointer-events: none;
+}
+.map-play-photos img {
+  width: 110px; height: 110px; object-fit: cover; background: #1a1a2e;
+  border: 4px solid #fff; border-radius: 6px; box-shadow: 0 8px 22px rgba(0,0,0,.55);
+  transform: rotate(-3deg);
+}
+.map-play-photos img:nth-child(2) { transform: rotate(2deg) translateY(-6px); }
+.map-play-photos img:nth-child(3) { transform: rotate(-1deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .map-play-photos img { animation: map-photo-in .45s ease-out both; }
+  .map-play-photos img:nth-child(2) { animation-delay: .12s; }
+  .map-play-photos img:nth-child(3) { animation-delay: .24s; }
+}
+@keyframes map-photo-in { from { opacity: 0; margin-bottom: -30px; } to { opacity: 1; margin-bottom: 0; } }
+@media (max-width: 640px) { .map-play-photos img { width: 78px; height: 78px; border-width: 3px; } }
