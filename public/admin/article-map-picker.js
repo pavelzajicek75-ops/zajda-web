@@ -49,7 +49,10 @@
         if (isArticleWrite && init && typeof init.body === 'string') {
           const body = JSON.parse(init.body);
           const valid = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
-          body.stops = valid.length >= 2 ? valid : [];
+          // posíláme jen {place,lat,lng} — příznak photos je čistě pro editor
+          body.stops = valid.length >= 2 ? valid.map(s => ({ place: s.place || '', lat: s.lat, lng: s.lng })) : [];
+          const photoIdx = valid.findIndex(s => s.photos);
+          body.photoStop = (valid.length >= 2 && photoIdx >= 0) ? photoIdx : null;
           if (valid.length) {
             // Zpětná kompatibilita: staré lat/lng = první zastávka trasy
             // (nebo prostě ten jediný bod, když zastávka je jen jedna).
@@ -211,6 +214,15 @@
     }
   };
 
+  // 📷 = kam patří fotky článku na mapě fotek. Jen jedna zastávka, druhé
+  // kliknutí na tu samou volbu zruší (pak se cíl odhadne automaticky).
+  window.setArticlePhotoStop = function (i) {
+    const was = !!(stops[i] && stops[i].photos);
+    stops.forEach(s => { s.photos = false; });
+    if (stops[i]) stops[i].photos = !was;
+    renderStopRows();
+  };
+
   window.clearArticleLocation = function () {
     stops = [emptyStop()];
     activeStopIndex = 0;
@@ -235,13 +247,14 @@
         'oninput="updateArticleStopPlace(' + i + ', this.value)" ' +
         'onkeydown="if(event.key===\'Enter\'){event.preventDefault();geocodeArticleStop(' + i + ');}">' +
         '<button type="button" id="artStopGeocodeBtn' + i + '" class="btn btn-sm" onclick="geocodeArticleStop(' + i + ')" title="Najít podle názvu" style="flex:0 0 auto">🔍</button>' +
+        (stops.length > 1 ? '<button type="button" class="btn btn-sm" onclick="setArticlePhotoStop(' + i + ')" title="' + (s.photos ? 'Fotky z výletu patří sem (kliknutím zrušíš)' : 'Fotky z výletu patří sem') + '" style="flex:0 0 auto;' + (s.photos ? 'background:var(--nova,#2fe6c9);color:#08080f' : 'opacity:.55') + '">📷</button>' : '') +
         '<span style="flex:0 0 auto;font-size:11px;color:var(--text-faint);white-space:nowrap;min-width:110px">' + coordText + '</span>' +
         (stops.length > 1 ? '<button type="button" class="btn btn-sm" onclick="removeArticleStop(' + i + ')" title="Odebrat zastávku" style="flex:0 0 auto">✕</button>' : '') +
         '</div>';
     }).join('') +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">' +
       '<button type="button" class="btn btn-sm" onclick="addArticleStop()">➕ Přidat zastávku</button>' +
-      '<span style="font-size:11px;color:var(--text-faint)">' + (stops.filter(s => Number.isFinite(s.lat)).length >= 2 ? '🛣️ cesta (' + stops.filter(s => Number.isFinite(s.lat)).length + ' zastávek)' : '📍 bod') + '</span>' +
+      '<span style="font-size:11px;color:var(--text-faint)">' + (stops.filter(s => Number.isFinite(s.lat)).length >= 2 ? '🛣️ cesta (' + stops.filter(s => Number.isFinite(s.lat)).length + ' zastávek) · 📷 = kam patří fotky' : '📍 bod') + '</span>' +
       '</div>';
   }
 
@@ -323,7 +336,7 @@
           const a = await r.json();
           injectUI();
           if (Array.isArray(a.stops) && a.stops.length >= 2) {
-            stops = a.stops.map(s => ({ place: s.place || '', lat: s.lat, lng: s.lng }));
+            stops = a.stops.map((s, si) => ({ place: s.place || '', lat: s.lat, lng: s.lng, photos: si === a.photoStop }));
           } else if (Number.isFinite(a.lat) && Number.isFinite(a.lng)) {
             stops = [{ place: a.place || '', lat: a.lat, lng: a.lng }];
           } else {
