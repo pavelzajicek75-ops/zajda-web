@@ -463,6 +463,7 @@
   </div>
   <script src="/shared.js?v=20261005"></script>
   <script src="/photo-stops.js?v=1"></script>
+  <script src="/comments.js?v=1"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
   <script>
   // --- Lightbox s galerií ---
@@ -741,6 +742,8 @@
      němu ukazovat chybu čtenáři.               */
   function recordArticleView(articleId) {
     if (!articleId) return;
+    // Vlastní návštěvy (přihlášený admin v tomhle prohlížeči) se nepočítají.
+    try { if (localStorage.getItem('token')) return; } catch (e) { /* bez localStorage počítej */ }
     var sessionKey = 'articleViewed:' + articleId;
     try {
       if (sessionStorage.getItem(sessionKey)) return;
@@ -800,6 +803,20 @@
       var article = allArticles.find(function(a) {
         return a.id != null && String(a.id) === String(articleId) && a.published !== false;
       });
+      // Soukromý článek není ve veřejném výpisu — otevře se jen s tajným
+      // tokenem z odkazu (?k=...), který ověří server.
+      var privateToken = new URLSearchParams(window.location.search).get('k');
+      if (!article && privateToken) {
+        try {
+          var pr = await fetch('/api/articles/get?id=' + encodeURIComponent(articleId) + '&k=' + encodeURIComponent(privateToken));
+          if (pr.ok) {
+            article = await pr.json();
+            var robots = document.createElement('meta');
+            robots.name = 'robots'; robots.content = 'noindex, nofollow';
+            document.head.appendChild(robots);
+          }
+        } catch (e) { /* pokračuje jako "nenalezeno" */ }
+      }
       if (!article) {
         container.innerHTML = '<div class="article-notfound"><h2>Článek nenalezen</h2><p>Tento článek neexistuje nebo byl smazán.</p></div>';
         return;
@@ -953,6 +970,28 @@
       countEl.textContent = current;
       try { localStorage.removeItem(storageKey); } catch (e) {}
     });
+  }
+
+  // Messenger nemá veřejné "sdílej odkaz" okno bez Facebook aplikace. Na
+  // mobilu otevře přímo Messenger (hluboký odkaz), jinde zkopíruje odkaz
+  // a otevře messenger.com, kam ho stačí vložit.
+  function shareMessenger(btn) {
+    var url = window.location.href;
+    if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      window.location.href = 'fb-messenger://share?link=' + encodeURIComponent(url);
+      return;
+    }
+    var original = btn.textContent;
+    var opened = function () {
+      window.open('https://www.messenger.com/', '_blank', 'noopener');
+      btn.textContent = '✅ Odkaz zkopírován — vlož ho v Messengeru';
+      setTimeout(function () { btn.textContent = original; }, 3500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(opened).catch(function () { prompt('Zkopíruj odkaz a vlož ho v Messengeru:', url); });
+    } else {
+      prompt('Zkopíruj odkaz a vlož ho v Messengeru:', url);
+    }
   }
 
   function copyArticleLink(btn) {
@@ -1136,6 +1175,7 @@
     html += '<div class="share-bar-inline">';
     html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
     html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>';
+    html += '<button type="button" class="share-btn" onclick="shareMessenger(this)">Messenger</button>';
     html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">Facebook</a>';
     html += '<a class="share-btn" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X / Twitter</a>';
     html += '<button type="button" class="share-btn" onclick="copyArticleLink(this)">🔗 Kopírovat odkaz</button>';
@@ -1176,6 +1216,9 @@
     }
 
     container.innerHTML = html;
+
+    // Komentáře čtenářů (viz comments.js) — chyba nesmí shodit zobrazení článku.
+    try { if (window.ArticleComments) window.ArticleComments.mount(article, container); } catch (e) { console.error('Komentáře:', e); }
 
     // Fotky v textu článku se jemně "vsunou", jak k nim čtenář scrolluje
     // — titulní fotka (article-hero) zůstává beze změny, tu je žádoucí
