@@ -12,3 +12,13 @@ export function applySchedule(article, now = Date.now()) {
 export function isPublished(article) {
   return !!article && article.published !== false;
 }
+
+// Veřejně vypsaný článek = publikovaný a ne "jen přes odkaz".
+export function isListed(article) {
+  return isPublished(article) && !article.unlisted;
+}
+
+// Náhodný tajný token do soukromého odkazu (24 hex znaků).
+export function newShareToken() {
+  return (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '').slice(0, 24);
+}

@@ -1,4 +1,5 @@
 import { requireAdmin, json } from '../_auth-utils.js';
+import { newShareToken } from './_publish.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -50,6 +51,9 @@ export async function onRequestPost(context) {
     // koncept = published:false; s publishAt se po daném čase zveřejní sám
     published: body.published !== false,
     publishAt: body.published === false && body.publishAt ? String(body.publishAt) : '',
+    // soukromý článek: mimo veřejný výpis, otevře se jen odkazem s tokenem
+    unlisted: body.unlisted === true,
+    shareToken: body.unlisted === true ? newShareToken() : '',
     created: Date.now()
   };
   await env.ARTICLES.put(`article:${id}`, JSON.stringify(article));

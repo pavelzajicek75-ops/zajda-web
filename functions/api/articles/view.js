@@ -29,8 +29,26 @@ export async function onRequestPost(context) {
   if (!existing) return Response.json({ error: 'Nenalezeno' }, { status: 404 });
 
   const views = (existing.views || 0) + 1;
-  const updated = { ...existing, views };
+  // Týdenní počítadla (viewsByWeek) jsou ve STEJNÉM záznamu a ve stejném
+  // zápisu jako celkový počet — nestojí žádný další zápis do KV navíc.
+  // Drží se jen posledních 26 týdnů, ať záznam neroste donekonečna.
+  const week = isoWeekKey(new Date());
+  const byWeek = { ...(existing.viewsByWeek || {}) };
+  byWeek[week] = (byWeek[week] || 0) + 1;
+  const keys = Object.keys(byWeek).sort();
+  while (keys.length > 26) delete byWeek[keys.shift()];
+  const updated = { ...existing, views, viewsByWeek: byWeek };
   await env.ARTICLES.put(key, JSON.stringify(updated));
 
   return Response.json({ views });
+}
+
+// ISO týden, např. "2026-W41" (pondělí = začátek týdne, UTC).
+export function isoWeekKey(d) {
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dayNum = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dayNum);
+  const yearStart = Date.UTC(t.getUTCFullYear(), 0, 1);
+  const week = Math.ceil(((t - yearStart) / 86400000 + 1) / 7);
+  return t.getUTCFullYear() + '-W' + String(week).padStart(2, '0');
 }
