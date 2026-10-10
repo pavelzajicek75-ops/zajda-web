@@ -42,6 +42,8 @@ export async function onRequestPost(context) {
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
     stops: stops.length >= 2 ? stops : [],
+    // 📷 zastávka, kam patří fotky z výletu (index v poli stops); jinak se odhadne
+    photoStop: (stops.length >= 2 && Number.isInteger(body.photoStop) && body.photoStop >= 0 && body.photoStop < stops.length) ? body.photoStop : null,
     excerpt: body.excerpt || '',
     coverUrl: body.coverUrl || '',
     slug: body.slug || '',
