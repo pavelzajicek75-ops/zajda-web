@@ -1,10 +1,11 @@
 import { requireAdmin } from '../_auth-utils.js';
-import { loadPending, savePending, MAX_APPROVED } from './_shared.js';
+import { loadPending, savePending, MAX_APPROVED, clean } from './_shared.js';
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
 // POST { action: 'approve' | 'reject', id }          — komentář z fronty
 // POST { action: 'delete', articleId, id }           — už schválený komentář
+// POST { action: 'reply', articleId, id, text }      — odpověď Zajdy (prázdný text = smazat odpověď)
 export async function onRequestPost({ request, env }) {
   if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
   let body;
@@ -19,6 +20,18 @@ export async function onRequestPost({ request, env }) {
     article.comments = (article.comments || []).filter(c => c.id !== id);
     await env.ARTICLES.put(key, JSON.stringify(article));
     return json({ ok: true });
+  }
+
+  if (action === 'reply') {
+    const key = `article:${body.articleId}`;
+    const article = await env.ARTICLES.get(key, { type: 'json' });
+    if (!article) return json({ error: 'Článek nenalezen' }, 404);
+    const c = (article.comments || []).find(x => x.id === id);
+    if (!c) return json({ error: 'Komentář nenalezen' }, 404);
+    const text = clean(body.text, 600);
+    if (text) c.reply = { text, created: Date.now() }; else delete c.reply;
+    await env.ARTICLES.put(key, JSON.stringify(article));
+    return json({ ok: true, reply: c.reply || null });
   }
 
   const pending = await loadPending(env);
