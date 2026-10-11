@@ -1,5 +1,6 @@
 import { requireAdmin } from '../_auth-utils.js';
 import { loadPending, savePending, MAX_APPROVED, clean } from './_shared.js';
+import { purgeEdge } from '../_edge-cache.js';
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -19,6 +20,7 @@ export async function onRequestPost({ request, env }) {
     if (!article) return json({ error: 'Článek nenalezen' }, 404);
     article.comments = (article.comments || []).filter(c => c.id !== id);
     await env.ARTICLES.put(key, JSON.stringify(article));
+    await purgeEdge(request, ['/api/articles/list']);
     return json({ ok: true });
   }
 
@@ -31,6 +33,7 @@ export async function onRequestPost({ request, env }) {
     const text = clean(body.text, 600);
     if (text) c.reply = { text, created: Date.now() }; else delete c.reply;
     await env.ARTICLES.put(key, JSON.stringify(article));
+    await purgeEdge(request, ['/api/articles/list']);
     return json({ ok: true, reply: c.reply || null });
   }
 
@@ -50,6 +53,7 @@ export async function onRequestPost({ request, env }) {
     const comments = (article.comments || []).concat([{ id: item.id, name: item.name, text: item.text, created: item.created }]);
     article.comments = comments.slice(-MAX_APPROVED);
     await env.ARTICLES.put(key, JSON.stringify(article));
+    await purgeEdge(request, ['/api/articles/list']);
     await savePending(env, rest);
     return json({ ok: true });
   }
