@@ -25,6 +25,8 @@
       '.comment{padding:12px 14px;margin-bottom:10px;border-radius:12px;background:var(--panel-solid,rgba(28,29,48,.92));border:1px solid var(--panel-border,rgba(140,150,255,.18))}' +
       '.comment-head{font-size:13px;color:var(--mist,#9aa3c0);margin-bottom:4px}.comment-head b{color:var(--nova,#2fe6c9);font-weight:600}' +
       '.comment-text{white-space:pre-wrap;word-wrap:break-word;font-size:15px;line-height:1.5;color:var(--parchment,#f8f5ef)}' +
+      '.comment-reply{margin:8px 0 0 14px;padding:8px 12px;border-left:3px solid var(--ember,#ff7a45);border-radius:0 10px 10px 0;background:rgba(255,122,69,.07)}' +
+      '.comment-reply .comment-head{margin-bottom:2px}.comment-reply .comment-head b{color:var(--ember,#ff7a45)}' +
       '.comment-form{display:grid;gap:10px;margin-top:16px}' +
       '.comment-form input,.comment-form textarea{width:100%;font:inherit;font-size:15px;padding:10px 12px;border-radius:10px;color:var(--parchment,#f8f5ef);background:rgba(255,255,255,.05);border:1px solid var(--panel-border,rgba(140,150,255,.25))}' +
       '.comment-form textarea{min-height:90px;resize:vertical}' +
@@ -54,6 +56,15 @@
       head.appendChild(document.createTextNode(' · ' + fmt(c.created)));
       box.appendChild(head);
       box.appendChild(el('div', 'comment-text', c.text || ''));
+      if (c.reply && c.reply.text) {
+        var rp = el('div', 'comment-reply');
+        var rh = el('div', 'comment-head');
+        rh.appendChild(el('b', null, 'Zajda odpovídá'));
+        rh.appendChild(document.createTextNode(' · ' + fmt(c.reply.created)));
+        rp.appendChild(rh);
+        rp.appendChild(el('div', 'comment-text', c.reply.text));
+        box.appendChild(rp);
+      }
       sec.appendChild(box);
     });
     if (!list.length) sec.appendChild(el('p', 'comment-head', 'Zatím žádný komentář — buď první.'));

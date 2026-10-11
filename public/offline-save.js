@@ -40,11 +40,12 @@
     var page = await fetch(pageUrl);
     if (!page.ok) throw new Error('Stránku se nepodařilo stáhnout');
     await cache.put(pageUrl, page);
+    try { await put(cache, location.origin + '/offline'); } catch (e) { /* seznam offline čtení je jen bonus */ }
     var done = [], failed = 0;
     for (var i = 0; i < c.api.length; i++) { try { if (await put(cache, c.api[i])) done.push(c.api[i]); else failed++; } catch (e) { failed++; } }
     var imgOk = [];
     for (var j = 0; j < c.imgs.length; j++) { try { if (await put(cache, c.imgs[j])) imgOk.push(c.imgs[j]); else failed++; } catch (e) { failed++; } }
-    setStore(article.id, { page: pageUrl, imgs: imgOk, api: done, at: Date.now() });
+    setStore(article.id, { title: article.title || 'Bez názvu', page: pageUrl, imgs: imgOk, api: done, at: Date.now() });
     return { photos: imgOk.length, failed: failed };
   }
 
@@ -83,8 +84,14 @@
       } catch (e) { paint('⚠️ Nepovedlo se uložit'); setTimeout(function () { paint(); }, 3000); }
       btn.disabled = false;
     };
+    var link = document.createElement('a'); link.className = 'offline-btn'; link.href = '/offline'; link.textContent = '📚 Moje offline čtení';
+    link.style.textDecoration = 'none'; link.style.width = 'fit-content';
+    function anySaved() { try { for (var i = 0; i < localStorage.length; i++) if (localStorage.key(i).indexOf('offline:') === 0) return true; } catch (e) {} return false; }
+    function showLink() { link.hidden = !anySaved(); }
+    var origPaint = paint; paint = function (m) { origPaint(m); showLink(); };
+    showLink();
     var host = container.querySelector('.heart-box');
-    if (host) host.appendChild(btn); else container.appendChild(btn);
+    if (host) { host.appendChild(btn); host.appendChild(link); } else { container.appendChild(btn); container.appendChild(link); }
   }
   window.ArticleOffline = { mount: mount };
 })();

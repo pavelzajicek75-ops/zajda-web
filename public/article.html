@@ -474,6 +474,7 @@
   <script src="/comments.js?v=1"></script>
   <script src="/hearts.js?v=1"></script>
   <script src="/offline-save.js?v=1"></script>
+  <script src="/reading-aids.js?v=1"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
   <script>
   // --- Lightbox s galerií ---
@@ -1261,6 +1262,9 @@
 
     // Komentáře čtenářů (viz comments.js) — chyba nesmí shodit zobrazení článku.
     try { if (window.ArticleComments) window.ArticleComments.mount(article, container); } catch (e) { console.error('Komentáře:', e); }
+
+    // Obsah, ukazatel čtení, lazy loading fotek (viz reading-aids.js).
+    try { if (window.ReadingAids) window.ReadingAids.mount(article, container); } catch (e) { console.error('Pomůcky čtení:', e); }
 
     // Srdíčko (viz hearts.js) — po komentářích, aby se vložilo před ně.
     try { if (window.ArticleHearts) window.ArticleHearts.mount(article, container); } catch (e) { console.error('Srdíčko:', e); }

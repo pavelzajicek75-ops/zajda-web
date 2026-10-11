@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline čtení — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Články uložené k čtení bez signálu.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20261010">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--panel-solid);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .3s;
+    }
+    .back-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); }
+    .nav-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--ember); text-decoration: none; }
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 0 20px 18px; }
+    .page-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700; color: var(--parchment); }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+    .wrap { position: relative; z-index: 10; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+    .block { background: var(--panel-solid); border: 1px solid var(--panel-border); border-radius: 16px; padding: 18px 20px; margin-bottom: 20px; }
+    .block h2 { font: 700 18px 'Space Grotesk', sans-serif; color: var(--parchment); margin-bottom: 4px; }
+    .block .hint { font-size: 13px; color: var(--mist); margin-bottom: 12px; }
+    .rm { font: 500 13px 'Space Grotesk', sans-serif; color: var(--mist); background: transparent; border: 1px solid var(--panel-border); border-radius: 14px; padding: 3px 12px; cursor: pointer; margin-left: 10px; }
+    .rm:hover { border-color: var(--ember); color: var(--parchment); }
+    .tabs { display: flex; gap: 8px; margin: 10px 0 14px; flex-wrap: wrap; }
+    .tab { font: 600 14px 'Space Grotesk', sans-serif; color: var(--parchment); background: transparent; border: 1px solid var(--panel-border); border-radius: 20px; padding: 7px 16px; cursor: pointer; }
+    .tab[aria-pressed="true"] { background: var(--ember); border-color: var(--ember); color: #08080f; }
+    ol.top { list-style: none; display: grid; gap: 8px; counter-reset: n; }
+    ol.top li { counter-increment: n; display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--panel-border); }
+    ol.top li:first-child { border-top: 0; }
+    ol.top li::before { content: counter(n); font: 700 18px 'Space Grotesk', sans-serif; color: var(--ember); min-width: 26px; }
+    ol.top a { color: var(--parchment); font-weight: 600; text-decoration: none; }
+    ol.top a:hover { color: var(--ember); }
+    ol.top .m { margin-left: auto; font-size: 13px; color: var(--mist); white-space: nowrap; }
+    .empty { color: var(--mist); font-size: 14px; }
+    @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } }
+  </style>
+</head>
+<body>
+  <a href="#offMain" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">📚 Moje offline čtení</h1>
+    <p class="page-subtitle">Články uložené v tomto zařízení</p>
+  </div>
+  <main class="wrap" id="offMain" tabindex="-1">
+    <div class="block">
+      <ol class="top" id="list"></ol>
+      <p class="empty" id="none" hidden>Zatím nemáš nic uložené. U článku najdeš tlačítko „📥 Uložit na offline“.</p>
+      <p class="hint" id="usage" style="margin-top:12px"></p>
+    </div>
+  </main>
+  <script src="/shared.js?v=20261010"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initStarfield === 'function') initStarfield(120);
+    function items() {
+      var out = [];
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k.indexOf('offline:') !== 0) continue;
+          var v = JSON.parse(localStorage.getItem(k) || 'null');
+          if (v && v.page) out.push({ id: k.slice(8), v: v });
+        }
+      } catch (e) {}
+      return out.sort(function (a, b) { return (b.v.at || 0) - (a.v.at || 0); });
+    }
+    function render() {
+      var list = document.getElementById('list'); list.textContent = '';
+      var arr = items();
+      arr.forEach(function (it) {
+        var li = document.createElement('li');
+        var a = document.createElement('a'); a.href = it.v.page; a.textContent = it.v.title || 'Článek ' + it.id;
+        li.appendChild(a);
+        var m = document.createElement('span'); m.className = 'm';
+        m.textContent = (it.v.imgs ? it.v.imgs.length : 0) + ' fotek';
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'rm'; b.textContent = 'Odebrat';
+        b.onclick = async function () {
+          try {
+            var c = await caches.open('zajda-offline');
+            await c.delete(it.v.page);
+            for (var j = 0; j < (it.v.imgs || []).length; j++) await c.delete(it.v.imgs[j]);
+          } catch (e) {}
+          try { localStorage.removeItem('offline:' + it.id); } catch (e) {}
+          render();
+        };
+        m.appendChild(b); li.appendChild(m); list.appendChild(li);
+      });
+      document.getElementById('none').hidden = !!arr.length;
+      var u = document.getElementById('usage');
+      if (arr.length && navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then(function (e) {
+          u.textContent = 'Web v tomto zařízení zabírá zhruba ' + Math.max(1, Math.round((e.usage || 0) / 1048576)) + ' MB.';
+        }).catch(function () {});
+      } else u.textContent = '';
+    }
+    render();
+  });
+  </script>
+</body>
+</html>
