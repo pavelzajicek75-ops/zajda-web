@@ -31,18 +31,20 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v19';
+const SW_VERSION = 'v20';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
 // Články uložené čtenářem „na offline“ (offline-save.js). Jméno je bez verze,
 // takže se při zvýšení SW_VERSION nesmaže.
 const OFFLINE_CACHE = 'zajda-offline';
+// Schránka pro „Sdílet do Zajdova blogu“ z mobilu (Web Share Target) — vyřizuje admin/share-admin.js.
+const SHARE_CACHE = 'zajda-share-inbox';
 
 // POZOR: shared.css/js, fonts.css, travel-map-core.js a timeline-core.js
 // se v HTML načítají s "?v=YYYYMMDD" (cache-busting). Když se některý z
 // těchto souborů příště změní, zvyš datum v HTML tagách (a klidně i tady
 // dole) — jinak zůstanou tyhle přesné URL v cache navždy (cache-first).
-const ASSET_VERSION = '20261016';
+const ASSET_VERSION = '20261017';
 
 const SHELL_URLS = [
   '/',
@@ -81,7 +83,7 @@ self.addEventListener('activate', function (event) {
       .then(function (keys) {
         return Promise.all(
           keys
-            .filter(function (k) { return k !== SHELL_CACHE && k !== RUNTIME_CACHE && k !== OFFLINE_CACHE; })
+            .filter(function (k) { return k !== SHELL_CACHE && k !== RUNTIME_CACHE && k !== OFFLINE_CACHE && k !== SHARE_CACHE; })
             .map(function (k) { return caches.delete(k); })
         );
       })
@@ -101,6 +103,12 @@ function isStaticAsset(request, url) {
 
 self.addEventListener('fetch', function (event) {
   const request = event.request;
+  // Sdílení z mobilu (POST z manifest.json → share_target): soubory a text uložíme
+  // do schránky a přesměrujeme do administrace, kde z nich uděláš koncept.
+  if (request.method === 'POST' && new URL(request.url).pathname === '/share-target') {
+    event.respondWith(handleShareTarget(request));
+    return;
+  }
   // Ukládání/mazání (POST/PUT/DELETE) necachovat, nechat vždy projít na síť.
   if (request.method !== 'GET') return;
 
@@ -140,6 +148,26 @@ self.addEventListener('fetch', function (event) {
 // uložit do cache a znovu vrátit. Proto se kontroluje i fresh.type.
 function isCacheable(response) {
   return !!response && (response.ok || response.type === 'opaque');
+}
+
+async function handleShareTarget(request) {
+  try {
+    const fd = await request.formData();
+    const cache = await caches.open(SHARE_CACHE);
+    const old = await cache.keys();
+    await Promise.all(old.map(function (k) { return cache.delete(k); }));
+    const str = function (v) { return typeof v === 'string' ? v.slice(0, 5000) : ''; };
+    const files = fd.getAll('media').filter(function (f) { return f && typeof f !== 'string'; }).slice(0, 12);
+    const meta = { title: str(fd.get('title')), text: str(fd.get('text')), url: str(fd.get('url')), files: [], at: Date.now() };
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const key = '/__share/file/' + i;
+      await cache.put(key, new Response(f, { headers: { 'Content-Type': f.type || 'image/jpeg' } }));
+      meta.files.push({ key: key, name: f.name || ('foto-' + i + '.jpg'), type: f.type || 'image/jpeg' });
+    }
+    await cache.put('/__share/meta', new Response(JSON.stringify(meta), { headers: { 'Content-Type': 'application/json' } }));
+  } catch (e) { /* i když se něco nepovede, otevři admin */ }
+  return Response.redirect(new URL('/admin/?shared=1', self.location.origin).href, 303);
 }
 
 // Záloha pro případ, že není síť: uložené články „na offline“.

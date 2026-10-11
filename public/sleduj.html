@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Sleduj blog — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Jak se dozvědět o novém článku: RSS, WhatsApp, přidání na plochu.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20261010">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--panel-solid);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .3s;
+    }
+    .back-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); }
+    .nav-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--ember); text-decoration: none; }
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 0 20px 18px; }
+    .page-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700; color: var(--parchment); }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+    .wrap { position: relative; z-index: 10; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+    .block { background: var(--panel-solid); border: 1px solid var(--panel-border); border-radius: 16px; padding: 18px 20px; margin-bottom: 20px; }
+    .block h2 { font: 700 18px 'Space Grotesk', sans-serif; color: var(--parchment); margin-bottom: 4px; }
+    .block .hint { font-size: 13px; color: var(--mist); margin-bottom: 12px; }
+    .fol { display: grid; gap: 10px; }
+    .fol a, .fol button { display: flex; align-items: center; gap: 10px; font: 600 15px 'Space Grotesk', sans-serif; color: var(--parchment); text-decoration: none; background: transparent; border: 1px solid var(--panel-border); border-radius: 14px; padding: 12px 16px; cursor: pointer; text-align: left; }
+    .fol a:hover, .fol button:hover { border-color: var(--ember); }
+    .fol small { display: block; font: 400 12.5px 'Inter', sans-serif; color: var(--mist); }
+    .tabs { display: flex; gap: 8px; margin: 10px 0 14px; flex-wrap: wrap; }
+    .tab { font: 600 14px 'Space Grotesk', sans-serif; color: var(--parchment); background: transparent; border: 1px solid var(--panel-border); border-radius: 20px; padding: 7px 16px; cursor: pointer; }
+    .tab[aria-pressed="true"] { background: var(--ember); border-color: var(--ember); color: #08080f; }
+    ol.top { list-style: none; display: grid; gap: 8px; counter-reset: n; }
+    ol.top li { counter-increment: n; display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--panel-border); }
+    ol.top li:first-child { border-top: 0; }
+    ol.top li::before { content: counter(n); font: 700 18px 'Space Grotesk', sans-serif; color: var(--ember); min-width: 26px; }
+    ol.top a { color: var(--parchment); font-weight: 600; text-decoration: none; }
+    ol.top a:hover { color: var(--ember); }
+    ol.top .m { margin-left: auto; font-size: 13px; color: var(--mist); white-space: nowrap; }
+    .empty { color: var(--mist); font-size: 14px; }
+    @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } }
+  </style>
+</head>
+<body>
+  <a href="#folMain" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">🔔 Sleduj blog</h1>
+    <p class="page-subtitle">Ať ti žádný nový článek neunikne</p>
+  </div>
+  <main class="wrap" id="folMain" tabindex="-1">
+    <div class="block">
+      <div class="fol" id="fol">
+        <a href="/rss.xml" id="rssLink">📡 <span>RSS kanál<small>Pro čtečky novinek (Feedly a další). Zkopíruj adresu a vlož ji do čtečky.</small></span></a>
+        <button type="button" id="copyRss">📋 <span>Zkopírovat adresu RSS<small id="copyMsg"></small></span></button>
+      </div>
+    </div>
+    <div class="block" id="installBlock">
+      <h2>📲 Přidat na plochu</h2>
+      <p class="hint" id="installHint">Blog se pak otevírá jako aplikace a funguje i bez signálu u článků, které sis uložil.</p>
+      <div class="fol"><button type="button" id="installBtn" hidden>📲 <span>Přidat na plochu</span></button></div>
+    </div>
+  </main>
+  <script src="/shared.js?v=20261010"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    if (typeof initStarfield === 'function') initStarfield(120);
+    document.getElementById('copyRss').onclick = function () {
+      var u = location.origin + '/rss.xml', m = document.getElementById('copyMsg');
+      (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function () { m.textContent = 'Zkopírováno: ' + u; }).catch(function () { prompt('Zkopíruj adresu RSS:', u); });
+    };
+    // Odkazy nastavené v adminu (Nastavení webu → Sleduj blog)
+    try {
+      var r = await fetch('/api/site/info'); var j = await r.json();
+      var labels = { whatsapp: ['💬', 'WhatsApp — kanál nebo skupina'], messenger: ['✉️', 'Messenger'], instagram: ['📷', 'Instagram'], facebook: ['👍', 'Facebook'] };
+      var fol = document.getElementById('fol');
+      Object.keys(labels).forEach(function (k) {
+        var u = j.follow && j.follow[k]; if (!u) return;
+        var a = document.createElement('a'); a.href = u; a.target = '_blank'; a.rel = 'noopener';
+        a.appendChild(document.createTextNode(labels[k][0] + ' '));
+        var sp = document.createElement('span'); sp.textContent = labels[k][1]; a.appendChild(sp);
+        fol.insertBefore(a, fol.firstChild);
+      });
+    } catch (e) {}
+    // Přidání na plochu
+    var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    var hint = document.getElementById('installHint'), btn = document.getElementById('installBtn'), deferred = null;
+    if (standalone) { hint.textContent = '✅ Blog už máš přidaný na ploše.'; }
+    else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { hint.textContent = 'V Safari klepni na tlačítko Sdílet (čtvereček se šipkou) a vyber „Přidat na plochu“.'; }
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; btn.hidden = false; });
+    btn.onclick = function () { if (!deferred) return; deferred.prompt(); deferred.userChoice.finally(function () { deferred = null; btn.hidden = true; }); };
+    if (!standalone && !/iPhone|iPad|iPod/i.test(navigator.userAgent)) setTimeout(function () { if (btn.hidden) hint.textContent = 'V menu prohlížeče (⋮) vyber „Přidat na plochu“ nebo „Nainstalovat aplikaci“.'; }, 1500);
+  });
+  </script>
+</body>
+</html>

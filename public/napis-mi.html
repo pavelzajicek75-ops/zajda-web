@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Napiš mi — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Soukromá zpráva autorovi blogu.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20261010">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--panel-solid);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .3s;
+    }
+    .back-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); }
+    .nav-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--ember); text-decoration: none; }
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 0 20px 18px; }
+    .page-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700; color: var(--parchment); }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+    .wrap { position: relative; z-index: 10; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+    .block { background: var(--panel-solid); border: 1px solid var(--panel-border); border-radius: 16px; padding: 18px 20px; margin-bottom: 20px; }
+    .block h2 { font: 700 18px 'Space Grotesk', sans-serif; color: var(--parchment); margin-bottom: 4px; }
+    .block .hint { font-size: 13px; color: var(--mist); margin-bottom: 12px; }
+    .mform { display: grid; gap: 12px; }
+    .mform label { font-size: 13px; color: var(--mist); display: grid; gap: 4px; }
+    .mform input, .mform textarea { width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 10px; color: var(--parchment); background: rgba(255,255,255,.05); border: 1px solid var(--panel-border); }
+    .mform textarea { min-height: 160px; resize: vertical; }
+    .mform button { justify-self: start; font: 600 15px 'Space Grotesk', sans-serif; padding: 11px 24px; border-radius: 26px; cursor: pointer; color: #08080f; background: var(--ember); border: 0; }
+    .mform button:disabled { opacity: .6; cursor: default; }
+    .hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; overflow: hidden; }
+    .msg-ok { color: var(--nova); } .msg-err { color: #ff8a8a; }
+    .tabs { display: flex; gap: 8px; margin: 10px 0 14px; flex-wrap: wrap; }
+    .tab { font: 600 14px 'Space Grotesk', sans-serif; color: var(--parchment); background: transparent; border: 1px solid var(--panel-border); border-radius: 20px; padding: 7px 16px; cursor: pointer; }
+    .tab[aria-pressed="true"] { background: var(--ember); border-color: var(--ember); color: #08080f; }
+    ol.top { list-style: none; display: grid; gap: 8px; counter-reset: n; }
+    ol.top li { counter-increment: n; display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--panel-border); }
+    ol.top li:first-child { border-top: 0; }
+    ol.top li::before { content: counter(n); font: 700 18px 'Space Grotesk', sans-serif; color: var(--ember); min-width: 26px; }
+    ol.top a { color: var(--parchment); font-weight: 600; text-decoration: none; }
+    ol.top a:hover { color: var(--ember); }
+    ol.top .m { margin-left: auto; font-size: 13px; color: var(--mist); white-space: nowrap; }
+    .empty { color: var(--mist); font-size: 14px; }
+    @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } }
+  </style>
+</head>
+<body>
+  <a href="#msgMain" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">✉️ Napiš mi</h1>
+    <p class="page-subtitle">Soukromá zpráva — uvidím ji jen já</p>
+  </div>
+  <main class="wrap" id="msgMain" tabindex="-1">
+    <div class="block" id="off" hidden><p class="empty">Posílání zpráv je zatím vypnuté. Zkus to prosím později, nebo napiš komentář pod některým článkem.</p></div>
+    <div class="block" id="formBlock" hidden>
+      <p class="hint">Tahle zpráva nikde nebude zveřejněná, uvidí ji jen autor blogu. Kontakt vyplňuj jen pokud chceš, abych se ti ozval.</p>
+      <form class="mform" id="mform" novalidate>
+        <label>Jméno nebo přezdívka (nepovinné)<input type="text" id="mName" maxlength="60" autocomplete="nickname"></label>
+        <label>Kontakt na tebe (e-mail nebo telefon, nepovinné)<input type="text" id="mContact" maxlength="100" autocomplete="off"></label>
+        <label>Tvoje zpráva<textarea id="mText" maxlength="2000" required></textarea></label>
+        <div class="hp" aria-hidden="true"><input type="text" id="mHp" tabindex="-1" autocomplete="off"></div>
+        <button type="submit" id="mBtn">Odeslat zprávu</button>
+        <div id="mMsg" role="status"></div>
+      </form>
+    </div>
+  </main>
+  <script src="/shared.js?v=20261010"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    if (typeof initStarfield === 'function') initStarfield(120);
+    var enabled = false;
+    try { var r = await fetch('/api/site/info'); var j = await r.json(); enabled = j && j.messagesEnabled === true; } catch (e) {}
+    document.getElementById('off').hidden = enabled;
+    document.getElementById('formBlock').hidden = !enabled;
+    var form = document.getElementById('mform'), msg = document.getElementById('mMsg'), btn = document.getElementById('mBtn');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      msg.className = ''; msg.textContent = '';
+      var text = document.getElementById('mText').value;
+      if (text.trim().length < 5) { msg.className = 'msg-err'; msg.textContent = 'Napiš aspoň pár slov.'; return; }
+      btn.disabled = true;
+      fetch('/api/messages/create', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: document.getElementById('mName').value, contact: document.getElementById('mContact').value, text: text, website: document.getElementById('mHp').value }) })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (res.ok) { msg.className = 'msg-ok'; msg.textContent = '✅ Díky, zpráva došla.'; document.getElementById('mText').value = ''; }
+          else { msg.className = 'msg-err'; msg.textContent = (res.j && res.j.error) || 'Odeslání se nepovedlo.'; }
+        })
+        .catch(function () { msg.className = 'msg-err'; msg.textContent = 'Odeslání se nepovedlo, zkus to znovu.'; })
+        .then(function () { btn.disabled = false; });
+    });
+  });
+  </script>
+</body>
+</html>

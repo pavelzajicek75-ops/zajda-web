@@ -473,7 +473,7 @@
   <script src="/photo-stops.js?v=1"></script>
   <script src="/comments.js?v=1"></script>
   <script src="/hearts.js?v=1"></script>
-  <script src="/share-card.js?v=1"></script>
+  <script src="/share-card.js?v=2"></script>
   <script src="/offline-save.js?v=1"></script>
   <script src="/reading-aids.js?v=2"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
@@ -764,7 +764,7 @@
     fetch('/api/articles/view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: articleId })
+      body: JSON.stringify({ id: articleId, ref: viewRef() })
     }).catch(function () { /* tichý fail — počítadlo není kritické */ });
   }
 
@@ -984,11 +984,24 @@
     });
   }
 
+  // Zdroj návštěvy: ?utm_source z našich sdílecích odkazů, jinak Referer.
+  function viewRef() {
+    try {
+      var u = new URLSearchParams(window.location.search).get('utm_source');
+      if (u) return 'utm:' + u;
+    } catch (e) {}
+    return document.referrer || '';
+  }
+  // Odkaz s označením, kam byl sdílen (pro přehled „Odkud čtenáři přicházejí“).
+  function tagUrl(url, src) {
+    try { var u = new URL(url); u.searchParams.set('utm_source', src); return u.href; } catch (e) { return url; }
+  }
+
   // Messenger nemá veřejné "sdílej odkaz" okno bez Facebook aplikace. Na
   // mobilu otevře přímo Messenger (hluboký odkaz), jinde zkopíruje odkaz
   // a otevře messenger.com, kam ho stačí vložit.
   function shareMessenger(btn) {
-    var url = window.location.href;
+    var url = tagUrl(window.location.href, 'messenger');
     if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
       window.location.href = 'fb-messenger://share?link=' + encodeURIComponent(url);
       return;
@@ -1186,9 +1199,9 @@
     html += renderReactionBar(article, reactionConfig);
     html += '<div class="share-bar-inline">';
     html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
-    html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>';
+    html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + tagUrl(shareUrl, 'whatsapp')) + '" target="_blank" rel="noopener">WhatsApp</a>';
     html += '<button type="button" class="share-btn" onclick="shareMessenger(this)">Messenger</button>';
-    html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">Facebook</a>';
+    html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(tagUrl(shareUrl, 'facebook')) + '" target="_blank" rel="noopener">Facebook</a>';
     html += '<a class="share-btn" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X / Twitter</a>';
     html += '<button type="button" class="share-btn" onclick="copyArticleLink(this)">🔗 Kopírovat odkaz</button>';
     html += '</div>';

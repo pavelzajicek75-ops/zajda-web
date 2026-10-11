@@ -41,7 +41,7 @@
     ctx.globalAlpha = 1;
 
     var top = 90;
-    var img = opts.imageUrl ? await loadImage(opts.imageUrl) : null;
+    var img = opts.quote ? null : opts.imageUrl ? await loadImage(opts.imageUrl) : null;
     if (img) {
       var bx = 90, by = 90, bw = W - 180, bh = 440, r = 28;
       ctx.save();
@@ -50,12 +50,12 @@
       ctx.drawImage(img, bx + (bw - img.width * s) / 2, by + (bh - img.height * s) / 2, img.width * s, img.height * s);
       ctx.restore();
       top = by + bh + 60;
-    } else top = 200;
+    } else top = opts.quote ? 170 : 200;
 
     ctx.fillStyle = '#f8f5ef'; ctx.textBaseline = 'top';
-    var tSize = img ? 58 : 76;
-    ctx.font = '700 ' + tSize + 'px ' + FONT;
-    var tl = wrap(ctx, opts.title, W - 180, img ? 3 : 4);
+    var tSize = opts.quote ? 54 : (img ? 58 : 76);
+    ctx.font = (opts.quote ? '500 ' : '700 ') + tSize + 'px ' + FONT;
+    var tl = wrap(ctx, opts.title, W - 180, opts.quote ? 9 : (img ? 3 : 4));
     tl.forEach(function (l, k) { ctx.fillText(l, 90, top + k * (tSize * 1.2)); });
     var y = top + tl.length * (tSize * 1.2) + 24;
     if (opts.text) {

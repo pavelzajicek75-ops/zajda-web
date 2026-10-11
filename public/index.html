@@ -311,6 +311,10 @@
     }
     .stat-card .stat-label { color: var(--mist-dim); font-size: 12px; margin-top: 4px; display: block; }
     .stats-footnote { color: var(--mist-dim); font-size: 12px; text-align: center; line-height: 1.6; }
+    .site-status { display: inline-block; margin-top: 14px; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: var(--parchment); background: rgba(47,230,201,.08); border: 1px solid rgba(47,230,201,.28); }
+    .site-status[hidden] { display: none; }
+    a.site-status:hover { border-color: var(--nova); }
+    .site-status small { color: var(--mist-dim); margin-left: 6px; }
     .search-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .search-filters[hidden] { display: none; }
     .search-filters select {
@@ -555,7 +559,7 @@
       <h3>Poslední aktuality</h3>
       <div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>
     </div>
-    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div></div>
+    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div><div class="site-status" id="siteStatus" hidden></div> <a class="site-status" id="writeMe" href="/napis-mi" hidden>✉️ Napiš mi</a></div>
   </div>
   <div class="search-panel">
     <input type="text" id="siteSearchInput" placeholder="🔍 Hledat v článcích…" autocomplete="off">
@@ -1156,7 +1160,7 @@
           (totalKm > 0 ? ' Kdyby ses po těch místech vydal/a v pořadí, jak jsi o nich psal/a, našlapal/a bys vzdušnou čarou přibližně ' + Math.round(totalKm).toLocaleString('cs') + ' km.' : '') + '</p>';
       }
 
-      html += '<p class="stats-footnote"><a href="/rok">📅 Čísla po letech →</a> · <a href="/nejctenejsi">🔥 Nejčtenější →</a> · <a href="/temata">🏷️ Témata →</a> · <a href="/fotomapa">📷 Mapa fotek →</a> · <a href="/galerie">🖼️ Galerie podle výletů →</a></p>';
+      html += '<p class="stats-footnote"><a href="/rok">📅 Čísla po letech →</a> · <a href="/nejctenejsi">🔥 Nejčtenější →</a> · <a href="/temata">🏷️ Témata →</a> · <a href="/sleduj">🔔 Sleduj blog →</a> · <a href="/fotomapa">📷 Mapa fotek →</a> · <a href="/galerie">🖼️ Galerie podle výletů →</a></p>';
       scroll.innerHTML = arr.length ? html : '<p class="stats-footnote">Zatím není z čeho počítat — přidej první článek.</p>';
     }
 
@@ -1633,5 +1637,21 @@
   </script>
 <script src="/diagnosis-counter.js?v=3"></script>
 <script src="/memory-card.js?v=2"></script>
+<script>
+// Stav dne (nastavuje se v adminu → Nastavení webu).
+(function () {
+  var el = document.getElementById('siteStatus');
+  if (!el) return;
+  fetch('/api/site/info').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    if (j && j.messagesEnabled) { var w = document.getElementById('writeMe'); if (w) { w.hidden = false; w.style.textDecoration = 'none'; } }
+    var st = j && j.status; if (!st || !st.text) return;
+    var age = Date.now() - (st.updated || 0), day = 86400000;
+    if (age > 14 * day) return;
+    el.textContent = (st.emoji ? st.emoji + ' ' : '') + st.text;
+    if (age > 2 * day) { var sm = document.createElement('small'); sm.textContent = '(před ' + Math.floor(age / day) + ' dny)'; el.appendChild(sm); }
+    el.hidden = false;
+  }).catch(function () {});
+})();
+</script>
 </body>
 </html>
