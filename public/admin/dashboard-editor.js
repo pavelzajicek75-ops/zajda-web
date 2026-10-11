@@ -2467,6 +2467,10 @@ async function editArticle(id) {
 /* === ČLÁNKY: stav publikování (hned / koncept / naplánovat) === */
 function readArticleStatus() {
   const mode = $('artStatus')?.value || 'now';
+  const tags = ($('artTags')?.value || '').split(',').map(t => t.trim()).filter(Boolean);
+  return Object.assign({ tags }, readArticleStatusCore(mode));
+}
+function readArticleStatusCore(mode) {
   if (mode === 'draft') return { published: false, publishAt: '', unlisted: false };
   if (mode === 'schedule') {
     const v = $('artPublishAt')?.value;
@@ -2482,6 +2486,7 @@ function onArticleStatusChange() {
   if (wrap) wrap.style.display = ($('artStatus')?.value === 'schedule') ? '' : 'none';
 }
 function setArticleStatusFields(a) {
+  if ($('artTags')) $('artTags').value = (a && Array.isArray(a.tags)) ? a.tags.join(', ') : '';
   const sel = $('artStatus'); if (!sel) return;
   const pub = !a || a.published !== false;
   if (pub && a && a.unlisted) sel.value = 'private';

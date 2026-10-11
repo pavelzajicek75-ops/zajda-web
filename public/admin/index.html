@@ -199,6 +199,7 @@
         </select>
         <input type="date" id="artDate" class="form-input">
         <input type="text" id="artPlace" class="form-input" placeholder="Místo">
+        <input type="text" id="artTags" class="form-input" placeholder="Štítky (oddělené čárkou, např. cesty, léčba)" title="Max 8 štítků">
         <select id="artStatus" class="form-select" onchange="onArticleStatusChange()" title="Kdy se článek zveřejní">
           <option value="now">✅ Publikovat hned</option>
           <option value="draft">📝 Uložit jako koncept (skrytý)</option>
@@ -811,12 +812,14 @@
 <script src="article-map-picker.js?v=20261011"></script>
 <script src="geocode-helper.js?v=1"></script>
 <script src="traffic-admin.js?v=1"></script>
-<script src="comments-admin.js?v=2"></script>
+<script src="comments-admin.js?v=3"></script>
 <script src="mood-admin.js?v=1"></script>
 <script src="restore-admin.js?v=2"></script>
 <script src="linkcheck-admin.js?v=1"></script>
 <script src="auto-backup-admin.js?v=1"></script>
 <script src="featured-admin.js?v=1"></script>
+<script src="weekly-admin.js?v=1"></script>
+<script src="selftest-admin.js?v=1"></script>
 <script src="timeline-admin.js?v=20260813"></script>
 <script src="mobile-editor.js?v=20260817"></script>
 <script src="gallery-mobile-menu.js?v=20260918"></script>

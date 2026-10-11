@@ -44,16 +44,24 @@
       (approved.length ? approved.slice(0, 30).map(function (x) {
         return '<div style="border-top:1px solid var(--border-soft,#263252);padding:8px 0;font-size:13px">' +
           '<span style="color:var(--text-muted)">' + esc(x.a.title) + ' · <b>' + esc(x.c.name) + '</b> · ' + fmt(x.c.created) + '</span><br>' + esc(x.c.text) +
+          (x.c.reply ? '<div style="margin:4px 0 0 12px;color:var(--text-muted)">↳ <b>Odpověď:</b> ' + esc(x.c.reply.text) + '</div>' : '') +
+          ' <button class="btn btn-sm" data-act="reply" data-id="' + esc(x.c.id) + '" data-article="' + esc(x.a.id) + '" data-reply="' + esc(x.c.reply ? x.c.reply.text : '') + '">' + (x.c.reply ? 'Upravit odpověď' : '↩️ Odpovědět') + '</button>' +
           ' <button class="btn btn-sm" data-act="delete" data-id="' + esc(x.c.id) + '" data-article="' + esc(x.a.id) + '">Smazat</button></div>';
       }).join('') : '<p style="font-size:13px;color:var(--text-muted)">Žádné.</p>');
 
     box.querySelectorAll('button[data-act]').forEach(function (b) {
       b.onclick = async function () {
         if (b.dataset.act === 'delete' && !confirm('Opravdu smazat tenhle komentář?')) return;
+        var extra = {};
+        if (b.dataset.act === 'reply') {
+          var t = prompt('Tvoje odpověď (prázdné = smazat odpověď):', b.dataset.reply || '');
+          if (t === null) return;
+          extra.text = t;
+        }
         b.disabled = true;
         try {
-          await act({ action: b.dataset.act, id: b.dataset.id, articleId: b.dataset.article });
-          toast(b.dataset.act === 'approve' ? 'Komentář schválen' : 'Hotovo', 'success');
+          await act(Object.assign({ action: b.dataset.act, id: b.dataset.id, articleId: b.dataset.article }, extra));
+          toast(b.dataset.act === 'approve' ? 'Komentář schválen' : (b.dataset.act === 'reply' ? 'Odpověď uložena' : 'Hotovo'), 'success');
           load().then(notifyPending);
         } catch (e) { toast('Nepovedlo se: ' + e.message, 'error'); b.disabled = false; }
       };
