@@ -75,5 +75,16 @@
       rd.readAsText(f);
     };
   }
+  // Pro panel automatických záloh: načte zálohu z objektu a ukáže náhled.
+  window.RestoreAdmin = {
+    useBackup: async function (obj) {
+      mount();
+      backup = obj;
+      var box = $('restoreSummary');
+      box.textContent = 'Kontroluji…';
+      try { showSummary(await call(false)); } catch (e) { box.textContent = '⚠️ ' + e.message; }
+      var b = $('restoreBox'); if (b && b.scrollIntoView) b.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();
