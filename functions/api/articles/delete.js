@@ -1,4 +1,5 @@
 import { requireAdmin, json } from '../_auth-utils.js';
+import { purgeEdge } from '../_edge-cache.js';
 
 export async function onRequestDelete(context) {
   const { request, env } = context;
@@ -6,5 +7,6 @@ export async function onRequestDelete(context) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   await env.ARTICLES.delete(`article:${id}`);
+  await purgeEdge(request, ['/api/articles/list']);
   return Response.json({ success: true });
 }

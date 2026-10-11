@@ -1,4 +1,5 @@
-export async function onRequestGet(context) {
+import { edgeCached } from '../_edge-cache.js';
+async function handleGet(context) {
   const { env } = context;
   const { searchParams } = new URL(context.request.url);
   const sectionId = searchParams.get('sectionId');
@@ -17,4 +18,9 @@ export async function onRequestGet(context) {
   }
   for (let i = photos.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [photos[i], photos[j]] = [photos[j], photos[i]]; }
   return Response.json(photos.slice(0, limit));
+}
+
+// Veřejný výpis se drží v cache (viz _edge-cache.js) — šetří denní limit operací „list“ v KV.
+export async function onRequestGet(context) {
+  return edgeCached(context, 600, () => handleGet(context));
 }

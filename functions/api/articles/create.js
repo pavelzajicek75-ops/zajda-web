@@ -1,5 +1,6 @@
 import { requireAdmin, json } from '../_auth-utils.js';
 import { normTags } from './_tags.js';
+import { purgeEdge } from '../_edge-cache.js';
 import { newShareToken } from './_publish.js';
 
 export async function onRequestPost(context) {
@@ -59,5 +60,6 @@ export async function onRequestPost(context) {
     created: Date.now()
   };
   await env.ARTICLES.put(`article:${id}`, JSON.stringify(article));
+  await purgeEdge(request, ['/api/articles/list']);
   return Response.json(article);
 }

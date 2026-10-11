@@ -1,7 +1,8 @@
 import { requireAdmin } from '../_auth-utils.js';
 import { applySchedule, isListed } from './_publish.js';
+import { edgeCached } from '../_edge-cache.js';
 
-export async function onRequestGet(context) {
+async function handleGet(context) {
   const { env, request } = context;
   const { searchParams } = new URL(request.url);
   const sectionId = searchParams.get('sectionId');
@@ -17,4 +18,9 @@ export async function onRequestGet(context) {
     if ((!sectionId || data.sectionId === sectionId) && (!subsectionId || data.subsectionId === subsectionId)) articles.push(data);
   }
   return Response.json(articles.sort((a, b) => (b.created || 0) - (a.created || 0)));
+}
+
+// Veřejný výpis se drží v cache (viz _edge-cache.js) — šetří denní limit operací „list“ v KV.
+export async function onRequestGet(context) {
+  return edgeCached(context, 300, () => handleGet(context));
 }

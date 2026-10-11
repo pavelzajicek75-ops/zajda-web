@@ -1,7 +1,8 @@
 import { jsonCached, requireAdmin } from '../_auth-utils.js';
 import { applySchedule, isListed } from './_publish.js';
+import { edgeCached } from '../_edge-cache.js';
 
-export async function onRequestGet(context) {
+async function handleGet(context) {
   const { env, request } = context;
   const isAdmin = !!(await requireAdmin(request, env));
   const list = await env.ARTICLES.list({ prefix: 'article:' });
@@ -21,4 +22,9 @@ export async function onRequestGet(context) {
   // Krátká 30s cache pro běžné návštěvníky (články se mění častěji než
   // sekce) — admin má díky Authorization hlavičce vždy čerstvá data.
   return jsonCached(articles.sort((a, b) => (b.created || 0) - (a.created || 0)), request, 30);
+}
+
+// Veřejný výpis se drží v cache (viz _edge-cache.js) — šetří denní limit operací „list“ v KV.
+export async function onRequestGet(context) {
+  return edgeCached(context, 300, () => handleGet(context));
 }

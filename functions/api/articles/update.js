@@ -1,6 +1,7 @@
 import { requireAdmin, json } from '../_auth-utils.js';
 import { newShareToken } from './_publish.js';
 import { normTags } from './_tags.js';
+import { purgeEdge } from '../_edge-cache.js';
 
 export async function onRequestPut(context) {
   const { request, env } = context;
@@ -23,5 +24,6 @@ export async function onRequestPut(context) {
     updated.shareToken = '';
   }
   await env.ARTICLES.put(`article:${body.id}`, JSON.stringify(updated));
+  await purgeEdge(request, ['/api/articles/list']);
   return Response.json(updated);
 }
