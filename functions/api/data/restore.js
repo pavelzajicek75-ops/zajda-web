@@ -22,7 +22,8 @@ const TYPES = {
   galleries:   { kv: 'PHOTOS',      prefix: 'gallery:',    label: 'Galerie (metadata)' },
   about:       { kv: 'ARTICLES',    key: 'about:zajda',    label: 'O Zajdovi' },
   commentsPending: { kv: 'ARTICLES', key: 'meta:comments-pending', label: 'Čekající komentáře' },
-  moodLog:     { kv: 'ARTICLES',    key: 'meta:mood-log',  label: 'Deník nálady' }
+  moodLog:     { kv: 'ARTICLES',    key: 'meta:mood-log',  label: 'Deník nálady' },
+  ideas:       { kv: 'ARTICLES',    key: 'meta:ideas',     label: 'Rozepsané nápady' }
 };
 
 function nameOf(item) {

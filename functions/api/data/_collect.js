@@ -19,6 +19,7 @@ export async function collectBackup(env) {
   backup.about = await env.ARTICLES.get('about:zajda', { type: 'json' });
   backup.commentsPending = await env.ARTICLES.get('meta:comments-pending', { type: 'json' });
   backup.moodLog = await env.ARTICLES.get('meta:mood-log', { type: 'json' });
+  backup.ideas = await env.ARTICLES.get('meta:ideas', { type: 'json' });
   backup.sections = await listAll(env.SUBSECTIONS, 'section:');
   backup.subsections = await listAll(env.SUBSECTIONS, 'subsection:');
   if (env.PHOTOS) backup.galleries = await listAll(env.PHOTOS, 'gallery:');
