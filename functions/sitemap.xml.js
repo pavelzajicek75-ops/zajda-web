@@ -36,7 +36,10 @@ export async function onRequestGet(context) {
 
   const staticUrls = [
     { loc: origin + '/', priority: '1.0', changefreq: 'daily' },
-    { loc: origin + '/about/', priority: '0.6', changefreq: 'weekly' }
+    { loc: origin + '/about/', priority: '0.6', changefreq: 'weekly' },
+    { loc: origin + '/nejctenejsi', priority: '0.5', changefreq: 'weekly' },
+    { loc: origin + '/temata', priority: '0.5', changefreq: 'weekly' },
+    { loc: origin + '/rok', priority: '0.4', changefreq: 'weekly' }
   ];
 
   const articleUrls = articles.map(a => {
