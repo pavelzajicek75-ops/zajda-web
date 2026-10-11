@@ -23,7 +23,9 @@ const TYPES = {
   about:       { kv: 'ARTICLES',    key: 'about:zajda',    label: 'O Zajdovi' },
   commentsPending: { kv: 'ARTICLES', key: 'meta:comments-pending', label: 'Čekající komentáře' },
   moodLog:     { kv: 'ARTICLES',    key: 'meta:mood-log',  label: 'Deník nálady' },
-  ideas:       { kv: 'ARTICLES',    key: 'meta:ideas',     label: 'Rozepsané nápady' }
+  ideas:       { kv: 'ARTICLES',    key: 'meta:ideas',     label: 'Rozepsané nápady' },
+  site:        { kv: 'ARTICLES',    key: 'meta:site',      label: 'Nastavení webu' },
+  messages:    { kv: 'ARTICLES',    key: 'meta:messages',  label: 'Soukromé zprávy' }
 };
 
 function nameOf(item) {
