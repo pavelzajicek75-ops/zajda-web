@@ -53,6 +53,19 @@
           '<span style="font-size:10px;color:var(--text-faint);margin-top:4px">' + esc(weeks[i].slice(-3)) + '</span></div>';
       }).join('') + '</div>';
 
+    var refTotals = {};
+    list.forEach(function (a) { Object.keys(a.refs || {}).forEach(function (k) { refTotals[k] = (refTotals[k] || 0) + a.refs[k]; }); });
+    var refKeys = Object.keys(refTotals).sort(function (x, y) { return refTotals[y] - refTotals[x]; });
+    var refSum = refKeys.reduce(function (n, k) { return n + refTotals[k]; }, 0) || 1;
+    var refHtml = '<h4 style="margin:.9rem 0 .4rem;font-size:14px">Odkud čtenáři přicházejí</h4>' +
+      (refKeys.length ? refKeys.slice(0, 10).map(function (k) {
+        var pct = Math.round(refTotals[k] / refSum * 100);
+        return '<div style="display:flex;gap:8px;align-items:center;font-size:13px;margin:3px 0"><span style="width:130px;flex:none">' + esc(k) + '</span>' +
+          '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:4px;height:10px"><div style="width:' + pct + '%;height:100%;background:var(--ember,#ff7a45);border-radius:4px"></div></div>' +
+          '<span style="width:70px;text-align:right;color:var(--text-muted)">' + refTotals[k] + ' (' + pct + ' %)</span></div>';
+      }).join('') + '<p style="font-size:12px;color:var(--text-muted);margin-top:4px">Počítá se od nasazení téhle funkce. Odkazy poslané z WhatsAppu nebo Messengeru bez označení se často ukážou jako „Přímý odkaz“ — odkazy ze sdílecích tlačítek na webu už označené jsou.</p>'
+        : '<p style="font-size:13px;color:var(--text-muted)">Zatím žádná data.</p>');
+
     box.innerHTML =
       '<p style="font-size:13px;color:var(--text-muted)">Celkem zobrazení všech článků: <b>' + allViews.toLocaleString('cs') +
       '</b> · týdenní přehled se počítá od nasazení téhle funkce, starší zobrazení v něm nejsou. Tvoje vlastní návštěvy (přihlášený admin) se nepočítají.</p>' +
@@ -60,7 +73,7 @@
       '<h4 style="margin:.9rem 0 .4rem;font-size:14px">Nejčtenější v posledních 4 týdnech</h4>' +
       (top.length ? '<ol style="margin-left:1.2rem;font-size:13.5px;line-height:1.6">' + top.map(function (x) {
         return '<li>' + esc(x.a.title || 'Bez názvu') + ' — <b>' + x.recent + '</b> <span style="opacity:.6">(celkem ' + x.total + ')</span></li>';
-      }).join('') + '</ol>' : '<p style="font-size:13px;color:var(--text-muted)">Zatím žádná data.</p>');
+      }).join('') + '</ol>' : '<p style="font-size:13px;color:var(--text-muted)">Zatím žádná data.</p>') + refHtml;
   }
 
   function mount() {

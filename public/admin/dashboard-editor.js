@@ -2819,12 +2819,22 @@ async function loadQuotes() {
         <td style="padding:0.75rem;border-bottom:1px solid #263252">"${escapeHtml(q.text)}"</td>
         <td style="padding:0.75rem;border-bottom:1px solid #263252;color:#92a0bc">${escapeHtml(q.author) || '—'}</td>
         <td style="padding:0.75rem;border-bottom:1px solid #263252">
+          <button onclick="shareQuoteCard(this)" data-text="${escapeHtml(q.text)}" data-author="${escapeHtml(q.author || '')}" class="btn btn-sm" title="Vytvořit obrázek ke sdílení">🖼️ Karta</button>
           <button onclick="deleteQuote('${encodeURIComponent(q.key || q.id)}')" class="btn btn-red btn-sm">Smazat</button>
         </td>
       </tr>`).join('');
   } catch {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;padding:1rem">Chyba načítání.</td></tr>';
   }
+}
+
+// Karta citátu jako obrázek (viz share-card.js)
+async function shareQuoteCard(btn) {
+  if (!window.ShareCard) return showToast('Karta ke sdílení se nenačetla', 'error');
+  const text = btn.dataset.text || '', author = btn.dataset.author || '';
+  try {
+    await window.ShareCard.open({ title: '„' + text + '“', text: author ? '— ' + author : '', quote: true, url: location.origin });
+  } catch (e) { showToast('Kartu se nepodařilo vytvořit', 'error'); }
 }
 
 async function createQuote() {
