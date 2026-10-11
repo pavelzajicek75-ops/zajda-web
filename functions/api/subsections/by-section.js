@@ -1,6 +1,7 @@
 import { jsonCached } from '../_auth-utils.js';
+import { edgeCached } from '../_edge-cache.js';
 
-export async function onRequestGet(context) {
+async function handleGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
   const sectionId = url.searchParams.get('sectionId');
@@ -39,4 +40,9 @@ export async function onRequestGet(context) {
   subs.sort(function(a, b) { return (a.order || 0) - (b.order || 0); });
 
   return Response.json(subs);
+}
+
+// Veřejný výpis se drží v cache (viz _edge-cache.js) — šetří denní limit operací „list“ v KV.
+export async function onRequestGet(context) {
+  return edgeCached(context, 900, () => handleGet(context));
 }
