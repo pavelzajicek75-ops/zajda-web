@@ -1,3 +1,4 @@
+import { edgeCached } from '../_edge-cache.js';
 // /functions/api/reactions/recent.js
 //
 // GET /api/reactions/recent → posledních pár reakcí napříč CELÝM webem
@@ -15,7 +16,7 @@
 const MAX_ITEMS = 15;
 const MAX_DAYS_BACK = 14;
 
-export async function onRequestGet(context) {
+async function handleGet(context) {
   const { env } = context;
 
   const foundKeys = [];
@@ -76,4 +77,9 @@ export async function onRequestGet(context) {
     });
 
   return Response.json({ items });
+}
+
+// Veřejný výpis se drží v cache (viz _edge-cache.js) — šetří denní limit operací „list“ v KV.
+export async function onRequestGet(context) {
+  return edgeCached(context, 300, () => handleGet(context));
 }
