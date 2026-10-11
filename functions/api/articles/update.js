@@ -8,7 +8,9 @@ export async function onRequestPut(context) {
   const existing = await env.ARTICLES.get(`article:${body.id}`, { type: 'json' });
   if (!existing) return Response.json({ error: 'Nenalezeno' }, { status: 404 });
   // shareToken nikdy nebereme z těla požadavku — spravuje se jen tady.
-  const { shareToken: _ignored, ...safeBody } = body;
+  // Počítadla (views, viewsByWeek, likes) taky ne — upravují se jen přes veřejné endpointy,
+  // jinak by je starý obsah editoru mohl přepsat.
+  const { shareToken: _ignored, likes: _l, views: _v, viewsByWeek: _w, ...safeBody } = body;
   const updated = { ...existing, ...safeBody, id: existing.id, updated: Date.now() };
   if (updated.unlisted === true) {
     // soukromý: zachovej stávající token (odkazy dál fungují), nebo vytvoř nový
