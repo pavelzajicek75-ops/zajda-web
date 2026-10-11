@@ -1,9 +1,10 @@
+import { edgeCached } from '../_edge-cache.js';
 // GET /api/timeline/list — vrátí všechny milníky, seřazené vzestupně
 // podle "order" (nejstarší/nejnižší první — timeline se čte
 // chronologicky odshora dolů, ne "nejnovější nahoře" jako u článků).
 // U starších milníků bez "order" (vytvořených před touto úpravou) se
 // jako záložní klíč použije datum, ať se nezačnou řadit nahodile.
-export async function onRequestGet(context) {
+async function handleGet(context) {
   const { env } = context;
   const list = await env.ARTICLES.list({ prefix: 'timeline:' });
   const milestones = [];
@@ -21,4 +22,9 @@ export async function onRequestGet(context) {
   }
   milestones.sort((a, b) => sortKey(a) - sortKey(b));
   return Response.json(milestones);
+}
+
+// Veřejný výpis se drží v cache (viz _edge-cache.js) — šetří denní limit operací „list“ v KV.
+export async function onRequestGet(context) {
+  return edgeCached(context, 900, () => handleGet(context));
 }
