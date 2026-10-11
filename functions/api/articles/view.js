@@ -12,13 +12,16 @@
 // je to zanedbatelné; pro web s vysokou návštěvností by bylo potřeba
 // řešit přes Durable Objects nebo Cloudflare Analytics Engine.
 
+import { refLabel, addRef } from './_ref.js';
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  let id;
+  let id, ref = '';
   try {
     const body = await request.json();
     id = body && body.id;
+    ref = body && typeof body.ref === 'string' ? body.ref : '';
   } catch {
     return Response.json({ error: 'Neplatné tělo požadavku' }, { status: 400 });
   }
@@ -37,7 +40,11 @@ export async function onRequestPost(context) {
   byWeek[week] = (byWeek[week] || 0) + 1;
   const keys = Object.keys(byWeek).sort();
   while (keys.length > 26) delete byWeek[keys.shift()];
-  const updated = { ...existing, views, viewsByWeek: byWeek };
+  // Zdroj návštěvy (Google, WhatsApp…) — do stejného záznamu a stejného zápisu, žádný zápis navíc.
+  let ownHost = '';
+  try { ownHost = new URL(request.url).hostname.toLowerCase().replace(/^www\./, ''); } catch {}
+  const refs = addRef(existing.refs, refLabel(ref, ownHost));
+  const updated = { ...existing, views, viewsByWeek: byWeek, refs };
   await env.ARTICLES.put(key, JSON.stringify(updated));
 
   return Response.json({ views });

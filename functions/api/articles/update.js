@@ -11,7 +11,7 @@ export async function onRequestPut(context) {
   // shareToken nikdy nebereme z těla požadavku — spravuje se jen tady.
   // Počítadla (views, viewsByWeek, likes) taky ne — upravují se jen přes veřejné endpointy,
   // jinak by je starý obsah editoru mohl přepsat.
-  const { shareToken: _ignored, likes: _l, views: _v, viewsByWeek: _w, ...safeBody } = body;
+  const { shareToken: _ignored, likes: _l, views: _v, viewsByWeek: _w, refs: _r, ...safeBody } = body;
   const updated = { ...existing, ...safeBody, id: existing.id, updated: Date.now() };
   if ('tags' in safeBody) updated.tags = normTags(safeBody.tags);
   if (updated.unlisted === true) {
