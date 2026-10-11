@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Nejčtenější — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Nejčtenější a nejoblíbenější články blogu a výběr „Začni tady“.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20261010">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px; background: var(--panel-solid);
+      border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px;
+      border-radius: 30px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .3s;
+    }
+    .back-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); }
+    .nav-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--ember); text-decoration: none; }
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 0 20px 18px; }
+    .page-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(24px, 4vw, 38px); font-weight: 700; color: var(--parchment); }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; font-weight: 300; }
+    .wrap { position: relative; z-index: 10; max-width: 960px; margin: 0 auto; padding: 0 20px 60px; }
+
+    .block { background: var(--panel-solid); border: 1px solid var(--panel-border); border-radius: 16px; padding: 18px 20px; margin-bottom: 20px; }
+    .block h2 { font: 700 18px 'Space Grotesk', sans-serif; color: var(--parchment); margin-bottom: 4px; }
+    .block .hint { font-size: 13px; color: var(--mist); margin-bottom: 12px; }
+    .tabs { display: flex; gap: 8px; margin: 10px 0 14px; flex-wrap: wrap; }
+    .tab { font: 600 14px 'Space Grotesk', sans-serif; color: var(--parchment); background: transparent; border: 1px solid var(--panel-border); border-radius: 20px; padding: 7px 16px; cursor: pointer; }
+    .tab[aria-pressed="true"] { background: var(--ember); border-color: var(--ember); color: #08080f; }
+    ol.top { list-style: none; display: grid; gap: 8px; counter-reset: n; }
+    ol.top li { counter-increment: n; display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--panel-border); }
+    ol.top li:first-child { border-top: 0; }
+    ol.top li::before { content: counter(n); font: 700 18px 'Space Grotesk', sans-serif; color: var(--ember); min-width: 26px; }
+    ol.top a { color: var(--parchment); font-weight: 600; text-decoration: none; }
+    ol.top a:hover { color: var(--ember); }
+    ol.top .m { margin-left: auto; font-size: 13px; color: var(--mist); white-space: nowrap; }
+    .empty { color: var(--mist); font-size: 14px; }
+    @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } }
+  </style>
+</head>
+<body>
+  <a href="#topMain" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">🔥 Nejčtenější</h1>
+    <p class="page-subtitle">Co čtenáře zajímá nejvíc</p>
+  </div>
+  <main class="wrap" id="topMain" tabindex="-1">
+    <div class="block" id="startBlock" hidden><h2>🌟 Začni tady</h2><p class="hint">Výběr pro ty, kdo na blog přišli poprvé.</p><ol class="top" id="startList"></ol></div>
+    <div class="block">
+      <div class="tabs" role="group" aria-label="Řazení">
+        <button type="button" class="tab" data-m="views" aria-pressed="true">👁️ Podle čtení</button>
+        <button type="button" class="tab" data-m="likes" aria-pressed="false">❤️ Podle srdíček</button>
+      </div>
+      <ol class="top" id="topList"></ol>
+      <p class="empty" id="topEmpty" hidden>Zatím tu nic není.</p>
+    </div>
+  </main>
+
+  <script src="/shared.js?v=20261010"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', async function () {
+    if (typeof initStarfield === 'function') initStarfield(120);
+    var all = [];
+    try {
+      var r = await fetch('/api/articles/list');
+      var d = await r.json();
+      all = (Array.isArray(d) ? d : []).filter(function (a) { return a && a.id && a.published !== false && !a.unlisted; });
+    } catch (e) { console.error(e); }
+
+    function li(a, meta) {
+      var item = document.createElement('li');
+      var link = document.createElement('a');
+      link.href = '/article?id=' + encodeURIComponent(a.id);
+      link.textContent = a.title || 'Bez názvu';
+      item.appendChild(link);
+      if (meta) { var m = document.createElement('span'); m.className = 'm'; m.textContent = meta; item.appendChild(m); }
+      return item;
+    }
+    function nf(n) { return Math.round(n).toLocaleString('cs-CZ'); }
+
+    var start = all.filter(function (a) { return a.featured; })
+      .sort(function (x, y) { return (x.featuredOrder || 0) - (y.featuredOrder || 0) || (x.created || 0) - (y.created || 0); });
+    var sl = document.getElementById('startList'); sl.textContent = '';
+    start.forEach(function (a) { sl.appendChild(li(a)); });
+    document.getElementById('startBlock').hidden = !start.length;
+
+    function render(metric) {
+      var list = all.filter(function (a) { return (a[metric] || 0) > 0; })
+        .sort(function (x, y) { return (y[metric] || 0) - (x[metric] || 0); }).slice(0, 15);
+      var ol = document.getElementById('topList');
+      ol.textContent = '';
+      list.forEach(function (a) { ol.appendChild(li(a, (metric === 'views' ? '👁️ ' : '❤️ ') + nf(a[metric]))); });
+      document.getElementById('topEmpty').hidden = !!list.length;
+    }
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.onclick = function () {
+        document.querySelectorAll('.tab').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        render(b.dataset.m);
+      };
+    });
+    render('views');
+  });
+  </script>
+</body>
+</html>

@@ -46,6 +46,13 @@
     .facts a { color: var(--nova); font-weight: 600; text-decoration: none; }
     .facts a:hover { text-decoration: underline; }
     .facts b { color: var(--parchment); }
+    .cal-wrap { overflow-x: auto; padding-bottom: 6px; }
+    .cal { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 12px); gap: 3px; width: max-content; }
+    .cal i { width: 12px; height: 12px; border-radius: 3px; background: rgba(255,255,255,.07); display: block; }
+    .cal i.l1 { background: rgba(47,230,201,.45); } .cal i.l2 { background: rgba(47,230,201,.8); } .cal i.l3 { background: #2fe6c9; }
+    .cal i.off { background: transparent; }
+    .cal-sum { font-size: 13px; color: var(--mist); margin-top: 8px; }
+    .cal-sum b { color: var(--parchment); }
     .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
     .badge { border: 1px solid var(--border-soft, #263252); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--mist); }
     .badge .ic { font-size: 22px; display: block; }
@@ -81,6 +88,7 @@
     <div class="block" id="factsBlock" hidden><h2>✨ Zajímavosti</h2><ul class="facts" id="facts"></ul></div>
     <div class="block" id="badgeBlock" hidden><h2>🏅 Úspěchy</h2><div class="badges" id="badges"></div></div>
     <div class="block" id="chartBlock" hidden><h2 id="chartTitle">Články</h2><div class="bars" id="bars"></div></div>
+    <div class="block" id="calBlock" hidden><h2 id="calTitle">Kalendář psaní</h2><div class="cal-wrap"><div class="cal" id="cal" role="img" aria-label="Kalendář dnů, kdy vznikl článek"></div></div><div class="cal-sum" id="calSum"></div></div>
     <div class="empty" id="rokEmpty" hidden>Zatím tu není z čeho počítat.</div>
   </main>
 
@@ -149,6 +157,38 @@
       });
     }
 
+    function dayKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+    // Kalendář: u roku celý rok, u „Celkem“ posledních 53 týdnů. Série = nejvíc dní po sobě s článkem.
+    function renderCalendar(list) {
+      var per = {}, days = [];
+      list.forEach(function (a) {
+        var d = new Date(a.date || a.created); if (isNaN(d.getTime())) return;
+        var k = dayKey(d); per[k] = (per[k] || 0) + 1;
+      });
+      var start, end;
+      if (current == null) { end = new Date(); start = new Date(end.getFullYear(), end.getMonth(), end.getDate() - 7 * 52); }
+      else { start = new Date(current, 0, 1); end = new Date(current, 11, 31); }
+      var lead = (start.getDay() + 6) % 7; // pondělí nahoře
+      var html = '';
+      for (var i = 0; i < lead; i++) html += '<i class="off"></i>';
+      var written = 0;
+      for (var d = new Date(start); d <= end; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) {
+        var n = per[dayKey(d)] || 0; if (n) written++;
+        html += '<i class="' + (n >= 3 ? 'l3' : n === 2 ? 'l2' : n === 1 ? 'l1' : '') + '" title="' + d.toLocaleDateString('cs-CZ') + (n ? ': ' + n + 'x' : '') + '"></i>';
+      }
+      // nejdelší série v celé historii (v rámci zobrazeného období)
+      var best = 0, cur = 0;
+      for (var e = new Date(start); e <= end; e = new Date(e.getFullYear(), e.getMonth(), e.getDate() + 1)) {
+        if (per[dayKey(e)]) { cur++; if (cur > best) best = cur; } else cur = 0;
+      }
+      document.getElementById('cal').innerHTML = html;
+      document.getElementById('calTitle').textContent = current == null ? 'Kalendář psaní — posledních 12 měsíců' : 'Kalendář psaní ' + current;
+      document.getElementById('calSum').innerHTML = 'Psal jsi <b>' + written + '</b> ' + plural(written, 'den', 'dny', 'dní') +
+        (best > 1 ? ' · nejdelší série <b>' + best + '</b> ' + plural(best, 'den', 'dny', 'dní') + ' po sobě' : '');
+      document.getElementById('calBlock').hidden = false;
+      var wrap = document.querySelector('.cal-wrap'); if (wrap) wrap.scrollLeft = wrap.scrollWidth;
+    }
+
     function renderStats() {
       var list = current == null ? all : all.filter(function (a) { return yearOf(a) === current; });
       var empty = document.getElementById('rokEmpty');
@@ -156,7 +196,7 @@
       if (!list.length) {
         grid.innerHTML = ''; empty.hidden = false;
         document.getElementById('factsBlock').hidden = true; document.getElementById('chartBlock').hidden = true;
-        document.getElementById('badgeBlock').hidden = true;
+        document.getElementById('badgeBlock').hidden = true; document.getElementById('calBlock').hidden = true;
         return;
       }
       empty.hidden = true;
@@ -213,6 +253,8 @@
         }).join('');
         bb.hidden = false;
       } else bb.hidden = true;
+
+      renderCalendar(list);
 
       // Sloupcový graf: u roku po měsících, u „Celkem“ po letech.
       var labels, values;

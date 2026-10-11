@@ -31,15 +31,18 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v16';
+const SW_VERSION = 'v17';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
+// Články uložené čtenářem „na offline“ (offline-save.js). Jméno je bez verze,
+// takže se při zvýšení SW_VERSION nesmaže.
+const OFFLINE_CACHE = 'zajda-offline';
 
 // POZOR: shared.css/js, fonts.css, travel-map-core.js a timeline-core.js
 // se v HTML načítají s "?v=YYYYMMDD" (cache-busting). Když se některý z
 // těchto souborů příště změní, zvyš datum v HTML tagách (a klidně i tady
 // dole) — jinak zůstanou tyhle přesné URL v cache navždy (cache-first).
-const ASSET_VERSION = '20261013';
+const ASSET_VERSION = '20261014';
 
 const SHELL_URLS = [
   '/',
@@ -78,7 +81,7 @@ self.addEventListener('activate', function (event) {
       .then(function (keys) {
         return Promise.all(
           keys
-            .filter(function (k) { return k !== SHELL_CACHE && k !== RUNTIME_CACHE; })
+            .filter(function (k) { return k !== SHELL_CACHE && k !== RUNTIME_CACHE && k !== OFFLINE_CACHE; })
             .map(function (k) { return caches.delete(k); })
         );
       })
@@ -139,6 +142,11 @@ function isCacheable(response) {
   return !!response && (response.ok || response.type === 'opaque');
 }
 
+// Záloha pro případ, že není síť: uložené články „na offline“.
+async function offlineMatch(request) {
+  try { return await caches.match(request, { cacheName: OFFLINE_CACHE }); } catch (e) { return undefined; }
+}
+
 async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   try {
@@ -146,7 +154,7 @@ async function networkFirst(request, cacheName) {
     if (isCacheable(fresh)) cache.put(request, fresh.clone());
     return fresh;
   } catch (e) {
-    const cached = await cache.match(request);
+    const cached = (await cache.match(request)) || (await offlineMatch(request));
     if (cached) return cached;
     throw e;
   }
@@ -169,6 +177,6 @@ async function staleWhileRevalidate(request, cacheName) {
       if (isCacheable(fresh)) cache.put(request, fresh.clone());
       return fresh;
     })
-    .catch(function () { return cached; });
+    .catch(function () { return cached || offlineMatch(request); });
   return cached || fetchPromise;
 }

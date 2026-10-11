@@ -472,6 +472,8 @@
   <script src="/shared.js?v=20261005"></script>
   <script src="/photo-stops.js?v=1"></script>
   <script src="/comments.js?v=1"></script>
+  <script src="/hearts.js?v=1"></script>
+  <script src="/offline-save.js?v=1"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
   <script>
   // --- Lightbox s galerií ---
@@ -1259,6 +1261,12 @@
 
     // Komentáře čtenářů (viz comments.js) — chyba nesmí shodit zobrazení článku.
     try { if (window.ArticleComments) window.ArticleComments.mount(article, container); } catch (e) { console.error('Komentáře:', e); }
+
+    // Srdíčko (viz hearts.js) — po komentářích, aby se vložilo před ně.
+    try { if (window.ArticleHearts) window.ArticleHearts.mount(article, container); } catch (e) { console.error('Srdíčko:', e); }
+
+    // Uložení na offline (viz offline-save.js) — v řádku se srdíčkem.
+    try { if (window.ArticleOffline) window.ArticleOffline.mount(article, container); } catch (e) { console.error('Offline:', e); }
 
     // Fotky v textu článku se jemně "vsunou", jak k nim čtenář scrolluje
     // — titulní fotka (article-hero) zůstává beze změny, tu je žádoucí
