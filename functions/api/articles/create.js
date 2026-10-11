@@ -1,4 +1,5 @@
 import { requireAdmin, json } from '../_auth-utils.js';
+import { normTags } from './_tags.js';
 import { newShareToken } from './_publish.js';
 
 export async function onRequestPost(context) {
@@ -45,6 +46,7 @@ export async function onRequestPost(context) {
     stops: stops.length >= 2 ? stops : [],
     // 📷 zastávka, kam patří fotky z výletu (index v poli stops); jinak se odhadne
     photoStop: (stops.length >= 2 && Number.isInteger(body.photoStop) && body.photoStop >= 0 && body.photoStop < stops.length) ? body.photoStop : null,
+    tags: normTags(body.tags),
     excerpt: body.excerpt || '',
     coverUrl: body.coverUrl || '',
     slug: body.slug || '',

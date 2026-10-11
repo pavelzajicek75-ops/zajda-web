@@ -1,5 +1,6 @@
 import { requireAdmin, json } from '../_auth-utils.js';
 import { newShareToken } from './_publish.js';
+import { normTags } from './_tags.js';
 
 export async function onRequestPut(context) {
   const { request, env } = context;
@@ -12,6 +13,7 @@ export async function onRequestPut(context) {
   // jinak by je starý obsah editoru mohl přepsat.
   const { shareToken: _ignored, likes: _l, views: _v, viewsByWeek: _w, ...safeBody } = body;
   const updated = { ...existing, ...safeBody, id: existing.id, updated: Date.now() };
+  if ('tags' in safeBody) updated.tags = normTags(safeBody.tags);
   if (updated.unlisted === true) {
     // soukromý: zachovej stávající token (odkazy dál fungují), nebo vytvoř nový
     updated.shareToken = existing.shareToken || newShareToken();
