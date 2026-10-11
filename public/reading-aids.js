@@ -68,6 +68,11 @@
       '.toc summary{cursor:pointer;font:600 15px "Space Grotesk",sans-serif;color:var(--nova,#2fe6c9)}' +
       '.toc ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}.toc li.sub{margin-left:16px;font-size:14px}' +
       '.toc a{color:var(--parchment,#f8f5ef);text-decoration:none}.toc a:hover,.toc a:focus-visible{color:var(--ember,#ff7a45)}' +
+      '.article-body{font-size:calc(17px * var(--rp,1))!important}@media(max-width:640px){.article-body{font-size:calc(16px * var(--rp,1))!important}}' +
+      '.article-body.rp-airy{line-height:2.1!important}' +
+      '.read-prefs{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin:0 0 14px;font-size:13px;color:var(--mist,#9aa3c0)}' +
+      '.read-prefs button{font:500 13px "Space Grotesk",sans-serif;padding:3px 11px;border-radius:14px;cursor:pointer;color:var(--mist,#9aa3c0);background:transparent;border:1px solid var(--panel-border,rgba(140,150,255,.3))}' +
+      '.read-prefs button:hover,.read-prefs button[aria-pressed="true"]{color:var(--parchment,#f8f5ef);border-color:var(--ember,#ff7a45)}' +
       '.art-tags{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}.art-tags a{font-size:13px;padding:4px 12px;border-radius:16px;text-decoration:none;color:var(--nova,#2fe6c9);border:1px solid var(--panel-border,rgba(140,150,255,.3))}' +
       '.art-tags a:hover,.art-tags a:focus-visible{border-color:var(--nova,#2fe6c9)}' +
       '.article-body h2,.article-body h3{scroll-margin-top:16px}';
@@ -85,12 +90,51 @@
     body.parentNode.insertBefore(box, body.nextSibling);
   }
 
+  // Nastavení čtení: velikost písma a řádkování (pamatuje se v prohlížeči).
+  var STEPS = [0.9, 1, 1.1, 1.2, 1.35];
+  function loadPrefs() { try { var p = JSON.parse(localStorage.getItem('readPrefs') || '{}'); return { s: (p.s >= 0 && p.s < STEPS.length) ? p.s : 1, l: p.l === 1 ? 1 : 0 }; } catch (e) { return { s: 1, l: 0 }; } }
+  function savePrefs(p) { try { localStorage.setItem('readPrefs', JSON.stringify(p)); } catch (e) {} }
+  function applyPrefs(body, p) {
+    body.style.setProperty('--rp', String(STEPS[p.s]));
+    body.classList.toggle('rp-airy', p.l === 1);
+  }
+  function prefs(body) {
+    if (document.getElementById('readPrefsBar')) return;
+    if (!document.getElementById('reading-aids-style')) addStyle();
+    var p = loadPrefs(); applyPrefs(body, p);
+    var bar = document.createElement('div'); bar.id = 'readPrefsBar'; bar.className = 'read-prefs';
+    function btn(label, title, fn) { var b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.title = title; b.setAttribute('aria-label', title); b.onclick = fn; return b; }
+    var lbl = document.createElement('span'); lbl.textContent = 'Čtení:';
+    var minus = btn('A−', 'Menší písmo', function () { if (p.s > 0) { p.s--; savePrefs(p); applyPrefs(body, p); } });
+    var plus = btn('A+', 'Větší písmo', function () { if (p.s < STEPS.length - 1) { p.s++; savePrefs(p); applyPrefs(body, p); } });
+    var lh = btn('↕ Vzdušněji', 'Přepnout řádkování', function () { p.l = p.l ? 0 : 1; savePrefs(p); applyPrefs(body, p); lh.setAttribute('aria-pressed', String(p.l === 1)); });
+    lh.setAttribute('aria-pressed', String(p.l === 1));
+    var reset = btn('Obnovit', 'Obnovit výchozí nastavení čtení', function () { p = { s: 1, l: 0 }; savePrefs(p); applyPrefs(body, p); lh.setAttribute('aria-pressed', 'false'); });
+    [lbl, minus, plus, lh, reset].forEach(function (e) { bar.appendChild(e); });
+    body.parentNode.insertBefore(bar, body);
+  }
+
+  // „Den N od diagnózy“ podle data článku (viz diagnosis-counter.js).
+  function dayMeta(article, container) {
+    var dc = window.DiagnosisCounter;
+    var meta = container.querySelector('.article-meta');
+    if (!dc || !dc.dayForDate || !meta || meta.querySelector('.meta-day')) return;
+    var n = dc.dayForDate(article.date || article.created);
+    if (n == null || n < 0) return;
+    var sp = document.createElement('span'); sp.className = 'meta-item meta-day';
+    sp.textContent = 'Den ' + n.toLocaleString('cs-CZ') + ' od diagnózy';
+    sp.title = 'Počítáno od 1. 6. 2026';
+    meta.appendChild(sp);
+  }
+
   function mount(article, container) {
     if (!article || !container) return;
     var body = container.querySelector('.article-body');
     if (!body) return;
+    dayMeta(article, container);
     images(body, article);
     tags(article, body);
+    prefs(body);
     toc(body);
     progress(body);
   }

@@ -94,7 +94,7 @@
 
   <script src="/shared.js?v=20261010"></script>
   <script src="/photo-stops.js?v=1"></script>
-  <script src="/diagnosis-counter.js?v=2"></script>
+  <script src="/diagnosis-counter.js?v=3"></script>
   <script>
   document.addEventListener('DOMContentLoaded', async function () {
     if (typeof initStarfield === 'function') initStarfield(120);
@@ -224,6 +224,12 @@
       if (s.longestText && s.longestText.n >= 50) facts.push('✍️ Nejdelší text: ' + link(s.longestText.a) + ' — <b>' + nf(s.longestText.n) + ' slov</b>.');
       if (s.topPlace) facts.push('📍 Nejčastější místo: <b>' + escapeHtml(s.topPlace.name) + '</b> (' + s.topPlace.n + '× v článcích).');
       if (s.words >= 250) facts.push('📖 To je zhruba <b>' + nf(s.words / 250) + ' stran</b> textu (při 250 slovech na stranu).');
+      if (window.DiagnosisCounter && window.DiagnosisCounter.dayForDate) {
+        var days = list.map(function (a) { return window.DiagnosisCounter.dayForDate(a.date || a.created); })
+          .filter(function (n) { return n != null && n >= 0; }).sort(function (x, y) { return x - y; });
+        if (days.length) facts.push('🌌 Články od diagnózy vznikaly ode <b>dne ' + nf(days[0]) + '</b> do <b>dne ' + nf(days[days.length - 1]) + '</b>' +
+          (days.length > 1 ? ' — v průměru jeden každých <b>' + nf(Math.max(1, (days[days.length - 1] - days[0]) / (days.length - 1))) + '</b> dní.' : '.'));
+      }
       var fb = document.getElementById('factsBlock');
       fb.hidden = !facts.length;
       document.getElementById('facts').innerHTML = facts.map(function (f) { return '<li>' + f + '</li>'; }).join('');

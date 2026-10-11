@@ -15,6 +15,14 @@
     return Math.floor((today - start) / 86400000) + OFFSET;
   }
 
+  // Číslo dne pro libovolné datum ('YYYY-MM-DD', ISO řetězec, timestamp nebo Date); null = neplatné.
+  function dayForDate(v) {
+    var y, m, d;
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) { y = +v.slice(0, 4); m = +v.slice(5, 7); d = +v.slice(8, 10); }
+    else { var dt = new Date(v); if (isNaN(dt.getTime())) return null; y = dt.getFullYear(); m = dt.getMonth() + 1; d = dt.getDate(); }
+    return Math.floor((Date.UTC(y, m - 1, d) - Date.UTC(START.year, START.month - 1, START.day)) / 86400000) + OFFSET;
+  }
+
   function injectStyle() {
     if (document.getElementById('diagnosis-counter-style')) return;
     var s = document.createElement('style');
@@ -101,7 +109,7 @@
     });
   }
 
-  window.DiagnosisCounter = { dayFor: dayFor, render: render, isMilestone: isMilestone };
+  window.DiagnosisCounter = { dayFor: dayFor, dayForDate: dayForDate, render: render, isMilestone: isMilestone };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

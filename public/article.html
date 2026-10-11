@@ -473,8 +473,9 @@
   <script src="/photo-stops.js?v=1"></script>
   <script src="/comments.js?v=1"></script>
   <script src="/hearts.js?v=1"></script>
+  <script src="/share-card.js?v=1"></script>
   <script src="/offline-save.js?v=1"></script>
-  <script src="/reading-aids.js?v=1"></script>
+  <script src="/reading-aids.js?v=2"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
   <script>
   // --- Lightbox s galerií ---
@@ -1269,6 +1270,9 @@
     // Srdíčko (viz hearts.js) — po komentářích, aby se vložilo před ně.
     try { if (window.ArticleHearts) window.ArticleHearts.mount(article, container); } catch (e) { console.error('Srdíčko:', e); }
 
+    // Karta ke sdílení jako obrázek (viz share-card.js).
+    try { if (window.ShareCard) window.ShareCard.mount(article, container); } catch (e) { console.error('Karta:', e); }
+
     // Uložení na offline (viz offline-save.js) — v řádku se srdíčkem.
     try { if (window.ArticleOffline) window.ArticleOffline.mount(article, container); } catch (e) { console.error('Offline:', e); }
 
@@ -1355,6 +1359,6 @@
     initReadingProgress();
   }
   </script>
-<script src="/diagnosis-counter.js?v=2"></script>
+<script src="/diagnosis-counter.js?v=3"></script>
 </body>
 </html>

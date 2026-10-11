@@ -31,7 +31,7 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v18';
+const SW_VERSION = 'v19';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
 // Články uložené čtenářem „na offline“ (offline-save.js). Jméno je bez verze,
@@ -42,7 +42,7 @@ const OFFLINE_CACHE = 'zajda-offline';
 // se v HTML načítají s "?v=YYYYMMDD" (cache-busting). Když se některý z
 // těchto souborů příště změní, zvyš datum v HTML tagách (a klidně i tady
 // dole) — jinak zůstanou tyhle přesné URL v cache navždy (cache-first).
-const ASSET_VERSION = '20261015';
+const ASSET_VERSION = '20261016';
 
 const SHELL_URLS = [
   '/',
