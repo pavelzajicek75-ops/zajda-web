@@ -5,11 +5,12 @@
 // dá sáhnout. Jen pro přihlášeného admina.
 
 import { requireAdmin, json } from '../_auth-utils.js';
+import { listIndexed } from '../_kv-index.js';
 
-async function countPrefix(kv, prefix) {
+async function countPrefix(kv, prefix, home, tag) {
   if (!kv) return null;
   try {
-    const list = await kv.list({ prefix });
+    const list = await listIndexed(kv, home, prefix, { tag, allowEmpty: true });
     return list.keys.length;
   } catch (e) {
     return null;
@@ -24,11 +25,11 @@ export async function onRequestGet(context) {
 
   const stats = { checkedAt: new Date().toISOString() };
 
-  stats.articles = await countPrefix(env.ARTICLES, 'article:');
-  stats.timeline = await countPrefix(env.ARTICLES, 'timeline:');
-  stats.sections = await countPrefix(env.SUBSECTIONS, 'section:');
-  stats.subsections = await countPrefix(env.SUBSECTIONS, 'subsection:');
-  stats.galleries = await countPrefix(env.PHOTOS, 'gallery:');
+  stats.articles = await countPrefix(env.ARTICLES, 'article:', env.ARTICLES, '');
+  stats.timeline = await countPrefix(env.ARTICLES, 'timeline:', env.ARTICLES, '');
+  stats.sections = await countPrefix(env.SUBSECTIONS, 'section:', env.ARTICLES, ':S');
+  stats.subsections = await countPrefix(env.SUBSECTIONS, 'subsection:', env.ARTICLES, ':S');
+  stats.galleries = await countPrefix(env.PHOTOS, 'gallery:', env.ARTICLES, ':P');
 
   stats.quotes = null;
   if (env.QUOTES_R2) {

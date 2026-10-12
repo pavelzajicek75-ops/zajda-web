@@ -73,12 +73,29 @@
       });
     });
 
+    // Kvalita obsahu: chybějící titulní fotka, štítky, popis (alt) u fotek, kratičké články.
+    var quality = [];
+    arts.forEach(function (a) {
+      if (a.published === false) return;
+      var t = a.title || 'Bez názvu', plain = String(a.content || '').replace(/<[^>]+>/g, ' ').trim();
+      if (!a.coverUrl) quality.push({ a: a, text: 'chybí titulní fotka' });
+      if (!(a.tags && a.tags.length)) quality.push({ a: a, text: 'nemá žádný štítek' });
+      if (plain.split(/\s+/).filter(Boolean).length < 40) quality.push({ a: a, text: 'je velmi krátký (pod 40 slov)' });
+      var doc = new DOMParser().parseFromString(a.content || '', 'text/html'), noAlt = 0;
+      doc.querySelectorAll('img').forEach(function (im) { if (!(im.getAttribute('alt') || '').trim()) noAlt++; });
+      if (noAlt) quality.push({ a: a, text: noAlt + '× fotka bez popisku (alt)' });
+    });
+    var qualityHtml = quality.length
+      ? '<details style="margin-top:.8rem"><summary style="cursor:pointer;font-size:14px">📝 Tipy na vylepšení (' + quality.length + ')</summary><ul style="font-size:13.5px;line-height:1.6;margin:.4rem 0 0 1.1rem">' +
+        quality.slice(0, 60).map(function (q) { return '<li><b>' + esc(q.a.title || 'Bez názvu') + '</b> — ' + esc(q.text) + '</li>'; }).join('') + (quality.length > 60 ? '<li>…a dalších ' + (quality.length - 60) + '</li>' : '') + '</ul></details>'
+      : '<p style="color:#22c55e;font-size:14px">✅ I obsah vypadá úplně v pořádku.</p>';
+
     var failedNote = Object.keys(listFailed).length ? '<p style="color:#f59e0b;font-size:13px">Některé galerie se nepodařilo zkontrolovat: ' + esc(Object.keys(listFailed).join(', ')) + '</p>' : '';
     out.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Zkontrolováno ' + arts.length + ' článků, ' + photosChecked + ' fotek a ' + linksChecked + ' odkazů na jiné články.</p>' + failedNote +
       (problems.length
         ? '<p style="color:#ef4444;font-size:14px;margin:.4rem 0">Nalezeno problémů: <b>' + problems.length + '</b></p><ul style="font-size:13.5px;line-height:1.6;margin-left:1.1rem">' +
           problems.map(function (p) { return '<li><b>' + esc(p.a.title || 'Bez názvu') + '</b> — ' + p.type + '<br><span style="opacity:.6;word-break:break-all">' + esc(p.detail) + '</span></li>'; }).join('') + '</ul>'
-        : '<p style="color:#22c55e;font-size:14px">✅ Všechno v pořádku, nic nechybí.</p>');
+        : '<p style="color:#22c55e;font-size:14px">✅ Všechno v pořádku, nic nechybí.</p>') + qualityHtml;
   }
 
   function mount() {
@@ -88,7 +105,7 @@
     box.id = 'linkcheckBox';
     box.style.cssText = 'margin:0 0 2rem';
     box.innerHTML = '<h3 style="margin-bottom:.5rem">🩺 Kontrola fotek a odkazů</h3>' +
-      '<p style="color:var(--text-muted);font-size:13px;margin-bottom:.6rem">Projde všechny články a najde fotky, které už v úložišti nejsou, a odkazy na články, které neexistují.</p>' +
+      '<p style="color:var(--text-muted);font-size:13px;margin-bottom:.6rem">Projde všechny články a najde fotky, které už v úložišti nejsou, a odkazy na články, které neexistují. Přidá i tipy: článek bez titulní fotky, bez štítků, příliš krátký, fotky bez popisku.</p>' +
       '<button class="btn btn-sm" id="linkcheckBtn">🩺 Zkontrolovat</button><div id="linkcheckResult" style="margin-top:.6rem"></div>';
     host.appendChild(box);
     $('linkcheckBtn').onclick = run;

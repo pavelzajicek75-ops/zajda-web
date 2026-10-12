@@ -263,6 +263,8 @@
       transition: border-color 0.25s ease;
     }
     .search-panel input:focus { border-color: var(--panel-border-hover); }
+    .search-snippet { display: block; font-size: 12.5px; opacity: .8; margin-top: 2px; }
+    .search-snippet mark { background: rgba(255,122,69,.3); color: inherit; border-radius: 3px; padding: 0 2px; }
     .search-panel input::placeholder { color: var(--mist-dim); }
 
     .fun-actions-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
@@ -1360,21 +1362,79 @@
         if (!e.target.closest('.search-panel')) results.classList.remove('open');
       });
 
+      /* Hledání odpouští diakritiku, velikost písmen, koncovky a drobné překlepy. */
+      function norm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+      function lev1(a, b, max) {
+        if (Math.abs(a.length - b.length) > max) return false;
+        var prev = [], cur = [], i, j;
+        for (j = 0; j <= b.length; j++) prev[j] = j;
+        for (i = 1; i <= a.length; i++) {
+          cur = [i]; var rowMin = i;
+          for (j = 1; j <= b.length; j++) {
+            cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+            if (cur[j] < rowMin) rowMin = cur[j];
+          }
+          if (rowMin > max) return false;
+          prev = cur;
+        }
+        return prev[b.length] <= max;
+      }
+      function prep(a) {
+        if (a._n) return a._n;
+        var plain = (a.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        var meta = norm((a.tags || []).join(' ') + ' ' + (a.place || ''));
+        var title = norm(a.title || '');
+        a._n = { plain: plain, text: norm(plain), title: title, meta: meta, words: (title + ' ' + meta).split(/[^a-z0-9]+/).filter(function(w) { return w.length >= 4; }) };
+        return a._n;
+      }
+      // Vrací { score, hit: { idx, len } | null } nebo null, když některé slovo nesedí.
+      function scoreArticle(a, tokens) {
+        var n = prep(a), score = 0, hit = null;
+        for (var i = 0; i < tokens.length; i++) {
+          var t = tokens[i], s = 0, p;
+          if (n.title.indexOf(t) !== -1) s = 3;
+          else if (n.meta.indexOf(t) !== -1) s = 2;
+          else if ((p = n.text.indexOf(t)) !== -1) { s = 1; if (!hit) hit = { idx: p, len: t.length }; }
+          if (!s && t.length >= 4) {
+            var stem = t.slice(0, t.length - (t.length >= 6 ? 2 : 1));
+            if (n.title.indexOf(stem) !== -1) s = 2;
+            else if ((p = n.text.indexOf(stem)) !== -1) { s = 0.7; if (!hit) hit = { idx: p, len: stem.length }; }
+            else {
+              var maxd = t.length >= 8 ? 2 : 1;
+              for (var w = 0; w < n.words.length; w++) { if (lev1(t, n.words[w], maxd)) { s = 0.8; break; } }
+            }
+          }
+          if (!s) return null;
+          score += s;
+        }
+        return { score: score, hit: hit };
+      }
+      function snippetHtml(a, hit) {
+        if (!hit) return '';
+        var plain = prep(a).plain, from = Math.max(0, hit.idx - 40), to = Math.min(plain.length, hit.idx + hit.len + 70);
+        return (from > 0 ? '…' : '') + escapeHtml(plain.slice(from, hit.idx)) + '<mark>' + escapeHtml(plain.slice(hit.idx, hit.idx + hit.len)) + '</mark>' + escapeHtml(plain.slice(hit.idx + hit.len, to)) + (to < plain.length ? '…' : '');
+      }
+
       async function runSearch() {
         var q = input.value.trim().toLowerCase();
         var fy = sfYear ? sfYear.value : '', ft = sfTag ? sfTag.value : '', fp = sfPlace ? sfPlace.value : '';
         var filtering = !!(fy || ft || fp);
         if (!q && !filtering) { results.classList.remove('open'); results.innerHTML = ''; return; }
+        var tokens = norm(q).split(/[^a-z0-9]+/).filter(Boolean);
         var articles = await getAllArticles();
+        var hits = {};
         var matches = articles.filter(function(a) {
           if (fy && yearOf(a) !== fy) return false;
           if (ft && !(a.tags || []).some(function(t) { return t.toLocaleLowerCase('cs') === ft; })) return false;
           if (fp && (a.place || '').trim().toLocaleLowerCase('cs') !== fp) return false;
-          if (!q) return true;
-          var title = (a.title || '').toLowerCase();
-          var text = (a.content || '').replace(/<[^>]+>/g, '').toLowerCase();
-          return title.indexOf(q) !== -1 || text.indexOf(q) !== -1;
-        }).sort(function(a, b) { return compareArticles(a, b, 'newest'); }).slice(0, filtering ? 20 : 8);
+          if (!tokens.length) return true;
+          var r = scoreArticle(a, tokens);
+          if (!r) return false;
+          hits[a.id] = r; return true;
+        }).sort(function(a, b) {
+          var sa = hits[a.id] ? hits[a.id].score : 0, sb = hits[b.id] ? hits[b.id].score : 0;
+          return sb - sa || compareArticles(a, b, 'newest');
+        }).slice(0, filtering ? 20 : 8);
 
         if (!matches.length) {
           results.innerHTML = '<div class="search-no-results">Nic jsem nenašel' + (q ? ' pro „' + escapeHtml(input.value.trim()) + '“' : '') + '</div>';
@@ -1388,6 +1448,7 @@
             return '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
               '<span class="art-title">' + escapeHtml(title) + '</span>' +
               (meta ? '<span class="art-date">' + escapeHtml(meta) + '</span>' : '') +
+              (hits[a.id] && hits[a.id].hit ? '<span class="art-date search-snippet">' + snippetHtml(a, hits[a.id].hit) + '</span>' : '') +
               '</a>';
           }));
           results.innerHTML = rendered.join('');

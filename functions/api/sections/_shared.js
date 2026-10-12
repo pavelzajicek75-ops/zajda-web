@@ -54,6 +54,8 @@ export async function loadSections(env) {
  *  zápisem (create/update/delete), aby nešlo přijít o "virtuální" výchozí
  *  sekce jen tím, že s nimi něco upravíme. Bezpečné volat opakovaně. */
 export async function ensureSeeded(env) {
+  // Levná cesta: stačí 1× obyčejné čtení (get) — žádný „list“ (ten má denní limit).
+  try { if (DEFAULT_SECTIONS.length && await env.SUBSECTIONS.get(`section:${DEFAULT_SECTIONS[0].id}`)) return; } catch (e) { /* pokračuj klasicky */ }
   const list = await env.SUBSECTIONS.list({ prefix: 'section:' });
   if (list.keys.length) return;
   for (const s of DEFAULT_SECTIONS) {

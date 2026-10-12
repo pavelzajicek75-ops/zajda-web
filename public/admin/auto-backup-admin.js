@@ -25,6 +25,19 @@
         '<button class="btn btn-sm" data-act="restore" data-key="' + esc(b.key) + '">♻️ Obnovit z této</button></div>';
     }).join('') : '<p style="font-size:13px;color:var(--text-muted)">Zatím žádná záloha.</p>');
     var keep = $('autoBackupKeep'); if (keep) keep.value = j.keep;
+    var rem = $('autoBackupRemind');
+    if (rem) {
+      var last = 0; try { last = Number(localStorage.getItem('lastBackupDownload')) || 0; } catch (e) {}
+      var days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+      if (j.backups.length && (days === null || days >= 30)) {
+        rem.hidden = false;
+        rem.innerHTML = '⚠️ ' + (days === null ? 'Zálohu sis ještě nikdy nestáhl do svého zařízení.' : 'Poslední stažená kopie je stará ' + days + ' dní.') +
+          ' Stáhni si ji, ať máš texty i mimo Cloudflare. <button class="btn btn-blue btn-sm" id="autoBackupDlLatest">⬇️ Stáhnout nejnovější</button>';
+        $('autoBackupDlLatest').onclick = function () {
+          var first = box.querySelector('button[data-act="dl"]'); if (first) first.click();
+        };
+      } else { rem.hidden = true; }
+    }
     box.querySelectorAll('button[data-act]').forEach(function (b) {
       b.onclick = async function () {
         b.disabled = true;
@@ -33,6 +46,7 @@
           if (!r.ok) throw new Error('HTTP ' + r.status);
           var data = await r.json();
           if (b.dataset.act === 'dl') {
+            try { localStorage.setItem('lastBackupDownload', String(Date.now())); } catch (e) {}
             var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             var a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -69,6 +83,7 @@
     box.style.cssText = 'margin:0 0 2rem';
     box.innerHTML = '<h3 style="margin-bottom:.5rem">💾 Automatické zálohy</h3>' +
       '<p style="color:var(--text-muted);font-size:13px;margin-bottom:.6rem">Jednou za týden se při vstupu do administrace sama uloží záloha textů a dat (bez fotek). Drží se jen posledních několik, starší se mažou.</p>' +
+      '<div id="autoBackupRemind" hidden style="background:rgba(245,158,11,.12);border:1px solid #f59e0b;border-radius:8px;padding:8px 12px;margin-bottom:.6rem;font-size:13px"></div>' +
       '<button class="btn btn-blue btn-sm" id="autoBackupNow">💾 Zálohovat teď</button> ' +
       '<label style="font-size:13px;margin-left:8px">Držet posledních <input type="number" id="autoBackupKeep" min="1" max="12" value="4" style="width:56px"> záloh</label> ' +
       '<button class="btn btn-sm" id="autoBackupSave">Uložit počet</button>' +

@@ -68,6 +68,11 @@
     .bar-lab { font-size: 11px; color: var(--mist-dim, #8a8fa8); margin-top: 6px; white-space: nowrap; }
     .empty { text-align: center; color: var(--mist); padding: 30px 10px; }
     @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } .bar-lab { font-size: 9.5px; } }
+      .year-share { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 22px; }
+    .year-share[hidden] { display: none; }
+    .year-share button { font: 600 14px 'Space Grotesk', sans-serif; padding: 8px 18px; border-radius: 20px; cursor: pointer; color: var(--parchment); background: transparent; border: 1px solid var(--panel-border); }
+    .year-share button:hover { border-color: var(--ember); }
+    .year-share span { font-size: 13px; color: var(--mist); }
   </style>
 <script src="/theme.js?v=1"></script>
   <script src="/error-report.js?v=1"></script>
@@ -87,6 +92,7 @@
   <main class="wrap" id="rokMain" tabindex="-1">
     <div class="year-chips" id="yearChips" role="group" aria-label="Vyber rok"></div>
     <div class="stat-grid" id="statGrid"></div>
+    <div class="year-share" id="yearShareRow" hidden><button type="button" id="yearShare">📤 Sdílet jako obrázek</button><span id="yearShareMsg" role="status"></span></div>
     <div class="block" id="factsBlock" hidden><h2>✨ Zajímavosti</h2><ul class="facts" id="facts"></ul></div>
     <div class="block" id="badgeBlock" hidden><h2>🏅 Úspěchy</h2><div class="badges" id="badges"></div></div>
     <div class="block" id="chartBlock" hidden><h2 id="chartTitle">Články</h2><div class="bars" id="bars"></div></div>
@@ -196,7 +202,7 @@
       var empty = document.getElementById('rokEmpty');
       var grid = document.getElementById('statGrid');
       if (!list.length) {
-        grid.innerHTML = ''; empty.hidden = false;
+        grid.innerHTML = ''; empty.hidden = false; document.getElementById('yearShareRow').hidden = true;
         document.getElementById('factsBlock').hidden = true; document.getElementById('chartBlock').hidden = true;
         document.getElementById('badgeBlock').hidden = true; document.getElementById('calBlock').hidden = true;
         return;
@@ -216,6 +222,8 @@
       if (window.DiagnosisCounter && current == null) {
         tiles.push({ n: nf(window.DiagnosisCounter.dayFor(new Date())), l: 'dnů od diagnózy' });
       }
+      shareTiles = tiles.slice(0, 6); shareLabel = current == null ? 'Můj blog v číslech' : 'Můj rok ' + current;
+      document.getElementById('yearShareRow').hidden = false; document.getElementById('yearShareMsg').textContent = '';
       grid.innerHTML = tiles.map(function (t) {
         return '<div class="stat-tile"><span class="n">' + t.n + '</span><span class="l">' + escapeHtml(t.l) + '</span></div>';
       }).join('');
@@ -282,6 +290,44 @@
       }).join('');
       document.getElementById('chartBlock').hidden = false;
     }
+
+    /* Sdílení shrnutí jako čtvercová karta 1080×1080 (WhatsApp, Messenger…). */
+    function drawYearCard(label, tiles) {
+      var c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
+      var x = c.getContext('2d');
+      var g = x.createLinearGradient(0, 0, 1080, 1080); g.addColorStop(0, '#0b0b18'); g.addColorStop(1, '#1b1030');
+      x.fillStyle = g; x.fillRect(0, 0, 1080, 1080);
+      var r = x.createRadialGradient(540, 120, 40, 540, 120, 700); r.addColorStop(0, 'rgba(255,122,69,.28)'); r.addColorStop(1, 'rgba(255,122,69,0)');
+      x.fillStyle = r; x.fillRect(0, 0, 1080, 1080);
+      x.textAlign = 'center'; x.fillStyle = '#f8f5ef';
+      x.font = '700 76px "Space Grotesk", Inter, sans-serif'; x.fillText(label, 540, 190);
+      x.font = '400 34px Inter, sans-serif'; x.fillStyle = '#b3b6da'; x.fillText('Zajda’s world — Moje diagnóza, můj vesmír', 540, 250);
+      var cols = 2, cw = 430, ch = 230, gx = 40, startX = (1080 - (cols * cw + gx)) / 2, startY = 320;
+      tiles.slice(0, 6).forEach(function (t, i) {
+        var cx = startX + (i % cols) * (cw + gx), cy = startY + Math.floor(i / cols) * (ch + 30);
+        x.fillStyle = 'rgba(255,255,255,.07)'; x.strokeStyle = 'rgba(143,107,255,.45)'; x.lineWidth = 2;
+        x.beginPath(); x.roundRect ? x.roundRect(cx, cy, cw, ch, 28) : x.rect(cx, cy, cw, ch); x.fill(); x.stroke();
+        x.fillStyle = '#ff7a45'; x.font = '700 84px "Space Grotesk", Inter, sans-serif'; x.fillText(t.n, cx + cw / 2, cy + 110);
+        x.fillStyle = '#f8f5ef'; x.font = '400 32px Inter, sans-serif'; x.fillText(t.l, cx + cw / 2, cy + 168);
+      });
+      x.fillStyle = '#8d90b3'; x.font = '400 28px Inter, sans-serif'; x.fillText('zajda-web.pages.dev', 540, 1030);
+      return c;
+    }
+    var shareTiles = [], shareLabel = '';
+    document.getElementById('yearShare').addEventListener('click', function () {
+      var msg = document.getElementById('yearShareMsg');
+      var c = drawYearCard(shareLabel, shareTiles);
+      c.toBlob(async function (blob) {
+        if (!blob) { msg.textContent = 'Obrázek se nepovedlo vytvořit.'; return; }
+        var file = new File([blob], 'zajda-rok.png', { type: 'image/png' });
+        try {
+          if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: shareLabel }); return; }
+        } catch (e) { if (e && e.name === 'AbortError') return; }
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'zajda-rok.png';
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+        msg.textContent = 'Obrázek je stažený.';
+      }, 'image/png');
+    });
 
     renderChips();
     renderStats();
