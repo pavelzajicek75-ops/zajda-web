@@ -14,7 +14,7 @@
   <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts.css?v=20261005">
-  <link rel="stylesheet" href="/shared.css?v=20261010">
+  <link rel="stylesheet" href="/shared.css?v=20261012">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
@@ -426,7 +426,8 @@
       .article-hero { box-shadow: none; }
     }
   </style>
-<script src="/error-report.js?v=1"></script>
+<script src="/theme.js?v=1"></script>
+  <script src="/error-report.js?v=1"></script>
 </head>
 <body>
   <a href="#articleContainer" class="skip-link">Přeskočit na obsah</a>
@@ -476,6 +477,7 @@
   <script src="/hearts.js?v=1"></script>
   <script src="/share-card.js?v=2"></script>
   <script src="/offline-save.js?v=1"></script>
+  <script src="/photo-speed.js?v=1"></script>
   <script src="/reading-aids.js?v=2"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
   <script>
@@ -547,7 +549,7 @@
     var img = galleryImages[galleryIndex];
     if (!img) return;
     var lbImg = document.getElementById('lightboxImg');
-    lbImg.src = img.getAttribute('src');
+    lbImg.src = img.getAttribute('data-full') || img.getAttribute('src');
     lbImg.alt = img.getAttribute('alt') || '';
     // Krátké probliknutí při KAŽDÉ změně fotky (šipka, klávesa, dokončené
     // swipe gesto) — animace se restartuje odebráním a přidáním třídy.
@@ -1168,7 +1170,7 @@
       // ale hero fotka obsahová informace, ne dekorace. Screenreader
       // uživatel by o ni jinak úplně přišel. Použijeme titulek článku
       // jako smysluplný fallback popisek.
-      html += '<img class="article-hero" src="' + escapeHtml(article.coverUrl) + '" alt="' + escapeHtml('Titulní fotografie k článku: ' + title) + '" loading="eager">';
+      html += '<img class="article-hero" fetchpriority="high" decoding="async" src="' + escapeHtml(article.coverUrl) + '" alt="' + escapeHtml('Titulní fotografie k článku: ' + title) + '" loading="eager">';
     }
     html += '<div class="article-header">';
     html += '<h1 class="article-title">' + escapeHtml(title) + '</h1>';
@@ -1279,6 +1281,7 @@
     try { if (window.ArticleComments) window.ArticleComments.mount(article, container); } catch (e) { console.error('Komentáře:', e); }
 
     // Obsah, ukazatel čtení, lazy loading fotek (viz reading-aids.js).
+    try { if (window.PhotoSpeed) window.PhotoSpeed.shrink(container); } catch (e) {}
     try { if (window.ReadingAids) window.ReadingAids.mount(article, container); } catch (e) { console.error('Pomůcky čtení:', e); }
 
     // Srdíčko (viz hearts.js) — po komentářích, aby se vložilo před ně.

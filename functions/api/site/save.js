@@ -1,5 +1,5 @@
 // POST /api/site/save — admin. Tělo (všechna pole volitelná; co chybí, zůstane):
-//  { status: { text, emoji } | null, messagesEnabled: bool, follow: { whatsapp, messenger, instagram, facebook } }
+//  { pinnedId: 'id článku' | '', status: { text, emoji } | null, messagesEnabled: bool, follow: { whatsapp, messenger, instagram, facebook } }
 import { requireAdmin, json } from '../_auth-utils.js';
 import { SITE_KEY, loadSite, cleanText, cleanUrl } from './_shared.js';
 
@@ -22,6 +22,7 @@ export async function onRequestPost({ request, env }) {
       };
     } else next.status = null;
   }
+  if ('pinnedId' in body) next.pinnedId = (typeof body.pinnedId === 'string' && /^[\w-]{1,80}$/.test(body.pinnedId)) ? body.pinnedId : '';
   if ('messagesEnabled' in body) next.messagesEnabled = body.messagesEnabled === true;
   if (body.follow && typeof body.follow === 'object') {
     next.follow = { ...cur.follow };

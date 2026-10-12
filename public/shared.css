@@ -34,7 +34,7 @@
   --nova-dim: rgba(47, 230, 201, 0.35);
   --parchment: #f8f5ef;
   --mist: #b3b6da;
-  --mist-dim: #6a6d90;
+  --mist-dim: #8d90b3; /* kontrast ≥ 6:1 na tmavém pozadí (dřív #6a6d90 = 4:1) */
   --hairline: linear-gradient(90deg, var(--aurora), var(--ember));
 }
 
@@ -424,3 +424,16 @@ body {
 }
 @keyframes map-photo-in { from { opacity: 0; margin-bottom: -30px; } to { opacity: 1; margin-bottom: 0; } }
 @media (max-width: 640px) { .map-play-photos img { width: 78px; height: 78px; border-width: 3px; } }
+
+
+/* === PŘÍSTUPNOST ===
+   Vyhledávací pole má vypnutý výchozí obrys, proto vlastní viditelný fokus. */
+.search-panel input:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+/* Když si čtenář v systému vypne animace, uklidní se úplně všechno (starší části webu
+   mají vlastní animace, které by jinak běžely dál). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+}

@@ -56,7 +56,7 @@
   <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts.css?v=20261003">
-  <link rel="stylesheet" href="/shared.css?v=20261010">
+  <link rel="stylesheet" href="/shared.css?v=20261012">
   <style>
     .title-block {
       position: relative; z-index: 10; text-align: center;
@@ -313,6 +313,11 @@
     .stats-footnote { color: var(--mist-dim); font-size: 12px; text-align: center; line-height: 1.6; }
     .site-status { display: inline-block; margin-top: 14px; padding: 6px 16px; border-radius: 20px; font-size: 14px; color: var(--parchment); background: rgba(47,230,201,.08); border: 1px solid rgba(47,230,201,.28); }
     .site-status[hidden] { display: none; }
+    .pinned-card { display: block; margin: 16px auto 0; max-width: 560px; padding: 12px 18px; border-radius: 14px; text-decoration: none; text-align: left; color: var(--parchment); background: rgba(255,122,69,.08); border: 1px solid rgba(255,122,69,.4); }
+    .pinned-card[hidden] { display: none; }
+    .pinned-card:hover, .pinned-card:focus-visible { border-color: var(--ember); }
+    .pinned-card small { display: block; color: var(--ember); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+    .pinned-card strong { font-family: 'Space Grotesk', sans-serif; font-size: 17px; }
     a.site-status:hover { border-color: var(--nova); }
     .site-status small { color: var(--mist-dim); margin-left: 6px; }
     .search-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
@@ -543,7 +548,8 @@
       .section-modal-box { max-height: 88vh; }
     }
   </style>
-<script src="/error-report.js?v=1"></script>
+<script src="/theme.js?v=1"></script>
+  <script src="/error-report.js?v=1"></script>
 </head>
 <body>
   <a href="#sectionsContainer" class="skip-link">Přeskočit na obsah</a>
@@ -560,10 +566,10 @@
       <h3>Poslední aktuality</h3>
       <div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>
     </div>
-    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div><div class="site-status" id="siteStatus" hidden></div> <a class="site-status" id="writeMe" href="/napis-mi" hidden>✉️ Napiš mi</a></div>
+    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div><div class="site-status" id="siteStatus" hidden></div><a class="pinned-card" id="pinnedCard" href="#" hidden></a> <a class="site-status" id="writeMe" href="/napis-mi" hidden>✉️ Napiš mi</a></div>
   </div>
   <div class="search-panel">
-    <input type="text" id="siteSearchInput" placeholder="🔍 Hledat v článcích…" autocomplete="off">
+    <input type="text" id="siteSearchInput" aria-label="Hledat v článcích" placeholder="🔍 Hledat v článcích…" autocomplete="off">
     <div class="search-filters" id="searchFilters" hidden>
       <select id="sfYear" aria-label="Filtr: rok"><option value="">Všechny roky</option></select>
       <select id="sfTag" aria-label="Filtr: štítek"><option value="">Všechny štítky</option></select>
@@ -628,6 +634,7 @@
        návštěvě stránky. -->
 
   <script src="/shared.js?v=20261003"></script>
+  <script src="/photo-speed.js?v=1"></script>
   <script src="/photo-stops.js?v=1"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
   <script>
@@ -1412,7 +1419,7 @@
             img.src = '/images/placeholder.jpg';
             img.onerror = function() { this.src = '/images/placeholder.jpg'; };
             loadSectionCover(sec.id).then(function(url) {
-              if (url) img.src = url;
+              if (url) PhotoSpeed.set(img, url);
             });
 
             var body = document.createElement('div');
@@ -1437,7 +1444,7 @@
           img.src = '/images/placeholder.jpg';
           img.onerror = function() { this.src = '/images/placeholder.jpg'; };
           loadSectionCover(sec.id).then(function(url) {
-            if (url) img.src = url;
+            if (url) PhotoSpeed.set(img, url);
           });
 
           var body = document.createElement('div');
@@ -1645,6 +1652,18 @@
   if (!el) return;
   fetch('/api/site/info').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
     if (j && j.messagesEnabled) { var w = document.getElementById('writeMe'); if (w) { w.hidden = false; w.style.textDecoration = 'none'; } }
+    if (j && j.pinnedId) {
+      fetch('/api/articles/list').then(function (r) { return r.ok ? r.json() : []; }).then(function (arr) {
+        if (!Array.isArray(arr)) return;
+        var a = arr.filter(function (x) { return x && x.id === j.pinnedId && !x.unlisted && x.published !== false; })[0];
+        var c = document.getElementById('pinnedCard'); if (!a || !c) return;
+        c.textContent = '';
+        var sm = document.createElement('small'); sm.textContent = '📌 Připnuto';
+        var st2 = document.createElement('strong'); st2.textContent = a.title || 'Článek';
+        c.appendChild(sm); c.appendChild(st2);
+        c.href = '/article?id=' + encodeURIComponent(a.id); c.hidden = false;
+      }).catch(function () {});
+    }
     var st = j && j.status; if (!st || !st.text) return;
     var age = Date.now() - (st.updated || 0), day = 86400000;
     if (age > 14 * day) return;

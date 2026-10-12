@@ -14,10 +14,27 @@
     return j.site;
   }
 
+  var pinnedWanted = '';
+  function fillPinned(id) {
+    pinnedWanted = id; var sel = $('sitePinned'); if (sel) sel.value = id;
+  }
+  async function loadArticles() {
+    var sel = $('sitePinned'); if (!sel) return;
+    try {
+      var r = await fetch('/api/articles/list'); if (!r.ok) return;
+      var arr = await r.json();
+      arr.filter(function (a) { return a && a.published !== false && !a.unlisted; }).slice(0, 80).forEach(function (a) {
+        var o = document.createElement('option'); o.value = a.id; o.textContent = (a.title || a.id).slice(0, 80); sel.appendChild(o);
+      });
+      sel.value = pinnedWanted;
+    } catch (e) {}
+  }
+
   function fill(site) {
     var st = site.status || {};
     $('siteStatusText').value = st.text || '';
     $('siteStatusEmoji').value = st.emoji || '';
+    fillPinned(site.pinnedId || '');
     $('siteMessages').checked = site.messagesEnabled === true;
     ['whatsapp', 'messenger', 'instagram', 'facebook'].forEach(function (k) { $('siteFollow_' + k).value = (site.follow && site.follow[k]) || ''; });
   }
@@ -40,6 +57,8 @@
       '<p style="color:var(--text-muted);font-size:13px;margin-bottom:.4rem">Jedna krátká věta, jak se dnes máš. Prázdné = nezobrazí se nic. Po 14 dnech se skryje sama.</p>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><select id="siteStatusEmoji"><option value="">—</option>' + EMOJIS.map(function (e) { return '<option>' + e + '</option>'; }).join('') + '</select>' +
       '<input type="text" id="siteStatusText" maxlength="140" placeholder="Dnes dobrý den, jdu na procházku" style="flex:1;min-width:200px"></div>' +
+      '<h4 style="margin:1rem 0 .4rem;font-size:14px">Připnutý článek (nahoře na úvodní stránce)</h4>' +
+      '<select id="sitePinned" aria-label="Připnutý článek" style="width:100%"><option value="">— žádný —</option></select>' +
       '<h4 style="margin:1rem 0 .4rem;font-size:14px">Soukromé zprávy („Napiš mi“)</h4>' +
       '<label style="font-size:13px"><input type="checkbox" id="siteMessages"> Zapnout veřejný formulář /napis-mi (zprávy uvidíš jen ty)</label>' +
       '<h4 style="margin:1rem 0 .4rem;font-size:14px">Odkazy „Sleduj blog“ (jen https://, prázdné se nezobrazí)</h4>' +
@@ -55,6 +74,7 @@
         var text = $('siteStatusText').value.trim();
         var site = await save({
           status: text ? { text: text, emoji: $('siteStatusEmoji').value } : null,
+          pinnedId: $('sitePinned').value,
           messagesEnabled: $('siteMessages').checked,
           follow: { whatsapp: $('siteFollow_whatsapp').value, messenger: $('siteFollow_messenger').value, instagram: $('siteFollow_instagram').value, facebook: $('siteFollow_facebook').value }
         });
@@ -62,7 +82,7 @@
       } catch (e) { toast('Nepovedlo se uložit: ' + e.message, 'error'); }
       b.disabled = false;
     };
-    load();
+    load(); loadArticles();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();

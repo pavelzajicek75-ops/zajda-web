@@ -6,6 +6,7 @@ export async function loadSite(env) {
   return {
     status: s.status && s.status.text ? s.status : null,
     messagesEnabled: s.messagesEnabled === true,
+    pinnedId: typeof s.pinnedId === 'string' && /^[\w-]{1,80}$/.test(s.pinnedId) ? s.pinnedId : '',
     follow: s.follow && typeof s.follow === 'object' ? s.follow : {}
   };
 }
