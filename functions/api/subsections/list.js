@@ -1,10 +1,11 @@
 import { edgeCached } from '../_edge-cache.js';
+import { listIndexed } from '../_kv-index.js';
 async function handleGet(context) {
   const { env } = context;
   const { searchParams } = new URL(request.url);
   const sectionId = searchParams.get('sectionId');
   
-  const list = await env.SUBSECTIONS.list({ prefix: 'subsection:' });
+  const list = await listIndexed(env.SUBSECTIONS, env.ARTICLES, 'subsection:', { tag: ':S' });
   const subsections = [];
   for (const key of list.keys) {
     const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });

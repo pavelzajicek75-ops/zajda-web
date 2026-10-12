@@ -4,7 +4,7 @@
   function $(id) { return document.getElementById(id); }
   function esc(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   var ICON = { ok: '✅', warn: '⚠️', fail: '❌' };
-  var PAGES = ['/', '/about', '/mapa', '/cesty', '/fotomapa', '/galerie', '/rok', '/nejctenejsi', '/temata', '/rss.xml', '/sitemap.xml', '/api/articles/list', '/api/quotes/public-list'];
+  var PAGES = ['/', '/about/', '/mapa', '/cesty', '/fotomapa', '/galerie', '/rok', '/nejctenejsi', '/temata', '/rss.xml', '/sitemap.xml', '/api/articles/list', '/api/quotes/public-list'];
 
   async function run() {
     var box = $('selftestResult');

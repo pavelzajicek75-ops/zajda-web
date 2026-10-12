@@ -22,7 +22,10 @@ export async function onRequestGet({ request, env }) {
   // 1) Bindingy a tajemství
   const need = [['ARTICLES', 'KV články'], ['SUBSECTIONS', 'KV sekce'], ['PHOTOS', 'KV fotky'], ['PHOTOS_R2', 'R2 fotky'], ['QUOTES_R2', 'R2 citáty a zálohy']];
   for (const [k, label] of need) add(label + ' (' + k + ')', env[k] ? 'ok' : 'fail', env[k] ? '' : 'Chybí binding v Cloudflare Pages → Settings → Functions.');
-  add('Přihlášení (JWT_SECRET)', env.JWT_SECRET ? 'ok' : 'fail', env.JWT_SECRET ? '' : 'Chybí proměnná JWT_SECRET.');
+  // Přihlášení bere tajný klíč z JWT_SECRET, a když chybí, z ADMIN_PASSWORD (viz _auth-utils.js).
+  if (env.JWT_SECRET) add('Přihlášení (JWT_SECRET)', 'ok');
+  else if (env.ADMIN_PASSWORD) add('Přihlášení', 'ok', 'používá se ADMIN_PASSWORD (funguje). Pro vyšší bezpečnost lze přidat zvláštní JWT_SECRET.');
+  else add('Přihlášení', 'fail', 'Chybí JWT_SECRET i ADMIN_PASSWORD.');
 
   // 2) Čtení KV + zdraví dat
   if (env.ARTICLES) {

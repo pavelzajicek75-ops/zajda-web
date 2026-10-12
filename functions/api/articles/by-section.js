@@ -1,6 +1,7 @@
 import { requireAdmin } from '../_auth-utils.js';
 import { applySchedule, isListed } from './_publish.js';
 import { edgeCached } from '../_edge-cache.js';
+import { listIndexed } from '../_kv-index.js';
 
 async function handleGet(context) {
   const { env, request } = context;
@@ -8,7 +9,7 @@ async function handleGet(context) {
   const sectionId = searchParams.get('sectionId');
   const subsectionId = searchParams.get('subsectionId');
   const isAdmin = !!(await requireAdmin(request, env));
-  const list = await env.ARTICLES.list({ prefix: 'article:' });
+  const list = await listIndexed(env.ARTICLES, env.ARTICLES, 'article:');
   const articles = [];
   for (const key of list.keys) {
     let data = await env.ARTICLES.get(key.name, { type: 'json' });

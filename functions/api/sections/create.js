@@ -4,6 +4,7 @@
 
 import { requireAdmin, json } from '../_auth-utils.js';
 import { loadSections, ensureSeeded, slugify, RESERVED_SECTION_IDS } from './_shared.js';
+import { invalidateIndex } from '../_kv-index.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -50,5 +51,6 @@ export async function onRequestPost(context) {
   };
 
   await env.SUBSECTIONS.put(`section:${id}`, JSON.stringify(section));
+  await invalidateIndex(env.ARTICLES, 'section:', ':S');
   return json(section);
 }

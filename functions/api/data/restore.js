@@ -9,6 +9,7 @@
 //         overwrite: boolean, types: ['articles', ...] (volitelně) }
 
 import { requireAdmin, json } from '../_auth-utils.js';
+import { invalidateIndex } from '../_kv-index.js';
 
 const MAX_WRITES = 900; // bezplatný plán KV: 1000 zápisů denně — nechávám rezervu
 const ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
@@ -88,6 +89,13 @@ export async function onRequestPost({ request, env }) {
   }
   for (const p of toWrite) {
     await env[p.kvName].put(p.key, JSON.stringify(p.value));
+  }
+  // Nové položky → obnov indexy klíčů (viz _kv-index.js).
+  if (toWrite.length && env.ARTICLES) {
+    await invalidateIndex(env.ARTICLES, 'article:');
+    await invalidateIndex(env.ARTICLES, 'timeline:');
+    await invalidateIndex(env.ARTICLES, 'section:', ':S');
+    await invalidateIndex(env.ARTICLES, 'subsection:', ':S');
   }
   return json({ ok: true, applied: true, summary, written: toWrite.length, skipped });
 }

@@ -1,4 +1,5 @@
 import { edgeCached } from '../_edge-cache.js';
+import { listIndexed } from '../_kv-index.js';
 // GET /api/timeline/list — vrátí všechny milníky, seřazené vzestupně
 // podle "order" (nejstarší/nejnižší první — timeline se čte
 // chronologicky odshora dolů, ne "nejnovější nahoře" jako u článků).
@@ -6,7 +7,7 @@ import { edgeCached } from '../_edge-cache.js';
 // jako záložní klíč použije datum, ať se nezačnou řadit nahodile.
 async function handleGet(context) {
   const { env } = context;
-  const list = await env.ARTICLES.list({ prefix: 'timeline:' });
+  const list = await listIndexed(env.ARTICLES, env.ARTICLES, 'timeline:');
   const milestones = [];
   for (const key of list.keys) {
     const data = await env.ARTICLES.get(key.name, { type: 'json' });

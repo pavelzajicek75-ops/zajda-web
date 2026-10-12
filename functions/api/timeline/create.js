@@ -3,6 +3,7 @@
 // úložiště (env.ARTICLES), jen s prefixem "timeline:" místo "article:",
 // ať nejsou milníky a články ve stejném seznamu smíchané.
 import { requireAdmin, json } from '../_auth-utils.js';
+import { invalidateIndex } from '../_kv-index.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -32,5 +33,6 @@ export async function onRequestPost(context) {
     created: Date.now()
   };
   await env.ARTICLES.put(`timeline:${id}`, JSON.stringify(milestone));
+  await invalidateIndex(env.ARTICLES, 'timeline:');
   return Response.json(milestone);
 }

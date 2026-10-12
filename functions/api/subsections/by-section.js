@@ -1,5 +1,6 @@
 import { jsonCached } from '../_auth-utils.js';
 import { edgeCached } from '../_edge-cache.js';
+import { listIndexed } from '../_kv-index.js';
 
 async function handleGet(context) {
   const { env, request } = context;
@@ -14,7 +15,7 @@ async function handleGet(context) {
 
   // Zkus samostatný KV namespace SUBSECTIONS
   if (env.SUBSECTIONS) {
-    const list = await env.SUBSECTIONS.list({ prefix: 'subsection:' });
+    const list = await listIndexed(env.SUBSECTIONS, env.ARTICLES, 'subsection:', { tag: ':S' });
     for (const key of list.keys) {
       const data = await env.SUBSECTIONS.get(key.name, { type: 'json' });
       if (data) {
@@ -26,7 +27,7 @@ async function handleGet(context) {
 
   // Fallback: zkus v ARTICLES namespace s prefixem subsection:
   if (!subs.length && env.ARTICLES) {
-    const list = await env.ARTICLES.list({ prefix: 'subsection:' });
+    const list = await listIndexed(env.ARTICLES, env.ARTICLES, 'subsection:', { tag: ':A', allowEmpty: true });
     for (const key of list.keys) {
       const data = await env.ARTICLES.get(key.name, { type: 'json' });
       if (data) {

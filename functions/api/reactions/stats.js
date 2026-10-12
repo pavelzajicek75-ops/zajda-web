@@ -10,6 +10,7 @@
 // interní přehled.
 
 import { requireAdmin, json } from '../_auth-utils.js';
+import { listIndexed } from '../_kv-index.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -23,7 +24,7 @@ export async function onRequestGet(context) {
   // --- Souhrn podle typu + nejpopulárnější článek (z aktuálních čítačů
   //     na záznamech článků — přesné aktuální stavy, žádné počítání
   //     historie tady není potřeba). ---
-  const articleList = await env.ARTICLES.list({ prefix: 'article:' });
+  const articleList = await listIndexed(env.ARTICLES, env.ARTICLES, 'article:');
   const articles = await Promise.all(
     articleList.keys.map(entry => env.ARTICLES.get(entry.name, { type: 'json' }))
   );

@@ -1,10 +1,11 @@
 import { edgeCached } from '../_edge-cache.js';
+import { listIndexed } from '../_kv-index.js';
 async function handleGet(context) {
   const { env } = context;
   const { searchParams } = new URL(context.request.url);
   const sectionId = searchParams.get('sectionId');
   const limit = parseInt(searchParams.get('limit')) || 6;
-  const list = await env.ARTICLES.list({ prefix: 'article:' });
+  const list = await listIndexed(env.ARTICLES, env.ARTICLES, 'article:');
   const articles = [];
   for (const k of list.keys) {
     const d = await env.ARTICLES.get(k.name, { type: 'json' });

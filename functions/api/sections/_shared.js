@@ -1,3 +1,4 @@
+import { listIndexed } from '../_kv-index.js';
 // functions/api/sections/_shared.js
 //
 // Sdílené věci pro správu HLAVNÍCH sekcí (Cestování / Fotografování / Projekty...).
@@ -34,7 +35,7 @@ export function slugify(str) {
  *  použití po nasazení téhle funkce), vrátí výchozí 3 sekce BEZ zápisu do KV
  *  — homepage tak funguje hned, bez nutnosti cokoliv ručně migrovat. */
 export async function loadSections(env) {
-  const list = await env.SUBSECTIONS.list({ prefix: 'section:' });
+  const list = await listIndexed(env.SUBSECTIONS, env.ARTICLES, 'section:', { tag: ':S' });
   if (!list.keys.length) {
     return DEFAULT_SECTIONS.map(s => ({ ...s }));
   }
