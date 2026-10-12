@@ -63,7 +63,7 @@ export async function onRequestPost({ request, env }) {
 
   let backups = await listBackups(r2);
   const due = !backups.length || Date.now() - backups[0].uploaded > WEEK;
-  let created = false, key = null;
+  let created = false, key = null, warnedAbout = null;
   if (due || body.force === true) {
     let data;
     try { data = await collectBackup(env); }
@@ -71,11 +71,12 @@ export async function onRequestPost({ request, env }) {
     key = PREFIX + 'zajda-zaloha-' + new Date().toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, 'Z') + '.json';
     await r2.put(key, JSON.stringify(data), { httpMetadata: { contentType: 'application/json' } });
     created = true;
+    warnedAbout = data.warnings;
     backups = await listBackups(r2);
   }
   // rotace
   const extra = backups.slice(keep);
   for (const b of extra) await r2.delete(b.key);
   if (extra.length) backups = backups.slice(0, keep);
-  return json({ created, key, backups, keep, due: false });
+  return json({ created, key, backups, keep, due: false, warnings: warnedAbout || undefined });
 }

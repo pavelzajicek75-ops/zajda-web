@@ -70,9 +70,10 @@
   async function auto() {
     try {
       var j = await post({});
-      if (j.created) toast('💾 Týdenní záloha vytvořena', 'success');
+      if (j.created) toast('💾 Týdenní záloha vytvořena' + (j.warnings && j.warnings.length ? ' (upozornění: ' + j.warnings.length + ' — viz konzole)' : ''), j.warnings && j.warnings.length ? 'info' : 'success');
+      if (j.warnings && j.warnings.length) console.warn('Záloha:', j.warnings);
       render(j);
-    } catch (e) { /* nepřihlášen / offline — ticho */ }
+    } catch (e) { if (e && e.status && e.status !== 401) toast('Automatická záloha selhala: ' + e.message, 'error'); /* nepřihlášen / offline — ticho */ }
   }
 
   function mount() {
