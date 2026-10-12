@@ -20,7 +20,7 @@
     if (!box) return;
     box.innerHTML = (j.backups.length ? j.backups.map(function (b) {
       return '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--border-soft,#263252);padding:6px 0;font-size:13px">' +
-        '<span style="flex:1;min-width:150px">' + fmt(b.uploaded) + ' <span style="color:var(--text-muted)">· ' + size(b.size) + '</span></span>' +
+        '<span style="flex:1;min-width:150px">' + fmt(b.uploaded) + ' <span style="color:var(--text-muted)">· ' + size(b.size) + (b.counts ? ' · ' + b.counts.a + ' článků, ' + b.counts.t + ' milníků, ' + b.counts.s + ' sekcí, ' + b.counts.u + ' podsekcí, ' + b.counts.q + ' citátů' : '') + '</span></span>' +
         '<button class="btn btn-sm" data-act="dl" data-key="' + esc(b.key) + '">⬇️ Stáhnout</button> ' +
         '<button class="btn btn-sm" data-act="restore" data-key="' + esc(b.key) + '">♻️ Obnovit z této</button></div>';
     }).join('') : '<p style="font-size:13px;color:var(--text-muted)">Zatím žádná záloha.</p>');

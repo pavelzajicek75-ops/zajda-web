@@ -20,7 +20,7 @@ export async function onRequestGet(context) {
 
   let backup;
   try {
-    backup = await collectBackup(env);
+    backup = await collectBackup(env, { fresh: true });
   } catch (e) {
     return json({ error: 'Záloha se nepodařila: ' + (e && e.message ? e.message : String(e)) }, 500);
   }

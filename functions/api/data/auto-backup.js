@@ -24,10 +24,10 @@ async function getKeep(r2) {
 }
 
 async function listBackups(r2) {
-  const l = await r2.list({ prefix: PREFIX });
+  const l = await r2.list({ prefix: PREFIX, include: ['customMetadata'] });
   return l.objects
     .filter(o => KEY_RE.test(o.key))
-    .map(o => ({ key: o.key, size: o.size, uploaded: new Date(o.uploaded).getTime() }))
+    .map(o => { let counts = null; try { counts = o.customMetadata && o.customMetadata.counts ? JSON.parse(o.customMetadata.counts) : null; } catch (e) {} return { key: o.key, size: o.size, uploaded: new Date(o.uploaded).getTime(), counts }; })
     .sort((a, b) => b.uploaded - a.uploaded);
 }
 
@@ -66,10 +66,11 @@ export async function onRequestPost({ request, env }) {
   let created = false, key = null, warnedAbout = null;
   if (due || body.force === true) {
     let data;
-    try { data = await collectBackup(env); }
+    try { data = await collectBackup(env, { fresh: body.force === true }); }
     catch (e) { return json({ error: 'Záloha se nepodařila: ' + (e && e.message ? e.message : String(e)) }, 500); }
     key = PREFIX + 'zajda-zaloha-' + new Date().toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, 'Z') + '.json';
-    await r2.put(key, JSON.stringify(data), { httpMetadata: { contentType: 'application/json' } });
+    const counts = { a: (data.articles || []).length, t: (data.timeline || []).length, s: (data.sections || []).length, u: (data.subsections || []).length, g: (data.galleries || []).length, q: (data.quotes || []).length };
+    await r2.put(key, JSON.stringify(data), { httpMetadata: { contentType: 'application/json' }, customMetadata: { counts: JSON.stringify(counts) } });
     created = true;
     warnedAbout = data.warnings;
     backups = await listBackups(r2);
