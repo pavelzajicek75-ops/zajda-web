@@ -5,7 +5,7 @@
   'use strict';
   var LAYOUT = {
     adminBoxes: ['siteBox', 'commentsBox', 'messagesBox', 'ideasBox', 'featuredBox', 'shareBox'],
-    overviewBoxes: ['trafficBox', 'weeklyBox', 'moodBox'],
+    overviewBoxes: ['kvMetricsBox', 'trafficBox', 'weeklyBox', 'moodBox'],
     toolsBoxes: ['selftestBox', 'autoBackupBox', 'restoreBox', 'linkcheckBox', 'thumbsBox', 'geoFillBox', 'errorsBox']
   };
 
