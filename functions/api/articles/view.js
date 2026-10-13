@@ -13,6 +13,7 @@
 // řešit přes Durable Objects nebo Cloudflare Analytics Engine.
 
 import { refLabel, addRef } from './_ref.js';
+import { sampleFactor } from '../_kv-budget.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -27,23 +28,28 @@ export async function onRequestPost(context) {
   }
   if (!id) return Response.json({ error: 'Chybí id' }, { status: 400 });
 
+  // Šetření zápisů: při vysoké dnešní spotřebě se zapíše jen každé k-té zobrazení (s váhou k).
+  const k = await sampleFactor(context);
+  if (k > 1 && Math.random() >= 1 / k) return Response.json({ sampled: true });
+
   const key = `article:${id}`;
   const existing = await env.ARTICLES.get(key, { type: 'json' });
   if (!existing) return Response.json({ error: 'Nenalezeno' }, { status: 404 });
 
-  const views = (existing.views || 0) + 1;
+  const views = (existing.views || 0) + k;
   // Týdenní počítadla (viewsByWeek) jsou ve STEJNÉM záznamu a ve stejném
   // zápisu jako celkový počet — nestojí žádný další zápis do KV navíc.
   // Drží se jen posledních 26 týdnů, ať záznam neroste donekonečna.
   const week = isoWeekKey(new Date());
   const byWeek = { ...(existing.viewsByWeek || {}) };
-  byWeek[week] = (byWeek[week] || 0) + 1;
+  byWeek[week] = (byWeek[week] || 0) + k;
   const keys = Object.keys(byWeek).sort();
   while (keys.length > 26) delete byWeek[keys.shift()];
   // Zdroj návštěvy (Google, WhatsApp…) — do stejného záznamu a stejného zápisu, žádný zápis navíc.
   let ownHost = '';
   try { ownHost = new URL(request.url).hostname.toLowerCase().replace(/^www\./, ''); } catch {}
-  const refs = addRef(existing.refs, refLabel(ref, ownHost));
+  let refs = existing.refs;
+  for (let i = 0; i < k; i++) refs = addRef(refs, refLabel(ref, ownHost));
   const updated = { ...existing, views, viewsByWeek: byWeek, refs };
   await env.ARTICLES.put(key, JSON.stringify(updated));
 

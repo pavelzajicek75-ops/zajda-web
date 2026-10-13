@@ -68,6 +68,12 @@
         <button type="button" id="copyRss">📋 <span>Zkopírovat adresu RSS<small id="copyMsg"></small></span></button>
       </div>
     </div>
+    <div class="block" id="pushBlock">
+      <h2>🔔 Upozornění na nové články</h2>
+      <p class="hint" id="pushHint">Když vyjde nový článek, ozve se ti telefon nebo počítač. Bez e-mailu a bez účtu — kdykoli to můžeš vypnout.</p>
+      <div class="fol"><button type="button" id="pushBtn" hidden>🔔 <span>Upozornit mě na nové články</span></button></div>
+      <p class="hint" id="pushMsg" role="status"></p>
+    </div>
     <div class="block" id="installBlock">
       <h2>📲 Přidat na plochu</h2>
       <p class="hint" id="installHint">Blog se pak otevírá jako aplikace a funguje i bez signálu u článků, které sis uložil.</p>
@@ -75,6 +81,7 @@
     </div>
   </main>
   <script src="/shared.js?v=20261010"></script>
+  <script src="/push-subscribe.js?v=1"></script>
   <script>
   document.addEventListener('DOMContentLoaded', async function () {
     if (typeof initStarfield === 'function') initStarfield(120);
@@ -95,6 +102,7 @@
         fol.insertBefore(a, fol.firstChild);
       });
     } catch (e) {}
+    if (window.PushSub) window.PushSub.mount(document.getElementById('pushBtn'), document.getElementById('pushMsg'));
     // Přidání na plochu
     var standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
     var hint = document.getElementById('installHint'), btn = document.getElementById('installBtn'), deferred = null;

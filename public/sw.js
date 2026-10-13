@@ -31,7 +31,7 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v23';
+const SW_VERSION = 'v24';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
 // Články uložené čtenářem „na offline“ (offline-save.js). Jméno je bez verze,
@@ -44,7 +44,7 @@ const SHARE_CACHE = 'zajda-share-inbox';
 // se v HTML načítají s "?v=YYYYMMDD" (cache-busting). Když se některý z
 // těchto souborů příště změní, zvyš datum v HTML tagách (a klidně i tady
 // dole) — jinak zůstanou tyhle přesné URL v cache navždy (cache-first).
-const ASSET_VERSION = '20261020';
+const ASSET_VERSION = '20261021';
 
 const SHELL_URLS = [
   '/',
@@ -208,3 +208,34 @@ async function staleWhileRevalidate(request, cacheName) {
     .catch(function () { return cached || offlineMatch(request); });
   return cached || fetchPromise;
 }
+
+
+/* === OZNÁMENÍ O NOVÉM ČLÁNKU (Web Push) ===
+   Server posílá jen „klepnutí“ bez obsahu; titulek a odkaz si stáhneme z /api/push/latest.
+   Prohlížeč vyžaduje, aby se po každém push zobrazilo oznámení — proto záložní text. */
+self.addEventListener('push', function (event) {
+  event.waitUntil(
+    fetch('/api/push/latest', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : {}; })
+      .catch(function () { return {}; })
+      .then(function (d) {
+        return self.registration.showNotification(d.title || 'Nový článek na blogu', {
+          body: d.title ? 'Zajda napsal nový článek' : 'Podívej se, co je nového',
+          icon: '/icon-192.png',
+          tag: 'zajda-new-article',
+          data: { url: d.url || '/' }
+        });
+      })
+  );
+});
+
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+      for (const c of list) { if (c.url === target && 'focus' in c) return c.focus(); }
+      return self.clients.openWindow(target);
+    })
+  );
+});

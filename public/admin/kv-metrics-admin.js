@@ -13,6 +13,28 @@
       '<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden"><div style="height:100%;width:' + pct + '%;background:' + color + '"></div></div></div>';
   }
 
+  // Varování: oranžový odznak na záložce Přehledy a jednorázová hláška, když je spotřeba ≥ 70 %.
+  function warn(t, L) {
+    var worst = null, pct = 0;
+    ['write', 'list', 'delete', 'read'].forEach(function (k) { var p = L[k] ? t[k] / L[k] : 0; if (p > pct) { pct = p; worst = k; } });
+    var tab = document.querySelector('button.ribbon-tab[data-tab="overview"]');
+    if (tab) {
+      var old = tab.querySelector('.kv-badge'); if (old) old.remove();
+      if (pct >= 0.7) {
+        var b = document.createElement('span'); b.className = 'kv-badge'; b.textContent = Math.round(pct * 100) + ' %';
+        b.title = 'Spotřeba KV: ' + LABELS[worst]; b.style.cssText = 'background:' + (pct >= 0.9 ? '#ef4444' : '#f59e0b') + ';color:#000;border-radius:10px;padding:0 6px;margin-left:6px;font-size:11px;font-weight:700';
+        tab.appendChild(b);
+      }
+    }
+    if (pct >= 0.7) {
+      var seen = false; try { seen = sessionStorage.getItem('kv-warned') === '1'; } catch (e) {}
+      if (!seen && typeof showToast === 'function') {
+        showToast('⚠️ KV: ' + LABELS[worst] + ' už je na ' + Math.round(pct * 100) + ' % denního limitu', 'info');
+        try { sessionStorage.setItem('kv-warned', '1'); } catch (e) {}
+      }
+    }
+  }
+
   function render(j) {
     var out = $('kvMetricsOut');
     if (j.configured === false) {
@@ -25,6 +47,7 @@
     }
     if (j.error) { out.innerHTML = '<p style="color:#ef4444;font-size:13px">⚠️ ' + esc(j.error) + '</p>'; return; }
     var t = j.today, L = j.limits;
+    warn(t, L);
     var html = '<p style="font-size:12.5px;color:var(--text-muted);margin:0 0 .3rem">Dnešek (UTC den — o půlnoci UTC, tj. 2:00 letního / 1:00 zimního času, se limity nulují)</p>' +
       ['read', 'write', 'list', 'delete'].map(function (k) { return bar(LABELS[k], t[k], L[k]); }).join('');
     html += '<table class="data-table" style="margin-top:.8rem;font-size:12.5px"><thead><tr><th>Den</th><th>Čtení</th><th>Zápisy</th><th>Výpisy</th><th>Mazání</th></tr></thead><tbody>' +
@@ -59,6 +82,6 @@
     host.appendChild(box); $('kvMetricsBtn').onclick = load;
     load();
   }
-  window.KvMetrics = { render: render };
+  window.KvMetrics = { render: render, warn: warn };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
 })();

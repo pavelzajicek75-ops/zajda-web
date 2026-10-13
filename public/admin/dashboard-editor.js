@@ -2552,6 +2552,7 @@ async function createArticle() {
     place: $('artPlace')?.value || '',
     ...readArticleStatus()
   };
+  if (typeof confirmPrePublish === 'function' && !(await confirmPrePublish(payload))) return;
   let created = null;
   try {
     const r = await fetch('/api/articles/create', {
@@ -2601,6 +2602,7 @@ async function updateArticle() {
     place: $('artPlace')?.value || '',
     ...readArticleStatus()
   };
+  if (typeof confirmPrePublish === 'function' && !(await confirmPrePublish(payload))) return;
   try {
     const r = await fetch('/api/articles/update', {
       method: 'PUT',

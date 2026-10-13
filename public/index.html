@@ -263,6 +263,7 @@
       transition: border-color 0.25s ease;
     }
     .search-panel input:focus { border-color: var(--panel-border-hover); }
+    .new-badge { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; color: #08080f; background: var(--nova); vertical-align: middle; }
     .search-snippet { display: block; font-size: 12.5px; opacity: .8; margin-top: 2px; }
     .search-snippet mark { background: rgba(255,122,69,.3); color: inherit; border-radius: 3px; padding: 0 2px; }
     .search-panel input::placeholder { color: var(--mist-dim); }
@@ -637,6 +638,19 @@
 
   <script src="/shared.js?v=20261003"></script>
   <script src="/photo-speed.js?v=1"></script>
+  <script>
+  /* „Nové od poslední návštěvy“ — jen v prohlížeči čtenáře (localStorage), žádné zápisy na server. */
+  (function () {
+    var prev = 0;
+    try {
+      var s = sessionStorage.getItem('prevVisit');
+      if (s === null) { prev = Number(localStorage.getItem('lastVisit')) || 0; sessionStorage.setItem('prevVisit', String(prev)); }
+      else prev = Number(s) || 0;
+      localStorage.setItem('lastVisit', String(Date.now()));
+    } catch (e) {}
+    window.isNewArticle = function (a) { return !!(prev && a && Number(a.created) > prev); };
+  })();
+  </script>
   <script src="/photo-stops.js?v=1"></script>
   <script src="/travel-map-core.js?v=20261010"></script>
   <script>
@@ -832,7 +846,7 @@
         var dateStr = formatDate(date);
         var breadcrumb = await getArticleBreadcrumb(a);
         var meta = [breadcrumb, dateStr].filter(Boolean).join(' • ');
-        var pinTag = a.pinned ? '<span class="pinned-badge">📌 Top</span>' : '';
+        var pinTag = (a.pinned ? '<span class="pinned-badge">📌 Top</span>' : '') + (window.isNewArticle && window.isNewArticle(a) ? '<span class="new-badge">NOVÉ</span>' : '');
         html += '<a class="latest-item" href="/article?id=' + encodeURIComponent(artId) + '">' + escapeHtml(title) + pinTag + '<small>' + escapeHtml(meta) + '</small></a>';
       }
       // Třetí řádek: "Před rokem" / "Z archivu" (viz memory-card.js).
@@ -956,7 +970,7 @@
         var excerpt = a.excerpt
           ? a.excerpt
           : (a.content ? a.content.replace(/<[^>]+>/g, '').substring(0, 60) + '...' : '');
-        var pinTag = a.pinned ? '<span class="pinned-badge">📌</span>' : '';
+        var pinTag = (a.pinned ? '<span class="pinned-badge">📌</span>' : '') + (window.isNewArticle && window.isNewArticle(a) ? '<span class="new-badge">NOVÉ</span>' : '');
         html += '<a class="article-link" href="/article?id=' + encodeURIComponent(artId) + '">' +
           '<span class="art-title">' + escapeHtml(title) + pinTag + '</span>' +
           (dateStr ? '<span class="art-date">' + escapeHtml(dateStr) + '</span>' : '') +

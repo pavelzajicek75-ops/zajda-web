@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   var LAYOUT = {
-    adminBoxes: ['siteBox', 'commentsBox', 'messagesBox', 'ideasBox', 'featuredBox', 'shareBox'],
+    adminBoxes: ['siteBox', 'commentsBox', 'messagesBox', 'ideasBox', 'featuredBox', 'pushBox', 'shareBox'],
     overviewBoxes: ['kvMetricsBox', 'trafficBox', 'weeklyBox', 'moodBox'],
     toolsBoxes: ['selftestBox', 'autoBackupBox', 'restoreBox', 'linkcheckBox', 'thumbsBox', 'geoFillBox', 'errorsBox']
   };
