@@ -1,10 +1,14 @@
 // GET /api/admin/kv-metrics — admin. Skutečná spotřeba Workers KV z Cloudflare GraphQL Analytics:
 // kolik čtení / zápisů / výpisů (list) / mazání proběhlo dnes (UTC den, jako počítá Cloudflare) a za posledních 7 dní.
 // Potřebuje v nastavení Pages (Variables and Secrets) dvě proměnné:
-//   CF_ACCOUNT_ID  — ID účtu (Cloudflare dashboard → Workers & Pages → vpravo „Account ID“)
-//   CF_API_TOKEN   — API token s oprávněním Account → Account Analytics → Read
+//   CF_ACCOUNT_ID_KV (nebo CF_ACCOUNT_ID)  — ID účtu (Cloudflare dashboard → Workers & Pages → vpravo „Account ID“)
+//   CF_API_TOKEN (nebo CF_API_TOKEN_KV)   — API token s oprávněním Account → Account Analytics → Read
 //                    (volitelně i Workers KV Storage → Read, pak se ukážou názvy namespaců)
 import { requireAdmin, json } from '../_auth-utils.js';
+
+// Názvy proměnných: přijímá i varianty s příponou _KV (CF_ACCOUNT_ID_KV, CF_API_TOKEN_KV).
+function cfAccount(env) { return env.CF_ACCOUNT_ID_KV || env.CF_ACCOUNT_ID || ''; }
+function cfToken(env) { return env.CF_API_TOKEN_KV || env.CF_API_TOKEN || ''; }
 
 const LIMITS = { read: 100000, write: 1000, list: 1000, delete: 1000 };
 const ACTION_MAP = { read: 'read', write: 'write', list: 'list', delete: 'delete' };
@@ -13,8 +17,9 @@ function isoDay(d) { return d.toISOString().slice(0, 10); }
 
 export async function onRequestGet({ request, env }) {
   if (!(await requireAdmin(request, env))) return json({ error: 'Unauthorized' }, 401);
-  if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) {
-    return json({ configured: false, limits: LIMITS, missing: [!env.CF_ACCOUNT_ID && 'CF_ACCOUNT_ID', !env.CF_API_TOKEN && 'CF_API_TOKEN'].filter(Boolean) });
+  const ACCOUNT = cfAccount(env), TOKEN = cfToken(env);
+  if (!ACCOUNT || !TOKEN) {
+    return json({ configured: false, limits: LIMITS, missing: [!ACCOUNT && 'CF_ACCOUNT_ID_KV', !TOKEN && 'CF_API_TOKEN'].filter(Boolean) });
   }
   const today = new Date();
   const from = new Date(today.getTime() - 6 * 86400000);
@@ -30,8 +35,8 @@ export async function onRequestGet({ request, env }) {
   try {
     const r = await fetch('https://api.cloudflare.com/client/v4/graphql', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + env.CF_API_TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables: { account: env.CF_ACCOUNT_ID, from: isoDay(from), to: isoDay(today) } })
+      headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { account: ACCOUNT, from: isoDay(from), to: isoDay(today) } })
     });
     data = await r.json();
     if (!r.ok || (data.errors && data.errors.length)) {
@@ -61,7 +66,7 @@ export async function onRequestGet({ request, env }) {
   // Názvy namespaců (volitelné — vyžaduje oprávnění Workers KV Storage: Read).
   const names = {};
   try {
-    const nr = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/storage/kv/namespaces?per_page=100`, { headers: { 'Authorization': 'Bearer ' + env.CF_API_TOKEN } });
+    const nr = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/storage/kv/namespaces?per_page=100`, { headers: { 'Authorization': 'Bearer ' + TOKEN } });
     if (nr.ok) for (const n of ((await nr.json()).result || [])) names[n.id] = n.title;
   } catch (e) { /* bez názvů */ }
 

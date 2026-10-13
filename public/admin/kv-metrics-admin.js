@@ -19,7 +19,7 @@
       out.innerHTML = '<p style="font-size:13px;line-height:1.6">Ještě to není zapojené do Cloudflare. Je to jednorázové (3 minuty):</p><ol style="font-size:13px;line-height:1.7;margin:.3rem 0 0 1.2rem">' +
         '<li>Cloudflare → <b>Workers &amp; Pages</b> → vpravo najdi <b>Account ID</b> a zkopíruj ho.</li>' +
         '<li>Cloudflare → ikona profilu → <b>My Profile → API Tokens → Create Token → Create Custom Token</b>. Oprávnění: <b>Account → Account Analytics → Read</b> (a pro názvy namespaců ještě <b>Account → Workers KV Storage → Read</b>). Ulož a zkopíruj token.</li>' +
-        '<li>Pages projekt → <b>Settings → Variables and Secrets</b> → přidej <code>CF_ACCOUNT_ID</code> a <code>CF_API_TOKEN</code> (token jako <i>Secret</i>) → nasaď znovu.</li></ol>' +
+        '<li>Pages projekt → <b>Settings → Variables and Secrets</b> → přidej <code>CF_ACCOUNT_ID_KV</code> a <code>CF_API_TOKEN</code> (jako Secret) (token jako <i>Secret</i>) → nasaď znovu.</li></ol>' +
         '<p style="font-size:12px;color:var(--text-muted);margin-top:.4rem">Chybí: ' + esc((j.missing || []).join(', ')) + '</p>';
       return;
     }
