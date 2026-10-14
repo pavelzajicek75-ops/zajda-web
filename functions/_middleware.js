@@ -4,7 +4,23 @@
 // Nezapočítává interní dashboard volání (/api/admin/, /api/verify).
 // Zapisuje ~20% requestů, přičítá +5 — 5x méně zápisů do KV.
 
+// Bezpečnostní hlavičky i pro stránky, které generuje server (úvod, článek, …) —
+// soubor public/_headers se na odpovědi z funkcí nevztahuje.
+function secure(res) {
+  try {
+    const h = new Headers(res.headers);
+    if (!h.has('X-Content-Type-Options')) h.set('X-Content-Type-Options', 'nosniff');
+    if (!h.has('X-Frame-Options')) h.set('X-Frame-Options', 'SAMEORIGIN');
+    if (!h.has('Referrer-Policy')) h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+  } catch (e) { return res; }
+}
+
 export async function onRequest(context) {
+  return secure(await inner(context));
+}
+
+async function inner(context) {
   const { request, env, next } = context;
 
   const url = new URL(request.url);

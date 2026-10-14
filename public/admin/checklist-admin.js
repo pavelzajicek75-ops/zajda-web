@@ -41,7 +41,7 @@
       }],
       ['s4', 'Bezpečnostní hlavičky jsou nastavené', async function () {
         var r = await fetch('/', { cache: 'no-store' });
-        return (r.headers.get('x-content-type-options') === 'nosniff') ? ok() : bad('Chybí soubor _headers (nahraj složku public).');
+        return (r.headers.get('x-content-type-options') === 'nosniff') ? ok() : bad('Chybí hlavičky — nahraj funkce (functions/_middleware.js) a public/_headers.');
       }],
       ['s5', 'Diagnostika serveru nehlásí chybu', async function () {
         var x = await jget('/api/admin/selftest'); if (!x.r.ok) return bad('HTTP ' + x.r.status);
@@ -75,7 +75,7 @@
       }],
       ['w6', 'Sdílecí obrázek v „Rok“ je nasazený', async function () {
         var a = await text('/share-card.js'), b = await text('/rok.html');
-        return (a.ok && b.t.indexOf('share-card') > -1) ? ok() : bad('Chybí share-card.js nebo rok.html');
+        return (a.ok && b.t.indexOf("createElement('canvas')") > -1) ? ok() : bad('Chybí share-card.js nebo sdílení v rok.html');
       }]
     ]],
     ['🛠️ Admin', [
