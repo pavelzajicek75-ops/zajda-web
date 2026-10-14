@@ -34,7 +34,7 @@
         ITEMS.map(function (t, i) { return '<label style="display:flex;gap:8px;align-items:flex-start;margin:.3rem 0;cursor:pointer"><input type="checkbox" data-i="' + i + '"' + (st[i] ? ' checked' : '') + ' style="margin-top:4px"><span' + (st[i] ? ' style="opacity:.55;text-decoration:line-through"' : '') + '>' + t.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span></label>'; }).join('') +
         '<button class="btn btn-sm" id="chkReset" style="margin-top:.6rem">Začít znovu</button>';
       box.querySelectorAll('input[type=checkbox]').forEach(function (c) { c.onchange = function () { st[c.dataset.i] = c.checked; save(st); paint(); }; });
-      box.querySelector('#chkReset').onclick = function () { st = {}; save(st); paint(); };
+      box.querySelector('#chkReset').onclick = function () { st = {}; save(st); paint(); if (typeof showToast === 'function') showToast('Seznam vynulován', 'info'); };
     }
     paint(); host.appendChild(box);
   }

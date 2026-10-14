@@ -27,7 +27,7 @@
       b.onclick = async function () { b.disabled = true; try { await clear(b.dataset.id); items = items.filter(function (x) { return x.id !== b.dataset.id; }); render(); } catch (e) { toast('Nepovedlo se: ' + e.message, 'error'); b.disabled = false; } };
     });
     var all = $('errorsClearAll');
-    if (all) all.onclick = async function () { if (!confirm('Smazat všechna hlášení?')) return; try { await clear(); items = []; render(); } catch (e) { toast('Nepovedlo se: ' + e.message, 'error'); } };
+    if (all) all.onclick = async function () { var ok = typeof showConfirm === 'function' ? await showConfirm('Smazat všechna hlášení?', { confirmText: 'Smazat', cancelText: 'Zrušit' }) : true; if (!ok) return; try { await clear(); items = []; render(); toast('Hlášení smazána', 'success'); } catch (e) { toast('Nepovedlo se: ' + e.message, 'error'); } };
   }
 
   async function load(silent) {
@@ -36,6 +36,7 @@
       if (!r.ok) { if (!silent) toast('Chyby se nepodařilo načíst (HTTP ' + r.status + ')', 'error'); return; }
       items = (await r.json()).items || [];
       render();
+      if (!silent) toast(items.length ? 'Načteno: ' + items.length + ' hlášených chyb' : 'Žádné hlášené chyby 🎉', 'info');
       if (silent && items.length) {
         var seen = false; try { seen = sessionStorage.getItem('err-notified') === '1'; } catch (e) {}
         if (!seen) { toast('🐞 Je tu ' + items.length + ' hlášených chyb webu (Admin → Hlášené chyby)', 'info'); try { sessionStorage.setItem('err-notified', '1'); } catch (e) {} }
