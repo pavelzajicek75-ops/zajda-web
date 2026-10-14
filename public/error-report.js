@@ -8,7 +8,7 @@
     try {
       if (sent >= 3) return;
       message = String(message || '').slice(0, 300);
-      if (!message || /^Script error\.?$/i.test(message) || /ResizeObserver loop/i.test(message)) return;
+      if (!message || /^Script error\.?$/i.test(message) || /ResizeObserver loop/i.test(message) || /view transition|Transition was aborted|Transition was skipped/i.test(message)) return;
       var sig = message + '|' + where;
       if (seen[sig]) return; seen[sig] = 1; sent++;
       var body = JSON.stringify({ message: message, where: String(where || '').slice(0, 200), page: location.pathname + location.search.replace(/[?&]k=[^&]*/g, '') });
