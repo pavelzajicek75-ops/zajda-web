@@ -5,9 +5,14 @@
 // stejně jako dřív. Žádný env.SESSIONS.put() → žádný KV limit.
 
 import { hashPassword, signJWT } from '../_auth-utils.js';
+import { isLimited, record } from '../_ratelimit.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  if (isLimited('login', request, 8, 15 * 60 * 1000)) {
+    return Response.json({ error: 'Příliš mnoho pokusů. Zkus to za chvíli.' }, { status: 429 });
+  }
 
   try {
     const { username, password } = await request.json();
@@ -43,6 +48,7 @@ export async function onRequestPost(context) {
     }
 
     if (!authedUser) {
+      record('login', request, 15 * 60 * 1000);
       return Response.json({ error: 'Špatné přihlašovací údaje' }, { status: 401 });
     }
 

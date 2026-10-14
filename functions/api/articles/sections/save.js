@@ -1,7 +1,4 @@
-// /functions/api/articles/sections/save.js
-export async function onRequestPost() {
-  return new Response(JSON.stringify({ success: true }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" }
-  });
+// Vyřazený starý koncový bod. Dřív byl bez přihlášení; nahrazen novými (s ověřením) v api/*.
+export async function onRequest() {
+  return new Response(JSON.stringify({ error: 'Gone' }), { status: 410, headers: { 'Content-Type': 'application/json' } });
 }

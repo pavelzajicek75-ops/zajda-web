@@ -1,4 +1,5 @@
 import { applySchedule, isListed } from '../articles/_publish.js';
+import { notifyAdmin } from '../push/_push.js';
 import { loadPending, savePending, clean, MAX_PENDING } from './_shared.js';
 
 // Jednoduchý limit v paměti (bez zápisů do KV): 3 komentáře / 10 min / IP.
@@ -14,7 +15,7 @@ function tooMany(ip) {
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil, ...ctx }) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Neplatný požadavek' }, 400); }
 
@@ -45,5 +46,7 @@ export async function onRequestPost({ request, env }) {
     name, text, created: Date.now()
   });
   await savePending(env, pending);
+  const job = notifyAdmin(env, 'comment', new URL(request.url).origin);
+  if (typeof waitUntil === 'function') waitUntil(job); else await job;
   return json({ ok: true, pending: true });
 }

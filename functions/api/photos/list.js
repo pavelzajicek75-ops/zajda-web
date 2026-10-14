@@ -1,5 +1,7 @@
+import { requireAdmin, json as _json } from '../_auth-utils.js';
 export async function onRequestGet(context) {
   const { env } = context;
+  if (!(await requireAdmin(context.request, env))) return _json({ error: 'Unauthorized' }, 401);
   const { searchParams } = new URL(context.request.url);
   const galleryId = searchParams.get('galleryId') || 'main';
   const prefix = `gallery-${galleryId}/`;

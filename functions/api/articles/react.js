@@ -1,3 +1,4 @@
+import { hit } from '../_ratelimit.js';
 // /functions/api/articles/react.js
 //
 // Vtipné reakce na článek (místo obyčejného srdíčka) — 🚀🐰😂🤯🥹. Každá
@@ -11,6 +12,7 @@
 const ALLOWED_EMOJI = ['rocket', 'bunny', 'laugh', 'mindblown', 'touched'];
 
 export async function onRequestPost(context) {
+  if (hit('react', context.request, 30)) return new Response(JSON.stringify({ error: 'Moc rychle, zkus to za chvíli.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
   const { request, env } = context;
 
   let id, emoji, action;

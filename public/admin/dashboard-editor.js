@@ -2576,6 +2576,9 @@ async function createArticle() {
   // ID vrácené rovnou z /api/articles/create.
   const realArticle = (window._articlesCache || []).find(a => a.slug === payload.slug)
     || (created?.id ? { ...payload, id: created.id } : null);
+  if (realArticle && payload.published && !payload.unlisted && !payload.publishAt && typeof offerReaderPush === 'function') {
+    await offerReaderPush(realArticle.id, realArticle.title);
+  }
   if (realArticle) {
     const shouldShare = await showConfirm('Chceš rovnou poslat odkaz na nový článek?', { confirmText: 'Sdílet odkaz', cancelText: 'Teď ne' });
     if (shouldShare) openShareModal(realArticle);
@@ -2630,6 +2633,10 @@ async function publishArticle(id) {
     });
     if (!r.ok) throw new Error('Chyba publikování');
     loadArticles();
+    if (typeof offerReaderPush === 'function') {
+      const art = (window._articlesCache || []).find(a => a.id === id);
+      if (!art || !art.unlisted) await offerReaderPush(id, art && art.title);
+    }
   } catch (e) {
     showToast('Nepodařilo se publikovat článek', 'error');
     console.error(e);

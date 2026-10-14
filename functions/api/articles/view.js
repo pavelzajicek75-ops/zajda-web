@@ -1,3 +1,4 @@
+import { hit } from '../_ratelimit.js';
 // /functions/api/articles/view.js
 //
 // Zaznamená jedno zobrazení článku. Volá se z veřejné stránky článku
@@ -16,6 +17,7 @@ import { refLabel, addRef } from './_ref.js';
 import { sampleFactor } from '../_kv-budget.js';
 
 export async function onRequestPost(context) {
+  if (hit('view', context.request, 60)) return new Response(JSON.stringify({ error: 'Moc rychle, zkus to za chvíli.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
   const { request, env } = context;
 
   let id, ref = '';

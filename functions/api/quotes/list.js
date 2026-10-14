@@ -1,5 +1,7 @@
+import { requireAdmin, json as _json } from '../_auth-utils.js';
 export async function onRequestGet(context) {
   const { env } = context;
+  if (!(await requireAdmin(context.request, env))) return _json({ error: 'Unauthorized' }, 401);
   const r2 = env.QUOTES_R2;
   if (!r2) return Response.json({ error: 'Chybí QUOTES_R2' }, { status: 500 });
   const list = await r2.list();

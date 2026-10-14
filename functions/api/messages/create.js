@@ -1,3 +1,4 @@
+import { notifyAdmin } from '../push/_push.js';
 // POST /api/messages/create — soukromá zpráva od čtenáře (vidí ji jen admin).
 // Celá fronta je v JEDNOM klíči KV (meta:messages) → odeslání = jediný zápis.
 // Funguje jen když je v Nastavení webu zapnuté „Napiš mi“.
@@ -16,7 +17,7 @@ function tooMany(ip) {
 }
 const json = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'Content-Type': 'application/json' } });
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost({ request, env, waitUntil }) {
   let body;
   try { body = await request.json(); } catch { return json({ error: 'Neplatný požadavek' }, 400); }
   if (body && body.website) return json({ ok: true }); // past na roboty
@@ -39,5 +40,7 @@ export async function onRequestPost({ request, env }) {
   if (list.length >= MAX) return json({ error: 'Schránka je plná, zkus to prosím později.' }, 503);
   list.unshift({ id: crypto.randomUUID(), name, contact, text, created: Date.now(), read: false });
   await env.ARTICLES.put(KEY, JSON.stringify(list));
+  const job = notifyAdmin(env, 'message', new URL(request.url).origin);
+  if (typeof waitUntil === 'function') waitUntil(job); else await job;
   return json({ ok: true });
 }

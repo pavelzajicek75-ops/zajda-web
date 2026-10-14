@@ -1,8 +1,4 @@
-export async function onRequest(context) {
-  const bucket = context.env.QUOTES_R2;
-  const data = await context.request.json();
-  const key = `${Date.now()}-${data.author}.json`;
-
-  await bucket.put(key, JSON.stringify(data));
-  return Response.json({ ok: true });
+// Vyřazený starý koncový bod. Dřív byl bez přihlášení; nahrazen novými (s ověřením) v api/*.
+export async function onRequest() {
+  return new Response(JSON.stringify({ error: 'Gone' }), { status: 410, headers: { 'Content-Type': 'application/json' } });
 }

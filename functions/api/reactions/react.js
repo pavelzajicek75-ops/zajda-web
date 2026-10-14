@@ -1,3 +1,4 @@
+import { hit } from '../_ratelimit.js';
 // /functions/api/articles/react.js
 //
 // Vtipné reakce na článek — konfigurovatelné z adminu (viz
@@ -13,6 +14,7 @@
 // nezacyklí do záporu.
 
 export async function onRequestPost(context) {
+  if (hit('react2', context.request, 30)) return new Response(JSON.stringify({ error: 'Moc rychle, zkus to za chvíli.' }), { status: 429, headers: { 'Content-Type': 'application/json' } });
   const { request, env } = context;
 
   let id, emoji, action;

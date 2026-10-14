@@ -52,3 +52,22 @@ export function validEndpoint(e) {
   if (typeof e !== 'string' || e.length > 800) return false;
   try { return new URL(e).protocol === 'https:'; } catch { return false; }
 }
+
+// === Oznámení pro správce (komentář / zpráva „Napiš mi“) ===
+export const ADMIN_SUBS_KEY = 'meta:push-admin';
+export const ADMIN_LAST_KEY = 'meta:push-admin-last';
+const ADMIN_TEXT = { comment: 'Nový komentář čeká na schválení', message: 'Nová zpráva z „Napiš mi“' };
+
+// Pošle „klepnutí“ zařízením správce. Nikdy nevyhodí chybu (komentář/zpráva se tím nesmí rozbít).
+export async function notifyAdmin(env, kind, origin) {
+  try {
+    const cur = await env.ARTICLES.get(ADMIN_SUBS_KEY, { type: 'json' });
+    const subs = cur && Array.isArray(cur.subs) ? cur.subs : [];
+    if (!subs.length) return;
+    await env.ARTICLES.put(ADMIN_LAST_KEY, JSON.stringify({ kind, text: ADMIN_TEXT[kind] || 'Něco nového v adminu', at: Date.now() }));
+    const vapid = await getVapid(env);
+    const res = await Promise.all(subs.map(async s => ({ s, st: await sendTap(vapid, s.endpoint, origin || 'https://example.com') })));
+    const gone = new Set(res.filter(r => r.st === 404 || r.st === 410).map(r => r.s.endpoint));
+    if (gone.size) await env.ARTICLES.put(ADMIN_SUBS_KEY, JSON.stringify({ subs: subs.filter(s => !gone.has(s.endpoint)) }));
+  } catch (e) { /* ticho */ }
+}

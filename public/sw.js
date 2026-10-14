@@ -31,7 +31,7 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v24';
+const SW_VERSION = 'v25';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
 // Články uložené čtenářem „na offline“ (offline-save.js). Jméno je bez verze,
@@ -213,19 +213,28 @@ async function staleWhileRevalidate(request, cacheName) {
 /* === OZNÁMENÍ O NOVÉM ČLÁNKU (Web Push) ===
    Server posílá jen „klepnutí“ bez obsahu; titulek a odkaz si stáhneme z /api/push/latest.
    Prohlížeč vyžaduje, aby se po každém push zobrazilo oznámení — proto záložní text. */
+function isAdminDevice() {
+  return caches.open('zajda-flags').then(function (c) { return c.match('/__admin-device'); }).then(function (r) { return !!r; }).catch(function () { return false; });
+}
 self.addEventListener('push', function (event) {
   event.waitUntil(
-    fetch('/api/push/latest', { cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : {}; })
-      .catch(function () { return {}; })
-      .then(function (d) {
-        return self.registration.showNotification(d.title || 'Nový článek na blogu', {
-          body: d.title ? 'Zajda napsal nový článek' : 'Podívej se, co je nového',
-          icon: '/icon-192.png',
-          tag: 'zajda-new-article',
-          data: { url: d.url || '/' }
+    Promise.all([
+      fetch('/api/push/latest', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }),
+      isAdminDevice()
+    ]).then(function (res) {
+      var d = res[0] || {}, adm = res[1];
+      if (adm && d.admin && d.admin.at && d.admin.at >= (d.at || 0)) {
+        return self.registration.showNotification(d.admin.text || 'Něco nového v adminu', {
+          body: 'Otevři administraci', icon: '/icon-192.png', tag: 'zajda-admin', data: { url: '/admin/' }
         });
-      })
+      }
+      return self.registration.showNotification(d.title || 'Nový článek na blogu', {
+        body: d.title ? 'Zajda napsal nový článek' : 'Podívej se, co je nového',
+        icon: '/icon-192.png',
+        tag: 'zajda-new-article',
+        data: { url: d.url || '/' }
+      });
+    })
   );
 });
 
