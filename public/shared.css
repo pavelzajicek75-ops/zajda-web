@@ -457,3 +457,18 @@ body.quotes-passthrough .quote-star { pointer-events: none; }
 .quote-inner { color: rgba(244,241,234,0.9); text-shadow: 0 0 12px rgba(255,255,255,0.18), 0 1px 8px rgba(0,0,0,0.85); }
 body.quotes-passthrough .quote-star.hover-active { animation-play-state: paused !important; }
 @media print { .quote-star { display: none; } }
+
+/* === Citáty v barvě mlhoviny (růžovo-fialová „hvězdný prach“), ať se odliší od oranžové a tyrkysové webu === */
+:root { --quote: #f2b8ff; --quote-glow: rgba(226, 120, 255, 0.55); --quote-deep: #c15bff; }
+.quote-inner { color: var(--quote); text-shadow: 0 0 14px rgba(226,120,255,0.38), 0 1px 8px rgba(0,0,0,0.85); }
+.quote-author { color: #ffd6a0; }
+.signal-dot { background: var(--quote); box-shadow: 0 0 10px var(--quote), 0 0 22px var(--quote-glow); }
+.comet-tail { background: linear-gradient(90deg, transparent, rgba(226,120,255,0.5) 65%, transparent); }
+.constellation-line { stroke: var(--quote-deep); }
+.constellation-line.active { stroke: #ffe3ff; }
+.quote-star::after { background: radial-gradient(circle, #fff 0%, var(--quote-deep) 35%, transparent 72%); }
+.quote-star:hover .quote-inner, .quote-star.hover-active .quote-inner {
+  color: #fff;
+  text-shadow: 0 0 14px #fff, 0 0 30px var(--quote-deep), 0 0 56px var(--quote-glow), 0 0 90px rgba(143,107,255,0.45);
+}
+.quote-star:hover .quote-author, .quote-star.hover-active .quote-author { color: #ffe9c8; }
