@@ -253,6 +253,7 @@ function spawnQuote(q) {
   });
 
   var textEl = el.querySelector('.quote-text');
+  textEl.__full = q.text || '';
   var authorEl = el.querySelector('.quote-author');
   var revealDelay = __reduceMotion ? 0 : 400 + Math.random() * 500;
   setTimeout(function () {
@@ -301,13 +302,29 @@ function __setupQuoteHover() {
 
 async function startQuotes() {
   var quotes = await loadQuotes();
-  if (!Array.isArray(quotes) || !quotes.length) return;
+  if (!Array.isArray(quotes)) return;
+  quotes = quotes.filter(function (q) { return q && q.text; });
+  if (!quotes.length) return;
   __setupQuoteHover();
-  for (var i = 0; i < Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-  setInterval(function () {
-    if (document.querySelectorAll('.quote-star').length > 12) return;
-    spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-  }, 5000);
+  var MAX = 4;                       // najednou nejvýš 4 citáty
+  var queue = [];
+  function refill() {                // zamíchaná fronta → žádný citát se neopakuje, dokud nepřijdou na řadu všechny
+    queue = quotes.slice();
+    for (var i = queue.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = queue[i]; queue[i] = queue[j]; queue[j] = t; }
+  }
+  function visibleTexts() {
+    return Array.prototype.map.call(document.querySelectorAll('.quote-star .quote-text'), function (n) { return n.__full || ''; });
+  }
+  function next() {
+    if (document.querySelectorAll('.quote-star').length >= MAX) return;
+    if (!queue.length) refill();
+    var shown = visibleTexts(), pick = -1;
+    for (var i = 0; i < queue.length; i++) { if (shown.indexOf(queue[i].text) === -1) { pick = i; break; } }
+    if (pick === -1) return;         // všechny dostupné už právě plují
+    spawnQuote(queue.splice(pick, 1)[0]);
+  }
+  for (var i = 0; i < Math.min(MAX, quotes.length); i++) next();
+  setInterval(next, 4000);
 }
 
 /* === "ULOŽIT NA POZDĚJI" ===
