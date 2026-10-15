@@ -1,9 +1,12 @@
-import { requireAdmin, json as _json } from '../_auth-utils.js';
-export async function onRequestGet(context) {
+// GET /api/photos/list?galleryId=main — seznam fotek galerie.
+// Veřejné (používá ho úvodní stránka), ale výsledek se drží v cache na okraji sítě,
+// takže návštěvníci nezatěžují úložiště. Admin (s přihlášením) dostává vždy čerstvá data.
+import { edgeCached } from '../_edge-cache.js';
+
+async function handleGet(context) {
   const { env } = context;
-  if (!(await requireAdmin(context.request, env))) return _json({ error: 'Unauthorized' }, 401);
   const { searchParams } = new URL(context.request.url);
-  const galleryId = searchParams.get('galleryId') || 'main';
+  const galleryId = String(searchParams.get('galleryId') || 'main').replace(/[^\w-]/g, '').slice(0, 60) || 'main';
   const prefix = `gallery-${galleryId}/`;
   const list = await env.PHOTOS_R2.list({ prefix });
   const photos = [];
@@ -13,4 +16,8 @@ export async function onRequestGet(context) {
     photos.push({ id, key: obj.key, url: `/api/photos/file?key=${encodeURIComponent(obj.key)}`, name: `${id}.${ext}`, size: obj.size, uploaded: new Date(obj.uploaded).toISOString() });
   }
   return Response.json(photos);
+}
+
+export async function onRequestGet(context) {
+  return edgeCached(context, 120, () => handleGet(context));
 }

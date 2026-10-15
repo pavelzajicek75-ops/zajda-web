@@ -30,9 +30,12 @@
         var r = await fetch('/api/articles/update', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, NOAUTH), body: JSON.stringify({ id: 'x', title: 'x' }) });
         return r.status >= 400 ? ok('odpověď ' + r.status) : bad('Server to přijal (' + r.status + ')!');
       }],
-      ['s2', 'Seznam fotek a citátů vyžaduje přihlášení', async function () {
-        var a = await fetch('/api/photos/list?galleryId=main', { headers: NOAUTH }), b = await fetch('/api/quotes/list', { headers: NOAUTH });
-        return (a.status === 401 && b.status === 401) ? ok() : bad('fotky ' + a.status + ', citáty ' + b.status);
+      ['s2', 'Statistiky fotek vyžadují přihlášení a veřejné citáty neprozradí interní klíče', async function () {
+        var a = await fetch('/api/photos/stats?galleryId=main', { headers: NOAUTH });
+        var q = await fetch('/api/quotes/list', { headers: NOAUTH }); var qj = []; try { qj = await q.json(); } catch (e) {}
+        if (a.status !== 401) return bad('Statistiky fotek jsou otevřené (' + a.status + ')');
+        if (!q.ok) return bad('Veřejné citáty se nenačetly (' + q.status + ') — na webu by chyběly');
+        return (Array.isArray(qj) && qj.every(function (x) { return !('key' in x); })) ? ok(qj.length + ' citátů') : bad('Citáty prozrazují interní klíče');
       }],
       ['s3', 'Ladicí a staré koncové body jsou zavřené', async function () {
         var codes = [];
