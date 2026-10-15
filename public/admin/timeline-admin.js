@@ -258,7 +258,7 @@
   window.shareTimelineMilestone = async function (id, fallbackTitle) {
     var m = timelineCache.find(function (x) { return String(x.id) === String(id); });
     var title = (m && m.title) || fallbackTitle || 'Milník';
-    var url = window.location.origin + '/timeline/#milestone-' + encodeURIComponent(id);
+    var url = window.location.origin + '/timeline/?m=' + encodeURIComponent(id) + '#milestone-' + encodeURIComponent(id);
     var text = title + ' — Moje diagnóza, můj vesmír';
     if (navigator.share) {
       try { await navigator.share({ title: text, text: text, url: url }); return; }

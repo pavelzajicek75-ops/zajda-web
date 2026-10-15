@@ -55,8 +55,8 @@
        + běžný text) — zbytek dotáhne fonts.css sám, až bude potřeba. -->
   <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/fonts.css?v=20261003">
-  <link rel="stylesheet" href="/shared.css?v=20261012">
+  <link rel="stylesheet" href="/fonts.css?v=20261024">
+  <link rel="stylesheet" href="/shared.css?v=20261024">
   <style>
     .title-block {
       position: relative; z-index: 10; text-align: center;
@@ -320,7 +320,7 @@
     .pinned-card[hidden] { display: none; }
     .pinned-card:hover, .pinned-card:focus-visible { border-color: var(--ember); }
     .pinned-card small { display: block; color: var(--ember); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
-    .pinned-card strong { font-family: 'Space Grotesk', sans-serif; font-size: 17px; }
+    .pinned-card strong { font-family: 'Fraunces', 'Space Grotesk', Georgia, serif; font-size: 17px; }
     a.site-status:hover { border-color: var(--nova); }
     .site-status small { color: var(--mist-dim); margin-left: 6px; }
     .search-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
@@ -552,6 +552,7 @@
     }
   </style>
 <script src="/theme.js?v=1"></script>
+  <script src="/motion.js?v=1" defer></script>
   <script src="/error-report.js?v=2"></script>
 </head>
 <body>

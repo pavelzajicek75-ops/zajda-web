@@ -101,7 +101,7 @@
         var linkedHtml = m.linkedArticleId
           ? '<a class="timeline-linked-article" href="/article?id=' + encodeURIComponent(m.linkedArticleId) + '">O týhle cestě víc píšu tady →</a>'
           : '';
-        var shareUrl = window.location.origin + SHARE_BASE_PATH + '#milestone-' + encodeURIComponent(m.id);
+        var shareUrl = window.location.origin + SHARE_BASE_PATH + '?m=' + encodeURIComponent(m.id) + '#milestone-' + encodeURIComponent(m.id);
         var shareText = mTitle + ' — Moje diagnóza, můj vesmír';
         var shareAttrs = ' data-share-text="' + escapeHtml(shareText) + '" data-share-url="' + escapeHtml(shareUrl) + '"';
         var shareHtml = '<div class="timeline-share">' +

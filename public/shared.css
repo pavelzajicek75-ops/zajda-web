@@ -437,3 +437,15 @@ body {
     transition-duration: 0.01ms !important; scroll-behavior: auto !important;
   }
 }
+
+
+/* === Jemné objevování karet při rolování + zvednutí při najetí (motion.js) === */
+@media (prefers-reduced-motion: no-preference) {
+  .rv { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1); transition-delay: var(--rv-d, 0ms); }
+  .rv.rv-in { opacity: 1; transform: none; }
+  .latest-item, .stat-card, .journey-card, .related-card { transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease, border-color .25s ease; }
+  .latest-item:hover, .stat-card:hover, .journey-card:hover { transform: translateY(-3px); }
+  .related-card { overflow: hidden; }
+  .related-card img { transition: transform .6s cubic-bezier(.22,1,.36,1), filter .3s; }
+  .related-card:hover img { transform: scale(1.06); }
+}
