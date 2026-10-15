@@ -37,10 +37,12 @@
      webový dialog (ten vyžaduje Facebook App ID, které nemáme).
      WhatsApp odkaz vedle toho zůstává jako explicitní fallback i na
      desktopu, kde navigator.share obvykle není. */
-  window.shareMilestone = function (text, url) {
-    if (navigator.share) {
-      navigator.share({ title: text, url: url }).catch(function () { /* uživatel zavřel nabídku — nic se neděje */ });
-    }
+  window.shareMilestone = function (text, url, btn) {
+    if (!navigator.share) { return window.copyMilestoneLink(btn || document.createElement('button'), url); }
+    navigator.share({ title: text, text: text, url: url }).catch(function (e) {
+      if (e && e.name === 'AbortError') return;           // uživatel zavřel nabídku — nic se neděje
+      window.copyMilestoneLink(btn || document.createElement('button'), url);
+    });
   };
 
   window.copyMilestoneLink = function (btn, url) {
@@ -101,10 +103,12 @@
           : '';
         var shareUrl = window.location.origin + SHARE_BASE_PATH + '#milestone-' + encodeURIComponent(m.id);
         var shareText = mTitle + ' — Moje diagnóza, můj vesmír';
+        var shareAttrs = ' data-share-text="' + escapeHtml(shareText) + '" data-share-url="' + escapeHtml(shareUrl) + '"';
         var shareHtml = '<div class="timeline-share">' +
-          '<button type="button" class="milestone-share-native" onclick="shareMilestone(\'' + escapeHtml(shareText) + '\', \'' + escapeHtml(shareUrl) + '\')">📤 Sdílet</button>' +
-          '<a class="wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>' +
-          '<button type="button" onclick="copyMilestoneLink(this, \'' + escapeHtml(shareUrl) + '\')">🔗 Kopírovat odkaz</button>' +
+          (navigator.share
+            ? '<button type="button" class="milestone-share-native"' + shareAttrs + '>📤 Sdílet</button>'
+            : '<a class="wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl) + '" target="_blank" rel="noopener">WhatsApp</a>') +
+          '<button type="button" class="milestone-copy"' + shareAttrs + '>🔗 Kopírovat odkaz</button>' +
           '</div>';
         return '<div class="timeline-item" id="milestone-' + escapeHtml(String(m.id)) + '"><div class="timeline-dot"></div><div class="timeline-card">' +
           (dateStr ? '<span class="timeline-date">' + escapeHtml(dateStr) + '</span>' : '') +
@@ -116,8 +120,14 @@
       // "📤 Sdílet" (nativní systémová nabídka) se zobrazí, jen kde ho
       // prohlížeč umí — jinak by na desktopu trčelo tlačítko, co nic
       // neudělá. WhatsApp a kopírování zůstávají vždy.
-      if (!navigator.share) {
-        track.querySelectorAll('.milestone-share-native').forEach(function (btn) { btn.remove(); });
+      if (!track._shareBound) {
+        track._shareBound = true;
+        track.addEventListener('click', function (e) {
+          var b = e.target.closest && e.target.closest('.milestone-share-native, .milestone-copy');
+          if (!b) return;
+          var t = b.getAttribute('data-share-text'), u = b.getAttribute('data-share-url');
+          if (b.classList.contains('milestone-copy')) window.copyMilestoneLink(b, u); else window.shareMilestone(t, u, b);
+        });
       }
 
       track.querySelectorAll('img').forEach(function (img) {

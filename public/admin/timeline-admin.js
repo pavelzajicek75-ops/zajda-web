@@ -180,6 +180,7 @@
         '<p style="color:#92a0bc;font-size:13px;margin-bottom:0.5rem">' + escapeHtml(dateStr) + '</p>' +
         (excerpt ? '<p style="color:#cbd5e1;font-size:14px;margin-bottom:0.75rem;line-height:1.5">' + escapeHtml(excerpt) + (excerpt.length >= 140 ? '…' : '') + '</p>' : '') +
         '<div style="display:flex;gap:0.5rem;flex-wrap:wrap">' +
+        '<button onclick="shareTimelineMilestone(\'' + m.id + '\')" class="btn btn-sm">📤 Sdílet</button>' +
         '<button onclick="editTimelineMilestone(\'' + m.id + '\')" class="btn btn-blue btn-sm">✏️ Upravit</button>' +
         '<button onclick="deleteTimelineMilestone(\'' + m.id + '\')" class="btn btn-red btn-sm">🗑 Smazat</button>' +
         '</div></div></div></div>';
@@ -253,6 +254,20 @@
     }
   }
 
+  // Sdílení milníku: systémová nabídka telefonu (WhatsApp, Messenger, SMS…), jinde zkopíruje odkaz.
+  window.shareTimelineMilestone = async function (id, fallbackTitle) {
+    var m = timelineCache.find(function (x) { return String(x.id) === String(id); });
+    var title = (m && m.title) || fallbackTitle || 'Milník';
+    var url = window.location.origin + '/timeline/#milestone-' + encodeURIComponent(id);
+    var text = title + ' — Moje diagnóza, můj vesmír';
+    if (navigator.share) {
+      try { await navigator.share({ title: text, text: text, url: url }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); if (typeof showToast === 'function') showToast('Odkaz na milník zkopírován', 'success'); }
+    catch (e) { prompt('Zkopíruj odkaz na milník:', url); }
+  };
+
   window.createTimelineMilestone = async function () {
     var title = $('tlTitle') ? $('tlTitle').value.trim() : '';
     var date = $('tlDate') ? $('tlDate').value : '';
@@ -272,9 +287,14 @@
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
       });
       if (!r.ok) throw new Error('Chyba ukládání');
+      var created = null; try { created = await r.json(); } catch (e2) {}
       resetTimelineForm();
       loadTimelineData();
       if (typeof showToast === 'function') showToast('Milník přidán', 'success');
+      if (created && created.id && typeof showConfirm === 'function') {
+        var yes = await showConfirm('Chceš milník rovnou někomu poslat?', { confirmText: 'Sdílet', cancelText: 'Teď ne' });
+        if (yes) window.shareTimelineMilestone(created.id, title);
+      }
     } catch (e) {
       console.error(e);
       if (typeof showToast === 'function') showToast('Nepodařilo se uložit milník', 'error');
