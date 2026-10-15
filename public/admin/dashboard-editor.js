@@ -2141,7 +2141,21 @@ function shareArticle(id) {
   openShareModal(a);
 }
 
-function openShareModal(article) {
+/* Systémová nabídka sdílení (mobil): jedním klepnutím se otevře výběr aplikací
+   (WhatsApp, Messenger, SMS…). Vrací true, když se nabídka otevřela / uživatel ji zavřel;
+   false, když to nešlo (starý prohlížeč, chybí oprávnění) → ukáže se okno s tlačítky. */
+async function tryNativeShare(article) {
+  if (!navigator.share) return false;
+  try {
+    await navigator.share({ title: article.title || 'Nový článek', text: article.title || 'Nový článek', url: getArticlePublicUrl(article) });
+    return true;
+  } catch (e) {
+    return !!(e && e.name === 'AbortError');
+  }
+}
+
+async function openShareModal(article) {
+  if (await tryNativeShare(article)) return;
   const url = getArticlePublicUrl(article);
   const text = article.title || 'Nový článek';
 

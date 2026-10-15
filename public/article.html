@@ -1022,6 +1022,15 @@
     }
   }
 
+  // Systémová nabídka sdílení (mobil): uživatel si sám vybere WhatsApp, Messenger, SMS, e-mail…
+  function shareNative(btn) {
+    var t = document.title || 'Článek';
+    navigator.share({ title: t, text: t, url: tagUrl(window.location.href, 'share') }).catch(function (e) {
+      if (e && e.name === 'AbortError') return;      // zavřel nabídku — nic se neděje
+      copyArticleLink(btn);                           // jiná chyba → aspoň zkopírovat odkaz
+    });
+  }
+
   function copyArticleLink(btn) {
     var url = window.location.href;
     var done = function () {
@@ -1202,10 +1211,14 @@
     html += renderReactionBar(article, reactionConfig);
     html += '<div class="share-bar-inline">';
     html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
-    html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + tagUrl(shareUrl, 'whatsapp')) + '" target="_blank" rel="noopener">WhatsApp</a>';
-    html += '<button type="button" class="share-btn" onclick="shareMessenger(this)">Messenger</button>';
-    html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(tagUrl(shareUrl, 'facebook')) + '" target="_blank" rel="noopener">Facebook</a>';
-    html += '<a class="share-btn" href="https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText) + '&url=' + encodeURIComponent(shareUrl) + '" target="_blank" rel="noopener">X / Twitter</a>';
+    if (navigator.share) {
+      // Mobil (i některé počítače): jedno tlačítko otevře systémovou nabídku s WhatsAppem, Messengerem, SMS…
+      html += '<button type="button" class="share-btn share-primary" onclick="shareNative(this)" style="font-weight:700">📤 Sdílet</button>';
+    } else {
+      html += '<a class="share-btn wa" href="https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + tagUrl(shareUrl, 'whatsapp')) + '" target="_blank" rel="noopener">WhatsApp</a>';
+      html += '<button type="button" class="share-btn" onclick="shareMessenger(this)">Messenger</button>';
+      html += '<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(tagUrl(shareUrl, 'facebook')) + '" target="_blank" rel="noopener">Facebook</a>';
+    }
     html += '<button type="button" class="share-btn" onclick="copyArticleLink(this)">🔗 Kopírovat odkaz</button>';
     html += '</div>';
     html += '</div>';
