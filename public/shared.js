@@ -206,7 +206,7 @@ function __ensureConstellationLoop() {
 function spawnQuote(q) {
   var el = document.createElement('div');
   el.className = 'quote-star';
-  var sz = 13 + Math.floor(Math.random() * 10);
+  var sz = 15 + Math.floor(Math.random() * 10);
 
   var sx = Math.random() * (window.innerWidth - 100);
   var sy = Math.random() * (window.innerHeight - 80);
@@ -248,6 +248,8 @@ function spawnQuote(q) {
       if (other !== el) other.classList.remove('hover-active');
     });
     el.classList.toggle('hover-active', !wasActive);
+    clearTimeout(el.__rel);
+    if (!wasActive) el.__rel = setTimeout(function () { el.classList.remove('hover-active'); }, 4000);   // po chvíli odjede dál
   });
 
   var textEl = el.querySelector('.quote-text');
@@ -269,9 +271,38 @@ function spawnQuote(q) {
   }, 25000);
 }
 
+/* Citáty plují přes celou obrazovku NAD obsahem (aby se neschovávaly za panely), ale myš i prst
+   jimi „propadnou“ — pod citátem jde normálně kliknout na článek. Rozsvítí se, když na ně myš najede
+   (a po chvíli zase odjedou dál), na dotykových zařízeních po klepnutí. */
+function __setupQuoteHover() {
+  if (!(window.matchMedia && window.matchMedia('(hover: hover)').matches)) return; // dotyk: klepnutí viz spawnQuote
+  document.body.classList.add('quotes-passthrough');
+  var px = -1, py = -1, ticking = false;
+  function check() {
+    ticking = false;
+    var now = Date.now();
+    __activeQuotes.forEach(function (entry) {
+      var r = entry.el.getBoundingClientRect(), pad = 10;
+      var inside = px >= r.left - pad && px <= r.right + pad && py >= r.top - pad && py <= r.bottom + pad;
+      if (!inside) { entry.since = 0; entry.cool = false; entry.el.classList.remove('hover-active'); return; }
+      if (!entry.since) entry.since = now;
+      // po ~3 s se citát přestane držet pod myší a plyne dál (aby nezakrýval odkaz pod sebou)
+      if (now - entry.since > 3000) { entry.cool = true; entry.el.classList.remove('hover-active'); return; }
+      if (!entry.cool) entry.el.classList.add('hover-active');
+    });
+    if (__activeQuotes.some(function (e) { return e.since; })) setTimeout(function () { if (!ticking) { ticking = true; requestAnimationFrame(check); } }, 250);
+  }
+  document.addEventListener('mousemove', function (e) {
+    px = e.clientX; py = e.clientY;
+    if (!ticking) { ticking = true; requestAnimationFrame(check); }
+  }, { passive: true });
+  document.addEventListener('mouseleave', function () { px = py = -1; if (!ticking) { ticking = true; requestAnimationFrame(check); } });
+}
+
 async function startQuotes() {
   var quotes = await loadQuotes();
-  if (!quotes.length) return;
+  if (!Array.isArray(quotes) || !quotes.length) return;
+  __setupQuoteHover();
   for (var i = 0; i < Math.min(8, quotes.length); i++) spawnQuote(quotes[Math.floor(Math.random() * quotes.length)]);
   setInterval(function () {
     if (document.querySelectorAll('.quote-star').length > 12) return;

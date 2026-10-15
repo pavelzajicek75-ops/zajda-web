@@ -449,3 +449,11 @@ body {
   .related-card img { transition: transform .6s cubic-bezier(.22,1,.36,1), filter .3s; }
   .related-card:hover img { transform: scale(1.06); }
 }
+
+/* === Plovoucí citáty: NAD obsahem, ale propouštějí myš (jde pod nimi kliknout na článek) === */
+.quote-star { z-index: 30; }
+.quote-star:hover, .quote-star.hover-active { z-index: 31; }
+body.quotes-passthrough .quote-star { pointer-events: none; }
+.quote-inner { color: rgba(244,241,234,0.9); text-shadow: 0 0 12px rgba(255,255,255,0.18), 0 1px 8px rgba(0,0,0,0.85); }
+body.quotes-passthrough .quote-star.hover-active { animation-play-state: paused !important; }
+@media print { .quote-star { display: none; } }
