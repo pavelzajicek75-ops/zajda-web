@@ -222,10 +222,20 @@ function spawnQuote(q) {
   var tailAngle = (Math.atan2(ey, ex) * 180 / Math.PI) + 180;
   el.style.setProperty('--tail-angle', tailAngle + 'deg');
 
+  // Každý citát je „hvězda“ s vlastní barvou (většinou lila mlhovina, občas růžová, ledově modrá nebo zlatá)
+  var palette = [
+    ['#f2b8ff', 'rgba(226,120,255,0.55)'], ['#f2b8ff', 'rgba(226,120,255,0.55)'], ['#f2b8ff', 'rgba(226,120,255,0.55)'],
+    ['#ffb3d9', 'rgba(255,110,190,0.5)'], ['#a9d0ff', 'rgba(110,170,255,0.5)'], ['#ffe2a0', 'rgba(255,190,90,0.5)']
+  ];
+  var pc = palette[Math.floor(Math.random() * palette.length)];
+  el.style.setProperty('--qc', pc[0]);
+  el.style.setProperty('--qglow', pc[1]);
+  el.style.setProperty('--qd', (Math.random() * -4).toFixed(2) + 's');
+  el.style.setProperty('--qt', (2.6 + Math.random() * 2.4).toFixed(2) + 's');
   el.innerHTML =
     '<span class="comet-tail"></span>' +
-    '<span class="signal-dot"></span>' +
-    '<div class="quote-inner" style="font-size:' + sz + 'px">"<span class="quote-text"></span>"' +
+    '<span class="qs-star" aria-hidden="true"></span>' +
+    '<div class="quote-inner" style="font-size:' + sz + 'px"><span class="quote-text"></span>' +
     '<span class="quote-author"></span></div>';
 
   document.body.appendChild(el);

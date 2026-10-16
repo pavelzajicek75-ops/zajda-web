@@ -472,3 +472,53 @@ body.quotes-passthrough .quote-star.hover-active { animation-play-state: paused 
   text-shadow: 0 0 14px #fff, 0 0 30px var(--quote-deep), 0 0 56px var(--quote-glow), 0 0 90px rgba(143,107,255,0.45);
 }
 .quote-star:hover .quote-author, .quote-star.hover-active .quote-author { color: #ffe9c8; }
+
+/* === Citáty jako HVĚZDNÉ OBJEKTY ===
+   Ve výchozím stavu je vidět zářící hvězda s paprsky a jen krátký, tlumený úryvek (nerušení).
+   Po najetí / klepnutí se hvězda rozzáří a citát se rozbalí celý. Barva se bere z --qc (každá hvězda jiná). */
+.quote-star { --qc: #f2b8ff; --qglow: rgba(226,120,255,0.55); }
+.quote-star .signal-dot { display: none; }
+.qs-star {
+  position: absolute; left: -18px; top: 3px; width: 11px; height: 11px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--qc) 42%, transparent 72%);
+  box-shadow: 0 0 8px 2px var(--qc), 0 0 22px 7px var(--qglow);
+  transition: transform .45s cubic-bezier(.34,1.56,.64,1), box-shadow .4s ease;
+  pointer-events: none;
+}
+.qs-star::before, .qs-star::after {
+  content: ''; position: absolute; left: 50%; top: 50%; border-radius: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #fff 50%, transparent);
+  transition: width .45s ease, height .45s ease, opacity .4s ease;
+}
+.qs-star::before { width: 34px; height: 1.5px; transform: translate(-50%, -50%); }
+.qs-star::after { width: 34px; height: 1.5px; transform: translate(-50%, -50%) rotate(90deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .qs-star { animation: qs-twinkle var(--qt, 3.4s) ease-in-out infinite; animation-delay: var(--qd, 0s); }
+  @keyframes qs-twinkle { 0%, 100% { opacity: .75; filter: brightness(.9); } 50% { opacity: 1; filter: brightness(1.35); } }
+}
+.quote-star.hover-active .qs-star, .quote-star:hover .qs-star { transform: scale(1.7); box-shadow: 0 0 12px 4px #fff, 0 0 34px 12px var(--qglow); }
+.quote-star.hover-active .qs-star::before, .quote-star.hover-active .qs-star::after,
+.quote-star:hover .qs-star::before, .quote-star:hover .qs-star::after { width: 70px; }
+
+/* sbalený stav: jen krátký úryvek, tlumený */
+.quote-star .quote-inner { color: var(--qc); }
+.quote-star.revealed .quote-inner { opacity: .6; }
+.quote-star .quote-text { display: inline-block; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.quote-star:not(.hover-active):not(:hover) .quote-author { display: none; }
+/* rozbalený stav */
+.quote-star.hover-active .quote-inner, .quote-star:hover .quote-inner { opacity: 1; }
+.quote-star.hover-active .quote-text, .quote-star:hover .quote-text { display: inline; max-width: none; white-space: normal; overflow: visible; }
+.quote-star.hover-active .quote-text::before, .quote-star:hover .quote-text::before { content: '„'; }
+.quote-star.hover-active .quote-text::after, .quote-star:hover .quote-text::after { content: '“'; }
+.quote-star.hover-active .quote-inner, .quote-star:hover .quote-inner {
+  text-shadow: 0 0 14px #fff, 0 0 30px var(--qc), 0 0 56px var(--qglow);
+}
+.quote-star .signal-dot, .quote-star.hover-active .comet-tail { opacity: 0; }
+.comet-tail { background: linear-gradient(90deg, transparent, var(--qglow) 65%, transparent); }
+.quote-star::after { background: radial-gradient(circle, #fff 0%, var(--qc) 35%, transparent 72%); }
+.quote-star::after, .quote-star:hover::after, .quote-star.hover-active::after { display: none; }
+.quote-star .quote-inner { padding-left: 6px; }
+.qs-star { left: -16px; }
+.quote-star .quote-text { font-size: .84em; transition: font-size .35s ease; }
+.quote-star.hover-active .quote-text, .quote-star:hover .quote-text { font-size: 1em; }
+.quote-star.hover-active .quote-inner, .quote-star:hover .quote-inner { padding-left: 12px; }
