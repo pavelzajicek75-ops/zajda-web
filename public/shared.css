@@ -522,3 +522,15 @@ body.quotes-passthrough .quote-star.hover-active { animation-play-state: paused 
 .quote-star .quote-text { font-size: .84em; transition: font-size .35s ease; }
 .quote-star.hover-active .quote-text, .quote-star:hover .quote-text { font-size: 1em; }
 .quote-star.hover-active .quote-inner, .quote-star:hover .quote-inner { padding-left: 12px; }
+
+/* === Plynulejší životní cyklus citátu === */
+.quote-star { animation-iteration-count: 1; animation-fill-mode: forwards; }
+/* už viděný (rozsvícený a pak puštěný) citát zůstane rozbalený, jen ztlumený, a plynule odpluje */
+.quote-star.seen .quote-text { display: inline; max-width: none; white-space: normal; overflow: visible; font-size: 1em; }
+.quote-star.seen .quote-text::before { content: '„'; }
+.quote-star.seen .quote-text::after { content: '“'; }
+.quote-star.seen .quote-author { display: inline; }
+.quote-star.seen.revealed .quote-inner { opacity: .55; text-shadow: 0 0 10px var(--qglow), 0 1px 8px rgba(0,0,0,0.85); padding-left: 12px; }
+.quote-star .quote-inner { transition: opacity .9s ease, text-shadow .9s ease, transform .6s cubic-bezier(.22,1,.36,1), color .6s ease; }
+.quote-star .qs-star { transition: transform .9s ease, box-shadow .9s ease; }
+@media (prefers-reduced-motion: reduce) { .quote-star { animation: none; } }

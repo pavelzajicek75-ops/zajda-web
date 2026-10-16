@@ -255,11 +255,13 @@ function spawnQuote(q) {
     e.stopPropagation();
     var wasActive = el.classList.contains('hover-active');
     document.querySelectorAll('.quote-star.hover-active').forEach(function (other) {
-      if (other !== el) other.classList.remove('hover-active');
+      if (other !== el) __releaseQuote(other);
     });
-    el.classList.toggle('hover-active', !wasActive);
     clearTimeout(el.__rel);
-    if (!wasActive) el.__rel = setTimeout(function () { el.classList.remove('hover-active'); }, 4000);   // po chvíli odjede dál
+    if (wasActive) { __releaseQuote(el); return; }
+    el.classList.remove('seen');
+    el.classList.add('hover-active');
+    el.__rel = setTimeout(function () { __releaseQuote(el); }, 4000);   // po chvíli plynule odpluje dál
   });
 
   var textEl = el.querySelector('.quote-text');
@@ -275,16 +277,25 @@ function spawnQuote(q) {
     }, __reduceMotion ? 0 : 700);
   }, revealDelay);
 
-  setTimeout(function () {
+  // Citát zmizí až když doplave svou dráhu do konce (zastavení při rozsvícení ho tedy nezkrátí).
+  function done() {
+    if (!el.parentNode) return;
     el.remove();
     var idx = __activeQuotes.indexOf(entry);
     if (idx > -1) __activeQuotes.splice(idx, 1);
-  }, 25000);
+  }
+  el.addEventListener('animationend', function (e) { if (e.animationName === 'drift') done(); });
+  setTimeout(done, 180000);   // pojistka (např. omezený pohyb nebo skrytá záložka)
 }
 
 /* Citáty plují přes celou obrazovku NAD obsahem (aby se neschovávaly za panely), ale myš i prst
    jimi „propadnou“ — pod citátem jde normálně kliknout na článek. Rozsvítí se, když na ně myš najede
    (a po chvíli zase odjedou dál), na dotykových zařízeních po klepnutí. */
+/* Citát, který už byl rozsvícený, se po „odjetí“ nesbalí skokem — zůstane rozbalený, jen ztlumený, a plynule doplave pryč. */
+function __releaseQuote(el) {
+  if (el.classList.contains('hover-active')) { el.classList.remove('hover-active'); el.classList.add('seen'); }
+}
+
 function __setupQuoteHover() {
   if (!(window.matchMedia && window.matchMedia('(hover: hover)').matches)) return; // dotyk: klepnutí viz spawnQuote
   document.body.classList.add('quotes-passthrough');
@@ -295,10 +306,10 @@ function __setupQuoteHover() {
     __activeQuotes.forEach(function (entry) {
       var r = entry.el.getBoundingClientRect(), pad = 10;
       var inside = px >= r.left - pad && px <= r.right + pad && py >= r.top - pad && py <= r.bottom + pad;
-      if (!inside) { entry.since = 0; entry.cool = false; entry.el.classList.remove('hover-active'); return; }
+      if (!inside) { entry.since = 0; entry.cool = false; __releaseQuote(entry.el); return; }
       if (!entry.since) entry.since = now;
       // po ~3 s se citát přestane držet pod myší a plyne dál (aby nezakrýval odkaz pod sebou)
-      if (now - entry.since > 3000) { entry.cool = true; entry.el.classList.remove('hover-active'); return; }
+      if (now - entry.since > 3000) { entry.cool = true; __releaseQuote(entry.el); return; }
       if (!entry.cool) entry.el.classList.add('hover-active');
     });
     if (__activeQuotes.some(function (e) { return e.since; })) setTimeout(function () { if (!ticking) { ticking = true; requestAnimationFrame(check); } }, 250);
