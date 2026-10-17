@@ -263,6 +263,8 @@
     .reading-takeaway .rt-label { font: 600 12px 'Space Grotesk', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--nova); margin-bottom: 8px; }
     .reading-takeaway p { margin: 0; font: 500 21px/1.5 'Space Grotesk', sans-serif; color: var(--parchment, #f0eefb); }
 
+    .trip-all { display: inline-block; margin-top: 10px; color: var(--nova); font: 600 13.5px 'Space Grotesk', sans-serif; text-decoration: none; }
+    .trip-all:hover { color: var(--ember); }
     /* === MAPA VÝLETU === */
     .trip-map-wrap { margin: 4px 0 12px; }
     .trip-map { height: 260px; border-radius: 12px; overflow: hidden; border: 1px solid var(--panel-border); background: #111; }
@@ -1359,7 +1361,7 @@
             '<div class="trip-nav-links">' +
             (tPrev ? '<a href="/article?id=' + encodeURIComponent(tPrev.id) + '">← ' + escapeHtml(tPrev.title || 'Předchozí část') + '</a>' : '<span></span>') +
             (tNext ? '<a href="/article?id=' + encodeURIComponent(tNext.id) + '">' + escapeHtml(tNext.title || 'Další část') + ' →</a>' : '<span></span>') +
-            '</div></nav>';
+            '</div><a class="trip-all" href="/vylet?s=' + encodeURIComponent(String(article.sectionId || '')) + '&sub=' + encodeURIComponent(String(article.subsectionId)) + '">📖 Celý výlet jako příběh →</a></nav>';
           if (tPrev) excludeIds.push(String(tPrev.id));
           if (tNext) excludeIds.push(String(tNext.id));
         }
