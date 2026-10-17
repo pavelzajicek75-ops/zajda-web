@@ -547,7 +547,12 @@ body.quotes-passthrough .quote-star.hover-active { animation-play-state: paused 
 .qotd-label { font: 600 11.5px 'Space Grotesk', sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--quote, #f2b8ff); margin-bottom: 10px; }
 .qotd-text { margin: 0 auto; max-width: 820px; font: 500 clamp(18px, 2.4vw, 24px)/1.5 'Space Grotesk', sans-serif; color: var(--parchment, #f0eefb); text-shadow: 0 0 18px rgba(226,120,255,0.25); }
 .qotd-author { margin-top: 10px; font-size: 14px; color: var(--quote, #f2b8ff); opacity: .85; }
-.qotd-author:empty { display: none; }
+.qotd-author { min-height: 1.4em; }
 .qotd-next { margin-top: 12px; background: transparent; border: 1px solid rgba(226,120,255,0.35); color: var(--quote, #f2b8ff); border-radius: 999px; padding: 4px 14px; font: 500 12.5px 'Space Grotesk', sans-serif; cursor: pointer; }
 .qotd-next:hover { border-color: var(--quote, #f2b8ff); box-shadow: 0 0 14px rgba(226,120,255,0.35); }
 @media (max-width: 900px) { .qotd { margin: 16px 20px 0; padding: 18px 18px 16px; } }
+.qotd-text { display: grid; }
+.qotd-sizer, .qotd-live { grid-area: 1 / 1; display: block; }
+.qotd-sizer { visibility: hidden; }
+.qotd-live { align-self: center; }
+.qotd { contain: layout; }

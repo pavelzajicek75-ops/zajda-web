@@ -338,17 +338,27 @@ function renderQuoteOfDay(quotes) {
   btn.setAttribute('aria-label', 'Zobrazit další citát');
   box.appendChild(lab); box.appendChild(txt); box.appendChild(au);
   if (list.length > 1) box.appendChild(btn);
+  // Výšku karty drží neviditelný „sizer" s celým citátem, vyluštěný text leží přes něj (absolutně) —
+  // měnící se znaky tak nikdy nepřelamují řádky ani neposouvají zbytek stránky (dřív to škubalo sekcemi).
+  // Sizery nesou nejdelší citáty, takže karta má pořád výšku toho nejvyššího — ani přepnutí na „další" nic neposune.
+  var live = document.createElement('span'); live.className = 'qotd-live';
+  list.slice().sort(function (a, b) { return String(b.text).length - String(a.text).length; }).slice(0, 12).forEach(function (q) {
+    var z = document.createElement('span'); z.className = 'qotd-sizer'; z.textContent = '„' + q.text + '"'; txt.appendChild(z);
+  });
+  txt.appendChild(live);
   function show(first) {
     var q = list[(idx + step) % list.length];
-    au.style.opacity = 0;
     var full = '„' + q.text + '"';
+    var dur = Math.min(4200, 1400 + full.length * 32);
+    au.style.opacity = 0;
+    au.textContent = q.author ? '— ' + q.author : '';
+    live.textContent = '';
     var go = function () {
       box.classList.remove('qotd-swap');
-      decodeText(txt, full, Math.min(4200, 1400 + full.length * 32));   // text se pomalu „vyluští" jako u plovoucích citátů
-      au.textContent = q.author ? '— ' + q.author : '';
-      setTimeout(function () { au.style.opacity = 1; }, __reduceMotion ? 0 : Math.min(4200, 1400 + full.length * 32) + 150);
+      decodeText(live, full, dur);
+      setTimeout(function () { au.style.opacity = 1; }, __reduceMotion ? 0 : dur + 150);
     };
-    if (first) { txt.textContent = ''; box.classList.add('qotd-wait'); setTimeout(function () { box.classList.remove('qotd-wait'); go(); }, __reduceMotion ? 0 : 1300); }
+    if (first) { box.classList.add('qotd-wait'); setTimeout(function () { box.classList.remove('qotd-wait'); go(); }, __reduceMotion ? 0 : 1300); }
     else { box.classList.add('qotd-swap'); setTimeout(go, __reduceMotion ? 0 : 450); }
   }
   btn.addEventListener('click', function () { step++; show(false); });
