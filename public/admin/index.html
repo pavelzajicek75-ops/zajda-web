@@ -221,6 +221,9 @@
       <div class="form-row">
         <textarea id="artExcerpt" class="form-input" rows="2" placeholder="Krátký popis (pro seznam článků, sdílení a vyhledávače — nepovinné, jinak se použije začátek textu)" style="resize:vertical;flex:1"></textarea>
       </div>
+      <div class="form-row">
+        <input id="artTakeaway" class="form-input" maxlength="220" placeholder="💭 Co mi ta cesta dala — jedna věta na konec článku (nepovinné)" style="flex:1">
+      </div>
       <div class="form-row" style="align-items:center">
         <label style="min-width:110px">Titulní fotka</label>
         <div id="artCoverPreview" style="width:90px;height:60px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border-soft);background-size:cover;background-position:center;flex-shrink:0"></div>
@@ -268,6 +271,7 @@
         <button data-key="imgLeft" onclick="insertImgTo('artEditor','left')" title="Obrázek vlevo">🖼️⬅</button>
         <button data-key="imgCenter" onclick="insertImgTo('artEditor','center')" title="Obrázek na střed">🖼️↔</button>
         <button data-key="imgRight" onclick="insertImgTo('artEditor','right')" title="Obrázek vpravo">🖼️➡</button>
+        <button data-key="photoStory" onmousedown="event.preventDefault()" onclick="insertPhotoStory()" title="Fotky vedle sebe, přes celou šířku nebo Před/Po">📷 Fotky vedle sebe</button>
         <button data-key="media" onmousedown="event.preventDefault()" onclick="insertMedia()" title="Vložit video (YouTube) nebo zvuk">🎧 Zvuk/video</button>
         <button data-key="deleteImg" onclick="deleteSelectedImg()" title="Smazat obrázek">🗑️🖼️</button>
         <button data-key="moveImgUp" onclick="moveImageUp()" title="Obrázek nahoru">🖼️↑</button>
@@ -832,7 +836,7 @@
 </div>
 
 <script src="dashboard-core.js?v=20261013"></script>
-<script src="dashboard-editor.js?v=20261023"></script>
+<script src="dashboard-editor.js?v=20261031"></script>
 <script src="/share-card.js?v=2"></script>
 <script src="gallery-ribbon-ui.js?v=20260910"></script>
 <script src="article-map-picker.js?v=20261011"></script>
@@ -851,6 +855,7 @@
 <script src="site-admin.js?v=2"></script>
 <script src="thumbs-admin.js?v=1"></script>
 <script src="embed-admin.js?v=1"></script>
+<script src="photostory-admin.js?v=1"></script>
 <script src="messages-admin.js?v=1"></script>
 <script src="share-admin.js?v=1"></script>
 <script src="kv-metrics-admin.js?v=3"></script>

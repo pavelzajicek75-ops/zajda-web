@@ -14,7 +14,7 @@
   <link rel="preload" href="/fonts/space-grotesk-latin-ext-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/inter-latin-ext-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/fonts.css?v=20261024">
-  <link rel="stylesheet" href="/shared.css?v=20261030">
+  <link rel="stylesheet" href="/shared.css?v=20261031">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
@@ -240,6 +240,50 @@
     }
     .article-body img:hover { transform: scale(1.02); box-shadow: 0 6px 30px rgba(255,122,69,0.3); }
 
+
+    /* === FOTOPŘÍBĚH: fotky vedle sebe / přes celou šířku / před-po === */
+    .article-body .photo-row { display: flex; gap: 10px; margin: 26px 0; align-items: flex-start; }
+    .article-body .photo-row figure { flex: 1 1 0 !important; min-width: 0; margin: 0; }
+    .article-body .photo-row img { margin: 0 !important; width: 100% !important; height: auto !important; border-radius: 12px; display: block; }
+    .article-body .photo-row-2 img, .article-body .photo-row-3 img, .article-body .photo-ba img { aspect-ratio: 4 / 3; object-fit: cover; }
+    .article-body .photo-row img:hover { transform: none; }
+    .article-body .photo-row figcaption { font-size: 13.5px; color: var(--mist, #a8a8c0); text-align: center; margin-top: 8px; font-style: italic; line-height: 1.45; }
+    .article-body .photo-full { display: block; margin: 30px 0; }
+    .article-body .photo-full img { border-radius: 14px; }
+    .article-body .photo-ba figcaption { font-style: normal; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; color: var(--nova); }
+    @media (max-width: 520px) {
+      .article-body .photo-row-3 { flex-wrap: wrap; }
+      .article-body .photo-row-3 figure { flex: 1 1 calc(50% - 5px) !important; }
+      .article-body .photo-row-3 figure:first-child { flex-basis: 100% !important; }
+    }
+
+    /* === „Co se mnou ta cesta udělala" === */
+    .reading-takeaway { margin: 36px 0 8px; padding: 22px 24px 20px; border-radius: 16px; position: relative;
+      background: linear-gradient(135deg, rgba(47,230,201,0.08), rgba(255,122,69,0.08)); border: 1px solid rgba(47,230,201,0.28); }
+    .reading-takeaway .rt-label { font: 600 12px 'Space Grotesk', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--nova); margin-bottom: 8px; }
+    .reading-takeaway p { margin: 0; font: 500 21px/1.5 'Space Grotesk', sans-serif; color: var(--parchment, #f0eefb); }
+
+    /* === MAPA VÝLETU === */
+    .trip-map-wrap { margin: 4px 0 12px; }
+    .trip-map { height: 260px; border-radius: 12px; overflow: hidden; border: 1px solid var(--panel-border); background: #111; }
+    .trip-map .leaflet-popup-content a { color: #c2410c; font-weight: 600; text-decoration: none; }
+    .trip-pin { width: 26px; height: 26px; border-radius: 50%; background: #2fe6c9; color: #0b0b1a; font: 700 13px 'Space Grotesk', sans-serif;
+      display: flex; align-items: center; justify-content: center; border: 2px solid #0b0b1a; box-shadow: 0 0 10px rgba(47,230,201,.6); }
+    .trip-pin.cur { background: #ff7a45; box-shadow: 0 0 14px rgba(255,122,69,.8); transform: scale(1.2); }
+
+    /* === ČTECÍ REŽIM === */
+    .reader-toggle { background: transparent; border: 1px solid var(--panel-border-hover, rgba(255,255,255,.25)); color: var(--parchment, #eee);
+      border-radius: 999px; padding: 4px 12px; font: 500 12.5px 'Space Grotesk', sans-serif; cursor: pointer; }
+    .reader-toggle:hover, .reader-toggle[aria-pressed="true"] { border-color: var(--nova); color: var(--nova); }
+    body.reading-mode .stars, body.reading-mode .constellation-layer, body.reading-mode .bg { opacity: .25; }
+    body.reading-mode .nav-bar { opacity: .5; }
+    body.reading-mode .article-container { max-width: 760px; }
+    body.reading-mode #articleContainer > :not(.article-cover):not(.article-header):not(.article-divider):not(.article-body):not(.reading-takeaway) { display: none !important; }
+    body.reading-mode .article-body { font-size: 21px; line-height: 2; color: #ececf6; }
+    body.reading-mode .article-body p { margin-bottom: 26px; }
+    body.reading-mode .article-body img { box-shadow: none; }
+    @media (max-width: 640px) { body.reading-mode .article-body { font-size: 19px; line-height: 1.9; } }
+
     .photo-grid {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
       margin: 24px 0;
@@ -429,7 +473,7 @@
       .bg, .stars, .constellation-layer, .lightbox-overlay,
       .nav-bar, .reading-progress, .article-footer,
       .article-nav-links, .related-section, .toc-box,
-      .article-mini-map-wrap,
+      .article-mini-map-wrap, .trip-map-wrap, .reader-toggle,
       .skip-link { display: none !important; }
       body { background: #fff !important; color: #111 !important; }
       .article-container { max-width: 100%; padding: 0; }
@@ -489,7 +533,7 @@
       <div>Načítání článku…</div>
     </div>
   </div>
-  <script src="/shared.js?v=20261030"></script>
+  <script src="/shared.js?v=20261031"></script>
   <script src="/motion.js?v=1" defer></script>
   <script src="/photo-stops.js?v=1"></script>
   <script src="/comments.js?v=1"></script>
@@ -1172,7 +1216,40 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTravelMapModal(); });
   }
 
+  function hasCoords(a) { return a && typeof a.lat === 'number' && isFinite(a.lat) && typeof a.lng === 'number' && isFinite(a.lng); }
+
+  // Mapa výletu: očíslované zastávky v pořadí článků, čárkovaná trasa, klik = odkaz na článek.
+  function initTripMap() {
+    var el = document.getElementById('tripMap');
+    var t = window._tripForMap;
+    if (!el || !t || !window.L) return;
+    var map = L.map(el, { scrollWheelZoom: false, attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, subdomains: 'abc' }).addTo(map);
+    var pts = [];
+    t.trip.forEach(function (a, i) {
+      if (!hasCoords(a)) return;
+      var ll = [a.lat, a.lng]; pts.push(ll);
+      var icon = L.divIcon({ className: '', html: '<div class="trip-pin' + (i === t.cur ? ' cur' : '') + '">' + (i + 1) + '</div>', iconSize: [26, 26], iconAnchor: [13, 13] });
+      var m = L.marker(ll, { icon: icon, title: a.title || '' }).addTo(map);
+      var box = document.createElement('div');
+      if (i === t.cur) { box.textContent = (i + 1) + '. ' + (a.title || 'Tento článek'); }
+      else { var l = document.createElement('a'); l.href = '/article?id=' + encodeURIComponent(a.id); l.textContent = (i + 1) + '. ' + (a.title || 'Bez názvu'); box.appendChild(l); }
+      m.bindPopup(box);
+    });
+    if (pts.length > 1) L.polyline(pts, { color: '#ff7a45', weight: 3, opacity: .8, dashArray: '6 8' }).addTo(map);
+    map.fitBounds(L.latLngBounds(pts), { padding: [28, 28], maxZoom: 12 });
+    setTimeout(function () { map.invalidateSize(); }, 200);
+  }
+
+  function setReadingMode(on) {
+    document.body.classList.toggle('reading-mode', on);
+    var b = document.getElementById('readerToggle');
+    if (b) { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.textContent = on ? '✕ Zavřít čtecí režim' : '📖 Čtecí režim'; }
+    try { localStorage.setItem('zajda-reading-mode', on ? '1' : '0'); } catch (e) {}
+  }
+
   function renderArticle(article, allArticles, reactionConfig) {
+    window._tripForMap = null;
     // Uloženo pro mapový modal (viz níž) — ať se při otevření mapy z
     // miniatury nemusí články stahovat znovu, když je má tahle stránka
     // už jednou natažené.
@@ -1199,6 +1276,7 @@
       (sectionName ? '<span class="meta-badge">' + escapeHtml(sectionName) + '</span>' : '') +
       (dateStr ? '<span class="meta-item">' + escapeHtml(dateStr) + '</span>' : '') +
       '<span class="meta-item">📖 ~' + readingMinutes + ' min čtení</span>' +
+      '<button type="button" class="reader-toggle" id="readerToggle" aria-pressed="false" title="Větší písmo, jen text a fotky">📖 Čtecí režim</button>' +
       '</div></div>';
     if (article.coverUrl) {
       html += '<header class="article-cover">';
@@ -1227,6 +1305,9 @@
 
     html += '<div id="tocPlaceholder"></div>';
     html += '<div class="article-body" id="articleBody">' + content + '</div>';
+    if (article.takeaway && String(article.takeaway).trim()) {
+      html += '<aside class="reading-takeaway"><div class="rt-label">💭 Co se mnou ta cesta udělala</div><p>' + escapeHtml(String(article.takeaway).trim()) + '</p></aside>';
+    }
 
     var shareUrl = window.location.href;
     var shareText = title + ' — Moje diagnóza, můj vesmír';
@@ -1269,9 +1350,13 @@
           .sort(function (a, b) { return (articleTimestamp(a) - articleTimestamp(b)) || ((a.created || 0) - (b.created || 0)); });
         var ti = trip.findIndex(function (a) { return String(a.id) === String(article.id); });
         if (trip.length >= 2 && ti !== -1) {
+          var tripPts = trip.filter(hasCoords).length;
+          window._tripForMap = { trip: trip, cur: ti };
           var tPrev = ti > 0 ? trip[ti - 1] : null, tNext = ti < trip.length - 1 ? trip[ti + 1] : null;
           html += '<nav class="trip-nav" aria-label="Části výletu" data-section="' + escapeHtml(String(article.sectionId || '')) + '" data-sub="' + escapeHtml(String(article.subsectionId)) + '">' +
-            '<div class="trip-nav-head">🧭 Část <b>' + (ti + 1) + '</b> z <b>' + trip.length + '</b><span class="trip-name"></span></div><div class="trip-nav-links">' +
+            '<div class="trip-nav-head">🧭 Část <b>' + (ti + 1) + '</b> z <b>' + trip.length + '</b><span class="trip-name"></span></div>' +
+            (tripPts >= 2 ? '<div class="trip-map-wrap"><div class="trip-map" id="tripMap" role="img" aria-label="Mapa zastávek výletu"></div></div>' : '') +
+            '<div class="trip-nav-links">' +
             (tPrev ? '<a href="/article?id=' + encodeURIComponent(tPrev.id) + '">← ' + escapeHtml(tPrev.title || 'Předchozí část') + '</a>' : '<span></span>') +
             (tNext ? '<a href="/article?id=' + encodeURIComponent(tNext.id) + '">' + escapeHtml(tNext.title || 'Další část') + ' →</a>' : '<span></span>') +
             '</div></nav>';
@@ -1298,6 +1383,14 @@
     }
 
     container.innerHTML = html;
+
+    try { initTripMap(); } catch (e) { console.error('Mapa výletu:', e); }
+    try {
+      var rt = document.getElementById('readerToggle');
+      if (rt) rt.addEventListener('click', function () { setReadingMode(!document.body.classList.contains('reading-mode')); });
+      var saved = false; try { saved = localStorage.getItem('zajda-reading-mode') === '1'; } catch (e) {}
+      setReadingMode(saved);
+    } catch (e) { console.error('Čtecí režim:', e); }
 
     // Název výletu (podsekce) se dotáhne dodatečně — bez něj blok funguje taky.
     try {

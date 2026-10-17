@@ -1188,6 +1188,7 @@ function saveArticleDraft() {
   const draft = {
     title, content,
     excerpt: $('artExcerpt')?.value || '',
+    takeaway: $('artTakeaway')?.value || '',
     coverUrl: $('artCoverUrl')?.value || '',
     date: $('artDate')?.value || '',
     place: $('artPlace')?.value || '',
@@ -1227,6 +1228,7 @@ async function syncDraftToServer() {
   const draft = {
     title, content,
     excerpt: $('artExcerpt')?.value || '',
+    takeaway: $('artTakeaway')?.value || '',
     coverUrl: $('artCoverUrl')?.value || '',
     date: $('artDate')?.value || '',
     place: $('artPlace')?.value || '',
@@ -1313,6 +1315,7 @@ async function offerDraftRestore(key) {
     if ($('artTitle')) $('artTitle').value = draft.title || '';
     if ($('artEditor')) $('artEditor').innerHTML = draft.content || '';
     if ($('artExcerpt')) $('artExcerpt').value = draft.excerpt || '';
+    if ($('artTakeaway')) $('artTakeaway').value = draft.takeaway || '';
     if ($('artCoverUrl')) $('artCoverUrl').value = draft.coverUrl || '';
     if ($('artCoverPreview')) $('artCoverPreview').style.backgroundImage = draft.coverUrl ? `url('${draft.coverUrl}')` : '';
     if ($('artDate')) $('artDate').value = draft.date || '';
@@ -2451,6 +2454,7 @@ async function editArticle(id) {
     if ($('artPlace')) $('artPlace').value = a.place || '';
     setArticleStatusFields(a);
     if ($('artExcerpt')) $('artExcerpt').value = a.excerpt || '';
+    if ($('artTakeaway')) $('artTakeaway').value = a.takeaway || '';
     if ($('artCoverUrl')) $('artCoverUrl').value = a.coverUrl || '';
     if ($('artCoverPreview')) $('artCoverPreview').style.backgroundImage = a.coverUrl ? `url('${a.coverUrl}')` : '';
     if ($('artSection')) {
@@ -2558,6 +2562,7 @@ async function createArticle() {
   const payload = {
     title, content,
     excerpt: $('artExcerpt')?.value.trim() || '',
+    takeaway: $('artTakeaway')?.value.trim() || '',
     coverUrl: $('artCoverUrl')?.value || '',
     slug: generateSlug(title),
     sectionId: $('artSection')?.value || null,
@@ -2611,6 +2616,7 @@ async function updateArticle() {
   const payload = {
     id, title, content,
     excerpt: $('artExcerpt')?.value.trim() || '',
+    takeaway: $('artTakeaway')?.value.trim() || '',
     coverUrl: $('artCoverUrl')?.value || '',
     slug: generateSlug(title),
     sectionId: $('artSection')?.value || null,
@@ -2717,6 +2723,7 @@ function resetArticleForm() {
   if ($('artPublishAt')) $('artPublishAt').value = '';
   setArticleStatusFields(null);
   if ($('artExcerpt')) $('artExcerpt').value = '';
+  if ($('artTakeaway')) $('artTakeaway').value = '';
   clearArticleCover();
   if ($('artSection')) $('artSection').value = '';
   if ($('artSubsection')) $('artSubsection').innerHTML = '<option value="">— Podsekce —</option>';
@@ -2786,6 +2793,7 @@ async function duplicateArticle(id) {
       title: (a.title || '') + ' (kopie)',
       content: a.content || '',
       excerpt: a.excerpt || '',
+      takeaway: a.takeaway || '',
       coverUrl: a.coverUrl || '',
       slug: generateSlug((a.title || '') + '-kopie-' + Date.now()),
       sectionId: a.sectionId || a.section || null,

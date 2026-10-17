@@ -321,11 +321,39 @@ function __setupQuoteHover() {
   document.addEventListener('mouseleave', function () { px = py = -1; if (!ticking) { ticking = true; requestAnimationFrame(check); } });
 }
 
+/* ✦ Citát dne: klidná stálá karta (#quoteOfDay) — pro každý den jeden citát (stejný pro všechny návštěvníky),
+   tlačítko „další" listuje dál. Plovoucí citáty zůstávají jako atmosféra. */
+function renderQuoteOfDay(quotes) {
+  var box = document.getElementById('quoteOfDay');
+  if (!box || !quotes || !quotes.length) return;
+  var list = quotes.slice().sort(function (a, b) { return ((a.created || 0) - (b.created || 0)) || String(a.text).localeCompare(String(b.text)); });
+  var d = new Date();
+  var dayNum = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  var idx = dayNum % list.length, step = 0;
+  box.textContent = '';
+  var lab = document.createElement('div'); lab.className = 'qotd-label'; lab.textContent = '✦ Citát dne';
+  var txt = document.createElement('blockquote'); txt.className = 'qotd-text';
+  var au = document.createElement('div'); au.className = 'qotd-author';
+  var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'qotd-next'; btn.textContent = 'další ↻';
+  btn.setAttribute('aria-label', 'Zobrazit další citát');
+  box.appendChild(lab); box.appendChild(txt); box.appendChild(au);
+  if (list.length > 1) box.appendChild(btn);
+  function show(first) {
+    var q = list[(idx + step) % list.length];
+    var apply = function () { txt.textContent = '„' + q.text + '"'; au.textContent = q.author ? '— ' + q.author : ''; box.classList.remove('qotd-swap'); };
+    if (first || __reduceMotion) { apply(); } else { box.classList.add('qotd-swap'); setTimeout(apply, 220); }
+  }
+  btn.addEventListener('click', function () { step++; show(false); });
+  show(true);
+  box.hidden = false;
+}
+
 async function startQuotes() {
   var quotes = await loadQuotes();
   if (!Array.isArray(quotes)) return;
   quotes = quotes.filter(function (q) { return q && q.text; });
   if (!quotes.length) return;
+  try { renderQuoteOfDay(quotes); } catch (e) {}
   __setupQuoteHover();
   var MAX = 4;                       // najednou nejvýš 4 citáty
   var queue = [];

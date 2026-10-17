@@ -15,6 +15,7 @@ export async function onRequestPut(context) {
   // jinak by je starý obsah editoru mohl přepsat.
   const { shareToken: _ignored, likes: _l, views: _v, viewsByWeek: _w, refs: _r, ...safeBody } = body;
   const updated = { ...existing, ...safeBody, id: existing.id, updated: Date.now() };
+  if ('takeaway' in safeBody) updated.takeaway = String(safeBody.takeaway || '').slice(0, 220);
   if ('tags' in safeBody) updated.tags = normTags(safeBody.tags);
   if (updated.unlisted === true) {
     // soukromý: zachovej stávající token (odkazy dál fungují), nebo vytvoř nový

@@ -50,6 +50,7 @@ export async function onRequestPost(context) {
     photoStop: (stops.length >= 2 && Number.isInteger(body.photoStop) && body.photoStop >= 0 && body.photoStop < stops.length) ? body.photoStop : null,
     tags: normTags(body.tags),
     excerpt: body.excerpt || '',
+    takeaway: String(body.takeaway || '').slice(0, 220),
     coverUrl: body.coverUrl || '',
     slug: body.slug || '',
     // koncept = published:false; s publishAt se po daném čase zveřejní sám
