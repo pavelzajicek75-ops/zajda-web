@@ -318,21 +318,6 @@
     .site-status[hidden] { display: none; }
 
 
-    /* === FOTKA DNE === */
-    .potd { position: relative; z-index: 10; display: block; max-width: 1200px; margin: 20px auto 0; border-radius: 16px; overflow: hidden; aspect-ratio: 21 / 8; min-height: 180px;
-      text-decoration: none; color: var(--parchment); border: 1px solid var(--panel-border); background: var(--panel-solid); opacity: 0; transform: translateY(10px); transition: opacity 1.4s ease, transform 1.4s ease, border-color .3s; }
-    .potd[hidden] { display: none; }
-    .potd.in { opacity: 1; transform: none; }
-    .potd:hover, .potd:focus-visible { border-color: var(--ember); }
-    .potd img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.88); transition: transform .8s; }
-    .potd:hover img { transform: scale(1.03); }
-    .potd::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(8,5,20,.88) 0%, rgba(8,5,20,0) 55%); }
-    .potd-cap { position: absolute; z-index: 2; left: 22px; right: 22px; bottom: 16px; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
-    .potd-label { font: 600 11.5px 'Space Grotesk', sans-serif; letter-spacing: .16em; text-transform: uppercase; color: var(--nova); }
-    .potd-title { font: 600 17px 'Space Grotesk', sans-serif; text-shadow: 0 2px 12px rgba(0,0,0,.7); }
-    .potd-place { font-size: 13px; color: #cfcce2; }
-    @media (max-width: 900px) { .potd { margin: 16px 20px 0; aspect-ratio: 4 / 3; } }
-
     /* === VLAJKOVÝ PŘÍBĚH NAHOŘE === */
     .story-hero { position: relative; z-index: 10; display: block; max-width: 1200px; margin: 28px auto 0; min-height: 340px; border-radius: 20px; overflow: hidden;
       text-decoration: none; color: var(--parchment); border: 1px solid var(--panel-border);
@@ -608,7 +593,6 @@
     <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div><div class="site-status" id="siteStatus" hidden></div><a class="pinned-card" id="pinnedCard" href="#" hidden></a> <a class="site-status" id="writeMe" href="/napis-mi" hidden>✉️ Napiš mi</a></div>
   </div>
   <div class="qotd" id="quoteOfDay" hidden></div>
-  <a class="potd" id="photoOfDay" href="#" hidden></a>
   <div class="search-panel">
     <input type="text" id="siteSearchInput" aria-label="Hledat v článcích" placeholder="🔍 Hledat v článcích…" autocomplete="off">
     <div class="search-filters" id="searchFilters" hidden>
@@ -887,52 +871,12 @@
       el.hidden = false;
     }
 
-    /* Fotka dne: z fotek použitých v článcích (titulní + v textu) se pro každý den vybere jedna,
-       pro všechny stejná; karta odkazuje na článek, ke kterému patří. */
-    function renderPhotoOfDay(articles) {
-      var el = document.getElementById('photoOfDay');
-      if (!el || !articles || !articles.length) return;
-      var seen = {}, cand = [];
-      function add(src, a) {
-        if (!src || /^data:/i.test(src) || seen[src]) return;
-        seen[src] = 1; cand.push({ src: src, a: a });
-      }
-      articles.forEach(function (a) {
-        if (!a || a.unlisted || a.published === false) return;
-        add(a.coverUrl, a);
-        var re = /<img[^>]+src=["']([^"']+)["']/gi, m, n = 0;
-        while ((m = re.exec(String(a.content || ''))) && n < 40) { add(m[1].replace(/&amp;/g, '&'), a); n++; }
-      });
-      if (!cand.length) return;
-      cand.sort(function (x, y) { return x.src < y.src ? -1 : (x.src > y.src ? 1 : 0); });
-      var d = new Date();
-      var dayNum = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
-      var pick = cand[(dayNum * 7) % cand.length];
-      var im = new Image(); im.alt = ''; im.decoding = 'async';
-      im.onload = function () {
-        el.textContent = '';
-        el.appendChild(im);
-        var cap = document.createElement('div'); cap.className = 'potd-cap';
-        var l = document.createElement('span'); l.className = 'potd-label'; l.textContent = '📷 Fotka dne';
-        var t = document.createElement('span'); t.className = 'potd-title'; t.textContent = pick.a.title || 'Bez názvu';
-        cap.appendChild(l); cap.appendChild(t);
-        if (pick.a.place) { var pl = document.createElement('span'); pl.className = 'potd-place'; pl.textContent = '📍 ' + pick.a.place; cap.appendChild(pl); }
-        el.appendChild(cap);
-        el.href = '/article?id=' + encodeURIComponent(pick.a.id || '');
-        el.setAttribute('aria-label', 'Fotka dne z článku ' + (pick.a.title || ''));
-        el.hidden = false;
-        requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('in'); }); });
-      };
-      im.src = pick.src;   // při chybě načtení se karta prostě nezobrazí
-    }
-
     async function loadLatest() {
       var box = document.getElementById('latestPanel');
       if (!box) return;
       var articles = await getAllArticles();
       var sorted = sortArticles(articles, 'newest');
       try { renderStoryHero(sorted[0]); } catch (e) {}
-      try { renderPhotoOfDay(articles); } catch (e) {}
       var latest = sorted.slice(0, 2);
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
