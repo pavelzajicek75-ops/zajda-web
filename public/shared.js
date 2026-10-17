@@ -340,8 +340,16 @@ function renderQuoteOfDay(quotes) {
   if (list.length > 1) box.appendChild(btn);
   function show(first) {
     var q = list[(idx + step) % list.length];
-    var apply = function () { txt.textContent = '„' + q.text + '"'; au.textContent = q.author ? '— ' + q.author : ''; box.classList.remove('qotd-swap'); };
-    if (first || __reduceMotion) { apply(); } else { box.classList.add('qotd-swap'); setTimeout(apply, 220); }
+    au.style.opacity = 0;
+    var full = '„' + q.text + '"';
+    var go = function () {
+      box.classList.remove('qotd-swap');
+      decodeText(txt, full, Math.min(4200, 1400 + full.length * 32));   // text se pomalu „vyluští" jako u plovoucích citátů
+      au.textContent = q.author ? '— ' + q.author : '';
+      setTimeout(function () { au.style.opacity = 1; }, __reduceMotion ? 0 : Math.min(4200, 1400 + full.length * 32) + 150);
+    };
+    if (first) { txt.textContent = ''; box.classList.add('qotd-wait'); setTimeout(function () { box.classList.remove('qotd-wait'); go(); }, __reduceMotion ? 0 : 1300); }
+    else { box.classList.add('qotd-swap'); setTimeout(go, __reduceMotion ? 0 : 450); }
   }
   btn.addEventListener('click', function () { step++; show(false); });
   show(true);
