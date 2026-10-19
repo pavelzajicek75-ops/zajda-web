@@ -7,6 +7,16 @@
   <meta name="theme-color" content="#05030f">
   <meta name="description" content="Moje citáty — signály zachycené z hlubokého vesmíru.">
   <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Citáty — Moje diagnóza, můj vesmír">
+  <meta property="og:description" content="Signály zachycené z hlubokého vesmíru.">
+  <meta property="og:url" content="https://zajda-web.pages.dev/citaty">
+  <meta property="og:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
+  <meta property="og:locale" content="cs_CZ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Citáty — Moje diagnóza, můj vesmír">
+  <meta name="twitter:description" content="Signály zachycené z hlubokého vesmíru.">
+  <meta name="twitter:image" content="https://zajda-web.pages.dev/images/og-cover.jpg">
   <style>
     html, body { margin: 0; background: #05030f; color: #cfeee9; font-family: system-ui, sans-serif; min-height: 100vh; }
     .fb { padding: 40px 20px; text-align: center; }
@@ -16,10 +26,10 @@
 </head>
 <body>
   <noscript><div class="fb">Citáty potřebují JavaScript. <a href="/">Zpět na vesmír</a></div></noscript>
-  <script src="/quote-tv.js?v=1"></script>
+  <script src="/quote-tv.js?v=2"></script>
   <script>
     // Přímý odkaz /citaty rovnou rozjede vysílání; po zavření se vrátí na úvodní stránku.
-    QuoteTV.open(null, null, { onClose: function () { location.href = '/'; } });
+    QuoteTV.open(null, null, { id: new URLSearchParams(location.search).get('q') || '', onClose: function () { location.href = '/'; } });
   </script>
 </body>
 </html>

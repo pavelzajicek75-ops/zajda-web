@@ -6,7 +6,7 @@
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var CSS = [
-    '.qtv{position:fixed;inset:0;z-index:10000;display:none;background:#05030f;color:#fff;overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;',
+    '.qtv{position:fixed;left:0;top:0;width:100%;height:100vh;height:100dvh;z-index:10000;display:none;background:#05030f;color:#fff;overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;',
     'clip-path:circle(0px at var(--ox,50%) var(--oy,100%));transition:clip-path .95s cubic-bezier(.65,0,.2,1)}',
     '.qtv.show{display:block}.qtv.open{clip-path:circle(170vmax at var(--ox,50%) var(--oy,100%))}',
     '.qtv-in{position:absolute;inset:0;transform:scale(1.35);opacity:0;transition:transform 1.2s cubic-bezier(.2,.8,.2,1),opacity .7s}',
@@ -14,15 +14,16 @@
     '.qtv.noanim,.qtv.noanim .qtv-in{transition:none}',
     '.qtv-cv{position:absolute;inset:0;width:100%;height:100%}',
     '.qtv-in::after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;box-shadow:inset 0 0 150px 30px rgba(0,0,0,.8)}',
-    '.qtv-hud{position:absolute;z-index:6;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:16px 22px;font:700 12px "Space Mono",ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:#7ff0dc;text-shadow:0 0 10px rgba(0,0,0,.9);pointer-events:none}',
+    '.qtv-hud{position:absolute;z-index:6;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:calc(16px + env(safe-area-inset-top)) 22px 16px;font:700 12px "Space Mono",ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:#7ff0dc;text-shadow:0 0 10px rgba(0,0,0,.9);pointer-events:none}',
     '.qtv-sys{min-height:1.4em;color:#7ff0dc}.qtv-sys.warn{color:#ffb86b}',
     '.qtv-bar{margin-top:8px;width:min(300px,52vw);height:6px;border:1px solid rgba(127,240,220,.5);border-radius:2px;overflow:hidden}',
     '.qtv-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2fe6c9,#f2b8ff);box-shadow:0 0 12px #2fe6c9}',
     '.qtv-barlab{margin-top:5px;font-size:10.5px;opacity:.8;letter-spacing:.14em}',
     '.qtv-hr{text-align:right;line-height:1.7}.qtv-hr b{color:#ffe14a;font-weight:700}',
     '.qtv-col{position:absolute;z-index:2;top:110px;bottom:26vh;margin:0;width:150px;overflow:hidden;font:400 10.5px/1.7 "Space Mono",ui-monospace,monospace;color:#7ff0dc;opacity:.32;pointer-events:none;white-space:pre}',
-    '.qtv-col.l{left:18px}.qtv-col.r{right:18px;text-align:right}',
-    '.qtv-logwrap{position:absolute;z-index:3;left:0;right:0;top:92px;bottom:25vh;display:flex;align-items:center;justify-content:center;padding:0 7vw}',
+    '.qtv-col.l{left:18px}.qtv-col.r{right:18px;top:228px;text-align:right}',
+    '.qtv-tel{display:none;position:absolute;z-index:5;left:14px;right:84px;top:calc(88px + env(safe-area-inset-top));font:400 10px/1.5 "Space Mono",ui-monospace,monospace;letter-spacing:.06em;color:#7ff0dc;opacity:.7;pointer-events:none;white-space:nowrap;overflow:hidden}',
+    '.qtv-logwrap{position:absolute;z-index:3;left:0;right:0;top:92px;bottom:max(25vh,215px);display:flex;align-items:center;justify-content:center;padding:0 7vw}',
     '.qtv-log{width:min(860px,100%);font-family:"Space Mono","Courier New",monospace;text-align:left;transition:opacity .6s}',
     '.qtv-log.off{opacity:0}',
     '.qtv-h{color:#7ff0dc;font-size:clamp(11px,1.4vw,13.5px);letter-spacing:.12em;text-transform:uppercase;line-height:1.75;margin-bottom:4vh;opacity:0;transition:opacity .7s}',
@@ -38,19 +39,20 @@
     '.qtv-live::after{content:"█";color:#7ff0dc;animation:qtvbl 1s steps(1) infinite}.qtv-live.done::after{content:""}',
     '.qtv-src{margin-top:4vh;font-size:clamp(12px,1.8vw,17px);color:#f2b8ff;opacity:0;transition:opacity .9s;letter-spacing:.06em}.qtv-src.in{opacity:1}',
     '@keyframes qtvbl{50%{opacity:0}}',
-    '.qtv-controls{position:absolute;z-index:7;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:10px}',
+    '.qtv-controls{position:absolute;z-index:7;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:8px;flex-wrap:nowrap}',
     '.qtv-controls button{cursor:pointer;font:700 12px "Space Mono",ui-monospace,monospace;letter-spacing:.08em;color:#cfeee9;background:rgba(8,5,22,.7);border:1px solid rgba(127,240,220,.4);border-radius:999px;padding:8px 16px}',
     '.qtv-controls button:hover,.qtv-controls button:focus-visible{border-color:#f2b8ff;color:#f2b8ff}',
-    '@media(max-width:760px){.qtv-controls button{padding:7px 11px;font-size:11px;white-space:nowrap}.qtv-col{display:none}.qtv-hud{font-size:10px;padding:14px}.qtv-logwrap{top:84px;bottom:28vh}}'
+    '.qtv-toast{position:absolute;z-index:8;left:50%;bottom:calc(62px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(8,5,22,.9);border:1px solid #7ff0dc;color:#7ff0dc;padding:8px 16px;border-radius:999px;font:700 12px "Space Mono",monospace;letter-spacing:.08em;opacity:0;transition:opacity .3s;pointer-events:none}.qtv-toast.on{opacity:1}',
+    '@media(max-width:760px){#qtvFull{display:none}.qtv-controls button{padding:7px 9px;font-size:10.5px;white-space:nowrap}.qtv-col{display:none}.qtv-tel{display:block}.qtv-hud{font-size:10px;padding:calc(14px + env(safe-area-inset-top)) 14px 14px}.qtv-logwrap{top:116px;bottom:max(28vh,215px)}}'
   ].join('');
 
   var HTML = '<div class="qtv-in"><canvas class="qtv-cv"></canvas>' +
     '<div class="qtv-hud"><div><div class="qtv-sys" id="qtvSys"></div><div class="qtv-bar"><i id="qtvFill"></i></div><div class="qtv-barlab" id="qtvLab"></div></div><div class="qtv-hr" id="qtvHr"></div></div>' +
-    '<pre class="qtv-col l" id="qtvL"></pre><pre class="qtv-col r" id="qtvR"></pre>' +
+    '<div class="qtv-tel" id="qtvTel"></div><pre class="qtv-col l" id="qtvL"></pre><pre class="qtv-col r" id="qtvR"></pre>' +
     '<div class="qtv-logwrap"><div class="qtv-log off" id="qtvLog"><div class="qtv-h" id="qtvH"></div>' +
     '<div class="qtv-body"><div class="qtv-sizer" id="qtvSizer"></div><div class="qtv-noise" id="qtvNoise"></div><div class="qtv-live" id="qtvLive"></div></div>' +
     '<div class="qtv-src" id="qtvSrc"></div></div></div>' +
-    '<div class="qtv-controls"><button type="button" id="qtvPause">⏸ PAUSE</button><button type="button" id="qtvNext">⏭ NEXT SIGNAL</button><button type="button" id="qtvFull">⛶</button><button type="button" id="qtvExit">✕ CLOSE</button></div></div>';
+    '<div class="qtv-toast" id="qtvToast"></div><div class="qtv-controls"><button type="button" id="qtvPause">⏸ PAUSE</button><button type="button" id="qtvNext">⏭ NEXT SIGNAL</button><button type="button" id="qtvShare">📤 SHARE</button><button type="button" id="qtvFull">⛶</button><button type="button" id="qtvExit">✕ CLOSE</button></div></div>';
 
   var STOP = ('a i o u v z s k je jsem jsi jsme jste jsou to se si na že ale jak co by aby do ze ve po pro než tak jen už ani nebo tu ten ta ty tě mě mi ti jí ho ji my vy oni byl byla bylo být má mám máš ' +
     'nemusíš musíš když kdy kde který která které tom tom tohle toto jako jeden jedna to že za při od před nad pod mezi bez ať ať ještě také tedy proto protože pokud však ne není nejsem nejsi').split(' ');
@@ -58,8 +60,20 @@
 
   var el, cv, g, wf, wg, wrow, quotes = [], loaded = false, built = false;
   var running = false, paused = false, raf = 0, queue = [], forced = null, curQuote = null, num = 0, onClose = null;
-  var W = 0, H = 0, pts = [], ptsN = 0, st = null, bpm = 92, phase = 0, lastT = 0, colT = 0, sysT = 0, sysI = 0, chars = '▒░█#%&@?*+=/\\<>';
+  var hist = [], histT = 0, telT = 0, W = 0, H = 0, pts = [], ptsN = 0, st = null, bpm = 92, phase = 0, lastT = 0, colT = 0, sysT = 0, sysI = 0, chars = '▒░█#%&@?*+=/\\<>';
   var q$ = function (id) { return document.getElementById(id); };
+
+  function qid(t) { var h = 5381; t = String(t).trim(); for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+  function toast(msg) { var t = q$('qtvToast'); t.textContent = msg; t.classList.add('on'); setTimeout(function () { t.classList.remove('on'); }, 2200); }
+  function share() {
+    var q = curQuote; if (!q) return;
+    var url = location.origin + '/citaty?q=' + qid(q.text), text = '„' + q.text + '"' + (q.author ? ' — ' + q.author : '');
+    var wasPaused = paused; paused = true; q$('qtvPause').textContent = '▶ RESUME';
+    function done() { if (!wasPaused) { paused = false; q$('qtvPause').textContent = '⏸ PAUSE'; } }
+    if (navigator.share) { navigator.share({ title: 'Zajda — signal from deep space', text: text, url: url }).then(done, done); return; }
+    var full = text + '\n' + url;
+    (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(full) : Promise.reject()).then(function () { toast('LINK COPIED'); done(); }, function () { window.prompt('Zkopíruj odkaz:', full); done(); });
+  }
 
   function build() {
     if (built) return; built = true;
@@ -72,6 +86,7 @@
     el.addEventListener('click', function () { next(); });
     q$('qtvNext').addEventListener('click', function (e) { e.stopPropagation(); next(); });
     q$('qtvPause').addEventListener('click', function (e) { e.stopPropagation(); togglePause(); });
+    q$('qtvShare').addEventListener('click', function (e) { e.stopPropagation(); share(); });
     q$('qtvExit').addEventListener('click', function (e) { e.stopPropagation(); close(); });
     q$('qtvFull').addEventListener('click', function (e) {
       e.stopPropagation();
@@ -203,8 +218,8 @@
     g.imageSmoothingEnabled = false; g.globalAlpha = .4; g.drawImage(wf, 0, 0, W, H * .8); g.globalAlpha = 1;
 
     // radar
-    if (W >= 760) {
-      var rx = W - 90, ry = 150, rr = 46, ang = reduce ? 0 : now / 900;
+    if (true) {
+      var mob = W < 760, rx = mob ? W - 38 : W - 90, ry = mob ? 126 : 168, rr = mob ? 24 : 46, ang = reduce ? 0 : now / 900;
       g.strokeStyle = 'rgba(127,240,220,.45)'; g.lineWidth = 1;
       [1, .66, .33].forEach(function (k) { g.beginPath(); g.arc(rx, ry, rr * k, 0, 6.3); g.stroke(); });
       g.beginPath(); g.moveTo(rx - rr, ry); g.lineTo(rx + rr, ry); g.moveTo(rx, ry - rr); g.lineTo(rx, ry + rr); g.stroke();
@@ -212,24 +227,32 @@
       if (sw) { sw.addColorStop(0, 'rgba(127,240,220,.55)'); sw.addColorStop(.12, 'rgba(127,240,220,0)'); sw.addColorStop(1, 'rgba(127,240,220,0)'); g.fillStyle = sw; g.beginPath(); g.arc(rx, ry, rr, 0, 6.3); g.fill(); }
       g.strokeStyle = '#7ff0dc'; g.beginPath(); g.moveTo(rx, ry); g.lineTo(rx + Math.cos(ang) * rr, ry + Math.sin(ang) * rr); g.stroke();
       g.fillStyle = '#ffe14a'; var bl = st.blips || (st.blips = [[rnd(70) - 35, rnd(70) - 35], [rnd(60) - 30, rnd(60) - 30], [rnd(50) - 25, rnd(50) - 25]]);
-      bl.forEach(function (b) { g.globalAlpha = tuning ? .9 : .5; g.beginPath(); g.arc(rx + b[0], ry + b[1], 2.2, 0, 6.3); g.fill(); }); g.globalAlpha = 1;
+      bl.forEach(function (b) { g.globalAlpha = tuning ? .9 : .5; g.beginPath(); g.arc(rx + b[0] * rr / 46, ry + b[1] * rr / 46, 2.2, 0, 6.3); g.fill(); }); g.globalAlpha = 1;
     }
 
-    // EKG
+    // PULSAR: živý tep dole + starší záznamy nad ním jako vrstvené vlny (jako radiový signál pulsaru)
     var chaos = tuning ? (1 - clean) : 0;
     var v0 = ecg(phase) + (reduce ? 0 : (Math.random() - .5) * chaos * .35);
     if (!reduce) { pts.push(v0); pts.shift(); pts.push(v0); pts.shift(); } else { for (var k = 0; k < pts.length; k++) pts[k] = 0; }
-    var base = H - 78, amp = Math.min(70, H * .1);
-    g.strokeStyle = tuning ? '#ffb86b' : '#7ff0dc'; g.shadowColor = g.strokeStyle; g.shadowBlur = 12; g.lineWidth = 2.2; g.beginPath();
-    for (var i = 0; i < pts.length; i++) { var Y = base - pts[i] * amp; i ? g.lineTo(i * 2, Y) : g.moveTo(0, Y); }
-    g.stroke(); g.shadowBlur = 0;
+    if (!reduce && now - histT > 480) { histT = now; hist.unshift(pts.slice()); if (hist.length > 6) hist.pop(); }
+    var baseY = H - 70 - (W < 760 ? 4 : 0), amp = Math.min(46, H * .07), gap = W < 760 ? 9 : 11;
+    for (var r = hist.length - 1; r >= -1; r--) {
+      var row = r === -1 ? pts : hist[r], y0 = baseY - (r + 1) * gap, live = r === -1, fade = live ? 1 : Math.max(.12, .62 - r * .1);
+      g.beginPath();
+      for (var i = 0; i < row.length; i++) { var Y = y0 - row[i] * amp * (live ? 1 : (1 - r * .06)); i ? g.lineTo(i * 2, Y) : g.moveTo(0, Y); }
+      if (!live) { g.lineTo((row.length - 1) * 2, y0 + 2); g.lineTo(0, y0 + 2); g.closePath(); g.fillStyle = '#05030f'; g.fill(); }
+      g.lineWidth = live ? 2.4 : 1.3;
+      var col = live ? (tuning ? '#ffb86b' : '#7ff0dc') : 'rgba(' + (r % 2 ? '190,150,255' : '127,240,220') + ',' + fade + ')';
+      g.strokeStyle = col; if (live) { g.shadowColor = col; g.shadowBlur = 14; }
+      g.stroke(); g.shadowBlur = 0;
+    }
+    if (!reduce) { for (var sI = 0; sI < 18; sI++) { var sx = (sI * 97 + (now / 40) * (1 + (sI % 3))) % W, sy = baseY - 90 - ((sI * 53) % 60); g.globalAlpha = .25 + .35 * Math.abs(Math.sin(now / 600 + sI)); g.fillStyle = '#fff'; g.fillRect(sx, sy, 1.6, 1.6); } g.globalAlpha = 1; }
     var hrState = bpm > 80 ? 'ELEVATED' : (bpm > 65 ? 'STABILIZING' : 'NOMINAL');
-    g.font = '700 12px "Space Mono", monospace'; g.fillStyle = tuning ? '#ffb86b' : '#7ff0dc'; g.textAlign = 'left';
-    g.fillText('♥ HEART RATE ' + Math.round(bpm) + ' BPM · ' + hrState, 18, base + amp * .9 + 22);
 
     // HUD vpravo
     var freq = 1420.40 + (tuning ? (1 - clean) * Math.sin(now / 260) * 4 : 0);
-    q$('qtvHr').innerHTML = freq.toFixed(2) + ' MHz<br>' + (tuning ? 'STATUS: SCANNING' : 'STATUS: <b>LOCKED</b>') + '<br>LINK ' + (tuning ? '—' : 'STABLE');
+    q$('qtvHr').innerHTML = freq.toFixed(2) + ' MHz<br>' + (tuning ? 'STATUS: SCANNING' : 'STATUS: <b>LOCKED</b>') + '<br>LINK ' + (tuning ? '—' : 'STABLE') + '<br>♥ ' + Math.round(bpm) + ' BPM · ' + hrState;
+    if (W < 760 && now - telT > 700) { telT = now; q$('qtvTel').textContent = 'ALT ' + (380 + rnd(60)) + '.' + rnd(9) + ' KM · SNR ' + (12 + rnd(20)) + '.' + rnd(9) + ' · FLUX 0.' + (10 + rnd(89)) + ' · RX ' + hex(4); }
     columns(now);
 
     // fáze
@@ -259,7 +282,7 @@
   function togglePause() { paused = !paused; q$('qtvPause').textContent = paused ? '▶ RESUME' : '⏸ PAUSE'; }
 
   function start(startQuote) {
-    forced = startQuote || null; running = true; paused = false; queue = []; st = null; num = 0; bpm = 92; phase = 0;
+    forced = startQuote || null; running = true; paused = false; queue = []; st = null; num = 0; bpm = 92; phase = 0; hist = [];
     q$('qtvPause').textContent = '⏸ PAUSE'; document.body.style.overflow = 'hidden';
     resize(); lastT = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
     try { q$('qtvNext').focus({ preventScroll: true }); } catch (e) {}
@@ -274,6 +297,7 @@
     el.classList.toggle('noanim', reduce);
     el.classList.add('show');
     var go = function () {
+      if (opts && opts.id) { startQuote = quotes.filter(function (q) { return qid(q.text) === opts.id; })[0] || startQuote; }
       if (!quotes.length) { el.classList.remove('open', 'show'); return; }
       void el.offsetWidth; el.classList.add('open'); start(startQuote);
     };
