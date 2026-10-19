@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <title>Citáty — Moje diagnóza, můj vesmír</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#08080f">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="description" content="Moje citáty — signály ze Zajdova vesmíru.">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/shared.css?v=20261035">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
+    .back-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--panel-solid); border: 1px solid rgba(255,122,69,0.35); color: var(--parchment); padding: 10px 22px; border-radius: 30px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all .3s; }
+    .back-btn:hover { border-color: var(--ember); background: rgba(255,122,69,0.18); }
+    .nav-title { font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 700; color: var(--ember); text-decoration: none; }
+    .page-header { position: relative; z-index: 10; text-align: center; padding: 0 20px 22px; }
+    .page-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(26px, 4.5vw, 44px); font-weight: 700; color: var(--parchment); }
+    .page-subtitle { color: var(--mist); font-size: 14.5px; margin-top: 8px; }
+    .wrap { position: relative; z-index: 10; max-width: 860px; margin: 0 auto; padding: 0 20px 70px; }
+    .launch { text-align: center; margin: 4px 0 30px; }
+    .launch-btn { font: 700 18px 'Space Grotesk', sans-serif; letter-spacing: .06em; color: #0b0618; background: linear-gradient(135deg, #f2b8ff, #2fe6c9); border: 0; border-radius: 999px; padding: 15px 34px; cursor: pointer; box-shadow: 0 0 34px rgba(226,120,255,.45); transition: transform .2s, box-shadow .2s; }
+    .launch-btn:hover, .launch-btn:focus-visible { transform: scale(1.04); box-shadow: 0 0 48px rgba(226,120,255,.7); }
+    .launch small { display: block; margin-top: 12px; color: var(--mist); font-size: 12.5px; line-height: 1.5; }
+    .qlist { display: grid; gap: 12px; }
+    .qrow { text-align: left; width: 100%; cursor: pointer; background: var(--panel-solid); border: 1px solid var(--panel-border); border-radius: 14px; padding: 15px 18px; color: var(--parchment); font: 500 17px/1.5 'Space Grotesk', sans-serif; transition: border-color .25s, transform .25s; }
+    .qrow:hover, .qrow:focus-visible { border-color: rgba(226,120,255,.6); transform: translateX(3px); }
+    .qrow small { display: block; margin-top: 6px; font: 400 13px 'Inter', sans-serif; color: var(--quote, #f2b8ff); opacity: .85; }
+    .qsearch { width: 100%; margin: 0 0 16px; padding: 11px 16px; border-radius: 999px; border: 1px solid var(--panel-border); background: var(--panel-solid); color: var(--parchment); font: 400 15px 'Inter', sans-serif; }
+    .empty { text-align: center; color: var(--mist); padding: 30px 0; }
+    @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } }
+
+    /* ===================== SIGNÁL ZE ZAJDOVA VESMÍRU ===================== */
+    .tv { position: fixed; inset: 0; z-index: 1000; background: #05030f; color: #fff; overflow: hidden; display: none; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    .tv.on { display: block; }
+    .tv canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .tv::after { content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; box-shadow: inset 0 0 150px 30px rgba(0,0,0,.8); }
+    .hud { position: absolute; z-index: 6; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 22px; font: 700 12px 'Space Mono', monospace; letter-spacing: .14em; text-transform: uppercase; color: #7ff0dc; text-shadow: 0 0 10px rgba(0,0,0,.9); pointer-events: none; }
+    .hud .st { color: #ffe14a; text-align: right; }
+    .hud .lock { color: #7ff0dc; }
+    .logwrap { position: absolute; z-index: 3; left: 0; right: 0; top: 56px; bottom: 25vh; display: flex; align-items: center; justify-content: center; padding: 0 6vw; }
+    .log { width: min(860px, 100%); font-family: 'Space Mono', 'Courier New', monospace; text-align: left; transition: opacity .6s; }
+    .log.off { opacity: 0; }
+    .log .h { color: #7ff0dc; font-size: clamp(11px, 1.5vw, 14px); letter-spacing: .12em; text-transform: uppercase; line-height: 1.7; margin-bottom: 4vh; opacity: 0; transition: opacity .7s; }
+    .log .h.in { opacity: 1; }
+    .log .h b { color: #ffe14a; font-weight: 700; }
+    .log .body { display: grid; }
+    .log .body > * { grid-area: 1 / 1; margin: 0; white-space: pre-wrap; word-break: break-word; font-weight: 400; line-height: 1.55; color: #f4efff; }
+    .log .sizer { visibility: hidden; }
+    .log .noise { color: #7ff0dc; opacity: .22; }
+    .log .live .w { transition: text-shadow .9s ease-out, color .9s ease-out; }
+    .log .live .w.pulse { color: #fff; text-shadow: 0 0 22px #7ff0dc, 0 0 6px #7ff0dc; transition: none; }
+    .log .live::after { content: '█'; color: #7ff0dc; animation: blink 1s steps(1) infinite; }
+    .log .live.done::after { content: ''; }
+    .log .src { margin-top: 4vh; font-size: clamp(12px, 1.8vw, 17px); color: #f2b8ff; opacity: 0; transition: opacity .9s; letter-spacing: .06em; }
+    .log .src.in { opacity: 1; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .controls { position: absolute; z-index: 7; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 10px; }
+    .controls button { cursor: pointer; font: 700 12px 'Space Mono', monospace; letter-spacing: .08em; color: #cfeee9; background: rgba(8,5,22,.7); border: 1px solid rgba(127,240,220,.4); border-radius: 999px; padding: 8px 16px; }
+    .controls button:hover, .controls button:focus-visible { border-color: #f2b8ff; color: #f2b8ff; }
+    @media (max-width: 640px) { .hud { font-size: 10px; padding: 14px; } .logwrap { top: 50px; bottom: 28vh; } }
+  </style>
+  <script src="/theme.js?v=1"></script>
+  <script src="/error-report.js?v=2"></script>
+</head>
+<body>
+  <a href="#qMain" class="skip-link">Přeskočit na obsah</a>
+  <div class="bg"></div>
+  <div class="stars" id="stars"></div>
+  <div class="nav-bar">
+    <a href="/" class="back-btn">← Zpět na vesmír</a>
+    <a href="/" class="nav-title">Moje diagnóza, můj vesmír</a>
+  </div>
+  <div class="page-header">
+    <h1 class="page-title">✦ Citáty</h1>
+    <p class="page-subtitle">Věty, které mě drží nad vodou</p>
+  </div>
+  <main class="wrap" id="qMain" tabindex="-1">
+    <div class="launch">
+      <button type="button" class="launch-btn" id="tvStart">▶ NALADIT SIGNÁL</button>
+      <small>Citáty jako signály zachycené z mého vesmíru. Tep se v nich uklidňuje.<br>Klepnutí / mezerník = přeladit, P = pauza, Esc = konec.</small>
+    </div>
+    <input class="qsearch" id="qSearch" type="search" placeholder="🔍 Hledat v citátech…" aria-label="Hledat v citátech" autocomplete="off">
+    <div class="qlist" id="qList"><div class="empty">Načítám…</div></div>
+  </main>
+
+  <div class="tv" id="tv" role="dialog" aria-label="Signál ze Zajdova vesmíru — vysílání citátů" aria-modal="true">
+    <canvas id="tvCv"></canvas>
+    <div class="hud"><span id="hudL">SIGNÁL ZE ZAJDOVA VESMÍRU</span><span class="st" id="hudR"></span></div>
+    <div class="logwrap"><div class="log off" id="log">
+      <div class="h" id="logH"></div>
+      <div class="body"><div class="sizer" id="logSizer"></div><div class="noise" id="logNoise"></div><div class="live" id="logLive"></div></div>
+      <div class="src" id="logSrc"></div>
+    </div></div>
+    <div class="controls">
+      <button type="button" id="tvPause">⏸ PAUZA</button>
+      <button type="button" id="tvNext">⏭ PŘELADIT</button>
+      <button type="button" id="tvFull">⛶</button>
+      <button type="button" id="tvExit">✕ KONEC</button>
+    </div>
+  </div>
+
+  <script src="/shared.js?v=20261035"></script>
+  <script>
+  (function () {
+    'use strict';
+    if (typeof initStarfield === 'function') document.addEventListener('DOMContentLoaded', function () { initStarfield(120); });
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var COLORS = ['#ffffff', '#f2b8ff', '#2fe6c9', '#ff7a45', '#ffe14a', '#a98bff'];
+    var quotes = [];
+    var tv = document.getElementById('tv');
+
+    /* ---------- seznam citátů ---------- */
+    function renderList(filter) {
+      var box = document.getElementById('qList'); box.textContent = '';
+      var f = (filter || '').toLocaleLowerCase('cs');
+      var shown = quotes.filter(function (q) { return !f || (q.text + ' ' + (q.author || '')).toLocaleLowerCase('cs').indexOf(f) !== -1; });
+      if (!shown.length) { var e = document.createElement('div'); e.className = 'empty'; e.textContent = quotes.length ? 'Nic nenalezeno.' : 'Zatím tu nejsou žádné citáty.'; box.appendChild(e); return; }
+      shown.forEach(function (q) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'qrow';
+        b.appendChild(document.createTextNode('„' + q.text + '"'));
+        if (q.author) { var s = document.createElement('small'); s.textContent = '— ' + q.author; b.appendChild(s); }
+        b.addEventListener('click', function () { startTV(q); });
+        box.appendChild(b);
+      });
+    }
+    document.getElementById('qSearch').addEventListener('input', function (e) { renderList(e.target.value); });
+
+    /* ---------- engine: signál → deník → tep ---------- */
+    var cv = document.getElementById('tvCv'), g = cv.getContext('2d');
+    var wf = document.createElement('canvas'); wf.width = 200; wf.height = 110; var wg = wf.getContext('2d'); var wrow = wg.createImageData(wf.width, 1);
+    var logEl = document.getElementById('log'), logH = document.getElementById('logH'), sizer = document.getElementById('logSizer'),
+        noiseEl = document.getElementById('logNoise'), liveEl = document.getElementById('logLive'), srcEl = document.getElementById('logSrc'),
+        hudR = document.getElementById('hudR'), hudL = document.getElementById('hudL');
+    var running = false, paused = false, raf = 0, queue = [], forced = null, curQuote = null, num = 0;
+    var W = 0, H = 0, DPR = 1, pts = [], ptsN = 0;
+    var st = null;   // stav aktuálního záznamu
+    var bpm = 92, phase = 0, lastT = 0, lastBeat = 0, chars = '▒░█#%&@?*+=/\\<>';
+
+    function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = (Math.random() * (i + 1)) | 0; var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+    function resize() {
+      DPR = Math.min(window.devicePixelRatio || 1, 2); W = cv.clientWidth; H = cv.clientHeight;
+      cv.width = W * DPR; cv.height = H * DPR; g.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ptsN = Math.ceil(W / 2); pts = []; for (var i = 0; i < ptsN; i++) pts.push(0);
+    }
+    function ecg(ph) {
+      if (ph < .08) return Math.sin(ph / .08 * Math.PI) * .12;
+      if (ph > .16 && ph < .19) return -(ph - .16) / .03 * .15;
+      if (ph >= .19 && ph < .23) return -.15 + (ph - .19) / .04 * 1.15;
+      if (ph >= .23 && ph < .28) return 1 - (ph - .23) / .05 * 1.35;
+      if (ph >= .28 && ph < .31) return -.35 + (ph - .28) / .03 * .35;
+      if (ph > .4 && ph < .55) return Math.sin((ph - .4) / .15 * Math.PI) * .2;
+      return 0;
+    }
+    function nextQuote() {
+      if (forced) { var q = forced; forced = null; return q; }
+      if (!queue.length) queue = shuffle(quotes);
+      var q2 = queue.pop(); if (curQuote && q2 === curQuote && queue.length) q2 = queue.pop(); return q2;
+    }
+    function stardate() { var d = new Date(), doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5); return d.getFullYear() + '.' + String(doy).padStart(3, '0'); }
+    function scr(n) { var o = ''; for (var i = 0; i < n; i++) o += chars[(Math.random() * chars.length) | 0]; return o; }
+
+    function begin() {   // nový záznam: ladění
+      var q = nextQuote(); curQuote = q; num++;
+      var full = q.text.trim();
+      var area = Math.max(200, window.innerWidth * .88) * Math.max(160, window.innerHeight * .5) * .5;
+      var fs = Math.max(16, Math.min(32, Math.sqrt(area / (full.length * .62 * 1.55))));
+      [sizer, noiseEl, liveEl].forEach(function (e) { e.style.fontSize = fs + 'px'; });
+      sizer.textContent = full; liveEl.textContent = ''; liveEl.className = 'live';
+      logH.classList.remove('in'); srcEl.classList.remove('in');
+      logH.innerHTML = 'Hvězdné datum ' + stardate() + ' · záznam č. <b>' + String(((quotes.indexOf(q)) + 1) || num).padStart(2, '0') + '</b><br>zdroj: ' + (q.author ? '' : 'Zajda') + '<span class="au"></span> · kvalita signálu <b>' + (94 + ((Math.random() * 5) | 0)) + ' %</b>';
+      logH.querySelector('.au').textContent = q.author || '';
+      srcEl.textContent = q.author ? '— ' + q.author : '— Zajda';
+      logEl.classList.remove('off');
+      st = { q: q, full: full, phase: reduce ? 'type' : 'tune', t0: performance.now(), typed: 0, lastType: 0, words: full.split(' '), tuneDur: 3600 + Math.random() * 900, holdUntil: 0 };
+      if (reduce) { st.typed = full.length; renderTyped(); logH.classList.add('in'); srcEl.classList.add('in'); liveEl.classList.add('done'); st.phase = 'hold'; st.holdUntil = performance.now() + 9000; }
+    }
+    function renderTyped() {
+      var t = st.full.slice(0, st.typed), parts = t.split(' '), i;
+      liveEl.textContent = '';
+      for (i = 0; i < parts.length; i++) {
+        var sp = document.createElement('span'); sp.className = 'w'; sp.textContent = parts[i] + (i < parts.length - 1 ? ' ' : ''); liveEl.appendChild(sp);
+      }
+      st.lastSpan = liveEl.lastChild;
+    }
+    function beat(now) {
+      lastBeat = now;
+      if (st && st.lastSpan && st.phase !== 'tune') { var sp = st.lastSpan; sp.classList.add('pulse'); setTimeout(function () { sp.classList.remove('pulse'); }, 90); }
+    }
+
+    function frame(now) {
+      if (!running) return;
+      raf = requestAnimationFrame(frame);
+      var dt = Math.min(60, now - lastT); lastT = now;
+      if (paused) return;
+      if (!st) begin();
+      var tuning = st.phase === 'tune';
+      var p = tuning ? Math.min(1, (now - st.t0) / st.tuneDur) : 1, clean = p * p * (3 - 2 * p);
+
+      // tep: při ladění rychlý a neklidný, po zachycení signálu se uklidní
+      var target = tuning ? 92 - clean * 14 : 58;
+      bpm += (target - bpm) * Math.min(1, dt * (tuning ? .0006 : .00075));
+      phase += dt * bpm / 60000; if (phase >= 1) { phase -= 1; beat(now); }
+
+      // pozadí: spektrogram (vodopád) + šum, který se s „čistotou" signálu ztrácí
+      if (!reduce) {
+        wg.drawImage(wf, 0, 1);
+        var d = wrow.data, n = wf.width, mid = n / 2;
+        for (var x = 0; x < n; x++) {
+          var dd = Math.abs(x - mid) / mid, peak = Math.exp(-dd * dd * 90) * (tuning ? clean : 1) * .9;
+          var v = Math.min(1, Math.random() * (tuning ? (1 - clean * .8) : .16) * .5 + peak);
+          d[x * 4] = 40 + v * 90; d[x * 4 + 1] = 70 + v * 180; d[x * 4 + 2] = 120 + v * 120; d[x * 4 + 3] = v * 255;
+        }
+        wg.putImageData(wrow, 0, 0);
+      }
+      g.fillStyle = '#05030f'; g.fillRect(0, 0, W, H);
+      var gr = g.createRadialGradient(W / 2, H * .35, 0, W / 2, H * .35, W * .65); gr.addColorStop(0, 'rgba(143,107,255,.22)'); gr.addColorStop(1, 'rgba(5,3,15,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+      g.imageSmoothingEnabled = false; g.globalAlpha = .4; g.drawImage(wf, 0, 0, W, H * .8); g.globalAlpha = 1;
+
+      // EKG dole
+      var chaos = tuning ? (1 - clean) : 0;
+      var v0 = ecg(phase) + (reduce ? 0 : (Math.random() - .5) * chaos * .35);
+      if (!reduce) { pts.push(v0); pts.shift(); pts.push(v0); pts.shift(); } else { for (var k = 0; k < pts.length; k++) pts[k] = 0; }
+      var base = H - 78, amp = Math.min(70, H * .1);
+      g.strokeStyle = tuning ? '#ffb86b' : '#7ff0dc'; g.shadowColor = g.strokeStyle; g.shadowBlur = 12; g.lineWidth = 2.2; g.beginPath();
+      for (var i = 0; i < pts.length; i++) { var Y = base - pts[i] * amp; i ? g.lineTo(i * 2, Y) : g.moveTo(0, Y); }
+      g.stroke(); g.shadowBlur = 0;
+      g.font = '700 12px "Space Mono", monospace'; g.fillStyle = tuning ? '#ffb86b' : '#7ff0dc'; g.textAlign = 'left';
+      g.fillText('♥ ' + Math.round(bpm) + ' tepů/min', 18, base + amp * .9 + 22);
+
+      // HUD
+      var freq = 1420.40 + (tuning ? (1 - clean) * Math.sin(now / 260) * 4 : 0);
+      hudR.textContent = freq.toFixed(2) + ' MHz · ' + (tuning ? 'ladím… ' + Math.round(clean * 100) + ' %' : 'signál zachycen');
+      hudR.className = 'st' + (tuning ? '' : ' lock');
+
+      // fáze
+      if (st.phase === 'tune') {
+        noiseEl.textContent = scr(st.full.length); noiseEl.style.opacity = .1 + clean * .18;
+        if (p >= 1) { st.phase = 'type'; st.t0 = now; noiseEl.textContent = ''; logH.classList.add('in'); st.perChar = Math.max(34, Math.min(70, 3200 / st.full.length)); }
+      } else if (st.phase === 'type') {
+        if (now - st.lastType > st.perChar) {
+          st.lastType = now; st.typed++; renderTyped();
+          if (st.typed >= st.full.length) { st.phase = 'hold'; st.holdUntil = now + 4200 + st.full.length * 22; liveEl.classList.add('done'); srcEl.classList.add('in'); }
+        }
+      } else if (st.phase === 'hold') {
+        if (now > st.holdUntil) { st.phase = 'out'; st.t0 = now; logEl.classList.add('off'); }
+      } else if (st.phase === 'out') {
+        if (now - st.t0 > 800) { st = null; }
+      }
+    }
+
+    function startTV(q) {
+      if (!quotes.length) return;
+      forced = q || null; running = true; paused = false; queue = []; st = null; num = 0; bpm = 92; phase = 0;
+      document.getElementById('tvPause').textContent = '⏸ PAUZA';
+      tv.classList.add('on'); document.body.style.overflow = 'hidden';
+      resize(); lastT = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
+      document.getElementById('tvNext').focus({ preventScroll: true });
+    }
+    function stopTV() {
+      running = false; cancelAnimationFrame(raf); st = null;
+      tv.classList.remove('on'); document.body.style.overflow = '';
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+      document.getElementById('tvStart').focus({ preventScroll: true });
+    }
+    function next() { if (!running) return; paused = false; document.getElementById('tvPause').textContent = '⏸ PAUZA'; st = null; logEl.classList.add('off'); }
+    function togglePause() { paused = !paused; document.getElementById('tvPause').textContent = paused ? '▶ POKRAČOVAT' : '⏸ PAUZA'; }
+    window.addEventListener('resize', function () { if (running) resize(); });
+
+    document.getElementById('tvStart').addEventListener('click', function () { startTV(null); });
+    document.getElementById('tvNext').addEventListener('click', function (e) { e.stopPropagation(); next(); });
+    document.getElementById('tvPause').addEventListener('click', function (e) { e.stopPropagation(); togglePause(); });
+    document.getElementById('tvExit').addEventListener('click', function (e) { e.stopPropagation(); stopTV(); });
+    document.getElementById('tvFull').addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (document.fullscreenElement) { document.exitFullscreen(); } else if (tv.requestFullscreen) { tv.requestFullscreen().catch(function () {}); }
+    });
+    tv.addEventListener('click', function () { next(); });
+    document.addEventListener('keydown', function (e) {
+      if (!running) return;
+      if (e.key === 'Escape') { stopTV(); }
+      else if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter') { if (e.target && e.target.tagName === 'BUTTON' && e.key !== 'ArrowRight') return; e.preventDefault(); next(); }
+      else if (e.key === 'p' || e.key === 'P') { togglePause(); }
+    });
+    document.addEventListener('visibilitychange', function () { if (document.hidden && running && !paused) togglePause(); });
+
+    fetch('/api/quotes/list').then(function (r) { return r.ok ? r.json() : []; }).then(function (a) {
+      quotes = (Array.isArray(a) ? a : []).filter(function (q) { return q && q.text; });
+      renderList('');
+      if (!quotes.length) document.getElementById('tvStart').parentNode.hidden = true;
+      if (location.hash === '#tv') startTV(null);
+    }).catch(function () { renderList(''); });
+  })();
+  </script>
+</body>
+</html>
