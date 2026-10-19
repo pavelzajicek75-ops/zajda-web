@@ -610,7 +610,7 @@
   <div class="sections-container" id="sectionsContainer" tabindex="-1"></div>
 
   <footer class="site-footer">
-    <a href="/citaty">✦ Citáty</a> · <a href="/rss.xml">📡 RSS feed</a> · © <span id="footerYear"></span> Zajda
+    <a href="/citaty" id="quoteTvLink">✦ Citáty</a> · <a href="/rss.xml">📡 RSS feed</a> · © <span id="footerYear"></span> Zajda
   </footer>
 
   <a href="#" class="reaction-ticker" id="reactionTicker" hidden></a>
@@ -1763,6 +1763,21 @@
     updateSavedLinkLabel();
   });
   </script>
+<script>
+// Odkaz „Citáty" v patičce: vysílání se rozjede přímo na úvodní stránce (skript se načte až při kliku).
+(function () {
+  var l = document.getElementById('quoteTvLink'); if (!l) return;
+  l.addEventListener('click', function (e) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    e.preventDefault();
+    function go() { window.QuoteTV.open(l); }
+    if (window.QuoteTV) return go();
+    var s = document.createElement('script'); s.src = '/quote-tv.js?v=1'; s.onload = go;
+    s.onerror = function () { location.href = '/citaty'; };
+    document.head.appendChild(s);
+  });
+})();
+</script>
 <script src="/diagnosis-counter.js?v=3"></script>
 <script src="/memory-card.js?v=2"></script>
 <script>
