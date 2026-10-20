@@ -27,7 +27,7 @@
     '.qtv-log{width:min(860px,100%);font-family:"Space Mono","Courier New",monospace;text-align:left;transition:opacity .6s}',
     '.qtv-log.off{opacity:0}',
     '.qtv-h{color:#7ff0dc;font-size:clamp(11px,1.4vw,13.5px);letter-spacing:.12em;text-transform:uppercase;line-height:1.75;margin-bottom:4vh;opacity:0;transition:opacity .7s}',
-    '.qtv-h.in{opacity:1}.qtv-h b{color:#ffe14a}',
+    '.qtv-h.pre{opacity:.5}.qtv-h.in{opacity:1}.qtv-h b{color:#ffe14a}',
     '.qtv-body{display:grid}.qtv-body>*{grid-area:1/1;margin:0;white-space:pre-wrap;word-break:break-word;font-weight:400;line-height:1.55;color:#f4efff}',
     '.qtv-sizer{visibility:hidden}.qtv-noise{color:#7ff0dc;opacity:.22}',
     '.qtv-live .w{display:inline-block;white-space:pre}',
@@ -166,13 +166,13 @@
     var fs = Math.max(16, Math.min(32, Math.sqrt(area / (full.length * .62 * 1.55))));
     ['qtvSizer', 'qtvNoise', 'qtvLive'].forEach(function (id) { q$(id).style.fontSize = fs + 'px'; });
     q$('qtvSizer').textContent = full; var live = q$('qtvLive'); live.textContent = ''; live.className = 'qtv-live';
-    q$('qtvH').classList.remove('in'); q$('qtvSrc').classList.remove('in');
-    q$('qtvH').innerHTML = 'Stardate ' + stardate() + ' · transmission #<b>' + String((quotes.indexOf(q) + 1) || num).padStart(2, '0') + '</b><br>origin: <span id="qtvAu"></span> · signal quality <b>' + (94 + rnd(5)) + '%</b> · encryption: none';
+    q$('qtvH').classList.remove('in'); q$('qtvH').classList.add('pre'); q$('qtvSrc').classList.remove('in');
+    q$('qtvH').innerHTML = 'Stardate ' + stardate() + ' · transmission #<b id="qtvTx"></b><span id="qtvPk"></span><br>origin: <span id="qtvAu"></span> · signal quality <b id="qtvSq"></b> · encryption: <span id="qtvEn">scanning</span>';
     q$('qtvAu').textContent = q.author || 'Zajda';
     q$('qtvSrc').textContent = '— ' + (q.author || 'Zajda');
     q$('qtvLog').classList.remove('off');
-    st = { q: q, full: full, words: words, keys: keys, phase: reduce ? 'hold' : 'tune', t0: performance.now(), typed: 0, lastType: 0, tuneDur: 3600 + Math.random() * 900, holdUntil: 0, sector: (1 + rnd(9)) + String.fromCharCode(65 + rnd(8)), n: 0 };
-    if (reduce) { st.typed = full.length; renderTyped(); q$('qtvH').classList.add('in'); q$('qtvSrc').classList.add('in'); live.classList.add('done'); st.holdUntil = performance.now() + 9000; sys('TRANSMISSION RECEIVED · DECODING COMPLETE'); bar(1, 'DATA INTEGRITY 100%'); }
+    st = { q: q, full: full, words: words, keys: keys, phase: reduce ? 'hold' : 'tune', t0: performance.now(), typed: 0, lastType: 0, tuneDur: 3600 + Math.random() * 900, holdUntil: 0, sector: (1 + rnd(9)) + String.fromCharCode(65 + rnd(8)), n: 0, rec: String((quotes.indexOf(q) + 1) || num).padStart(2, '0'), sqBase: 94 + Math.random() * 4, hT: 0 };
+    if (reduce) { q$('qtvH').classList.remove('pre'); q$('qtvTx').textContent = st.rec; q$('qtvSq').textContent = st.sqBase.toFixed(1) + '%'; q$('qtvEn').textContent = 'none'; st.typed = full.length; renderTyped(); q$('qtvH').classList.add('in'); q$('qtvSrc').classList.add('in'); live.classList.add('done'); st.holdUntil = performance.now() + 9000; sys('TRANSMISSION RECEIVED · DECODING COMPLETE'); bar(1, 'DATA INTEGRITY 100%'); }
   }
 
   function renderTyped() {
@@ -202,6 +202,23 @@
     function line() { return tpl[rnd(tpl.length)].replace('{a}', 300 + rnd(200) + '.' + rnd(9)).replace('{b}', 120 + rnd(80)).replace('{c}', '0.' + (10 + rnd(89))).replace('{d}', '0' + rnd(9) + rnd(9)).replace('{e}', 20 + rnd(30)).replace('{f}', 10 + rnd(30) + '.' + rnd(9)).replace('{g}', rnd(9) + '.' + rnd(99)).replace('{h}', hex(4)); }
     var a = L.textContent.split('\n'); a.push('RX ' + hex(4) + ' ' + hex(4) + ' ' + hex(2)); while (a.length > 16) a.shift(); L.textContent = a.join('\n');
     var b = R.textContent.split('\n'); b.push(line()); while (b.length > 16) b.shift(); R.textContent = b.join('\n');
+  }
+
+  function liveHeader(now, tuning, clean) {
+    if (!st || now - st.hT < 110 || reduce) return; st.hT = now;
+    var tx = q$('qtvTx'), sq = q$('qtvSq'), pk = q$('qtvPk'), en = q$('qtvEn'); if (!tx) return;
+    if (tuning) {
+      tx.textContent = clean > .75 && Math.random() < clean ? st.rec : (rnd(10) + '' + rnd(10));
+      var v = 14 + clean * 62 + (Math.random() - .5) * 26 * (1 - clean * .6);
+      sq.textContent = Math.max(3, Math.min(88, v)).toFixed(1) + '%';
+      pk.textContent = ''; en.textContent = 'scanning…';
+    } else {
+      tx.textContent = st.rec;
+      var q2 = st.sqBase + Math.sin(now / 650) * 1.2 + (Math.random() - .5) * .9; sq.textContent = Math.min(99.9, q2).toFixed(1) + '%';
+      var wt = st.full.slice(0, st.typed).split(' ').length;
+      pk.textContent = ' · packet ' + Math.min(st.words.length, st.typed >= st.full.length ? st.words.length : wt) + '/' + st.words.length;
+      en.textContent = 'none';
+    }
   }
 
   var SYS_TUNE = ['SCANNING DEEP SPACE', 'CALIBRATING ANTENNA ARRAY', 'SWEEPING SECTOR {s}', 'SEARCHING FOR TRANSMISSION', 'FILTERING COSMIC NOISE'];
@@ -306,7 +323,7 @@
     var freq = 1420.40 + (tuning ? (1 - clean) * Math.sin(now / 260) * 4 : 0);
     q$('qtvHr').innerHTML = freq.toFixed(2) + ' MHz<br>' + (tuning ? 'STATUS: SCANNING' : 'STATUS: <b>LOCKED</b>') + '<br>LINK ' + (tuning ? '—' : 'STABLE') + '<br>♥ ' + Math.round(bpm) + ' BPM · ' + hrState;
     if (W < 760 && now - telT > 700) { telT = now; q$('qtvTel').textContent = 'ALT ' + (380 + rnd(60)) + '.' + rnd(9) + ' KM · SNR ' + (12 + rnd(20)) + '.' + rnd(9) + ' · FLUX 0.' + (10 + rnd(89)) + ' · RX ' + hex(4); }
-    columns(now);
+    columns(now); liveHeader(now, tuning, clean);
 
     // fáze
     if (st.phase === 'tune') {
@@ -314,7 +331,7 @@
       sys(SYS_TUNE[sysI % SYS_TUNE.length].replace('{s}', st.sector) + '.'.repeat(1 + ((now / 350) | 0) % 3), true);
       bar(clean, 'SCAN ' + Math.round(clean * 100) + '% · SECTOR ' + st.sector);
       var nz = q$('qtvNoise'); nz.textContent = scr(st.full.length); nz.style.opacity = .1 + clean * .18;
-      if (p >= 1) { st.phase = 'type'; st.t0 = now; nz.textContent = ''; q$('qtvH').classList.add('in'); st.perChar = Math.max(34, Math.min(70, 3200 / st.full.length)); }
+      if (p >= 1) { st.phase = 'type'; st.t0 = now; nz.textContent = ''; q$('qtvH').classList.remove('pre'); q$('qtvH').classList.add('in'); st.perChar = Math.max(34, Math.min(70, 3200 / st.full.length)); }
     } else if (st.phase === 'type') {
       var pr = st.typed / st.full.length;
       sys('SIGNAL LOCKED · DOWNLOADING DATA'); bar(pr, 'DOWNLOADING ' + Math.round(pr * 100) + '% · ' + (st.typed * 3) + ' BYTES');
