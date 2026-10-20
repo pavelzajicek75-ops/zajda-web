@@ -144,6 +144,18 @@
       .timeline-card { padding: 1rem 1.15rem; }
     }
 
+    /* Hvězdná mapa (star-map.js) překrývá celou stránku; seznam níž je záloha + pohled „Seznam". */
+    body.map-on { overflow: hidden; }
+    body.map-on #themeToggle { display: none; }
+    body.map-on .back-link, body.map-on .title-block, body.map-on .timeline-section { visibility: hidden; }
+    #mapBack {
+      display: none; position: fixed; top: 14px; right: 14px; z-index: 60; cursor: pointer;
+      font: 600 11px/1 'Space Grotesk', sans-serif; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--parchment); background: var(--panel-solid, rgba(28,29,48,0.92));
+      border: 1px solid rgba(255,122,69,0.35); border-radius: 20px; padding: 9px 14px;
+    }
+    #mapBack:hover { border-color: var(--ember); }
+    body.has-map:not(.map-on) #mapBack { display: block; }
     .timeline-empty { text-align: center; padding: 3rem 1.5rem; color: var(--mist-dim); position: relative; z-index: 10; }
   </style>
 <script src="/theme.js?v=1"></script>
@@ -156,6 +168,7 @@
   <div class="stars" id="stars"></div>
   <div class="lightbox-overlay" id="lightboxOverlay" onclick="this.classList.remove('open')"></div>
 
+  <button type="button" id="mapBack">✦ Hvězdná mapa</button>
   <div class="back-link">
     <a href="/about/">← Zpět na O Zajdovi</a>
   </div>
@@ -171,6 +184,7 @@
 
   <script src="/shared.js?v=20261035"></script>
   <script src="/timeline-core.js?v=20261024"></script>
+  <script src="/star-map.js?v=1"></script>
   <script>
     function openLightbox(src) {
       var overlay = document.getElementById('lightboxOverlay');
@@ -248,6 +262,25 @@
       initStarfieldParallax();
 
       await TimelineCore.render({ trackId: 'timelineTrack' });
+
+      // Hvězdná mapa: stejná data (API je v cache), seznam výš zůstává jako záloha a pohled „Seznam".
+      try {
+        var tlData = await (await fetch('/api/timeline/list')).json();
+        if (Array.isArray(tlData) && tlData.length && window.StarMap) {
+          var qs = new URLSearchParams(location.search), h = location.hash || '';
+          var wanted = qs.get('m') || (h.indexOf('#milestone-') === 0 ? decodeURIComponent(h.slice(11)) : '');
+          var sm = StarMap.open(tlData, {
+            selectId: wanted,
+            onList: function () { sm.hide(); document.body.classList.remove('map-on'); window.scrollTo(0, 0); }
+          });
+          if (sm) {
+            document.body.classList.add('has-map', 'map-on');
+            document.getElementById('mapBack').addEventListener('click', function () {
+              sm.show(); document.body.classList.add('map-on');
+            });
+          }
+        }
+      } catch (e) { console.error('StarMap:', e); }
 
       var track = document.getElementById('timelineTrack');
       if (!track.children.length) {
