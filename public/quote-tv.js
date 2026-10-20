@@ -60,7 +60,7 @@
 
   var el, cv, g, wf, wg, wrow, quotes = [], loaded = false, built = false;
   var running = false, paused = false, raf = 0, queue = [], forced = null, curQuote = null, num = 0, onClose = null;
-  var sun = 0, rings = [], lastBeatT = 0, telT = 0, W = 0, H = 0, pts = [], ptsN = 0, st = null, bpm = 92, phase = 0, lastT = 0, colT = 0, sysT = 0, sysI = 0, chars = '▒░█#%&@?*+=/\\<>';
+  var sunX = 0, sun = 0, rings = [], lastBeatT = 0, telT = 0, W = 0, H = 0, pts = [], ptsN = 0, st = null, bpm = 92, phase = 0, lastT = 0, colT = 0, sysT = 0, sysI = 0, chars = '▒░█#%&@?*+=/\\<>';
   var q$ = function (id) { return document.getElementById(id); };
 
   function qid(t) { var h = 5381; t = String(t).trim(); for (var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
@@ -159,6 +159,9 @@
   function sys(txt, warn) { var e = q$('qtvSys'); if (e.textContent !== txt) e.textContent = txt; e.className = 'qtv-sys' + (warn ? ' warn' : ''); }
   function bar(p, lab) { q$('qtvFill').style.width = Math.max(0, Math.min(100, p * 100)).toFixed(1) + '%'; q$('qtvLab').textContent = lab; }
 
+  var lastSunX = .5;
+  function nextSunX() { var x; do { x = .13 + Math.random() * .74; } while (Math.abs(x - lastSunX) < .22); lastSunX = x; return x; }
+
   function begin() {
     var q = nextQuote(); curQuote = q; num++;
     var full = String(q.text).trim(), words = full.split(' '), keys = keyWords(words);
@@ -171,7 +174,7 @@
     q$('qtvAu').textContent = q.author || 'Zajda';
     q$('qtvSrc').textContent = '— ' + (q.author || 'Zajda');
     q$('qtvLog').classList.remove('off');
-    st = { q: q, full: full, words: words, keys: keys, phase: reduce ? 'hold' : 'tune', t0: performance.now(), typed: 0, lastType: 0, tuneDur: 3600 + Math.random() * 900, holdUntil: 0, sector: (1 + rnd(9)) + String.fromCharCode(65 + rnd(8)), n: 0, rec: String((quotes.indexOf(q) + 1) || num).padStart(2, '0'), sqBase: 94 + Math.random() * 4, hT: 0 };
+    st = { q: q, full: full, words: words, keys: keys, phase: reduce ? 'hold' : 'tune', t0: performance.now(), typed: 0, lastType: 0, tuneDur: 3600 + Math.random() * 900, holdUntil: 0, sector: (1 + rnd(9)) + String.fromCharCode(65 + rnd(8)), n: 0, rec: String((quotes.indexOf(q) + 1) || num).padStart(2, '0'), sunX: nextSunX(), sqBase: 94 + Math.random() * 4, hT: 0 };
     if (reduce) { q$('qtvH').classList.remove('pre'); q$('qtvTx').textContent = st.rec; q$('qtvSq').textContent = st.sqBase.toFixed(1) + '%'; q$('qtvEn').textContent = 'none'; st.typed = full.length; renderTyped(); q$('qtvH').classList.add('in'); q$('qtvSrc').classList.add('in'); live.classList.add('done'); st.holdUntil = performance.now() + 9000; sys('TRANSMISSION RECEIVED · DECODING COMPLETE'); bar(1, 'DATA INTEGRITY 100%'); }
   }
 
@@ -265,13 +268,15 @@
 
     // ÚSVIT: nad horizontem planety vychází hvězda. Čím víc se tep uklidňuje a signál drží, tím výš stoupá („nejtemnější je těsně před úsvitem")
     var R = Math.max(W * 1.35, 520), cx = W / 2, rimTop = H - (W < 760 ? 86 : 100), cy = rimTop + R, u = Math.max(.45, Math.min(1, W / 900));
+    if (!sunX) sunX = (st.sunX || .5) * W;
+    sunX += ((st.sunX != null ? st.sunX * W : cx) - sunX) * Math.min(1, dt * .004); var sx0 = sunX || cx, hy = cy - Math.sqrt(Math.max(0, R * R - (sx0 - cx) * (sx0 - cx)));
     var glow = reduce ? .3 : Math.max(0, 1 - (now - lastBeatT) / 850), tone = tuning ? '255,184,107' : '127,240,220';
     var sunTarget = st.phase === 'out' ? 0 : (tuning ? .08 + clean * .4 : 1);
-    sun += (sunTarget - sun) * Math.min(1, dt * (reduce ? 1 : .0009));
-    var sy = rimTop + 40 - sun * (92 * u + 20), al = .22 + .78 * sun, chaosJ = tuning ? (1 - clean) : 0;
+    sun += (sunTarget - sun) * Math.min(1, dt * (reduce ? 1 : (sunTarget === 0 ? .0028 : .0009)));
+    var sy = hy + 40 - sun * (92 * u + 20), al = .22 + .78 * sun, chaosJ = tuning ? (1 - clean) : 0;
     // záře koróny
     var cr = (210 * u + 40) * (.7 + .3 * sun) + glow * 34 * u;
-    var cg = g.createRadialGradient(cx, sy, 0, cx, sy, cr);
+    var cg = g.createRadialGradient(sx0, sy, 0, sx0, sy, cr);
     cg.addColorStop(0, 'rgba(255,236,190,' + (.55 * al + glow * .25) + ')'); cg.addColorStop(.18, 'rgba(255,170,110,' + (.32 * al) + ')'); cg.addColorStop(.5, 'rgba(190,120,255,' + (.14 * al) + ')'); cg.addColorStop(1, 'rgba(60,30,120,0)');
     g.fillStyle = cg; g.fillRect(0, Math.max(0, sy - cr), W, cr * 2);
     // paprsky
@@ -279,19 +284,19 @@
     for (var ry = 0; ry < 28; ry++) {
       var ra = ry * 6.2832 / 28 + (reduce ? 0 : now / 7000), rl = (60 + (ry % 4 === 0 ? 70 : (ry % 2 ? 22 : 40))) * u + glow * 46 * u + chaosJ * Math.random() * 26;
       g.strokeStyle = 'rgba(255,224,170,' + ((.07 + glow * .09) * al * (ry % 4 === 0 ? 1.6 : 1)) + ')';
-      g.beginPath(); g.moveTo(cx + Math.cos(ra) * 12 * u, sy + Math.sin(ra) * 12 * u); g.lineTo(cx + Math.cos(ra) * rl, sy + Math.sin(ra) * rl); g.stroke();
+      g.beginPath(); g.moveTo(sx0 + Math.cos(ra) * 12 * u, sy + Math.sin(ra) * 12 * u); g.lineTo(sx0 + Math.cos(ra) * rl, sy + Math.sin(ra) * rl); g.stroke();
     }
     // horizontální záblesk čočky
-    var fg = g.createLinearGradient(cx - 260 * u - 80, 0, cx + 260 * u + 80, 0); fg.addColorStop(0, 'rgba(255,220,170,0)'); fg.addColorStop(.5, 'rgba(255,230,190,' + (.55 * al + glow * .3) + ')'); fg.addColorStop(1, 'rgba(255,220,170,0)');
-    g.fillStyle = fg; g.fillRect(cx - 260 * u - 80, sy - 1, (260 * u + 80) * 2, 2);
+    var fg = g.createLinearGradient(sx0 - 260 * u - 80, 0, sx0 + 260 * u + 80, 0); fg.addColorStop(0, 'rgba(255,220,170,0)'); fg.addColorStop(.5, 'rgba(255,230,190,' + (.55 * al + glow * .3) + ')'); fg.addColorStop(1, 'rgba(255,220,170,0)');
+    g.fillStyle = fg; g.fillRect(sx0 - 260 * u - 80, sy - 1, (260 * u + 80) * 2, 2);
     // orbity s částicemi
     var NOW = reduce ? 0 : now;
     for (var oj = 0; oj < 3; oj++) {
       var orx = (118 + oj * 92) * u + glow * 5, ory = orx * .17;
-      g.strokeStyle = 'rgba(190,150,255,' + (.16 * al) + ')'; g.lineWidth = 1; g.beginPath(); g.ellipse(cx, sy, orx, ory, 0, 0, 6.3); g.stroke();
+      g.strokeStyle = 'rgba(190,150,255,' + (.16 * al) + ')'; g.lineWidth = 1; g.beginPath(); g.ellipse(sx0, sy, orx, ory, 0, 0, 6.3); g.stroke();
       for (var tr = 0; tr < 7; tr++) {
         var pa = NOW / (3300 + oj * 1900) * (oj % 2 ? -1 : 1) + oj * 2.1 - tr * .07;
-        var px = cx + Math.cos(pa) * orx + chaosJ * (Math.random() - .5) * 14, py = sy + Math.sin(pa) * ory + chaosJ * (Math.random() - .5) * 6;
+        var px = sx0 + Math.cos(pa) * orx + chaosJ * (Math.random() - .5) * 14, py = sy + Math.sin(pa) * ory + chaosJ * (Math.random() - .5) * 6;
         g.fillStyle = (oj === 1 ? 'rgba(' + tone + ',' : 'rgba(255,255,255,') + ((tr === 0 ? .95 : .45 - tr * .06) * al) + ')';
         g.beginPath(); g.arc(px, py, (tr === 0 ? 2.8 : 1.8) * (u > .7 ? 1 : .8), 0, 6.3); g.fill();
       }
@@ -299,20 +304,21 @@
     // jádro hvězdy
     var kr = (7 + glow * 4) * (.6 + .4 * u);
     g.shadowColor = 'rgba(255,220,160,1)'; g.shadowBlur = 24 + glow * 24; g.fillStyle = 'rgba(255,248,230,' + (.55 + .45 * al) + ')';
-    g.beginPath(); g.arc(cx, sy, kr, 0, 6.3); g.fill(); g.shadowBlur = 0;
+    g.beginPath(); g.arc(sx0, sy, kr, 0, 6.3); g.fill(); g.shadowBlur = 0;
     // prstence z úderů (gravitační vlny)
     for (var ri = rings.length - 1; ri >= 0; ri--) {
       var age = now - rings[ri], rx = age * .5 * (u > .7 ? 1 : .6);
       if (age > 2400) { rings.splice(ri, 1); continue; }
       g.strokeStyle = 'rgba(' + tone + ',' + (.5 * (1 - age / 2400) * al) + ')'; g.lineWidth = 1.4;
-      g.beginPath(); g.ellipse(cx, sy, rx, rx * .15, 0, 0, 6.3); g.stroke();
+      g.beginPath(); g.ellipse(sx0, sy, rx, rx * .15, 0, 0, 6.3); g.stroke();
     }
     // planeta překryje spodní část hvězdy
     var pg = g.createRadialGradient(cx, cy, R * .86, cx, cy, R); pg.addColorStop(0, '#05030f'); pg.addColorStop(.92, '#0a0620'); pg.addColorStop(1, '#1a1040');
     g.fillStyle = pg; g.beginPath(); g.arc(cx, cy, R, 0, 6.3); g.fill();
     // osvětlený okraj planety pod hvězdou
     var th = Math.min(1.2, (W / 2 + 40) / R);
-    var rg = g.createLinearGradient(0, 0, W, 0); rg.addColorStop(0, 'rgba(190,150,255,.04)'); rg.addColorStop(.3, 'rgba(' + tone + ',.18)'); rg.addColorStop(.5, 'rgba(255,210,150,' + (.35 + .5 * sun + glow * .15) + ')'); rg.addColorStop(.7, 'rgba(' + tone + ',.18)'); rg.addColorStop(1, 'rgba(190,150,255,.04)');
+    var sp = Math.max(.03, Math.min(.97, sx0 / W)), cl = function (v) { return Math.max(.01, Math.min(.99, v)); };
+    var rg = g.createLinearGradient(0, 0, W, 0); rg.addColorStop(0, 'rgba(190,150,255,.04)'); rg.addColorStop(cl(sp - .2), 'rgba(' + tone + ',.18)'); rg.addColorStop(cl(sp), 'rgba(255,210,150,' + (.35 + .5 * sun + glow * .15) + ')'); rg.addColorStop(cl(sp + .2), 'rgba(' + tone + ',.18)'); rg.addColorStop(1, 'rgba(190,150,255,.04)');
     g.strokeStyle = rg; g.lineWidth = 1.8; g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2 - th, -Math.PI / 2 + th); g.stroke();
     for (var at = 3; at >= 1; at--) { g.strokeStyle = 'rgba(255,190,130,' + ((.02 + glow * .03 + sun * .03) * (4 - at)) + ')'; g.lineWidth = at * 6; g.beginPath(); g.arc(cx, cy, R + at * 2.5, -Math.PI / 2 - .5, -Math.PI / 2 + .5); g.stroke(); }
     // hvězdný prach
@@ -352,7 +358,7 @@
   function togglePause() { paused = !paused; q$('qtvPause').textContent = paused ? '▶ RESUME' : '⏸ PAUSE'; }
 
   function start(startQuote) {
-    forced = startQuote || null; running = true; paused = false; queue = []; st = null; num = 0; bpm = 92; phase = 0; rings = []; sun = 0;
+    forced = startQuote || null; running = true; paused = false; queue = []; st = null; num = 0; bpm = 92; phase = 0; rings = []; sun = 0; sunX = 0; lastSunX = .5;
     q$('qtvPause').textContent = '⏸ PAUSE'; lockPage();
     resize(); lastT = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
     try { q$('qtvNext').focus({ preventScroll: true }); } catch (e) {}
