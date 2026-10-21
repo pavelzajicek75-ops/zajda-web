@@ -37,31 +37,27 @@
     /* === 1) ÚVODNÍ KARTA === */
     .hero {
       position: relative; z-index: 10; max-width: 1000px; margin: 1rem auto 0; padding: 2.2rem 2.4rem;
-      display: grid; grid-template-columns: 190px 1fr; gap: 2.2rem; align-items: center;
+      display: grid; grid-template-columns: 230px 1fr; gap: 2.2rem; align-items: center;
       background: linear-gradient(135deg, rgba(34,26,60,0.62), rgba(14,18,34,0.62)); border: 1px solid var(--panel-border); border-radius: 20px;
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 24px 60px rgba(0,0,0,0.45); overflow: hidden;
     }
     .hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--ember), var(--nova), var(--aurora)); }
     .hero::after { content: ''; position: absolute; width: 420px; height: 420px; right: -140px; top: -160px; border-radius: 50%; background: radial-gradient(circle, rgba(143,107,255,0.22), transparent 70%); pointer-events: none; }
-    .hero-avatar { position: relative; width: 170px; height: 170px; margin: 0 auto; }
-    .hero-avatar .orb {
-      position: absolute; inset: 14px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
-      background: radial-gradient(circle at 35% 30%, #5a3fc0, #1b1540 70%); box-shadow: 0 0 40px rgba(143,107,255,0.45), 0 0 0 2px rgba(255,255,255,0.14);
-      font: 700 3.6rem 'Space Grotesk', sans-serif; color: var(--parchment);
+    .hero-photo {
+      position: relative; width: 210px; aspect-ratio: 4 / 5; margin: 0 auto; border-radius: 18px; overflow: hidden; background: #0a0720;
+      border: 1px solid rgba(255,255,255,0.16); box-shadow: 0 18px 44px rgba(0,0,0,0.5), 0 0 44px rgba(143,107,255,0.22);
     }
-    .hero-avatar .orb img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
-    .hero-avatar .ring { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed rgba(47,230,201,0.45); animation: spin 26s linear infinite; }
-    .hero-avatar .ring::after { content: ''; position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--nova); box-shadow: 0 0 12px var(--nova); }
-    .hero-avatar .ring2 { position: absolute; inset: -10px; border-radius: 50%; border: 1px solid rgba(255,122,69,0.2); animation: spin 40s linear infinite reverse; }
-    .hero-avatar .ring2::after { content: ''; position: absolute; bottom: 8px; right: 14px; width: 5px; height: 5px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 10px var(--ember); }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .dawn { width: 100%; height: 100%; display: block; }
-    .dawn-sun { animation: dawn-rise 9s ease-in-out infinite alternate; transform-origin: 50px 52px; }
-    .dawn-glow { animation: dawn-pulse 4.5s ease-in-out infinite; transform-origin: 50px 52px; }
-    .dawn-stars circle { animation: dawn-tw 3s ease-in-out infinite; }
-    .dawn-stars circle:nth-child(2n) { animation-delay: -1.2s; } .dawn-stars circle:nth-child(3n) { animation-delay: -2.1s; }
-    @keyframes dawn-rise { from { transform: translateY(6px); } to { transform: translateY(-4px); } }
-    @keyframes dawn-pulse { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.12); opacity: 1; } }
+    .hero-photo img, .hero-photo svg { width: 100%; height: 100%; display: block; object-fit: cover; }
+    .hero-photo img { cursor: zoom-in; }
+    .hero-photo::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 -50px 60px rgba(5,3,15,0.35); pointer-events: none; }
+    .rk-body { animation: rk-bob 3.2s ease-in-out infinite alternate; transform-origin: 122px 92px; }
+    .rk-flame { animation: rk-flick .22s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 0; }
+    .rk-trail { animation: rk-trail 3.2s ease-in-out infinite alternate; }
+    .rk-stars circle { animation: dawn-tw 3s ease-in-out infinite; }
+    .rk-stars circle:nth-child(2n) { animation-delay: -1.2s; } .rk-stars circle:nth-child(3n) { animation-delay: -2.1s; }
+    @keyframes rk-bob { from { transform: translate(-1px, 3px); } to { transform: translate(2px, -4px); } }
+    @keyframes rk-flick { from { transform: scaleY(.82); } to { transform: scaleY(1.18); } }
+    @keyframes rk-trail { from { opacity: .55; } to { opacity: .95; } }
     @keyframes dawn-tw { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
     .eyebrow { font: 600 0.72rem 'Space Grotesk', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--nova); margin-bottom: .35rem; }
     .hero h1 {
@@ -78,6 +74,8 @@
     .stat span { font: 600 .66rem 'Space Grotesk', sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--mist-dim); }
     .stat:nth-child(1) b { color: var(--ember); } .stat:nth-child(2) b { color: var(--nova); } .stat:nth-child(3) b { color: #ffd36b; } .stat:nth-child(4) b { color: var(--aurora); }
     .stat[hidden] { display: none; }
+    .stat small { display: block; margin-top: 3px; font: 500 .68rem/1.35 'Inter', system-ui, sans-serif; color: #7c7fa6; font-variant-numeric: tabular-nums; }
+    #stRocket b { font-size: clamp(1.1rem, 2.2vw, 1.4rem); letter-spacing: -.3px; padding-top: .18rem; }
     .hero-cta { display: flex; gap: .6rem; flex-wrap: wrap; }
     .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .55rem 1.05rem; border-radius: 999px; border: 1px solid rgba(140,150,255,0.3); color: var(--parchment); text-decoration: none; font: 600 .85rem 'Space Grotesk', sans-serif; transition: all .25s; background: rgba(8,8,20,0.35); }
     .btn:hover { border-color: var(--nova); box-shadow: 0 0 18px var(--nova-dim); transform: translateY(-1px); }
@@ -139,9 +137,9 @@
       box-shadow: 0 16px 40px rgba(0,0,0,0.4); transition: border-color .3s, box-shadow .3s; }
     .mini-wrap:hover { border-color: var(--panel-border-hover); box-shadow: 0 16px 40px rgba(0,0,0,0.4), 0 0 28px rgba(255,122,69,0.15); }
     .mini-wrap canvas { width: 100%; height: 100%; display: block; }
-    .mini-tip { position: absolute; transform: translate(-50%, -100%); padding: 3px 9px; border-radius: 4px; background: rgba(5,6,14,0.9); border: 1px solid rgba(95,240,220,0.4); color: #fff; font: 600 11px ui-monospace, Menlo, monospace; letter-spacing: .04em; pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap; }
+    .mini-tip { position: absolute; transform: translate(-50%, -100%); padding: 3px 9px; border-radius: 4px; background: rgba(5,6,14,0.9); border: 1px solid rgba(95,240,220,0.4); color: #fff; font: 600 11.5px 'Space Grotesk', sans-serif; letter-spacing: .02em; pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap; }
     .mini-tip.on { opacity: 1; }
-    .mini-open { position: absolute; right: 12px; bottom: 10px; font: 600 10px ui-monospace, Menlo, monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--nova); pointer-events: none; }
+    .mini-open { position: absolute; right: 12px; bottom: 10px; font: 600 10px 'Space Grotesk', sans-serif; letter-spacing: .18em; text-transform: uppercase; color: var(--nova); pointer-events: none; }
     .mini-cap { margin-top: .5rem; text-align: center; font-size: .8rem; color: var(--mist-dim); }
 
     /* === 4) PODSEKCE JAKO PLANETY === */
@@ -191,7 +189,7 @@
     /* Čtecí režim (sdílí volbu s články) — jen příběh, větší písmo, žádné okolní bloky */
     body.reading-mode .hero-stats, body.reading-mode .hero-cta, body.reading-mode .hero::after, body.reading-mode .mini-section, body.reading-mode .subsections, body.reading-mode .news-section { display: none; }
     body.reading-mode .hero { grid-template-columns: 1fr; text-align: center; padding: 1.4rem; }
-    body.reading-mode .hero-avatar { display: none; }
+    body.reading-mode .hero-photo { display: none; }
     body.reading-mode .container { max-width: 760px; padding-bottom: 4rem; }
     body.reading-mode .content p, body.reading-mode .content li { font-size: 1.28rem; line-height: 1.95; color: #cfd2ee; }
     body.reading-mode .story-intro, body.reading-mode .chapter { background: none; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 1rem .2rem; }
@@ -199,13 +197,14 @@
 
     @media (prefers-reduced-motion: reduce) {
       .hero h1 { animation: none !important; }
-      .hero-avatar .ring, .hero-avatar .ring2, .planet-orb .orbit::after, .dawn-sun, .dawn-glow, .dawn-stars circle { animation: none !important; }
+      .planet-orb .orbit::after, .rk-body, .rk-flame, .rk-trail, .rk-stars circle { animation: none !important; }
       .story-intro, .chapter { opacity: 1; transform: none; transition: none; }
     }
     @media (max-width: 1040px) { .hero { margin-left: 1.5rem; margin-right: 1.5rem; } }
     @media (max-width: 760px) {
       .hero { grid-template-columns: 1fr; text-align: center; padding: 1.6rem 1.2rem; gap: 1.1rem; }
-      .hero-avatar { width: 140px; height: 140px; }
+      .hero-photo { width: 160px; }
+      #stRocket { grid-column: 1 / -1; }
       .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); text-align: left; }
       .hero-cta { justify-content: center; }
       .content { padding: 1.5rem; }
@@ -233,38 +232,48 @@
   </div>
 
   <section class="hero" id="hero">
-    <div class="hero-avatar" id="heroAvatar" aria-hidden="false">
-      <div class="ring2"></div><div class="ring"></div>
-      <div class="orb" id="heroOrb"><svg viewBox="0 0 100 100" class="dawn" aria-hidden="true" focusable="false">
+    <div class="hero-photo" id="heroPhoto">
+      <svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Raketa stoupající nad planetou">
         <defs>
-          <radialGradient id="hzSky" cx="50%" cy="62%" r="75%"><stop offset="0" stop-color="#6b3fb8"/><stop offset=".55" stop-color="#241552"/><stop offset="1" stop-color="#0a0720"/></radialGradient>
-          <radialGradient id="hzGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffb46b" stop-opacity=".95"/><stop offset=".35" stop-color="#ff7a45" stop-opacity=".4"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></radialGradient>
-          <radialGradient id="hzSun" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#ffe29a"/><stop offset="1" stop-color="#ff9a55"/></radialGradient>
-          <linearGradient id="hzLand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1d52"/><stop offset=".25" stop-color="#120d2c"/><stop offset="1" stop-color="#05030f"/></linearGradient>
-          <linearGradient id="hzRim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fe6c9" stop-opacity="0"/><stop offset=".35" stop-color="#ff9a55"/><stop offset=".5" stop-color="#fff2c8"/><stop offset=".65" stop-color="#ff9a55"/><stop offset="1" stop-color="#8f6bff" stop-opacity="0"/></linearGradient>
-          <clipPath id="hzClip"><circle cx="50" cy="50" r="50"/></clipPath>
+          <linearGradient id="rkSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070416"/><stop offset=".55" stop-color="#1d1145"/><stop offset="1" stop-color="#5b2a72"/></linearGradient>
+          <linearGradient id="rkEarth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3a63"/><stop offset=".3" stop-color="#0f1f3d"/><stop offset="1" stop-color="#050a18"/></linearGradient>
+          <linearGradient id="rkRim" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2fe6c9" stop-opacity="0"/><stop offset=".5" stop-color="#7ff3e4"/><stop offset="1" stop-color="#2fe6c9" stop-opacity="0"/></linearGradient>
+          <linearGradient id="rkTrail" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".5" stop-color="#ffb46b" stop-opacity=".5"/><stop offset="1" stop-color="#ff7a45" stop-opacity="0"/></linearGradient>
+          <linearGradient id="rkBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c9d0ff"/><stop offset=".45" stop-color="#fff"/><stop offset="1" stop-color="#aab2e8"/></linearGradient>
+          <linearGradient id="rkFlame" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6c8"/><stop offset=".4" stop-color="#ffb04d"/><stop offset="1" stop-color="#ff5a2d" stop-opacity="0"/></linearGradient>
+          <radialGradient id="rkHalo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ff9a55" stop-opacity=".5"/><stop offset="1" stop-color="#ff9a55" stop-opacity="0"/></radialGradient>
+          <filter id="rkBlur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
         </defs>
-        <g clip-path="url(#hzClip)">
-          <rect width="100" height="100" fill="url(#hzSky)"/>
-          <g class="dawn-stars" fill="#fff">
-            <circle cx="22" cy="24" r=".7"/><circle cx="70" cy="18" r=".9"/><circle cx="82" cy="36" r=".6"/><circle cx="36" cy="12" r=".6"/><circle cx="56" cy="30" r=".5"/><circle cx="14" cy="44" r=".5"/><circle cx="88" cy="22" r=".5"/><circle cx="46" cy="20" r=".4"/>
-          </g>
-          <g class="dawn-sun">
-            <circle class="dawn-glow" cx="50" cy="52" r="34" fill="url(#hzGlow)"/>
-            <circle cx="50" cy="51" r="11" fill="url(#hzSun)"/>
-          </g>
-          <circle cx="50" cy="134" r="72" fill="url(#hzLand)"/>
-          <circle cx="50" cy="134" r="72" fill="none" stroke="url(#hzRim)" stroke-width="1.4"/>
-          <path d="M-2 100 Q 30 92 50 96 T 102 94 V102 H-2Z" fill="#05030f" opacity=".7"/>
+        <rect width="200" height="250" fill="url(#rkSky)"/>
+        <g class="rk-stars" fill="#fff">
+          <circle cx="24" cy="30" r="1"/><circle cx="160" cy="22" r="1.2"/><circle cx="178" cy="70" r=".9"/><circle cx="52" cy="62" r=".8"/><circle cx="100" cy="18" r=".8"/><circle cx="18" cy="104" r=".8"/><circle cx="140" cy="56" r=".7"/><circle cx="84" cy="44" r=".6"/><circle cx="188" cy="118" r=".7"/><circle cx="40" cy="140" r=".6"/>
         </g>
-      </svg></div>
+        <circle cx="122" cy="100" r="60" fill="url(#rkHalo)"/>
+        <g class="rk-trail">
+          <path d="M113 112 Q 90 152 60 214" stroke="url(#rkTrail)" stroke-width="12" stroke-linecap="round" fill="none" filter="url(#rkBlur)"/>
+          <path d="M113 112 Q 90 152 60 214" stroke="url(#rkTrail)" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+        </g>
+        <circle cx="100" cy="345" r="168" fill="url(#rkEarth)"/>
+        <circle cx="100" cy="345" r="168" fill="none" stroke="url(#rkRim)" stroke-width="2.4"/>
+        <circle cx="100" cy="345" r="172" fill="none" stroke="#2fe6c9" stroke-opacity=".22" stroke-width="7" filter="url(#rkBlur)"/>
+        <g class="rk-body">
+          <g transform="translate(122 92) rotate(28)">
+            <path class="rk-flame" d="M-5.5 20 Q 0 58 5.5 20 Z" fill="url(#rkFlame)"/>
+            <path d="M-9 8 L-18 25 L-9 20 Z M9 8 L18 25 L9 20 Z" fill="#8f6bff"/>
+            <path d="M0 -27 C 7 -17 9 -5 9 8 L9 20 L-9 20 L-9 8 C -9 -5 -7 -17 0 -27 Z" fill="url(#rkBody)"/>
+            <path d="M0 -27 C 4 -22 6 -18 7.4 -13 L-7.4 -13 C -6 -18 -4 -22 0 -27 Z" fill="#ff7a45"/>
+            <circle cx="0" cy="-2" r="4.4" fill="#2fe6c9" stroke="#5a4fb0" stroke-width="1.4"/>
+            <rect x="-5" y="20" width="10" height="3" rx="1" fill="#6b6fa0"/>
+          </g>
+        </g>
+      </svg>
     </div>
     <div class="hero-main">
       <p class="eyebrow">✦ Kdo je za tím vším</p>
       <h1 id="pageTitle">O Zajdovi</h1>
       <p class="hero-lead">Trochu cvok a občasný zapisovatel vlastního života.</p>
       <div class="hero-stats" id="heroStats">
-        <div class="stat" id="stDays" hidden><b data-n>0</b><span>dní od diagnózy</span></div>
+        <div class="stat" id="stRocket" hidden title="Estimate: mission elapsed time × orbital velocity 7.8 km/s"><b id="rkKm">0</b><span>km from launch</span><small id="rkT"></small></div>
         <div class="stat" id="stArticles" hidden><b data-n>0</b><span>příběhů</span></div>
         <div class="stat" id="stPlaces" hidden><b data-n>0</b><span>míst</span></div>
         <div class="stat" id="stMiles" hidden><b data-n>0</b><span>milníků</span></div>
@@ -334,7 +343,22 @@
         if (k < 1) requestAnimationFrame(tick);
       })(t0);
     }
-    try { if (window.DiagnosisCounter) setStat('stDays', DiagnosisCounter.dayFor()); } catch (e) {}
+    /* Telemetrie rakety: od startu (1. 6. 2026, stejně jako počítadlo dní) letí raketa oběžnou rychlostí 7.8 km/s. */
+    (function() {
+      var box = document.getElementById('stRocket');
+      if (!box || !window.DiagnosisCounter) return;
+      var V = 7.8, km = document.getElementById('rkKm'), tt = document.getElementById('rkT');
+      function p2(n) { return ('0' + n).slice(-2); }
+      function upd() {
+        var now = new Date(), day = DiagnosisCounter.dayFor(now);
+        if (!(day >= 0)) { box.hidden = true; return; }
+        var sec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
+        km.textContent = Math.floor((day * 86400 + sec) * V).toLocaleString('en-US');
+        tt.textContent = 'MET T+' + day + 'd ' + p2(now.getHours()) + ':' + p2(now.getMinutes()) + ':' + p2(now.getSeconds()) + ' · VEL 7.8 km/s';
+        box.hidden = false;
+      }
+      try { upd(); if (!REDUCE) setInterval(upd, 250); } catch (e) {}
+    })();
 
     /* ── Příběh po kapitolách ── */
     function revealOnScroll(els) {
@@ -422,14 +446,15 @@
             img.addEventListener('click', function() { openLightbox(this.src); });
           });
         }
-        // Portrét v úvodní kartě: první fotka z adminu „O Zajdovi“, jinak iniciála.
+        // Portrét v úvodní kartě: fotka nahraná v adminu „O Zajdovi“, jinak raketa.
         var p0 = data.photos && data.photos[0];
         var avatar = typeof p0 === 'string' ? p0 : (p0 && (p0.url || p0.src));
         if (avatar) {
-          var orb = document.getElementById('heroOrb');
-          orb.textContent = '';
-          var im = document.createElement('img'); im.src = avatar; im.alt = ''; im.addEventListener('click', function() { openLightbox(avatar); });
-          orb.appendChild(im);
+          var hp = document.getElementById('heroPhoto');
+          var im = document.createElement('img'); im.alt = 'Zajda'; im.decoding = 'async';
+          im.addEventListener('load', function() { hp.innerHTML = ''; hp.appendChild(im); });
+          im.addEventListener('click', function() { openLightbox(avatar); });
+          im.src = avatar;
         }
       } catch (e) {
         content.classList.remove('loading');

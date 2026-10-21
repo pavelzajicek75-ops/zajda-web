@@ -367,6 +367,13 @@
       <div class="form-row">
         <input type="text" id="aboutTitle" class="form-input" placeholder="Nadpis">
       </div>
+      <div class="form-row" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:.2rem 0 .9rem">
+        <img id="aboutPhotoPrev" alt="" style="display:none;width:64px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #444">
+        <button type="button" class="btn btn-sm" onclick="document.getElementById('aboutPhotoInput').click()">📷 Portrét nahoře na stránce</button>
+        <button type="button" class="btn btn-sm" id="aboutPhotoDel" style="display:none" onclick="removeAboutPhoto()">✖ Odstranit</button>
+        <input type="file" id="aboutPhotoInput" accept="image/*" hidden onchange="uploadAboutPhoto(this)">
+        <span id="aboutPhotoHint" style="font-size:.8rem;opacity:.7">Bez fotky se ukáže animovaná raketa.</span>
+      </div>
 
       <div class="editor-toolbar" data-for="wysiwyg">
         <button data-key="bold" onclick="toggleBold()" title="Tučně"><b>B</b></button>
@@ -836,7 +843,7 @@
 </div>
 
 <script src="dashboard-core.js?v=20261013"></script>
-<script src="dashboard-editor.js?v=20261031"></script>
+<script src="dashboard-editor.js?v=20261037"></script>
 <script src="/share-card.js?v=2"></script>
 <script src="gallery-ribbon-ui.js?v=20260910"></script>
 <script src="article-map-picker.js?v=20261011"></script>

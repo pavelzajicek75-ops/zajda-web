@@ -3428,11 +3428,54 @@ async function saveSectionCover(sectionId, url) {
 }
 
 /* === O ZAJDOVI === */
+let ABOUT_DOC = {};
+function paintAboutPhoto() {
+  const url = (ABOUT_DOC.photos && ABOUT_DOC.photos[0]) || '';
+  const img = $('aboutPhotoPrev'), del = $('aboutPhotoDel'), hint = $('aboutPhotoHint');
+  if (img) { img.style.display = url ? '' : 'none'; if (url) img.src = typeof url === 'string' ? url : (url.url || ''); }
+  if (del) del.style.display = url ? '' : 'none';
+  if (hint) hint.textContent = url ? 'Fotka se ukazuje v úvodní kartě stránky O Zajdovi.' : 'Bez fotky se ukáže animovaná raketa.';
+}
+// Zmenší fotku (delší strana max. 1000 px) a pošle ji do R2; hned potom uloží stránku.
+async function uploadAboutPhoto(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  try {
+    let blob = f;
+    try {
+      const bmp = await createImageBitmap(f);
+      const k = Math.min(1, 1000 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.86)) || f;
+    } catch (e) { blob = f; }
+    const fd = new FormData();
+    fd.append('file', blob, 'portret.jpg');
+    const r = await fetch('/api/about/upload-photo', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    ABOUT_DOC.photos = [d.url];
+    paintAboutPhoto();
+    await saveAbout();
+  } catch (e) {
+    console.error('Portrét:', e);
+    showToast('Fotku se nepodařilo nahrát', 'error');
+  }
+}
+async function removeAboutPhoto() {
+  ABOUT_DOC.photos = [];
+  paintAboutPhoto();
+  await saveAbout();
+}
 async function loadAbout() {
   try {
     const r = await fetch('/api/about/get');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json() || {};
+    ABOUT_DOC = d;
+    paintAboutPhoto();
     if ($('aboutTitle')) $('aboutTitle').value = d.title || '';
     if ($('aboutEditor')) {
       $('aboutEditor').innerHTML = d.text || '';
@@ -3451,7 +3494,9 @@ async function loadAbout() {
 async function saveAbout() {
   const about = {
     title: $('aboutTitle')?.value || '',
-    text: $('aboutEditor')?.innerHTML || ''
+    text: $('aboutEditor')?.innerHTML || '',
+    photos: ABOUT_DOC.photos || [],
+    subsections: ABOUT_DOC.subsections || []
   };
   try {
     const r = await fetch('/api/about/update', {
