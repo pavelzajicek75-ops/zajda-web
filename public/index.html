@@ -624,11 +624,11 @@
   <div class="gates" id="gates">
     <a class="gate gate-map" id="gateMap" href="/timeline/" aria-label="Hvězdná mapa milníků">
       <canvas id="gateCv" aria-hidden="true"></canvas>
-      <div class="gate-txt"><small>✦ Hvězdná mapa</small><strong>Můj příběh jako souhvězdí</strong><span id="gateMapSub">Každý milník je hvězda. Klikni a proleť se jimi.</span></div>
+      <div class="gate-txt"><small>✦ Hvězdná mapa</small><strong>Mapa mých průšvihů</strong><span id="gateMapSub">Od startu až do dneška. Klikni na hvězdu.</span></div>
       <i class="gate-go">Vstoupit →</i>
     </a>
-    <a class="gate gate-quote" href="/citaty"><small>✦ Citáty</small><strong>Co mi dává sílu</strong><span id="gateQuote">Myšlenky, které si nosím s sebou.</span><i class="gate-go">Číst →</i></a>
-    <a class="gate gate-about" href="/about/"><small>✦ O Zajdovi</small><strong>Kdo tohle píše</strong><span>Příběh po kapitolách, fotky a vše od začátku.</span><i class="gate-go">Poznat →</i></a>
+    <a class="gate gate-quote" href="/citaty"><small>✦ Citáty</small><strong>Moje sbírka vět</strong><span id="gateQuote">Co jsem si zapamatoval a nechci zapomenout.</span><i class="gate-go">Číst →</i></a>
+    <a class="gate gate-about" href="/about/"><small>✦ O Zajdovi</small><strong>Tak já jsem Zajda</strong><span>Trochu cvok a občasný zapisovatel.</span><i class="gate-go">Poznat →</i></a>
   </div>
   <div class="top-grid">
     <div class="latest-panel" id="latestPanel">
@@ -1851,7 +1851,7 @@
   fetch('/api/timeline/list').then(function (r) { return r.ok ? r.json() : []; }).then(function (l) {
     if (!Array.isArray(l) || !l.length) { var g = document.getElementById('gateMap'); if (g) g.style.minHeight = '140px'; return; }
     l.sort(function (a, b) { return String(a.date || '').localeCompare(String(b.date || '')); });
-    var sub = document.getElementById('gateMapSub'); if (sub) sub.textContent = l.length + ' milníků — každý je hvězda. Klikni a proleť se jimi.';
+    var sub = document.getElementById('gateMapSub'); if (sub) sub.textContent = l.length + ' milníků. Od startu až do dneška. Klikni na hvězdu.';
     startMap(l);
   }).catch(function () {});
   fetch('/api/quotes/list').then(function (r) { return r.ok ? r.json() : []; }).then(function (q) {
