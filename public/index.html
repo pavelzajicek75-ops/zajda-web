@@ -288,6 +288,13 @@
       .sections-container { padding-left: 0; padding-right: 0; }
       .section-panel { max-width: none; }
     }
+    /* Mobil: karty sekcí na celou šířku stejně jako ostatní bloky, nižší titulní fotka */
+    @media (max-width: 900px) {
+      .sections-container { padding: 40px 20px 90px; }
+      .section-panel { flex: 1 1 100%; max-width: none; }
+      .panel-cover { aspect-ratio: 16 / 9; }
+      .story-share { top: 10px; right: 10px; }
+    }
     @media (min-width: 901px) and (max-width: 1239px) {
       .story-hero.story-hero, .qotd { margin-left: 20px; margin-right: 20px; }
       .top-grid, .sections-container { padding-left: 20px; padding-right: 20px; }
@@ -362,6 +369,10 @@
     .intro-text { padding: 1.1rem 1.3rem; }
     .qotd { padding: 14px 24px; margin-top: 16px; } .qotd-label { margin-bottom: 4px; } .qotd-author { margin-top: 6px; } .qotd-next { margin-top: 8px; }
     .intro-highlight { font-size: 19px; margin-bottom: 4px; }
+    .story-share { position: absolute; top: 14px; right: 14px; z-index: 3; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+      background: rgba(8,5,20,.55); border: 1px solid rgba(255,255,255,.28); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      color: #fff; font: 600 12.5px 'Space Grotesk', sans-serif; transition: border-color .2s, background .2s; }
+    .story-share:hover, .story-share:focus-visible { border-color: var(--ember); background: rgba(255,122,69,.25); }
     @media (max-width: 900px) { .top-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) { .story-hero { margin: 20px 20px 0; min-height: 300px; border-radius: 16px; } .story-hero-body { padding: 120px 20px 22px; } }
 
@@ -594,7 +605,7 @@
     @media (max-width: 900px) {
       .top-grid { grid-template-columns: 1fr; margin-top: 28px; }
       .sections-container { padding: 40px 20px 100px; flex-direction: column; align-items: center; }
-      .section-panel { width: 90%; max-width: 400px; flex: none; }
+      .section-panel { width: 100%; max-width: none; flex: none; }
       .panel-scroll { max-height: 300px; }
       .search-panel { max-width: none; }
       .section-modal-box { max-height: 88vh; }
@@ -903,6 +914,18 @@
       if (a.place) { var m = document.createElement('span'); m.className = 'story-hero-meta'; m.textContent = '📍 ' + a.place; body.appendChild(m); }
       el.appendChild(body);
       el.href = '/article?id=' + encodeURIComponent(a.id || '');
+      /* Sdílení příběhu: nativní nabídka (mobil), jinak WhatsApp. Klik nesmí otevřít článek. */
+      var shUrl = location.origin + '/article?id=' + encodeURIComponent(a.id || ''), shTxt = (a.title || 'Příběh') + ' — Zajda';
+      var sh = document.createElement('span'); sh.className = 'story-share'; sh.setAttribute('role', 'button'); sh.tabIndex = 0;
+      sh.setAttribute('aria-label', 'Poslat kamarádovi'); sh.textContent = '📤 Pošli dál';
+      function doShare(e) {
+        e.preventDefault(); e.stopPropagation();
+        if (navigator.share) { navigator.share({ title: shTxt, text: shTxt, url: shUrl }).catch(function () {}); }
+        else { window.open('https://wa.me/?text=' + encodeURIComponent(shTxt + ' ' + shUrl), '_blank', 'noopener'); }
+      }
+      sh.addEventListener('click', doShare);
+      sh.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') doShare(e); });
+      el.appendChild(sh);
       el.hidden = false;
     }
 
