@@ -384,6 +384,8 @@
     .article-nav-link .nav-title-text { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
     @media (max-width: 640px) { .article-nav-links { grid-template-columns: 1fr; } }
 
+    .article-reactions { margin: 28px 0 6px; }
+    .article-reactions .reaction-bar { margin-bottom: 0; }
     .related-section { margin-top: 40px; }
     .related-section h2 {
       font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 600; color: var(--parchment);
@@ -474,7 +476,7 @@
     @media print {
       .bg, .stars, .constellation-layer, .lightbox-overlay,
       .nav-bar, .reading-progress, .article-footer,
-      .article-nav-links, .related-section, .toc-box,
+      .article-nav-links, .related-section, .article-reactions, .toc-box,
       .article-mini-map-wrap, .trip-map-wrap, .reader-toggle,
       .skip-link { display: none !important; }
       body { background: #fff !important; color: #111 !important; }
@@ -1314,7 +1316,6 @@
     var shareUrl = window.location.href;
     var shareText = title + ' — Moje diagnóza, můj vesmír';
     html += '<div class="article-footer">';
-    html += renderReactionBar(article, reactionConfig);
     html += '<div class="share-bar-inline">';
     html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
     if (navigator.share) {
@@ -1367,22 +1368,10 @@
         }
       }
 
-      var related = findRelated(article, allArticles, excludeIds);
-      if (related.length) {
-        html += '<div class="related-section"><h2>Podobné články</h2><div class="related-grid">';
-        related.forEach(function (a) {
-          var rDate = '';
-          try { rDate = new Date(a.date || a.created).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) {}
-          // ★ ZMĚNA: alt="" → smysluplný popisek z titulku daného článku
-          var cover = a.coverUrl ? '<img ' + thumbImgAttrs(a.coverUrl) + ' alt="' + escapeHtml(a.title || 'Náhledová fotografie článku') + '" loading="lazy">' : '';
-          html += '<a class="related-card" href="/article?id=' + encodeURIComponent(a.id) + '">' + cover +
-            '<div class="related-body"><h3>' + escapeHtml(a.title || 'Bez názvu') + '</h3>' +
-            (rDate ? '<div class="related-date">' + escapeHtml(rDate) + '</div>' : '') +
-            '</div></a>';
-        });
-        html += '</div></div>';
-      }
     }
+
+    // Hodnocení (reakce) pod navigací mezi články; srdíčko a komentáře se přidají za něj.
+    html += '<div class="article-reactions">' + renderReactionBar(article, reactionConfig) + '</div>';
 
     container.innerHTML = html;
 
