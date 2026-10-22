@@ -106,7 +106,7 @@
     .top-grid {
       position: relative; z-index: 10;
       max-width: 1200px; margin: 40px auto 0; padding: 0 20px;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+      display: grid; grid-template-columns: 1.45fr 1fr; gap: 20px;
       align-items: stretch;
     }
     .latest-panel, .intro-text {
@@ -280,6 +280,8 @@
     .search-snippet mark { background: rgba(255,122,69,.3); color: inherit; border-radius: 3px; padding: 0 2px; }
     .search-panel input::placeholder { color: var(--mist-dim); }
 
+    @media (min-width: 700px) { .fun-actions-row { margin-left: -160px; margin-right: -160px; } }
+    a.fun-action-btn { text-decoration: none; display: inline-flex; align-items: center; }
     .fun-actions-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
 
     .reaction-ticker {
@@ -345,6 +347,10 @@
     .story-hero-excerpt { font-size: 16.5px; line-height: 1.6; color: #e2e0f0; margin: 0 0 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .story-hero-cta { display: inline-block; padding: 9px 20px; border-radius: 999px; background: var(--ember); color: #1a0d05; font: 700 14px 'Space Grotesk', sans-serif; }
     .story-hero-meta { margin-left: 14px; font-size: 13px; color: #bdbad0; }
+    .intro-text { padding: 1.1rem 1.3rem; }
+    .qotd { padding: 14px 24px; margin-top: 16px; } .qotd-label { margin-bottom: 4px; } .qotd-author { margin-top: 6px; } .qotd-next { margin-top: 8px; }
+    .intro-highlight { font-size: 19px; margin-bottom: 4px; }
+    @media (max-width: 900px) { .top-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) { .story-hero { margin: 20px 20px 0; min-height: 300px; border-radius: 16px; } .story-hero-body { padding: 120px 20px 22px; } }
 
     .pinned-card { display: block; margin: 16px auto 0; max-width: 560px; padding: 12px 18px; border-radius: 14px; text-decoration: none; text-align: left; color: var(--parchment); background: rgba(255,122,69,.08); border: 1px solid rgba(255,122,69,.4); }
@@ -618,6 +624,8 @@
     <div class="search-results" id="searchResults"></div>
     <div style="text-align:center;margin-top:12px" id="savedLinkWrap"></div>
     <div class="fun-actions-row">
+      <a class="fun-action-btn" href="/timeline/">✦ Hvězdná mapa</a>
+      <a class="fun-action-btn" href="/citaty">✦ Citáty</a>
       <button type="button" class="fun-action-btn" id="statsModalTrigger">🌌 Moje čísla</button>
       <button type="button" class="fun-action-btn" id="surpriseMeBtn">🎲 Překvap mě</button>
     </div>
@@ -892,7 +900,7 @@
       var articles = await getAllArticles();
       var sorted = sortArticles(articles, 'newest');
       try { renderStoryHero(sorted[0]); } catch (e) {}
-      var latest = sorted.slice(0, 2);
+      var latest = sorted.slice(1, 4); // 0 je ve velké kartě nahoře — neopakovat
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
         return;
