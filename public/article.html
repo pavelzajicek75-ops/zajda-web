@@ -1298,11 +1298,24 @@
     // === MINIATURA MAPY — jen pokud má článek vyplněné souřadnice ===
     var hasLocation = typeof article.lat === 'number' && isFinite(article.lat) &&
       typeof article.lng === 'number' && isFinite(article.lng);
+    // Cesta/výlet (podsekce): mapa ukáže NEJVZDÁLENĚJŠÍ místo od startu, ať je vidět, kam jsme dojeli.
+    var farPt = null, startPt = null;
+    if (hasLocation && article.subsectionId && Array.isArray(allArticles)) {
+      var tripC = allArticles.filter(function (a) { return hasCoords(a) && String(a.subsectionId || '') === String(article.subsectionId) && String(a.sectionId || '') === String(article.sectionId || ''); })
+        .sort(function (a, b) { return (articleTimestamp(a) - articleTimestamp(b)) || ((a.created || 0) - (b.created || 0)); });
+      if (tripC.length >= 2) {
+        var hav = function (a, b) { var R = 6371, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+          var h = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2); return 2 * R * Math.asin(Math.sqrt(h)); };
+        startPt = tripC[0]; var best = 0;
+        tripC.forEach(function (a) { var d = hav(startPt, a); if (d > best) { best = d; farPt = a; } });
+        if (!farPt || best < 1) { farPt = null; startPt = null; }
+      }
+    }
     if (hasLocation) {
       html += '<div class="article-mini-map-wrap">' +
         '<div class="article-mini-map" id="articleMiniMap"></div>' +
         '<div class="article-mini-map-label">' +
-        '<span>📍 ' + escapeHtml(article.place || 'Místo na mapě') + '</span>' +
+        '<span>📍 ' + escapeHtml((farPt && farPt.place) || article.place || 'Místo na mapě') + (farPt ? ' <small style="opacity:.7">· nejvzdálenější místo výletu</small>' : '') + '</span>' +
         '<a href="/mapa.html" id="articleMiniMapLink">Zobrazit celou mapu cest →</a>' +
         '</div></div>';
     }
@@ -1316,6 +1329,7 @@
     var shareUrl = window.location.href;
     var shareText = title + ' — Moje diagnóza, můj vesmír';
     html += '<div class="article-footer">';
+    html += renderReactionBar(article, reactionConfig);
     html += '<div class="share-bar-inline">';
     html += '<button type="button" id="saveArticleBtn" class="share-btn save-btn">☆ Uložit na později</button>';
     if (navigator.share) {
@@ -1330,48 +1344,7 @@
     html += '</div>';
     html += '</div>';
 
-    var excludeIds = [String(article.id)];
-    if (Array.isArray(allArticles) && allArticles.length) {
-      var pn = findPrevNext(article, allArticles);
-      var navParts = [];
-      if (pn.older) {
-        excludeIds.push(String(pn.older.id));
-        navParts.push('<a class="article-nav-link prev" href="/article?id=' + encodeURIComponent(pn.older.id) + '"><span class="nav-hint">← Starší</span><span class="nav-title-text">' + escapeHtml(pn.older.title || 'Bez názvu') + '</span></a>');
-      }
-      if (pn.newer) {
-        excludeIds.push(String(pn.newer.id));
-        navParts.push('<a class="article-nav-link next" href="/article?id=' + encodeURIComponent(pn.newer.id) + '"><span class="nav-hint">Novější →</span><span class="nav-title-text">' + escapeHtml(pn.newer.title || 'Bez názvu') + '</span></a>');
-      }
-      if (navParts.length) {
-        html += '<div class="article-nav-links' + (navParts.length === 1 ? ' single' : '') + '">' + navParts.join('') + '</div>';
-      }
-
-      // Výlet (podsekce): "Část 3 z 7" + předchozí/další část v pořadí, jak šly za sebou.
-      if (article.subsectionId) {
-        var trip = allArticles
-          .filter(function (a) { return a && String(a.subsectionId || '') === String(article.subsectionId) && String(a.sectionId || '') === String(article.sectionId || ''); })
-          .sort(function (a, b) { return (articleTimestamp(a) - articleTimestamp(b)) || ((a.created || 0) - (b.created || 0)); });
-        var ti = trip.findIndex(function (a) { return String(a.id) === String(article.id); });
-        if (trip.length >= 2 && ti !== -1) {
-          var tripPts = trip.filter(hasCoords).length;
-          window._tripForMap = { trip: trip, cur: ti };
-          var tPrev = ti > 0 ? trip[ti - 1] : null, tNext = ti < trip.length - 1 ? trip[ti + 1] : null;
-          html += '<nav class="trip-nav" aria-label="Části výletu" data-section="' + escapeHtml(String(article.sectionId || '')) + '" data-sub="' + escapeHtml(String(article.subsectionId)) + '">' +
-            '<div class="trip-nav-head">🧭 Část <b>' + (ti + 1) + '</b> z <b>' + trip.length + '</b><span class="trip-name"></span></div>' +
-            (tripPts >= 2 ? '<div class="trip-map-wrap"><div class="trip-map" id="tripMap" role="img" aria-label="Mapa zastávek výletu"></div></div>' : '') +
-            '<div class="trip-nav-links">' +
-            (tPrev ? '<a href="/article?id=' + encodeURIComponent(tPrev.id) + '">← ' + escapeHtml(tPrev.title || 'Předchozí část') + '</a>' : '<span></span>') +
-            (tNext ? '<a href="/article?id=' + encodeURIComponent(tNext.id) + '">' + escapeHtml(tNext.title || 'Další část') + ' →</a>' : '<span></span>') +
-            '</div><a class="trip-all" href="/vylet?s=' + encodeURIComponent(String(article.sectionId || '')) + '&sub=' + encodeURIComponent(String(article.subsectionId)) + '">📖 Celý výlet jako příběh →</a></nav>';
-          if (tPrev) excludeIds.push(String(tPrev.id));
-          if (tNext) excludeIds.push(String(tNext.id));
-        }
-      }
-
-    }
-
-    // Hodnocení (reakce) pod navigací mezi články; srdíčko a komentáře se přidají za něj.
-    html += '<div class="article-reactions">' + renderReactionBar(article, reactionConfig) + '</div>';
+    // Pod článkem už jen hodnocení, uložit, sdílet a odkaz (+ komentáře). Žádné odkazy na další články.
 
     container.innerHTML = html;
 
@@ -1404,15 +1377,6 @@
     try { if (window.PhotoSpeed) window.PhotoSpeed.shrink(container); } catch (e) {}
     try { if (window.ReadingAids) window.ReadingAids.mount(article, container); } catch (e) { console.error('Pomůcky čtení:', e); }
 
-    // Srdíčko (viz hearts.js) — po komentářích, aby se vložilo před ně.
-    try { if (window.ArticleHearts) window.ArticleHearts.mount(article, container); } catch (e) { console.error('Srdíčko:', e); }
-
-    // Karta ke sdílení jako obrázek (viz share-card.js).
-    try { if (window.ShareCard) window.ShareCard.mount(article, container); } catch (e) { console.error('Karta:', e); }
-
-    // Uložení na offline (viz offline-save.js) — v řádku se srdíčkem.
-    try { if (window.ArticleOffline) window.ArticleOffline.mount(article, container); } catch (e) { console.error('Offline:', e); }
-
     // Fotky v textu článku se jemně "vsunou", jak k nim čtenář scrolluje
     // — titulní fotka (article-hero) zůstává beze změny, tu je žádoucí
     // vidět hned. Zpoždění je omezené na prvních pár fotek, ať dlouhý
@@ -1441,7 +1405,9 @@
           zoomControl: false, dragging: false, scrollWheelZoom: false,
           doubleClickZoom: false, touchZoom: false, boxZoom: false,
           keyboard: false, attributionControl: false
-        }).setView([article.lat, article.lng], 11);
+        });
+        if (farPt && startPt) { miniMap.fitBounds(L.latLngBounds([[startPt.lat, startPt.lng], [farPt.lat, farPt.lng]]), { padding: [34, 34], maxZoom: 11 }); }
+        else { miniMap.setView([article.lat, article.lng], 11); }
         // ★ CARTO dlaždice (basemaps.cartocdn.com) teď vyžadují API klíč a
         // bez něj kreslí přes mapu vodoznak "API KEY REQUIRED" — stejně jako
         // v travel-map-core.js se proto používá bezklíčové Esri Canvas.
@@ -1457,7 +1423,12 @@
             '</g></svg>',
           iconSize: [30, 30], iconAnchor: [15, 26]
         });
-        L.marker([article.lat, article.lng], { icon: miniIcon, interactive: false }).addTo(miniMap);
+        var pinAt = farPt || article;
+        if (farPt && startPt) {
+          L.circleMarker([startPt.lat, startPt.lng], { radius: 5, color: '#fff', weight: 2, fillColor: '#8f6bff', fillOpacity: 1, interactive: false }).addTo(miniMap);
+          L.polyline([[startPt.lat, startPt.lng], [farPt.lat, farPt.lng]], { color: '#ff7a45', weight: 2.5, opacity: .85, dashArray: '6 8', interactive: false }).addTo(miniMap);
+        }
+        L.marker([pinAt.lat, pinAt.lng], { icon: miniIcon, interactive: false }).addTo(miniMap);
         // Miniatura je jen náhled (bez interakce) — klik kamkoliv v ní
         // otevře plnou mapu cest rovnou tady (modal), ne přechod na jinou
         // stránku. Zavření modalu = zpátky v článku, bez jakékoli navigace.
