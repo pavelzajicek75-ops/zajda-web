@@ -280,6 +280,16 @@
     .search-snippet mark { background: rgba(255,122,69,.3); color: inherit; border-radius: 3px; padding: 0 2px; }
     .search-panel input::placeholder { color: var(--mist-dim); }
 
+    /* PC: všechny bloky (velká karta, aktuality, citát dne, karty sekcí) mají stejnou šířku i okraje */
+    @media (min-width: 901px) {
+      .top-grid { padding-left: 0; padding-right: 0; }
+      .sections-container { padding-left: 0; padding-right: 0; }
+      .section-panel { max-width: none; }
+    }
+    @media (min-width: 901px) and (max-width: 1239px) {
+      .story-hero.story-hero, .qotd { margin-left: 20px; margin-right: 20px; }
+      .top-grid, .sections-container { padding-left: 20px; padding-right: 20px; }
+    }
     @media (min-width: 700px) { .fun-actions-row { margin-left: -160px; margin-right: -160px; } }
     a.fun-action-btn { text-decoration: none; display: inline-flex; align-items: center; }
     .fun-actions-row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
