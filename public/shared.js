@@ -144,7 +144,9 @@ function decodeText(el, finalText, duration) {
   if (__reduceMotion || !finalText) { el.textContent = finalText || ''; return; }
   var len = finalText.length;
   var start = null;
+  var runId = el.__decId = (el.__decId || 0) + 1;   // nový běh zruší předchozí (jinak se prolínají a text bliká/zasekne)
   function frame(ts) {
+    if (el.__decId !== runId) return;
     if (!start) start = ts;
     var progress = Math.min(1, (ts - start) / duration);
     var revealCount = Math.floor(progress * len);
@@ -326,7 +328,11 @@ function __setupQuoteHover() {
 function renderQuoteOfDay(quotes) {
   var box = document.getElementById('quoteOfDay');
   if (!box || !quotes || !quotes.length) return;
-  var list = quotes.slice().sort(function (a, b) { return ((a.created || 0) - (b.created || 0)) || String(a.text).localeCompare(String(b.text)); });
+  // Do karty jen rozumně krátké citáty — jeden dlouhý text dřív nafoukl celou kartu.
+  var QMAX = 260;
+  var short = quotes.filter(function (q) { return q && q.text && String(q.text).length <= QMAX; });
+  if (!short.length) return;
+  var list = short.slice().sort(function (a, b) { return ((a.created || 0) - (b.created || 0)) || String(a.text).localeCompare(String(b.text)); });
   var d = new Date();
   var dayNum = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
   var idx = dayNum % list.length, step = 0;
@@ -346,7 +352,9 @@ function renderQuoteOfDay(quotes) {
     var z = document.createElement('span'); z.className = 'qotd-sizer'; z.textContent = '„' + q.text + '"'; txt.appendChild(z);
   });
   txt.appendChild(live);
+  var showId = 0;
   function show(first) {
+    var myShow = ++showId;
     var q = list[(idx + step) % list.length];
     var full = '„' + q.text + '"';
     var dur = Math.min(4200, 1400 + full.length * 32);
@@ -354,9 +362,10 @@ function renderQuoteOfDay(quotes) {
     au.textContent = q.author ? '— ' + q.author : '';
     live.textContent = '';
     var go = function () {
+      if (myShow !== showId) return;   // mezitím se kliklo na „další“ — tenhle běh už neplatí
       box.classList.remove('qotd-swap');
       decodeText(live, full, dur);
-      setTimeout(function () { au.style.opacity = 1; }, __reduceMotion ? 0 : dur + 150);
+      setTimeout(function () { if (myShow === showId) au.style.opacity = 1; }, __reduceMotion ? 0 : dur + 150);
     };
     if (first) { box.classList.add('qotd-wait'); setTimeout(function () { box.classList.remove('qotd-wait'); go(); }, __reduceMotion ? 0 : 1300); }
     else { box.classList.add('qotd-swap'); setTimeout(go, __reduceMotion ? 0 : 450); }
@@ -369,9 +378,11 @@ function renderQuoteOfDay(quotes) {
 async function startQuotes() {
   var quotes = await loadQuotes();
   if (!Array.isArray(quotes)) return;
-  quotes = quotes.filter(function (q) { return q && q.text; });
+  quotes = quotes.filter(function (q) { return q && q.text && String(q.text).length <= 600; });
   if (!quotes.length) return;
   try { renderQuoteOfDay(quotes); } catch (e) {}
+  var floating = quotes.filter(function (q) { return String(q.text).length <= 220; });
+  if (floating.length) quotes = floating;
   __setupQuoteHover();
   var MAX = 4;                       // najednou nejvýš 4 citáty
   var queue = [];
@@ -382,7 +393,21 @@ async function startQuotes() {
   function visibleTexts() {
     return Array.prototype.map.call(document.querySelectorAll('.quote-star .quote-text'), function (n) { return n.__full || ''; });
   }
+  function prune() {                 // pojistka: citát, který přežil svou dráhu (zaseklá animace, skrytá záložka), se odstraní
+    var now = Date.now();
+    for (var k = __activeQuotes.length - 1; k >= 0; k--) {
+      var en = __activeQuotes[k];
+      if (!en.el.parentNode) { __activeQuotes.splice(k, 1); continue; }
+      if (!en.t0) en.t0 = now;
+      if (now - en.t0 > 50000 && !en.el.classList.contains('hover-active')) { en.el.remove(); __activeQuotes.splice(k, 1); }
+    }
+    document.querySelectorAll('.quote-star').forEach(function (n) {   // osiřelé prvky mimo evidenci
+      if (!__activeQuotes.some(function (e) { return e.el === n; })) n.remove();
+    });
+  }
   function next() {
+    if (document.hidden) return;     // ve skryté záložce se nic nespouští (animace stojí, citáty by se hromadily)
+    prune();
     if (document.querySelectorAll('.quote-star').length >= MAX) return;
     if (!queue.length) refill();
     var shown = visibleTexts(), pick = -1;

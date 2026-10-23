@@ -31,7 +31,7 @@
    Při každé výraznější změně webu zvyš SW_VERSION o kousek níž — vynutí
    to smazání staré cache a čerstvé stažení všeho. */
 
-const SW_VERSION = 'v60';
+const SW_VERSION = 'v61';
 const SHELL_CACHE = 'zajda-shell-' + SW_VERSION;
 const RUNTIME_CACHE = 'zajda-runtime-' + SW_VERSION;
 // Články uložené čtenářem „na offline“ (offline-save.js). Jméno je bez verze,
@@ -51,7 +51,7 @@ const SHELL_URLS = [
   '/manifest.json',
   '/fonts.css?v=' + ASSET_VERSION,
   '/shared.css?v=' + ASSET_VERSION,
-  '/shared.js?v=' + ASSET_VERSION,
+  '/shared.js?v=20261040',
   '/travel-map-core.js?v=' + ASSET_VERSION,
   '/timeline-core.js?v=' + ASSET_VERSION,
   '/icon-192.png',
