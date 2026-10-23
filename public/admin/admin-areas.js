@@ -21,6 +21,7 @@
       { k: 'quotes', i: '💬', n: 'Citáty', a: TAB, t: 'quotes' },
       { k: 'galleries', i: '🖼️', n: 'Fotky a galerie', a: TAB, t: 'galleries' },
       { k: 'about', i: '👤', n: 'O Zajdovi', a: TAB, t: 'about' },
+      { k: 'subsections', i: '📂', n: 'Struktura a covery', a: TAB, t: 'subsections' },
       { k: 'ideas', i: '💡', n: 'Nápady', a: BOX, t: 'admin', b: 'ideasBox' },
       { k: 'share', i: '📲', n: 'Z mobilu', a: BOX, t: 'admin', b: 'shareBox' }
     ] },
@@ -32,7 +33,6 @@
       { k: 'errors', i: '🐞', n: 'Hlášené chyby', a: BOX, t: 'tools', b: 'errorsBox', cnt: 'errors' }
     ] },
     { id: 'web', i: '🗺️', n: 'Web', tools: [
-      { k: 'subsections', i: '📂', n: 'Struktura a covery', a: TAB, t: 'subsections' },
       { k: 'featured', i: '🌟', n: 'Začni tady', a: BOX, t: 'admin', b: 'featuredBox' },
       { k: 'site', i: '⚙️', n: 'Nastavení webu', a: BOX, t: 'admin', b: 'siteBox' },
       { k: 'push', i: '📣', n: 'Oznámení', a: BOX, t: 'admin', b: 'pushBox' },
