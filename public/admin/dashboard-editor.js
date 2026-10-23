@@ -2851,12 +2851,38 @@ async function loadQuotes() {
         <td style="padding:0.75rem;border-bottom:1px solid #263252;color:#92a0bc">${escapeHtml(q.author) || '—'}</td>
         <td style="padding:0.75rem;border-bottom:1px solid #263252">
           <button onclick="shareQuoteCard(this)" data-text="${escapeHtml(q.text)}" data-author="${escapeHtml(q.author || '')}" class="btn btn-sm" title="Vytvořit obrázek ke sdílení">🖼️ Karta</button>
-          <button onclick="deleteQuote('${encodeURIComponent(q.key || q.id)}')" class="btn btn-red btn-sm">Smazat</button>
+          <button onclick="deleteQuote('${encodeURIComponent(q.key || q.id).replace(/'/g, '%27')}')" class="btn btn-red btn-sm">Smazat</button>
         </td>
       </tr>`).join('');
   } catch {
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#ef4444;padding:1rem">Chyba načítání.</td></tr>';
   }
+}
+
+// Úklid: soubory v úložišti citátů, které nejsou citáty ani zálohy (smaže se jen po potvrzení, po jednom).
+async function auditQuotes() {
+  const box = $('quoteAudit');
+  if (!box) return;
+  box.textContent = 'Hledám…';
+  try {
+    const r = await fetch('/api/admin/quotes-audit');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!d.foreign.length) { box.textContent = '✅ Žádné cizí soubory (celkem ' + d.total + ' položek).'; return; }
+    box.innerHTML = '<div style="margin-bottom:6px">Nalezeno ' + d.foreign.length + ' cizích souborů (ze ' + d.total + '):</div>' +
+      d.foreign.map(f => '<div style="display:flex;gap:10px;align-items:center;border-top:1px solid #263252;padding:5px 0"><span style="flex:1;word-break:break-all">' + escapeHtml(f.key) + ' <span style="color:#92a0bc">· ' + Math.max(1, Math.round(f.size / 1024)) + ' kB</span></span>' +
+        '<button class="btn btn-red btn-sm" data-key="' + escapeHtml(f.key) + '" onclick="deleteForeignQuoteFile(this)">Smazat</button></div>').join('');
+  } catch (e) { box.textContent = 'Nepodařilo se načíst (' + e.message + ').'; }
+}
+async function deleteForeignQuoteFile(btn) {
+  const key = btn.dataset.key;
+  if (!confirm('Opravdu smazat soubor „' + key + '“? Nejde to vrátit.')) return;
+  try {
+    const r = await fetch('/api/quotes/delete?key=' + encodeURIComponent(key), { method: 'DELETE' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    btn.closest('div').remove();
+    showToast('Smazáno', 'success');
+  } catch (e) { showToast('Smazání se nezdařilo', 'error'); }
 }
 
 // Karta citátu jako obrázek (viz share-card.js)

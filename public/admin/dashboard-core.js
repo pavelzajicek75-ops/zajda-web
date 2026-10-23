@@ -782,7 +782,7 @@ async function loadAdminUsers() {
         <td>${escapeHtml(u.email)}</td>
         <td>${escapeHtml(u.role || 'editor')}</td>
         <td style="font-family:var(--font-mono);font-size:12px">${u.created ? new Date(u.created).toLocaleDateString('cs') : '—'}</td>
-        <td><button class="btn btn-red btn-sm" onclick="deleteAdminUser('${encodeURIComponent(u.email)}')">🗑 Odebrat</button></td>
+        <td><button class="btn btn-red btn-sm" onclick="deleteAdminUser('${encodeURIComponent(u.email).replace(/'/g, '%27')}')">🗑 Odebrat</button></td>
       </tr>`).join('');
   } catch (e) {
     console.error('/api/admin/users selhalo:', e);

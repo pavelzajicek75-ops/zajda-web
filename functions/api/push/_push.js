@@ -56,7 +56,7 @@ export function validEndpoint(e) {
 // === Oznámení pro správce (komentář / zpráva „Napiš mi“) ===
 export const ADMIN_SUBS_KEY = 'meta:push-admin';
 export const ADMIN_LAST_KEY = 'meta:push-admin-last';
-const ADMIN_TEXT = { comment: 'Nový komentář čeká na schválení', message: 'Nová zpráva z „Napiš mi“' };
+const ADMIN_TEXT = { comment: 'Nový komentář čeká na schválení', message: 'Nová zpráva z „Napiš mi“', login: 'Přihlášení do adminu z nového zařízení' };
 
 // Pošle „klepnutí“ zařízením správce. Nikdy nevyhodí chybu (komentář/zpráva se tím nesmí rozbít).
 export async function notifyAdmin(env, kind, origin) {

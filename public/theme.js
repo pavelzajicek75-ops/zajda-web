@@ -18,6 +18,10 @@
     '#themeToggle{position:fixed;left:14px;bottom:14px;z-index:9990;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:19px;line-height:1;' +
     'display:flex;align-items:center;justify-content:center;color:#f8f5ef;background:rgba(20,21,38,.88);border:1px solid rgba(140,150,255,.4);padding:0}' +
     '#themeToggle:hover{border-color:#ff7a45}#themeToggle:focus-visible{outline:3px solid #2fe6c9;outline-offset:2px}' +
+    /* Mobil: menší a průhlednější; při posouvání stránky se schová (nepřekrývá text) a po chvíli klidu se vrátí */
+    '@media (max-width:700px){#themeToggle{width:34px;height:34px;font-size:16px;left:10px;bottom:10px;opacity:.7;transition:opacity .25s,transform .25s}' +
+    '#themeToggle.tt-away{opacity:0;transform:translateX(-48px);pointer-events:none}}' +
+    '@media (prefers-reduced-motion:reduce){#themeToggle{transition:none!important}}' +
     '@media print{#themeToggle{display:none}}';
 
   function mount() {
@@ -33,6 +37,12 @@
     }
     b.addEventListener('click', function () { var n = read() === 'light' ? 'dark' : 'light'; save(n); apply(n); paint(); });
     paint(); document.body.appendChild(b);
+    var awayT = 0;
+    window.addEventListener('scroll', function () {
+      if (!(window.matchMedia && matchMedia('(max-width:700px)').matches)) return;
+      b.classList.add('tt-away'); clearTimeout(awayT);
+      awayT = setTimeout(function () { b.classList.remove('tt-away'); }, 1100);
+    }, { passive: true });
   }
   /* styl světlého režimu musí platit hned (ne až po DOMContentLoaded) */
   var early = document.createElement('style'); early.textContent = css; (document.head || root).appendChild(early);

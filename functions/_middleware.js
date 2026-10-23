@@ -12,6 +12,10 @@ function secure(res) {
     if (!h.has('X-Content-Type-Options')) h.set('X-Content-Type-Options', 'nosniff');
     if (!h.has('X-Frame-Options')) h.set('X-Frame-Options', 'SAMEORIGIN');
     if (!h.has('Referrer-Policy')) h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    if (!h.has('Permissions-Policy')) h.set('Permissions-Policy', 'camera=(), microphone=(), payment=(), geolocation=(), usb=(), bluetooth=(), serial=(), accelerometer=(), gyroscope=(), magnetometer=(), interest-cohort=()');
+    if (!h.has('Cross-Origin-Opener-Policy')) h.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    if (!h.has('Content-Security-Policy')) h.set('Content-Security-Policy', "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'");
+    if (!h.has('Content-Security-Policy-Report-Only')) h.set('Content-Security-Policy-Report-Only', "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://server.arcgisonline.com; frame-src https://www.youtube-nocookie.com https://www.openstreetmap.org; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'");
     return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
   } catch (e) { return res; }
 }

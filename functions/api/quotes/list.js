@@ -20,12 +20,14 @@ async function build(env, isAdmin) {
     quotes.push(q);
   };
   for (const obj of list.objects || []) {
+    if (obj.key.startsWith('backups/')) continue;   // v tomhle úložišti leží i zálohy webu — to nejsou citáty
     const official = /^quotes\/[^/]+\.json$/.test(obj.key) || obj.key === 'quotes.json';
     try {
       const data = await r2.get(obj.key);
       if (!data) continue;
       let item, raw = null;
       try { item = await data.json(); } catch { continue; }
+      if (Array.isArray(item) && obj.key !== 'quotes.json') continue;
       // Neoficiální klíč: přijmout jen když to nevypadá jako článek (články mají title / sekci / obálku).
       if (!official && item && !Array.isArray(item) && (item.title || item.sectionId || item.coverUrl || item.subsectionId || item.published !== undefined)) continue;
       let text = item.text || item.quote || item.citat || '';

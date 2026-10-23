@@ -21,6 +21,10 @@
     if (e.filename && e.filename.indexOf(location.origin) !== 0) return; // cizí skripty (CDN, rozšíření prohlížeče) neřešíme
     send(e.message, file + ':' + (e.lineno || 0));
   });
+  // Porušení bezpečnostní politiky (CSP v režimu „jen hlásit“) — zobrazí se mezi hlášenými chybami, ať je vidět, co by pravidla blokovala.
+  document.addEventListener('securitypolicyviolation', function (e) {
+    send('CSP: ' + (e.violatedDirective || '') + ' ← ' + String(e.blockedURI || '').slice(0, 120), String(e.disposition || ''));
+  });
   window.addEventListener('unhandledrejection', function (e) {
     var r = e.reason; send('Promise: ' + (r && r.message ? r.message : r), '');
   });
