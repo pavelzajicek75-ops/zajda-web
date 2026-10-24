@@ -802,6 +802,19 @@ function autoSharpen() {
   showToast('Auto doostření nastaveno (' + amount + ')', 'success');
 }
 
+function applyBasicFilters(ctx, w, h, exposure, contrast, saturation) {
+  const b = (100 + exposure) / 100, k = (100 + contrast) / 100, sa = (100 + saturation) / 100;
+  const img = ctx.getImageData(0, 0, w, h), d = img.data;
+  const clamp = v => v < 0 ? 0 : v > 255 ? 255 : v;
+  for (let i = 0; i < d.length; i += 4) {
+    let r = clamp(d[i] * b), g = clamp(d[i + 1] * b), bl = clamp(d[i + 2] * b);
+    r = clamp((r - 127.5) * k + 127.5); g = clamp((g - 127.5) * k + 127.5); bl = clamp((bl - 127.5) * k + 127.5);
+    const l = 0.213 * r + 0.715 * g + 0.072 * bl;
+    d[i] = clamp(l + (r - l) * sa); d[i + 1] = clamp(l + (g - l) * sa); d[i + 2] = clamp(l + (bl - l) * sa);
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 /* === DALŠÍ AUTOMATICKÉ ÚPRAVY (stíny, světla, barvy, šum, šero) ===
    Všechny se počítají z měření fotky (podíl tmavých a přepálených míst,
    průměrná sytost, odhad šumu) a nastavují jen existující posuvníky, takže
@@ -969,6 +982,8 @@ function autoEnhanceAll() {
   if (!ED.img) return;
   snapshotFilters();
   ED._suppressSnapshot = true;
+  const realToast = window.showToast; window.showToast = () => {};   // jedna souhrnná hláška místo osmi
+  try {
   autoStraighten();
   autoExposure();
   autoContrast();
@@ -978,6 +993,7 @@ function autoEnhanceAll() {
   autoColor();
   autoDenoise();
   autoSharpen();
+  } finally { window.showToast = realToast; }
   ED._suppressSnapshot = false;
   showToast('Automatické vylepšení hotovo — zkontroluj výsledek a doladˇ dle chuti', 'success');
 }
@@ -1294,17 +1310,30 @@ async function saveEditor(mode) {
   const f = ED.filters;
   let filterStr = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
   if (f.denoise > 0) filterStr += ` blur(${f.denoise * 0.05}px)`;
-  ctx.filter = filterStr;
+  /* Pořadí je stejné jako v náhledu: nejdřív tón (úrovně, stíny, světla), potom jas/kontrast/sytost, teplota, živost, doostření. */
   ctx.save();
   ctx.translate(dim.w / 2, dim.h / 2);
   ctx.rotate((ED.rotate + ED.straighten) * Math.PI / 180);
   const drawScale = Math.min(fullDim.w / srcW, fullDim.h / srcH);
   ctx.drawImage(img, -img.naturalWidth * drawScale / 2, -img.naturalHeight * drawScale / 2, img.naturalWidth * drawScale, img.naturalHeight * drawScale);
   ctx.restore();
-  if (f.temp) applyTemperature(ctx, dim.w, dim.h, f.temp);
   if (toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
     applyToneLUT(ctx, dim.w, dim.h, f.shadows, f.highlights, f.blackPoint, f.whitePoint);
   }
+  if (f.exposure || f.contrast || f.saturation || f.denoise > 0) {
+    if (typeof ctx.filter === 'string') {
+      const tmp = document.createElement('canvas'); tmp.width = dim.w; tmp.height = dim.h;
+      tmp.getContext('2d').drawImage(out, 0, 0);
+      ctx.clearRect(0, 0, dim.w, dim.h);
+      ctx.filter = filterStr;
+      ctx.drawImage(tmp, 0, 0);
+      ctx.filter = 'none';
+    } else {
+      /* Safari (iPad) neumí ctx.filter – jas, kontrast a sytost se spočítají ručně, ať se úpravy při uložení neztratí. */
+      applyBasicFilters(ctx, dim.w, dim.h, f.exposure, f.contrast, f.saturation);
+    }
+  }
+  if (f.temp) applyTemperature(ctx, dim.w, dim.h, f.temp);
   if (f.vibrance) {
     applyVibrance(ctx, dim.w, dim.h, f.vibrance);
   }
