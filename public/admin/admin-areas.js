@@ -14,44 +14,41 @@
   var TAB = 'tab', BOX = 'box';
   /* Nástroj: { k: klíč, i: ikona, n: název, a: kind (tab|box), t: záložka/sekce, b: id panelu | '_rest' } */
   var AREAS = [
-    { id: 'dnes', i: '🏠', n: 'Dnes', tools: [] },
-    { id: 'tvorit', i: '✍️', n: 'Tvořit', tools: [
+    { id: 'dnes', i: '✍️', n: 'Tvořit', tools: [
       { k: 'articles', i: '📝', n: 'Články', a: TAB, t: 'articles' },
+      { k: 'galleries', i: '🖼️', n: 'Fotky', a: TAB, t: 'galleries' },
       { k: 'timeline', i: '🌌', n: 'Milníky', a: TAB, t: 'timeline' },
       { k: 'quotes', i: '💬', n: 'Citáty', a: TAB, t: 'quotes' },
-      { k: 'galleries', i: '🖼️', n: 'Fotky a galerie', a: TAB, t: 'galleries' },
-      { k: 'about', i: '👤', n: 'O Zajdovi', a: TAB, t: 'about' },
-      { k: 'subsections', i: '📂', n: 'Struktura a covery', a: TAB, t: 'subsections' },
-      { k: 'ideas', i: '💡', n: 'Nápady', a: BOX, t: 'admin', b: 'ideasBox' },
-      { k: 'share', i: '📲', n: 'Z mobilu', a: BOX, t: 'admin', b: 'shareBox' }
+      { k: 'subsections', i: '📂', n: 'Struktura', a: TAB, t: 'subsections' }
     ] },
     { id: 'ohlas', i: '💬', n: 'Ohlas', tools: [
       { k: 'comments', i: '💬', n: 'Komentáře', a: BOX, t: 'admin', b: 'commentsBox', cnt: 'comments' },
       { k: 'messages', i: '✉️', n: 'Zprávy', a: BOX, t: 'admin', b: 'messagesBox', cnt: 'messages' },
       { k: 'reactions', i: '😀', n: 'Reakce', a: TAB, t: 'reactions' },
-      { k: 'mood', i: '🌡️', n: 'Nálada', a: BOX, t: 'overview', b: 'moodBox' },
-      { k: 'errors', i: '🐞', n: 'Hlášené chyby', a: BOX, t: 'tools', b: 'errorsBox', cnt: 'errors' }
+      { k: 'mood', i: '🌡️', n: 'Nálada', a: BOX, t: 'overview', b: 'moodBox' }
     ] },
-    { id: 'web', i: '🗺️', n: 'Web', tools: [
-      { k: 'featured', i: '🌟', n: 'Začni tady', a: BOX, t: 'admin', b: 'featuredBox' },
-      { k: 'site', i: '⚙️', n: 'Nastavení webu', a: BOX, t: 'admin', b: 'siteBox' },
-      { k: 'push', i: '📣', n: 'Oznámení', a: BOX, t: 'admin', b: 'pushBox' },
-      { k: 'users', i: '👥', n: 'Přístupy', a: BOX, t: 'admin', b: '_rest', load: true }
-    ] },
-    { id: 'provoz', i: '📊', n: 'Provoz', tools: [
-      { k: 'usage', i: '📈', n: 'Stav a využití', a: BOX, t: 'overview', b: '_rest', load: true },
-      { k: 'traffic', i: '👣', n: 'Návštěvnost', a: BOX, t: 'overview', b: 'trafficBox' },
-      { k: 'weekly', i: '🗓️', n: 'Týdenní souhrn', a: BOX, t: 'overview', b: 'weeklyBox' },
-      { k: 'kv', i: '☁️', n: 'Spotřeba KV', a: BOX, t: 'overview', b: 'kvMetricsBox' },
-      { k: 'backup', i: '💾', n: 'Zálohy', a: BOX, t: 'tools', b: 'autoBackupBox' },
-      { k: 'restore', i: '♻️', n: 'Obnova', a: BOX, t: 'tools', b: 'restoreBox' },
-      { k: 'selftest', i: '🩺', n: 'Diagnostika', a: BOX, t: 'tools', b: 'selftestBox' },
-      { k: 'linkcheck', i: '🔎', n: 'Kontrola odkazů', a: BOX, t: 'tools', b: 'linkcheckBox' },
-      { k: 'thumbs', i: '🖼️', n: 'Náhledy fotek', a: BOX, t: 'tools', b: 'thumbsBox' },
-      { k: 'geo', i: '📍', n: 'Doplnit polohy', a: BOX, t: 'tools', b: 'geoFillBox' },
-      { k: 'checklist', i: '✅', n: 'Testovací den', a: BOX, t: 'tools', b: 'checklistBox' },
-      { k: 'guide', i: '📖', n: 'Příručka', a: BOX, t: 'tools', b: 'guideBox' },
-      { k: 'links', i: '🔗', n: 'Záloha, odkazy, složky', a: BOX, t: 'tools', b: '_rest' }
+    { id: 'expert', i: '⚙️', n: 'Expert', tools: [
+      { g: 'Vzhled a obsah', k: 'about', i: '👤', n: 'O Zajdovi', a: TAB, t: 'about' },
+      { g: 'Vzhled a obsah', k: 'featured', i: '🌟', n: 'Začni tady', a: BOX, t: 'admin', b: 'featuredBox' },
+      { g: 'Vzhled a obsah', k: 'site', i: '⚙️', n: 'Nastavení webu', a: BOX, t: 'admin', b: 'siteBox' },
+      { g: 'Vzhled a obsah', k: 'ideas', i: '💡', n: 'Nápady', a: BOX, t: 'admin', b: 'ideasBox' },
+      { g: 'Vzhled a obsah', k: 'share', i: '📲', n: 'Z mobilu', a: BOX, t: 'admin', b: 'shareBox' },
+      { g: 'Vzhled a obsah', k: 'push', i: '📣', n: 'Oznámení', a: BOX, t: 'admin', b: 'pushBox' },
+      { g: 'Provoz a bezpečnost', k: 'usage', i: '📈', n: 'Stav a využití', a: BOX, t: 'overview', b: '_rest', load: true },
+      { g: 'Provoz a bezpečnost', k: 'traffic', i: '👣', n: 'Návštěvnost', a: BOX, t: 'overview', b: 'trafficBox' },
+      { g: 'Provoz a bezpečnost', k: 'weekly', i: '🗓️', n: 'Týdenní souhrn', a: BOX, t: 'overview', b: 'weeklyBox' },
+      { g: 'Provoz a bezpečnost', k: 'kv', i: '☁️', n: 'Spotřeba KV', a: BOX, t: 'overview', b: 'kvMetricsBox' },
+      { g: 'Provoz a bezpečnost', k: 'backup', i: '💾', n: 'Zálohy', a: BOX, t: 'tools', b: 'autoBackupBox' },
+      { g: 'Provoz a bezpečnost', k: 'restore', i: '♻️', n: 'Obnova', a: BOX, t: 'tools', b: 'restoreBox' },
+      { g: 'Provoz a bezpečnost', k: 'users', i: '👥', n: 'Přístupy a uživatelé', a: BOX, t: 'admin', b: '_rest', load: true },
+      { g: 'Provoz a bezpečnost', k: 'errors', i: '🐞', n: 'Hlášené chyby', a: BOX, t: 'tools', b: 'errorsBox', cnt: 'errors' },
+      { g: 'Provoz a bezpečnost', k: 'selftest', i: '🩺', n: 'Diagnostika', a: BOX, t: 'tools', b: 'selftestBox' },
+      { g: 'Provoz a bezpečnost', k: 'linkcheck', i: '🔎', n: 'Kontrola odkazů', a: BOX, t: 'tools', b: 'linkcheckBox' },
+      { g: 'Provoz a bezpečnost', k: 'thumbs', i: '🖼️', n: 'Náhledy fotek', a: BOX, t: 'tools', b: 'thumbsBox' },
+      { g: 'Provoz a bezpečnost', k: 'geo', i: '📍', n: 'Doplnit polohy', a: BOX, t: 'tools', b: 'geoFillBox' },
+      { g: 'Provoz a bezpečnost', k: 'checklist', i: '✅', n: 'Testovací den', a: BOX, t: 'tools', b: 'checklistBox' },
+      { g: 'Provoz a bezpečnost', k: 'guide', i: '📖', n: 'Příručka', a: BOX, t: 'tools', b: 'guideBox' },
+      { g: 'Provoz a bezpečnost', k: 'links', i: '🔗', n: 'Záloha, odkazy, složky', a: BOX, t: 'tools', b: '_rest' }
     ] }
   ];
   var SECTIONS_WITH_BOXES = ['admin', 'overview', 'tools'];
@@ -66,7 +63,7 @@
   function findTool(k) { for (var i = 0; i < AREAS.length; i++) for (var j = 0; j < AREAS[i].tools.length; j++) if (AREAS[i].tools[j].k === k) return { area: AREAS[i], tool: AREAS[i].tools[j] }; return null; }
   function toolForTab(tab) { for (var i = 0; i < AREAS.length; i++) for (var j = 0; j < AREAS[i].tools.length; j++) { var t = AREAS[i].tools[j]; if (t.a === TAB && t.t === tab) return { area: AREAS[i], tool: t }; } return null; }
   function badgeFor(k) { return k === 'comments' ? counts.comments : k === 'messages' ? counts.messages : k === 'errors' ? counts.errors : 0; }
-  function areaBadge(a) { return a.id === 'ohlas' ? counts.comments + counts.messages + counts.errors : 0; }
+  function areaBadge(a) { return a.id === 'ohlas' ? counts.comments + counts.messages : a.id === 'expert' ? counts.errors : 0; }
 
   /* ---------- styly ---------- */
   function css() {
@@ -99,6 +96,13 @@
       '.dn-row{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;width:100%;background:var(--surface-2,#1a2338);border:1px solid var(--border,#263252);border-radius:12px;padding:10px 12px;color:var(--text,#eef1f8);font:inherit;font-size:14px;cursor:pointer}' +
       '.dn-row:hover{border-color:var(--accent,#ff7a1a)}' +
       '.dn-row small{color:var(--text-muted,#92a0bc);white-space:nowrap}' +
+      '.dn-big{display:grid;grid-template-columns:1fr 1fr;gap:10px}' +
+      '.dn-bt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:104px;padding:14px 8px;border-radius:16px;border:1px solid var(--border,#263252);background:var(--surface-2,#1a2338);color:var(--text,#eef1f8);font:600 15px var(--font-display,inherit);cursor:pointer}' +
+      '.dn-bt i{font-style:normal;font-size:30px;line-height:1.1}' +
+      '.dn-bt small{font:400 12px var(--font-body,inherit);color:var(--text-muted,#92a0bc)}' +
+      '.dn-bt.main{border:0;background:linear-gradient(135deg,#ff7a1a,#e0457b);color:#fff}.dn-bt.main small{color:#ffe6d2}' +
+      '.dn-bt.wide{grid-column:1/-1;min-height:74px;flex-direction:row;gap:10px}.dn-bt.wide small{display:none}' +
+      '.dn-bt:hover{filter:brightness(1.1)}' +
       '.dn-empty{color:var(--text-muted,#92a0bc);font-size:13.5px;padding:6px 2px}' +
       /* spodní lišta (telefon) + plovoucí ＋ */
       '#areaBar{display:none}' +
@@ -106,7 +110,7 @@
       '@media (max-width:767px){' +
         '#areaTabs{display:none}' +
         '#areaChips{padding:8px 10px}' +
-        '#areaBar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:950;background:#0e1424;border-top:1px solid var(--border,#263252);padding-bottom:env(safe-area-inset-bottom)}' +
+        '#areaBar{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;left:0;right:0;bottom:0;z-index:950;background:#0e1424;border-top:1px solid var(--border,#263252);padding-bottom:env(safe-area-inset-bottom)}' +
         '.ar-bt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:58px;border:0;background:none;color:var(--text-muted,#92a0bc);font:600 10.5px var(--font-display,inherit);cursor:pointer}' +
         '.ar-bt .e{font-size:21px;line-height:1.1}' +
         '.ar-bt.on{color:#fff}' +
@@ -156,10 +160,13 @@
 
   function onNav(e) {
     var a = e.target.closest('[data-area]'), t = e.target.closest('[data-tool]');
+    if (e.target.closest('[data-home]')) { activateDnes(); return; }
+    if (e.target.closest('[data-expert-home]')) { activateExpert(); return; }
     if (t) { activateTool(t.dataset.tool); return; }
     if (a) {
       var ar = areaOf(a.dataset.area); if (!ar) return;
       if (ar.id === 'dnes') { activateDnes(); return; }
+      if (ar.id === 'expert') { activateExpert(); return; }
       // ve stejné oblasti zůstane poslední nástroj, jinak první
       var remembered = ar.tools.filter(function (x) { return x.k === cur.tool; })[0];
       activateTool((remembered || ar.tools[0]).k);
@@ -178,7 +185,10 @@
       return '<button class="ar-bt' + (a.id === cur.area ? ' on' : '') + '" data-area="' + a.id + '"><span class="e">' + a.i + '</span>' + a.n + (b ? '<span class="ar-badge">' + b + '</span>' : '') + '</button>';
     }).join('');
     var ar = areaOf(cur.area);
-    chips.innerHTML = ar.tools.map(function (t) {
+    var tools = ar.tools, lead = '';
+    if (ar.id === 'expert') { tools = ar.tools.filter(function (t) { return t.k === cur.tool; }); lead = '<button class="ar-chip" data-expert-home="1">‹ Všechny nástroje</button>'; }
+    else if (ar.id === 'dnes') { lead = '<button class="ar-chip' + (cur.tool ? '' : ' on') + '" data-home="1">🏠 Úvod</button>'; }
+    chips.innerHTML = ((ar.id === 'expert' || ar.id === 'dnes') && !cur.tool ? '' : lead + '') + (((ar.id === 'expert' || ar.id === 'dnes') && !cur.tool) ? [] : tools).map(function (t) {
       var b = badgeFor(t.k);
       return '<button class="ar-chip' + (t.k === cur.tool ? ' on' : '') + '" data-tool="' + t.k + '">' + t.i + ' ' + esc(t.n) + (b ? '<span class="ar-badge">' + b + '</span>' : '') + '</button>';
     }).join('');
@@ -237,6 +247,13 @@
     setActiveSection('dnes'); paintNav(); renderDnes();
   }
 
+  function activateExpert() {
+    cur = { area: 'expert', tool: '' };
+    try { localStorage.setItem(KEY, 'expert'); } catch (e) {}
+    setFocus('', '');
+    setActiveSection('dnes'); paintNav(); renderExpert();
+  }
+
   function activateTool(k) {
     var f = findTool(k); if (!f) return activateDnes();
     var t = f.tool;
@@ -261,23 +278,41 @@
     return !ts ? '' : d <= 0 ? 'dnes' : d === 1 ? 'včera' : d < 14 ? 'před ' + d + ' dny' : new Date(Number(ts)).toLocaleDateString('cs');
   }
   function renderDnes() {
-    var sec = $('dnes'); if (!sec) return;
+    var sec = $('dnes'); if (!sec || cur.area !== 'dnes') return;
     var drafts = dnesData.drafts, recent = dnesData.recent;
+    var waiting = [];
+    if (counts.comments) waiting.push('<button class="dn-row" data-go="comments"><span>💬 Komentáře ke schválení</span><small class="ar-badge">' + counts.comments + '</small></button>');
+    if (counts.messages) waiting.push('<button class="dn-row" data-go="messages"><span>✉️ Nepřečtené zprávy</span><small class="ar-badge">' + counts.messages + '</small></button>');
+    if (counts.errors) waiting.push('<button class="dn-row" data-go="errors"><span>🐞 Hlášené chyby</span><small class="ar-badge">' + counts.errors + '</small></button>');
     sec.innerHTML =
-      '<div class="dn-tiles">' +
-        '<button class="dn-tile' + (counts.comments ? ' hot' : '') + '" data-go="comments"><strong>' + counts.comments + '</strong><span>komentářů ke schválení</span></button>' +
-        '<button class="dn-tile' + (counts.messages ? ' hot' : '') + '" data-go="messages"><strong>' + counts.messages + '</strong><span>nepřečtených zpráv</span></button>' +
-        '<button class="dn-tile' + (counts.errors ? ' hot' : '') + '" data-go="errors"><strong>' + counts.errors + '</strong><span>hlášených chyb</span></button>' +
-        '<button class="dn-tile" data-go="usage"><strong>✅</strong><span>stav a využití</span></button>' +
+      '<div class="dn-h">Co chceš udělat?</div>' +
+      '<div class="dn-big">' +
+        '<button class="dn-bt main" data-q="article"><i>✍️</i>Nový článek<small>psaní a vkládání</small></button>' +
+        '<button class="dn-bt main" data-go="galleries"><i>🖼️</i>Fotky<small>galerie a úpravy</small></button>' +
+        '<button class="dn-bt" data-go="timeline"><i>🌌</i>Milníky<small>timeline</small></button>' +
+        '<button class="dn-bt" data-go="quotes"><i>💬</i>Citáty<small>přidat / smazat</small></button>' +
+        '<button class="dn-bt wide" data-go="subsections"><i>📂</i>Struktura<small>sekce, podsekce a covery</small></button>' +
       '</div>' +
-      '<div class="dn-h">Rychle přidat</div>' +
-      '<div class="dn-quick"><button class="btn btn-blue" data-q="article">📝 Článek</button><button class="btn" data-q="milestone">🌌 Milník</button><button class="btn" data-q="quote">💬 Citát</button><button class="btn" data-q="photos">⬆️ Fotky</button></div>' +
+      '<div class="dn-h">Čeká na tebe</div><div class="dn-list">' +
+        (waiting.length ? waiting.join('') : '<div class="dn-empty">' + (dnesData.ok ? 'Nic nečeká. 🎉' : 'Načítám…') + '</div>') +
+      '</div>' +
       '<div class="dn-h">Rozepsané</div><div class="dn-list">' +
         (drafts.length ? drafts.map(rowHtml).join('') : '<div class="dn-empty">' + (dnesData.ok ? 'Žádný rozepsaný článek.' : 'Načítám…') + '</div>') +
       '</div>' +
       '<div class="dn-h">Naposledy upraveno</div><div class="dn-list">' +
         (recent.length ? recent.map(rowHtml).join('') : '<div class="dn-empty">' + (dnesData.ok ? 'Zatím nic.' : 'Načítám…') + '</div>') +
       '</div>';
+  }
+  function renderExpert() {
+    var sec = $('dnes'); if (!sec) return;
+    var ar = areaOf('expert'), groups = [], map = {};
+    ar.tools.forEach(function (t) { if (!map[t.g]) { map[t.g] = []; groups.push(t.g); } map[t.g].push(t); });
+    sec.innerHTML = groups.map(function (g) {
+      return '<div class="dn-h">' + esc(g) + '</div><div class="dn-list">' + map[g].map(function (t) {
+        var b = badgeFor(t.k);
+        return '<button class="dn-row" data-go="' + t.k + '"><span>' + t.i + ' ' + esc(t.n) + '</span>' + (b ? '<small class="ar-badge">' + b + '</small>' : '<small>›</small>') + '</button>';
+      }).join('') + '</div>';
+    }).join('');
   }
   function rowHtml(a) {
     return '<button class="dn-row" data-edit="' + esc(a.id) + '"><span>' + esc(a.title || 'Bez názvu') + '</span><small>' + esc(a.published === false ? 'koncept · ' + ago(a.updated || a.created) : ago(a.updated || a.created)) + '</small></button>';
@@ -296,7 +331,7 @@
       dnesData.recent = arts.slice(0, 5);
       dnesData.ok = true;
       paintNav();
-      if (cur.area === 'dnes') renderDnes();
+      if (cur.area === 'dnes' && !cur.tool) renderDnes(); else if (cur.area === 'expert' && !cur.tool) renderExpert();
     });
   }
 
@@ -328,7 +363,7 @@
     };
   }
   function startWith(saved) {
-    if (saved && saved !== 'dnes' && findTool(saved)) activateTool(saved); else activateDnes();
+    if (saved === 'expert') activateExpert(); else if (saved && saved !== 'dnes' && findTool(saved)) activateTool(saved); else activateDnes();
     loadDnes(true);
   }
 
@@ -337,6 +372,6 @@
     // pojistka: kdyby základní skript showTab nezavolal (např. už byl přihlášen dřív), spustí se výchozí obrazovka sám
     setTimeout(function () { if (!inited) { inited = true; var saved = ''; try { saved = localStorage.getItem(KEY) || ''; } catch (e) {} startWith(saved); } }, 2500);
   }
-  window.AdminAreas = { activateTool: activateTool, activateDnes: activateDnes, refresh: function () { loadDnes(true); } };
+  window.AdminAreas = { activateTool: activateTool, activateDnes: activateDnes, activateExpert: activateExpert, refresh: function () { loadDnes(true); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
