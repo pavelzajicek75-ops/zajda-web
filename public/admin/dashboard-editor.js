@@ -35,6 +35,9 @@ window.G = window.G || { photos: [] };
       <filter id="ed-sharpen-dynamic" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
         <feConvolveMatrix id="ed-sharpen-dynamic-matrix" order="3" kernelMatrix="0 0 0 0 1 0 0 0 0" preserveAlpha="true"/>
       </filter>
+      <filter id="ed-temp-dynamic" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feColorMatrix id="ed-temp-matrix" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+      </filter>
       <filter id="ed-tone-dynamic" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
         <feComponentTransfer>
           <feFuncR id="ed-tone-r" type="table" tableValues="0 1"/>
@@ -59,6 +62,28 @@ function updateSharpenFilter(strength) {
   if (!matrix) return;
   const { kernel } = sharpenKernelForStrength(strength);
   matrix.setAttribute('kernelMatrix', kernel.map(v => v.toFixed(3)).join(' '));
+}
+
+/* === TEPLOTA (skutečné vyvážení bílé) ===
+   Dřív se „teplota“ dělala přes sepii a hue-rotate, což barevný nádech skoro
+   neposunulo (a u automatického vyvážení bílé ho někdy i zhoršilo). Teď se
+   násobí červený a modrý kanál: kladná hodnota = teplejší, záporná = chladnější. */
+function tempGains(t) { return { r: 1 + t / 150, b: 1 - t / 150 }; }
+function updateTempFilter(t) {
+  const m = document.getElementById('ed-temp-matrix');
+  if (!m) return;
+  const g = tempGains(t);
+  m.setAttribute('values', `${g.r.toFixed(4)} 0 0 0 0  0 1 0 0 0  0 0 ${g.b.toFixed(4)} 0 0  0 0 0 1 0`);
+}
+function applyTemperature(ctx, w, h, t) {
+  if (!t) return;
+  const g = tempGains(t);
+  const img = ctx.getImageData(0, 0, w, h), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    d[i] = Math.min(255, d[i] * g.r);
+    d[i + 2] = Math.min(255, d[i + 2] * g.b);
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 /* === STÍNY / SVĚTLA (tónová křivka) ===
@@ -385,8 +410,7 @@ function applyFilters() {
   const f = ED.filters;
   let s = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
   if (f.vibrance) s += ` saturate(${100 + f.vibrance * 0.5}%)`;
-  if (f.temp > 0) s += ` sepia(${f.temp * 0.5}%)`;
-  else s += ` hue-rotate(${f.temp * 0.3}deg)`;
+  if (f.temp) { updateTempFilter(f.temp); s += ' url(#ed-temp-dynamic)'; }
   if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
   if (f.sharpen > 0) {
     updateSharpenFilter(f.sharpen);
@@ -615,8 +639,9 @@ function autoWhiteBalance() {
   const s = getImageStats();
   if (!s) return;
   if (!ED._suppressSnapshot) snapshotFilters();
-  const rbDiff = s.rAvg - s.bAvg;
-  ED.filters.temp = Math.max(-45, Math.min(45, Math.round(-rbDiff * 0.85)));
+  /* Gray-world: červený a modrý kanál se dorovnají na stejný průměr. */
+  const x = (s.bAvg - s.rAvg) / Math.max(1, s.bAvg + s.rAvg);
+  ED.filters.temp = Math.max(-45, Math.min(45, Math.round(x * 150)));
   syncFilterSlidersFromState();
   applyFilters();
   showToast('Auto bílá použita', 'success');
@@ -700,10 +725,30 @@ function _autoApply(msg, fn) {
 }
 const _clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+/* Šum se měří na výřezu v plném rozlišení (po zmenšení fotky by se šum zprůměroval a zmizel). */
+function noiseSigmaCrop(img) {
+  const S = 256;
+  const w = Math.min(S, img.naturalWidth), h = Math.min(S, img.naturalHeight);
+  if (w < 8 || h < 8) return 0;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, (img.naturalWidth - w) / 2, (img.naturalHeight - h) / 2, w, h, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const L = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) L[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+  let sum = 0;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x;
+    const v = L[i - w - 1] - 2 * L[i - w] + L[i - w + 1] - 2 * L[i - 1] + 4 * L[i] - 2 * L[i + 1] + L[i + w - 1] - 2 * L[i + w] + L[i + w + 1];
+    sum += Math.abs(v);
+  }
+  return Math.sqrt(Math.PI / 2) * sum / (6 * (w - 2) * (h - 2));
+}
+
 function autoShadows() {
   let v = 0;
   _autoApply(() => v ? 'Stíny projasněny (' + v + ')' : 'Stíny jsou v pořádku – nic se neměnilo', s => {
-    v = _clamp(Math.round((s.darkShare - 0.18) * 220), 0, 70);
+    v = _clamp(Math.round((s.darkShare - 0.18) * 160), 0, 45);
     v = Math.round(v * (1 - _clamp(ED.filters.exposure, 0, 40) / 80));   // už projasněná fotka (expozice) nepotřebuje stíny naplno
     ED.filters.shadows = v;
   });
@@ -726,15 +771,15 @@ function autoColor() {
 function autoDenoise() {
   let v = 0;
   _autoApply(() => v ? 'Šum potlačen (' + v + ')' : 'Šum je nízký – nic se neměnilo', () => {
-    const sigma = computeBlurAndNoiseScores(ED.img).noiseSigma;
-    v = _clamp(Math.round((sigma - 2) * 6), 0, 30);
+    const sigma = noiseSigmaCrop(ED.img);
+    v = _clamp(Math.round((sigma - 2) * 4), 0, 30);
     ED.filters.denoise = v;
   });
 }
 function autoLowLight() {
   _autoApply(() => 'Fotka ze šera upravena', s => {
     const avg = (s.rAvg + s.gAvg + s.bAvg) / 3;
-    const sigma = computeBlurAndNoiseScores(ED.img).noiseSigma;
+    const sigma = noiseSigmaCrop(ED.img);
     ED.filters.exposure = _clamp(Math.round((115 - avg) * 0.6), 0, 45);
     ED.filters.shadows = 40;
     ED.filters.highlights = -15;
@@ -1149,8 +1194,6 @@ async function saveEditor(mode) {
   const ctx = out.getContext('2d', { willReadFrequently: true });
   const f = ED.filters;
   let filterStr = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
-  if (f.temp > 0) filterStr += ` sepia(${f.temp * 0.5}%)`;
-  else filterStr += ` hue-rotate(${f.temp * 0.3}deg)`;
   if (f.denoise > 0) filterStr += ` blur(${f.denoise * 0.05}px)`;
   ctx.filter = filterStr;
   ctx.save();
@@ -1159,6 +1202,7 @@ async function saveEditor(mode) {
   const drawScale = Math.min(dim.w / srcW, dim.h / srcH);
   ctx.drawImage(img, -img.naturalWidth * drawScale / 2, -img.naturalHeight * drawScale / 2, img.naturalWidth * drawScale, img.naturalHeight * drawScale);
   ctx.restore();
+  if (f.temp) applyTemperature(ctx, dim.w, dim.h, f.temp);
   if (toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
     applyToneLUT(ctx, dim.w, dim.h, f.shadows, f.highlights, f.blackPoint, f.whitePoint);
   }

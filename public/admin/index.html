@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link rel="stylesheet" href="style.css?v=20260918">
+<link rel="stylesheet" href="style.css?v=20261042">
 <script src="/error-report.js?v=1"></script>
 </head>
 <body>
@@ -714,30 +714,22 @@
           <summary>✨ Automaticky</summary>
           <div class="editor-panel-body">
             <p style="font-size:11px;color:var(--text-faint);margin:0 0 0.2rem">Skutečná analýza fotky (histogram, ostrost, horizont) — ne pevný filtr.</p>
-            <div class="tool-row">
+            <div class="auto-grid">
               <button class="btn btn-sm" onclick="autoStraighten()" title="Najde vodorovnou linii a narovná horizont">📐 Horizont</button>
               <button class="btn btn-sm" onclick="autoExposure()" title="Posune jas ke střední šedé">☀️ Expozice</button>
-              <button class="btn btn-sm" onclick="autoContrast()" title="Natáhne histogram (auto levels)">◐ Kontrast</button>
-            </div>
-            <div class="tool-row">
-              <button class="btn btn-sm" onclick="autoWhiteBalance()" title="Gray-world vyvážení bílé">⚪ Bílá</button>
+              <button class="btn btn-sm" onclick="autoContrast()" title="Natáhne histogram (auto levels)">🌗 Kontrast</button>
+              <button class="btn btn-sm" onclick="autoWhiteBalance()" title="Vyvážení bílé: dorovná červený a modrý nádech">⚪ Bílá</button>
               <button class="btn btn-sm" onclick="autoSharpen()" title="Podle míry rozostření fotky">🔍 Doostření</button>
-            </div>
-            <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoDenoise()" title="Podle odhadu šumu (noční fotky)">🔇 Šum</button>
               <button class="btn btn-sm" onclick="autoShadows()" title="Projasní tmavá místa podle toho, kolik jich ve fotce je">🌑 Stíny</button>
               <button class="btn btn-sm" onclick="autoHighlights()" title="Zklidní přepálená světlá místa (obloha, okna)">🌤️ Světla</button>
               <button class="btn btn-sm" onclick="autoColor()" title="Oživí vybledlé barvy, odolné vůči přesycení">🎨 Barvy</button>
-            </div>
-            <div class="tool-row">
-              <button class="btn btn-sm" onclick="autoDenoise()" title="Podle odhadu šumu (noční fotky)">🔇 Šum</button>
               <button class="btn btn-sm" onclick="autoLowLight()" title="Fotka z šera: jas, stíny, barvy a šum najednou">🌙 Šero</button>
               <button class="btn btn-sm" onclick="autoResetAll()" title="Vynuluje všechny úpravy světla a barev">↺ Vynulovat</button>
+              <button class="btn btn-sm" onclick="undoFilterChange()" title="Vrátí poslední úpravu">↶ Zpět</button>
             </div>
             <div class="tool-row">
               <button class="btn btn-sm btn-blue" style="width:100%;justify-content:center" onclick="autoEnhanceAll()">✨ Vylepšit vše najednou</button>
-            </div>
-            <div class="tool-row">
-              <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="undoFilterChange()">↶ Zpět (styl)</button>
             </div>
           </div>
         </details>
@@ -854,7 +846,7 @@
 </div>
 
 <script src="dashboard-core.js?v=20261014"></script>
-<script src="dashboard-editor.js?v=20261041"></script>
+<script src="dashboard-editor.js?v=20261042"></script>
 <script src="/share-card.js?v=2"></script>
 <script src="gallery-ribbon-ui.js?v=20260910"></script>
 <script src="article-map-picker.js?v=20261011"></script>
