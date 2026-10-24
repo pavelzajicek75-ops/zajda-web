@@ -316,7 +316,42 @@ function updatePreviewTransform() {
   applyFilters();
 }
 
-function rotateEditor(deg) { ED.rotate = (ED.rotate + deg) % 360; updatePreviewTransform(); }
+/* Otočení fotky: fotku znovu vměstná do náhledu (otočená na výšku se jinak vylévá ven)
+   a ořezový rámeček se přizpůsobí otočené fotce — dřív zůstal původní a ořez po otočení nešel použít. */
+function rotatedBox(scale) {
+  const a = (ED.rotate + ED.straighten) * Math.PI / 180, c = Math.abs(Math.cos(a)), sn = Math.abs(Math.sin(a));
+  const w = ED.img.naturalWidth, h = ED.img.naturalHeight;
+  return { w: (w * c + h * sn) * scale, h: (w * sn + h * c) * scale };
+}
+function fitRotated() {
+  if (!ED.img) return;
+  const pv = $('editPreview'); if (!pv) return;
+  const b = rotatedBox(1);
+  const fit = Math.min(pv.clientWidth / b.w, pv.clientHeight / b.h, 1);
+  ED.scale = fit; ED.panX = 0; ED.panY = 0;
+  const zs = $('zoomSlider');
+  if (zs) { zs.min = Math.min(fit, 0.1).toFixed(2); zs.max = 4; zs.value = fit.toFixed(2); }
+  updatePreviewTransform();
+}
+function fitCropToImage() {
+  if (!ED.img || ED.crop === 'free') return;
+  const pv = $('editPreview'); if (!pv) return;
+  const W = pv.clientWidth, H = pv.clientHeight;
+  const b = rotatedBox(ED.scale);
+  const cx = W / 2 + ED.panX, cy = H / 2 + ED.panY;
+  const x0 = Math.max(0, cx - b.w / 2), y0 = Math.max(0, cy - b.h / 2);
+  const x1 = Math.min(W, cx + b.w / 2), y1 = Math.min(H, cy + b.h / 2);
+  let w = Math.max(20, x1 - x0), h = Math.max(20, y1 - y0);
+  const ratio = ED.crop === '1:1' ? 1 : ED.crop === '4:3' ? 4 / 3 : ED.crop === '3:4' ? 3 / 4 : ED.crop === '16:9' ? 16 / 9 : 0;
+  if (ratio) { if (w / h > ratio) w = h * ratio; else h = w / ratio; }
+  ED.cropRect = { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
+  renderCropRect();
+}
+function rotateEditor(deg) {
+  ED.rotate = ((ED.rotate + deg) % 360 + 360) % 360;
+  fitRotated();
+  fitCropToImage();
+}
 
 /* === PŘED/PO NÁHLED ===
    Podržením tlačítka se na chvíli ukáže needitovaná fotka (bez CSS
@@ -524,7 +559,7 @@ function analyzeImageStats(img) {
   const ctx = c.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(img, 0, 0, w, h);
   const data = ctx.getImageData(0, 0, w, h).data;
-  let rSum = 0, gSum = 0, bSum = 0, lumMin = 255, lumMax = 0;
+  let rSum = 0, gSum = 0, bSum = 0, lumMin = 255, lumMax = 0, dark = 0, bright = 0, satSum = 0;
   const n = w * h;
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
@@ -532,8 +567,12 @@ function analyzeImageStats(img) {
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
     if (lum < lumMin) lumMin = lum;
     if (lum > lumMax) lumMax = lum;
+    if (lum < 60) dark++;
+    if (lum > 225) bright++;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    satSum += mx ? (mx - mn) / mx : 0;
   }
-  return { rAvg: rSum / n, gAvg: gSum / n, bAvg: bSum / n, lumMin, lumMax };
+  return { rAvg: rSum / n, gAvg: gSum / n, bAvg: bSum / n, lumMin, lumMax, darkShare: dark / n, brightShare: bright / n, satAvg: satSum / n };
 }
 
 /* Statistiky se počítají jen jednou na fotku (a znovu po ořezu), ne při
@@ -644,6 +683,77 @@ function autoSharpen() {
   showToast('Auto doostření nastaveno (' + amount + ')', 'success');
 }
 
+/* === DALŠÍ AUTOMATICKÉ ÚPRAVY (stíny, světla, barvy, šum, šero) ===
+   Všechny se počítají z měření fotky (podíl tmavých a přepálených míst,
+   průměrná sytost, odhad šumu) a nastavují jen existující posuvníky, takže
+   je jde kdykoli doladit ručně nebo vrátit tlačítkem „Zpět (styl)“. */
+function _autoApply(msg, fn) {
+  if (!ED.img) return;
+  const s = getImageStats(); if (!s) return;
+  if (!ED._suppressSnapshot) snapshotFilters();
+  fn(s);
+  syncFilterSlidersFromState();
+  updateSharpenFilter(ED.filters.sharpen);
+  scheduleToneRegeneration();
+  applyFilters();
+  if (!ED._suppressSnapshot) showToast(msg(), 'success');
+}
+const _clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function autoShadows() {
+  let v = 0;
+  _autoApply(() => v ? 'Stíny projasněny (' + v + ')' : 'Stíny jsou v pořádku – nic se neměnilo', s => {
+    v = _clamp(Math.round((s.darkShare - 0.18) * 220), 0, 70);
+    v = Math.round(v * (1 - _clamp(ED.filters.exposure, 0, 40) / 80));   // už projasněná fotka (expozice) nepotřebuje stíny naplno
+    ED.filters.shadows = v;
+  });
+}
+function autoHighlights() {
+  let v = 0;
+  _autoApply(() => v ? 'Přepálená světla zklidněna (' + v + ')' : 'Světla jsou v pořádku – nic se neměnilo', s => {
+    v = _clamp(Math.round((s.brightShare - 0.04) * 300), 0, 70);
+    ED.filters.highlights = -v;
+  });
+}
+function autoColor() {
+  let v = 0;
+  _autoApply(() => v > 0 ? 'Barvy oživeny (' + v + ')' : v < 0 ? 'Barvy zklidněny (' + v + ')' : 'Barvy jsou v pořádku – nic se neměnilo', s => {
+    v = _clamp(Math.round((0.32 - s.satAvg) * 220), -20, 45);
+    ED.filters.vibrance = v;
+    ED.filters.saturation = s.satAvg < 0.15 ? 8 : 0;
+  });
+}
+function autoDenoise() {
+  let v = 0;
+  _autoApply(() => v ? 'Šum potlačen (' + v + ')' : 'Šum je nízký – nic se neměnilo', () => {
+    const sigma = computeBlurAndNoiseScores(ED.img).noiseSigma;
+    v = _clamp(Math.round((sigma - 2) * 6), 0, 30);
+    ED.filters.denoise = v;
+  });
+}
+function autoLowLight() {
+  _autoApply(() => 'Fotka ze šera upravena', s => {
+    const avg = (s.rAvg + s.gAvg + s.bAvg) / 3;
+    const sigma = computeBlurAndNoiseScores(ED.img).noiseSigma;
+    ED.filters.exposure = _clamp(Math.round((115 - avg) * 0.6), 0, 45);
+    ED.filters.shadows = 40;
+    ED.filters.highlights = -15;
+    ED.filters.vibrance = 15;
+    ED.filters.denoise = _clamp(Math.round((sigma - 2) * 7), 8, 35);
+  });
+}
+function autoResetAll() {
+  if (!ED.img) return;
+  snapshotFilters();
+  ED.filters = Object.assign({}, FILTER_PRESETS.none);
+  ED.activePreset = '';
+  syncFilterSlidersFromState();
+  updateSharpenFilter(ED.filters.sharpen);
+  scheduleToneRegeneration();
+  applyFilters();
+  showToast('Úpravy vynulovány (jde vrátit tlačítkem Zpět)', 'info');
+}
+
 /* === AUTO NAROVNÁNÍ HORIZONTU ===
    Přes Sobelův gradient najde ve fotce nejvýraznější téměř vodorovné linie
    (horizont, hrany budov, čáry na zemi...) a spočítá, o kolik stupňů jsou
@@ -723,6 +833,10 @@ function autoEnhanceAll() {
   autoExposure();
   autoContrast();
   autoWhiteBalance();
+  autoShadows();
+  autoHighlights();
+  autoColor();
+  autoDenoise();
   autoSharpen();
   ED._suppressSnapshot = false;
   showToast('Automatické vylepšení hotovo — zkontroluj výsledek a doladˇ dle chuti', 'success');
@@ -910,29 +1024,25 @@ function renderCropRect() {
 
 function applyCrop() {
   if (!ED.img || ED.crop === 'free' || !ED.cropRect) return;
-  if (ED.rotate !== 0 || ED.straighten !== 0) { showToast('Pro ořez musí být rotace i narovnání horizontu na 0°.', 'info'); return; }
   const preview = $('editPreview'), pW = preview.clientWidth, pH = preview.clientHeight;
-  const imgW = ED.img.naturalWidth, imgH = ED.img.naturalHeight;
-  const imgDisplayW = imgW * ED.scale, imgDisplayH = imgH * ED.scale;
-  const imgLeft = (pW - imgDisplayW) / 2 + ED.panX, imgTop = (pH - imgDisplayH) / 2 + ED.panY;
-  let srcX = (ED.cropRect.x - imgLeft) / ED.scale, srcY = (ED.cropRect.y - imgTop) / ED.scale;
-  let srcW = ED.cropRect.w / ED.scale, srcH = ED.cropRect.h / ED.scale;
-  if (srcX < 0) { srcW += srcX; srcX = 0; }
-  if (srcY < 0) { srcH += srcY; srcY = 0; }
-  if (srcX + srcW > imgW) srcW = imgW - srcX;
-  if (srcY + srcH > imgH) srcH = imgH - srcY;
-  srcW = Math.max(1, srcW); srcH = Math.max(1, srcH);
-  if (srcW < 2 || srcH < 2) { showToast('Ořez je příliš malý.', 'info'); return; }
+  const r = ED.cropRect, sc = ED.scale;
+  const outW = Math.round(r.w / sc), outH = Math.round(r.h / sc);
+  if (outW < 2 || outH < 2) { showToast('Ořez je příliš malý.', 'info'); return; }
+  /* Ořez se kreslí přesně tak, jak je fotka vidět v náhledu (včetně otočení a narovnání). */
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(srcW); canvas.height = Math.round(srcH);
-  canvas.getContext('2d').drawImage(ED.img, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
+  canvas.width = outW; canvas.height = outH;
+  const ctx = canvas.getContext('2d');
+  ctx.translate((pW / 2 + ED.panX - r.x) / sc, (pH / 2 + ED.panY - r.y) / sc);
+  ctx.rotate((ED.rotate + ED.straighten) * Math.PI / 180);
+  ctx.drawImage(ED.img, -ED.img.naturalWidth / 2, -ED.img.naturalHeight / 2);
   canvas.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     if (ED.blobUrl) URL.revokeObjectURL(ED.blobUrl);
     ED.blobUrl = url;
     const newImg = new Image();
     newImg.onload = () => {
-      ED.img = newImg; ED.crop = 'free'; ED.panX = 0; ED.panY = 0; ED.rotate = 0; ED.scale = 1;
+      ED.img = newImg; ED.crop = 'free'; ED.panX = 0; ED.panY = 0; ED.rotate = 0; ED.straighten = 0; ED.scale = 1;
+      { const ss = $('fslider-straighten'); if (ss) ss.value = 0; const sl = $('fval-straighten'); if (sl) sl.textContent = '0°'; }
       ED.stats = null;
       ED.filterHistory = [];
       const zs = $('zoomSlider'); if (zs) zs.value = 1;
@@ -1028,7 +1138,10 @@ async function uploadWithRetry(fd, maxRetries) {
 async function saveEditor(mode) {
   if (!ED.img) return;
   const img = ED.img;
-  let dim = getExportDim(img.naturalWidth, img.naturalHeight);
+  /* Při otočení o 90°/270° se rozměry prohazují, jinak by se fotka na výšku vtěsnala do šířky a zmenšila. */
+  const quarter = (Math.round(ED.rotate / 90) % 2) !== 0;
+  const srcW = quarter ? img.naturalHeight : img.naturalWidth, srcH = quarter ? img.naturalWidth : img.naturalHeight;
+  let dim = getExportDim(srcW, srcH);
   dim = getSafeCanvasDim(dim.w, dim.h);
   const out = document.createElement('canvas');
   out.width = dim.w;
@@ -1043,7 +1156,7 @@ async function saveEditor(mode) {
   ctx.save();
   ctx.translate(dim.w / 2, dim.h / 2);
   ctx.rotate((ED.rotate + ED.straighten) * Math.PI / 180);
-  const drawScale = Math.min(dim.w / img.naturalWidth, dim.h / img.naturalHeight);
+  const drawScale = Math.min(dim.w / srcW, dim.h / srcH);
   ctx.drawImage(img, -img.naturalWidth * drawScale / 2, -img.naturalHeight * drawScale / 2, img.naturalWidth * drawScale, img.naturalHeight * drawScale);
   ctx.restore();
   if (toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {

@@ -724,6 +724,16 @@
               <button class="btn btn-sm" onclick="autoSharpen()" title="Podle míry rozostření fotky">🔍 Doostření</button>
             </div>
             <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoShadows()" title="Projasní tmavá místa podle toho, kolik jich ve fotce je">🌑 Stíny</button>
+              <button class="btn btn-sm" onclick="autoHighlights()" title="Zklidní přepálená světlá místa (obloha, okna)">🌤️ Světla</button>
+              <button class="btn btn-sm" onclick="autoColor()" title="Oživí vybledlé barvy, odolné vůči přesycení">🎨 Barvy</button>
+            </div>
+            <div class="tool-row">
+              <button class="btn btn-sm" onclick="autoDenoise()" title="Podle odhadu šumu (noční fotky)">🔇 Šum</button>
+              <button class="btn btn-sm" onclick="autoLowLight()" title="Fotka z šera: jas, stíny, barvy a šum najednou">🌙 Šero</button>
+              <button class="btn btn-sm" onclick="autoResetAll()" title="Vynuluje všechny úpravy světla a barev">↺ Vynulovat</button>
+            </div>
+            <div class="tool-row">
               <button class="btn btn-sm btn-blue" style="width:100%;justify-content:center" onclick="autoEnhanceAll()">✨ Vylepšit vše najednou</button>
             </div>
             <div class="tool-row">
@@ -844,7 +854,7 @@
 </div>
 
 <script src="dashboard-core.js?v=20261014"></script>
-<script src="dashboard-editor.js?v=20261040"></script>
+<script src="dashboard-editor.js?v=20261041"></script>
 <script src="/share-card.js?v=2"></script>
 <script src="gallery-ribbon-ui.js?v=20260910"></script>
 <script src="article-map-picker.js?v=20261011"></script>
