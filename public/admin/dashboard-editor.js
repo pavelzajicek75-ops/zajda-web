@@ -130,18 +130,72 @@ function updateToneFilter(shadows, highlights, blackPoint, whitePoint) {
   });
 }
 
-/* Pixelová aplikace tónové křivky při finálním ukládání (přesná, 256 kroků) */
+/* Stíny / světla „jako ve Photoshopu“ (Shadows/Highlights): úprava se řídí MÍSTNÍM jasem (rozmazaná maska),
+   ne jasem jednoho pixelu. Tmavé oblasti se projasní a světlé zklidní, ale detail uvnitř oblasti zůstane
+   (nevzniká šedý závoj a černá zůstává černá, protože se jen násobí). */
+function localLuminanceMask(d, w, h) {
+  const f = Math.max(1, Math.round(Math.max(w, h) / 320));
+  const mw = Math.ceil(w / f), mh = Math.ceil(h / f);
+  let a = new Float32Array(mw * mh), t = new Float32Array(mw * mh);
+  for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) {
+    const sx = Math.min(w - 1, x * f), sy = Math.min(h - 1, y * f), i = (sy * w + sx) * 4;
+    a[y * mw + x] = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+  }
+  const r = Math.max(2, Math.round(Math.max(mw, mh) * 0.04));
+  const box = (src, dst, horiz) => {
+    const len = horiz ? mw : mh, lines = horiz ? mh : mw;
+    for (let l = 0; l < lines; l++) {
+      const idx = k => horiz ? l * mw + k : k * mw + l;
+      let sum = 0;
+      for (let k = -r; k <= r; k++) sum += src[idx(Math.min(len - 1, Math.max(0, k)))];
+      for (let k = 0; k < len; k++) {
+        dst[idx(k)] = sum / (2 * r + 1);
+        sum += src[idx(Math.min(len - 1, k + r + 1))] - src[idx(Math.max(0, k - r))];
+      }
+    }
+  };
+  for (let pass = 0; pass < 2; pass++) { box(a, t, true); box(t, a, false); }
+  return { m: a, mw, mh, f };
+}
+function applyShadowsHighlights(ctx, w, h, shadows, highlights) {
+  if (!shadows && !highlights) return;
+  const img = ctx.getImageData(0, 0, w, h), d = img.data;
+  const { m, mw, mh, f } = localLuminanceMask(d, w, h);
+  const sh = shadows / 100, hi = highlights / 100;
+  for (let y = 0; y < h; y++) {
+    const fy = Math.min(mh - 1, y / f), y0 = Math.floor(fy), y1 = Math.min(mh - 1, y0 + 1), ty = fy - y0;
+    for (let x = 0; x < w; x++) {
+      const fx = Math.min(mw - 1, x / f), x0 = Math.floor(fx), x1 = Math.min(mw - 1, x0 + 1), tx = fx - x0;
+      const mv = (m[y0 * mw + x0] * (1 - tx) + m[y0 * mw + x1] * tx) * (1 - ty) + (m[y1 * mw + x0] * (1 - tx) + m[y1 * mw + x1] * tx) * ty;
+      const dark = (1 - mv) * (1 - mv), light = mv * mv;
+      const g = 1 + (sh > 0 ? sh * 1.4 : sh * 0.8) * dark;
+      const i = (y * w + x) * 4;
+      for (let c = 0; c < 3; c++) {
+        let v = d[i + c] * g;
+        if (hi < 0) v *= 1 + hi * 0.6 * light;
+        else if (hi > 0) v = 255 - (255 - v) * (1 - hi * 0.5 * light);
+        d[i + c] = v > 255 ? 255 : v < 0 ? 0 : v;
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/* Pixelová aplikace tónu: úrovně (černý a bílý bod) tabulkou, stíny a světla místní maskou (viz výše). */
 function applyToneLUT(ctx, w, h, shadows, highlights, blackPoint, whitePoint) {
   if (!toneIsActive(shadows, highlights, blackPoint, whitePoint)) return;
-  const lut = buildToneLUT256(shadows, highlights, blackPoint, whitePoint);
-  const imgData = ctx.getImageData(0, 0, w, h);
-  const d = imgData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    d[i] = lut[d[i]];
-    d[i + 1] = lut[d[i + 1]];
-    d[i + 2] = lut[d[i + 2]];
+  if (blackPoint || (whitePoint != null && whitePoint < 255)) {
+    const lut = buildToneLUT256(0, 0, blackPoint, whitePoint);
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      d[i] = lut[d[i]];
+      d[i + 1] = lut[d[i + 1]];
+      d[i + 2] = lut[d[i + 2]];
+    }
+    ctx.putImageData(imgData, 0, 0);
   }
-  ctx.putImageData(imgData, 0, 0);
+  applyShadowsHighlights(ctx, w, h, shadows, highlights);
 }
 
 /* === NAROVNÁNÍ HORIZONTU ===
@@ -152,6 +206,39 @@ function setStraighten(val) {
   const el = $('fval-straighten');
   if (el) el.textContent = ED.straighten + '°';
   updatePreviewTransform();
+  if (ED.crop !== 'free') fitCropToImage();
+}
+
+/* Po narovnání se v rozích objeví prázdná místa. Největší obdélník stejného poměru stran, který se do
+   narovnané fotky ještě vejde bez prázdných rohů (to je ořez, který by udělal i Photoshop). */
+function quarterDims() {
+  const q = (Math.round(ED.rotate / 90) % 2) !== 0;
+  return { W: q ? ED.img.naturalHeight : ED.img.naturalWidth, H: q ? ED.img.naturalWidth : ED.img.naturalHeight };
+}
+function inscribedScale() {
+  if (!ED.img || !ED.straighten) return 1;
+  const a = Math.abs(ED.straighten) * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a);
+  const { W, H } = quarterDims();
+  return Math.max(0.1, Math.min(1, W / (W * c + H * sn), H / (W * sn + H * c)));
+}
+function updateStraightenGuide() {
+  const pv = $('editPreview'); if (!pv || !ED.img) return;
+  let g = $('straightGuide');
+  if (!ED.straighten) { if (g) g.style.display = 'none'; return; }
+  if (!g) {
+    g = document.createElement('div'); g.id = 'straightGuide';
+    g.style.cssText = 'position:absolute;pointer-events:none;border:2px dashed #ff7a1a;box-shadow:0 0 0 9999px rgba(6,9,20,.62);z-index:3;box-sizing:border-box';
+    const tag = document.createElement('span');
+    tag.textContent = 'Výsledný ořez po narovnání';
+    tag.style.cssText = 'position:absolute;left:6px;top:4px;font:600 11px sans-serif;color:#ffb27a;text-shadow:0 1px 2px #000';
+    g.appendChild(tag); pv.appendChild(g);
+  }
+  const { W, H } = quarterDims(), s = inscribedScale();
+  const gw = W * ED.scale * s, gh = H * ED.scale * s;
+  g.style.display = 'block';
+  g.style.width = gw + 'px'; g.style.height = gh + 'px';
+  g.style.left = (pv.clientWidth / 2 + ED.panX - gw / 2) + 'px';
+  g.style.top = (pv.clientHeight / 2 + ED.panY - gh / 2) + 'px';
 }
 
 function toggleStraightenGrid(show) {
@@ -338,6 +425,7 @@ function updatePreviewTransform() {
   img.style.width = (ED.img.naturalWidth * ED.scale) + 'px';
   img.style.height = (ED.img.naturalHeight * ED.scale) + 'px';
   img.style.transform = `translate(${ED.panX}px, ${ED.panY}px) rotate(${ED.rotate + ED.straighten}deg)`;
+  updateStraightenGuide();
   applyFilters();
 }
 
@@ -362,7 +450,8 @@ function fitCropToImage() {
   if (!ED.img || ED.crop === 'free') return;
   const pv = $('editPreview'); if (!pv) return;
   const W = pv.clientWidth, H = pv.clientHeight;
-  const b = rotatedBox(ED.scale);
+  let b = rotatedBox(ED.scale);
+  if (ED.straighten) { const q = quarterDims(), is = inscribedScale(); b = { w: q.W * ED.scale * is, h: q.H * ED.scale * is }; }
   const cx = W / 2 + ED.panX, cy = H / 2 + ED.panY;
   const x0 = Math.max(0, cx - b.w / 2), y0 = Math.max(0, cy - b.h / 2);
   const x1 = Math.min(W, cx + b.w / 2), y1 = Math.min(H, cy + b.h / 2);
@@ -584,6 +673,7 @@ function analyzeImageStats(img) {
   ctx.drawImage(img, 0, 0, w, h);
   const data = ctx.getImageData(0, 0, w, h).data;
   let rSum = 0, gSum = 0, bSum = 0, lumMin = 255, lumMax = 0, dark = 0, bright = 0, satSum = 0;
+  const hist = new Uint32Array(256);
   const n = w * h;
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
@@ -591,12 +681,16 @@ function analyzeImageStats(img) {
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
     if (lum < lumMin) lumMin = lum;
     if (lum > lumMax) lumMax = lum;
+    hist[Math.min(255, Math.round(lum))]++;
     if (lum < 60) dark++;
     if (lum > 225) bright++;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
     satSum += mx ? (mx - mn) / mx : 0;
   }
-  return { rAvg: rSum / n, gAvg: gSum / n, bAvg: bSum / n, lumMin, lumMax, darkShare: dark / n, brightShare: bright / n, satAvg: satSum / n };
+  /* Percentily místo absolutního minima/maxima – jeden horký pixel nebo tmavý bod jinak zruší celé auto-úrovně
+     (Photoshop při Auto Levels taky ořezává 0,5 % na obou koncích). */
+  const pct = p => { let acc = 0; const t = n * p; for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc >= t) return i; } return 255; };
+  return { rAvg: rSum / n, gAvg: gSum / n, bAvg: bSum / n, lumMin, lumMax, lumLo: pct(0.005), lumHi: pct(0.995), lumMed: pct(0.5), darkShare: dark / n, brightShare: bright / n, satAvg: satSum / n };
 }
 
 /* Statistiky se počítají jen jednou na fotku (a znovu po ořezu), ne při
@@ -613,8 +707,8 @@ function autoContrast() {
   const s = getImageStats();
   if (!s) return;
   if (!ED._suppressSnapshot) snapshotFilters();
-  ED.filters.blackPoint = Math.max(0, Math.min(60, Math.round(s.lumMin)));
-  ED.filters.whitePoint = Math.min(255, Math.max(195, Math.round(s.lumMax)));
+  ED.filters.blackPoint = Math.max(0, Math.min(60, Math.round(s.lumLo)));
+  ED.filters.whitePoint = Math.min(255, Math.max(195, Math.round(s.lumHi)));
   syncFilterSlidersFromState();
   scheduleToneRegeneration();
   applyFilters();
@@ -626,8 +720,8 @@ function autoExposure() {
   const s = getImageStats();
   if (!s) return;
   if (!ED._suppressSnapshot) snapshotFilters();
-  const avgLum = (s.rAvg + s.gAvg + s.bAvg) / 3;
-  ED.filters.exposure = Math.max(-60, Math.min(60, Math.round((128 - avgLum) * 0.5)));
+  const midLum = s.lumMed;   // medián je odolnější než průměr (světlá obloha nezkreslí odhad)
+  ED.filters.exposure = Math.max(-60, Math.min(60, Math.round((118 - midLum) * 0.5)));
   syncFilterSlidersFromState();
   applyFilters();
   showToast('Auto expozice použita', 'success');
@@ -862,7 +956,8 @@ function autoStraighten() {
   const label = $('fval-straighten');
   if (label) label.textContent = ED.straighten + '°';
   updatePreviewTransform();
-  showToast('Horizont narovnán o ' + ED.straighten + '°', 'success');
+  if (ED.crop !== 'free') fitCropToImage();
+  showToast('Horizont narovnán o ' + ED.straighten + '° – přerušovaný rámeček ukazuje výsledný ořez bez prázdných rohů', 'success');
 }
 
 /* === AUTO VŠECHNO NAJEDNOU ===
@@ -996,6 +1091,7 @@ function setCrop(mode) {
   w = Math.min(w, W - 20); h = Math.min(h, H - 20);
   ED.cropRect = { x: (W - w) / 2, y: (H - h) / 2, w, h };
   renderCropRect();
+  if (ED.straighten) fitCropToImage();
 }
 
 function renderCropRect() {
@@ -1188,6 +1284,9 @@ async function saveEditor(mode) {
   const srcW = quarter ? img.naturalHeight : img.naturalWidth, srcH = quarter ? img.naturalWidth : img.naturalHeight;
   let dim = getExportDim(srcW, srcH);
   dim = getSafeCanvasDim(dim.w, dim.h);
+  /* Narovnaná fotka se uloží oříznutá bez prázdných rohů (stejně jako ve Photoshopu). */
+  const fullDim = dim, cs = inscribedScale();
+  if (cs < 1) dim = { w: Math.max(1, Math.round(fullDim.w * cs)), h: Math.max(1, Math.round(fullDim.h * cs)) };
   const out = document.createElement('canvas');
   out.width = dim.w;
   out.height = dim.h;
@@ -1199,7 +1298,7 @@ async function saveEditor(mode) {
   ctx.save();
   ctx.translate(dim.w / 2, dim.h / 2);
   ctx.rotate((ED.rotate + ED.straighten) * Math.PI / 180);
-  const drawScale = Math.min(dim.w / srcW, dim.h / srcH);
+  const drawScale = Math.min(fullDim.w / srcW, fullDim.h / srcH);
   ctx.drawImage(img, -img.naturalWidth * drawScale / 2, -img.naturalHeight * drawScale / 2, img.naturalWidth * drawScale, img.naturalHeight * drawScale);
   ctx.restore();
   if (f.temp) applyTemperature(ctx, dim.w, dim.h, f.temp);
