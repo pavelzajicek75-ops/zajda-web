@@ -43,6 +43,15 @@
 
     var scans = arts.map(function (a) { return { a: a, refs: scanArticle(a) }; });
 
+    // Milníky na časové ose — fotky se kontrolují stejně jako v článcích.
+    var tl = [];
+    try { var tr = await fetch('/api/timeline/list'); if (tr.ok) { var tj = await tr.json(); tl = Array.isArray(tj) ? tj : []; } } catch (e) {}
+    tl.forEach(function (m) {
+      var urls = (m.photos && m.photos.length) ? m.photos : (m.photoUrl ? [m.photoUrl] : []);
+      var refs = { photos: urls.map(function (u) { return { url: u, where: 'fotka milníku' }; }), links: [] };
+      scans.push({ a: { id: 'tl-' + m.id, title: '📍 Milník: ' + (m.title || m.date || 'bez názvu') }, refs: refs });
+    });
+
     // Seznamy souborů v úložišti — jen pro galerie, které se v článcích vyskytují.
     var galleryIds = {};
     scans.forEach(function (s) { s.refs.photos.forEach(function (p) { var k = photoKey(p.url); var m = k && k.match(/^gallery-([^/]+)\//); if (m) galleryIds[m[1]] = true; }); });
