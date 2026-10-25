@@ -63,6 +63,21 @@ export async function collectBackup(env, opts = {}) {
       }
     } catch (e) { warnings.push('Citáty se nepodařilo načíst: ' + (e && e.message ? e.message : e)); }
   }
+  backup.reactionsConfig = await getJson(env, 'config:reactions', warnings);
+  // Soupis fotek v úložišti (klíč + velikost): samotné fotky se do zálohy nevejdou,
+  // ale ze soupisu jde poznat, co kdy existovalo a co případně zmizelo.
+  if (env.PHOTOS_R2) {
+    try {
+      const inv = []; let cursor, total = 0;
+      for (let i = 0; i < 40; i++) {
+        const l = await env.PHOTOS_R2.list({ prefix: 'gallery-', cursor });
+        for (const o of l.objects) { if (o.key.indexOf('/thumbs/') < 0 && o.key.indexOf('thumbs/') !== 0) { inv.push([o.key, o.size]); total += o.size; } }
+        if (!l.truncated) break;
+        cursor = l.cursor;
+      }
+      backup.photoInventory = { count: inv.length, totalBytes: total, items: inv };
+    } catch (e) { warnings.push('Soupis fotek se nepodařilo načíst: ' + (e && e.message ? e.message : e)); }
+  }
   if (warnings.length) backup.warnings = warnings;
   return backup;
 }

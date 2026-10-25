@@ -69,7 +69,7 @@ export async function onRequestPost({ request, env }) {
     try { data = await collectBackup(env, { fresh: body.force === true }); }
     catch (e) { return json({ error: 'Záloha se nepodařila: ' + (e && e.message ? e.message : String(e)) }, 500); }
     key = PREFIX + 'zajda-zaloha-' + new Date().toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, 'Z') + '.json';
-    const counts = { a: (data.articles || []).length, t: (data.timeline || []).length, s: (data.sections || []).length, u: (data.subsections || []).length, g: (data.galleries || []).length, q: (data.quotes || []).length };
+    const counts = { a: (data.articles || []).length, t: (data.timeline || []).length, s: (data.sections || []).length, u: (data.subsections || []).length, g: (data.galleries || []).length, q: (data.quotes || []).length, p: data.photoInventory ? data.photoInventory.count : 0, pm: data.photoInventory ? Math.round(data.photoInventory.totalBytes / 1048576) : 0 };
     await r2.put(key, JSON.stringify(data), { httpMetadata: { contentType: 'application/json' }, customMetadata: { counts: JSON.stringify(counts) } });
     created = true;
     warnedAbout = data.warnings;
