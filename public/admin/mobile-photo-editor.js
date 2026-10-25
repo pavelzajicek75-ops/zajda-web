@@ -44,9 +44,10 @@
       '#editorModal.me-mobile .editor-panel-body{padding:.1rem .1rem .3rem;gap:.55rem}' +
       /* horní lišta */
       '#editorModal.me-mobile .me-top{display:flex;align-items:center;gap:4px;padding:calc(6px + env(safe-area-inset-top)) 6px 6px;background:var(--surface-2);border-bottom:1px solid var(--border-soft)}' +
-      '.me-ib{flex:0 1 auto;min-width:40px;width:42px;height:44px;border:0;border-radius:12px;background:var(--surface,#131a2c);color:var(--text,#eef1f8);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}' +
+      '.me-ib{flex:0 1 auto;min-width:34px;width:38px;height:44px;border:0;border-radius:12px;background:var(--surface,#131a2c);color:var(--text,#eef1f8);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}' +
       '.me-ib:active{background:var(--surface-3,#212c46)}.me-ib[disabled]{opacity:.35}' +
-      '.me-sp{flex:1}' +
+      '.me-sp{flex:1;min-width:0}' +
+      '@media (pointer:coarse){.crop-handle::after{content:"";position:absolute;inset:-16px}}' +
       '.me-save{flex:0 0 auto;height:44px;padding:0 12px;margin-left:2px;border:0;border-radius:12px;background:linear-gradient(135deg,#ff7a1a,#e0457b);color:#fff;font:700 15px var(--font-display,inherit);cursor:pointer}' +
       /* dolní lišta nástrojů */
       '#editorModal.me-mobile .me-tabs{order:3;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;background:var(--surface-2);border-top:1px solid var(--border-soft);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}' +
@@ -95,6 +96,7 @@
       '<button class="me-ib" data-a="undo" aria-label="Zpět">↶</button>' +
       '<button class="me-ib" data-a="redo" aria-label="Znovu">↷</button>' +
       '<button class="me-ib" data-a="before" aria-label="Podrž pro původní fotku">👁</button>' +
+      '<button class="me-ib" data-a="zoom" aria-label="Fotka v plném rozlišení">🔍</button>' +
       '<button class="me-save" data-a="save">Uložit</button>';
     box.insertBefore(top, box.firstChild);
 
@@ -136,6 +138,7 @@
     if (a === 'close') closeEditor();
     else if (a === 'prev') editorStep(-1);
     else if (a === 'next') editorStep(1);
+    else if (a === 'zoom') { buzz(); if (typeof openFullView === 'function') openFullView(); }
     else if (a === 'undo') { buzz(); undoFilterChange(); }
     else if (a === 'redo') { buzz(); redoFilterChange(); }
     else if (a === 'save') { e.stopPropagation(); sheet.classList.toggle('on'); }

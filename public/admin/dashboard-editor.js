@@ -370,7 +370,7 @@ async function openEditor(id) {
       if (!vig) {
         vig = document.createElement('div');
         vig.className = 'vignette-overlay';
-        vig.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:4;';
+        vig.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:4;';
         $('editPreview').appendChild(vig);
       }
       vig.style.opacity = 0;
@@ -427,6 +427,7 @@ function updatePreviewTransform() {
   img.style.height = (ED.img.naturalHeight * ED.scale) + 'px';
   img.style.transform = `translate(${ED.panX}px, ${ED.panY}px) rotate(${ED.rotate + ED.straighten}deg)`;
   updateStraightenGuide();
+  updateVignetteRect();
   applyFilters();
 }
 
@@ -462,6 +463,17 @@ function fitCropToImage() {
   ED.cropRect = { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h };
   renderCropRect();
 }
+/* Vinětace se kreslí jen přes samotnou fotku (výsledný rám po otočení a narovnání), ne přes celý šachovnicový náhled. */
+function updateVignetteRect() {
+  const vig = document.querySelector('.vignette-overlay'), pv = $('editPreview');
+  if (!vig || !pv || !ED.img) return;
+  const { W, H } = quarterDims(), s = inscribedScale();
+  const w = W * ED.scale * s, h = H * ED.scale * s;
+  vig.style.width = w + 'px'; vig.style.height = h + 'px';
+  vig.style.left = (pv.clientWidth / 2 + ED.panX - w / 2) + 'px';
+  vig.style.top = (pv.clientHeight / 2 + ED.panY - h / 2) + 'px';
+}
+
 function rotateEditor(deg) {
   ED.rotate = ((ED.rotate + deg) % 360 + 360) % 360;
   fitRotated();
@@ -496,12 +508,11 @@ function showBeforePreview(show) {
 /* === EDITOR: filtry === */
 function applyFilters() {
   const img = $('editImg');
-  if (!img) return;
+  if (!img || !ED.img) return;
   const f = ED.filters;
   let s = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
-  if (f.vibrance) s += ` saturate(${100 + f.vibrance * 0.5}%)`;
   if (f.temp) { updateTempFilter(f.temp); s += ' url(#ed-temp-dynamic)'; }
-  if (f.denoise > 0) s += ` blur(${f.denoise * 0.05}px)`;
+  if (f.denoise > 0) s += ` blur(${(f.denoise * 0.05 * (Math.max(ED.img.naturalWidth, ED.img.naturalHeight) * ED.scale / 900)).toFixed(3)}px)`;   // poměrově k velikosti fotky, ať odpovídá uložení
   if (f.sharpen > 0) {
     updateSharpenFilter(f.sharpen);
     s += ' url(#ed-sharpen-dynamic)';
@@ -538,7 +549,7 @@ async function regenerateToneMappedImage() {
   if (!el) return;
   const f = ED.filters;
 
-  if (!toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
+  if (!toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint) && !f.vibrance) {
     if (ED.toneBaseUrl) { URL.revokeObjectURL(ED.toneBaseUrl); ED.toneBaseUrl = null; }
     if (ED.blobUrl && el.src !== ED.blobUrl) el.src = ED.blobUrl;
     return;
@@ -561,6 +572,7 @@ async function regenerateToneMappedImage() {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(ED.img, 0, 0, w, h);
   applyToneLUT(ctx, w, h, f.shadows, f.highlights, f.blackPoint, f.whitePoint);
+  if (f.vibrance) applyVibrance(ctx, w, h, f.vibrance);   // živost se počítá pixelově jako při uložení (chrání už sytou pleť a barvy)
 
   const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
   if (!blob || myToken !== toneRegenToken) return; // zastaralý výsledek, zahodit
@@ -592,7 +604,7 @@ function setFilter(key, val) {
   const el = $('fval-' + key);
   if (el) el.textContent = val;
   if (key === 'sharpen') updateSharpenFilter(ED.filters.sharpen);
-  if (key === 'shadows' || key === 'highlights' || key === 'blackPoint' || key === 'whitePoint') {
+  if (key === 'shadows' || key === 'highlights' || key === 'blackPoint' || key === 'whitePoint' || key === 'vibrance') {
     scheduleToneRegeneration();
   }
   ED.activePreset = '';
@@ -1268,34 +1280,35 @@ function getSafeCanvasDim(w, h) {
 }
 
 /* === UPLOAD (PNG + retry) === */
-function applySharpen(ctx, w, h, strength) {
-  const imgData = ctx.getImageData(0, 0, w, h);
-  const data = imgData.data;
-  const out = ctx.createImageData(w, h);
-  const od = out.data;
-  const { kernel } = sharpenKernelForStrength(strength);
+/* Doostření při uložení: unsharp mask s poloměrem úměrným velikosti fotky (jako v náhledu, kde je jádro 3×3 na zobrazené fotce). */
+function _boxBlurF(src, w, h, r) {
+  const tmp = new Float32Array(w * h), dst = new Float32Array(w * h), n = 2 * r + 1;
   for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      let r = 0, g = 0, b = 0;
-      for (let ky = -1; ky <= 1; ky++) {
-        for (let kx = -1; kx <= 1; kx++) {
-          const py = Math.min(h - 1, Math.max(0, y + ky));
-          const px = Math.min(w - 1, Math.max(0, x + kx));
-          const idx = (py * w + px) * 4;
-          const k = kernel[(ky + 1) * 3 + (kx + 1)];
-          r += data[idx] * k;
-          g += data[idx + 1] * k;
-          b += data[idx + 2] * k;
-        }
-      }
-      const i = (y * w + x) * 4;
-      od[i] = Math.min(255, Math.max(0, r));
-      od[i + 1] = Math.min(255, Math.max(0, g));
-      od[i + 2] = Math.min(255, Math.max(0, b));
-      od[i + 3] = data[i + 3];
+    let sum = 0; const o = y * w;
+    for (let k = -r; k <= r; k++) sum += src[o + Math.min(w - 1, Math.max(0, k))];
+    for (let x = 0; x < w; x++) { tmp[o + x] = sum / n; sum += src[o + Math.min(w - 1, x + r + 1)] - src[o + Math.max(0, x - r)]; }
+  }
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let k = -r; k <= r; k++) sum += tmp[Math.min(h - 1, Math.max(0, k)) * w + x];
+    for (let y = 0; y < h; y++) { dst[y * w + x] = sum / n; sum += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]; }
+  }
+  return dst;
+}
+function applySharpen(ctx, w, h, strength) {
+  const imgData = ctx.getImageData(0, 0, w, h), d = imgData.data;
+  const amt = 4 * sharpenKernelForStrength(strength).k;          // 3×3 Laplace jádro = 4 × (pixel − průměr čtyř sousedů)
+  const r = Math.max(1, Math.round(Math.max(w, h) / 900));
+  const ch = new Float32Array(w * h);
+  for (let c = 0; c < 3; c++) {
+    for (let i = 0, j = c; i < ch.length; i++, j += 4) ch[i] = d[j];
+    const bl = _boxBlurF(ch, w, h, r);
+    for (let i = 0, j = c; i < ch.length; i++, j += 4) {
+      const v = d[j] + amt * (d[j] - bl[i]);
+      d[j] = v < 0 ? 0 : v > 255 ? 255 : v;
     }
   }
-  ctx.putImageData(out, 0, 0);
+  ctx.putImageData(imgData, 0, 0);
 }
 
 async function uploadWithRetry(fd, maxRetries) {
@@ -1313,8 +1326,9 @@ async function uploadWithRetry(fd, maxRetries) {
   return false;
 }
 
-async function saveEditor(mode) {
-  if (!ED.img) return;
+/* Vykreslí fotku se všemi úpravami v plném rozlišení (stejný postup pro uložení i pro náhled v plném rozlišení). */
+async function renderEditorCanvas() {
+  if (!ED.img) return null;
   const img = ED.img;
   /* Při otočení o 90°/270° se rozměry prohazují, jinak by se fotka na výšku vtěsnala do šířky a zmenšila. */
   const quarter = (Math.round(ED.rotate / 90) % 2) !== 0;
@@ -1330,7 +1344,7 @@ async function saveEditor(mode) {
   const ctx = out.getContext('2d', { willReadFrequently: true });
   const f = ED.filters;
   let filterStr = `brightness(${100 + f.exposure}%) contrast(${100 + f.contrast}%) saturate(${100 + f.saturation}%)`;
-  if (f.denoise > 0) filterStr += ` blur(${f.denoise * 0.05}px)`;
+  if (f.denoise > 0) filterStr += ` blur(${(f.denoise * 0.05 * (Math.max(dim.w, dim.h) / 900)).toFixed(3)}px)`;   // stejně poměrově jako v náhledu
   /* Pořadí je stejné jako v náhledu: nejdřív tón (úrovně, stíny, světla), potom jas/kontrast/sytost, teplota, živost, doostření. */
   ctx.save();
   ctx.translate(dim.w / 2, dim.h / 2);
@@ -1341,6 +1355,7 @@ async function saveEditor(mode) {
   if (toneIsActive(f.shadows, f.highlights, f.blackPoint, f.whitePoint)) {
     applyToneLUT(ctx, dim.w, dim.h, f.shadows, f.highlights, f.blackPoint, f.whitePoint);
   }
+  if (f.vibrance) applyVibrance(ctx, dim.w, dim.h, f.vibrance);
   if (f.exposure || f.contrast || f.saturation || f.denoise > 0) {
     if (typeof ctx.filter === 'string') {
       const tmp = document.createElement('canvas'); tmp.width = dim.w; tmp.height = dim.h;
@@ -1355,19 +1370,25 @@ async function saveEditor(mode) {
     }
   }
   if (f.temp) applyTemperature(ctx, dim.w, dim.h, f.temp);
-  if (f.vibrance) {
-    applyVibrance(ctx, dim.w, dim.h, f.vibrance);
-  }
   if (f.sharpen > 0) {
     applySharpen(ctx, dim.w, dim.h, f.sharpen);
   }
   if (f.vignette > 0) {
-    const grad = ctx.createRadialGradient(dim.w / 2, dim.h / 2, dim.w * 0.25, dim.w / 2, dim.h / 2, dim.w * 0.9);
-    grad.addColorStop(0, 'transparent');
+    /* Stejná geometrie jako v náhledu (CSS: kruh od středu, 30 % → 90 % vzdálenosti k rohu). */
+    const R = Math.hypot(dim.w, dim.h) / 2;
+    const grad = ctx.createRadialGradient(dim.w / 2, dim.h / 2, R * 0.3, dim.w / 2, dim.h / 2, R * 0.9);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
     grad.addColorStop(1, `rgba(0,0,0,${f.vignette / 100})`);
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, dim.w, dim.h);
   }
+  return out;
+}
+
+async function saveEditor(mode) {
+  if (!ED.img) return;
+  const out = await renderEditorCanvas();
+  if (!out) return;
   const blob = await new Promise(r => out.toBlob(r, 'image/png'));
 
   // Náhled se kreslí ze STEJNÉHO už upraveného plátna (out) — má tedy
@@ -3997,3 +4018,88 @@ function showKeyboardShortcutsHelp() {
 }
 
 initDashboardEditor();
+
+
+/* === NÁHLED V PLNÉM ROZLIŠENÍ ===
+   Klepnutí (kliknutí) na fotku v editoru ji otevře v maximálním rozlišení se všemi úpravami, ať jde
+   zkontrolovat ostrost, šum a detaily. Prstem (nebo myší) se posouvá, dvojklep přepíná 100 % a celou fotku. */
+let _fullViewUrl = null;
+async function openFullView(fx, fy) {
+  if (!ED.img) return;
+  let ov = document.getElementById('fullViewOv');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'fullViewOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10050;background:#05070d;display:flex;flex-direction:column';
+    ov.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px;background:#0e1424;border-bottom:1px solid #263252;color:#eef1f8;font:600 14px sans-serif">' +
+      '<button id="fvClose" style="min-width:44px;height:44px;border:0;border-radius:12px;background:#1a2338;color:#fff;font-size:20px;cursor:pointer">✕</button>' +
+      '<span id="fvInfo" style="flex:1;opacity:.85"></span>' +
+      '<button id="fvZoom" style="height:44px;padding:0 14px;border:0;border-radius:12px;background:#4c8dff;color:#fff;font:600 14px sans-serif;cursor:pointer">Celá fotka</button></div>' +
+      '<div id="fvScroll" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch;position:relative;background:repeating-conic-gradient(#0a0f1c 0% 25%,#131a2c 0% 50%) 50% / 20px 20px"><img id="fvImg" alt="" style="display:block;margin:0 auto;max-width:none"></div>' +
+      '<div id="fvBusy" style="position:absolute;inset:60px 0 0;display:flex;align-items:center;justify-content:center;color:#fff;font:600 16px sans-serif;background:rgba(5,7,13,.75)">Počítám úpravy v plném rozlišení…</div>';
+    document.body.appendChild(ov);
+    const close = () => { ov.style.display = 'none'; if (_fullViewUrl) { URL.revokeObjectURL(_fullViewUrl); _fullViewUrl = null; } $('fvImg').removeAttribute('src'); };
+    $('fvClose').onclick = close;
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && ov.style.display !== 'none') close(); });
+    const img = $('fvImg'), sc = $('fvScroll'), btn = $('fvZoom');
+    const setMode = (full, px, py) => {
+      img.dataset.mode = full ? 'fit' : 'full';
+      if (full) { img.style.width = '100%'; img.style.height = 'auto'; img.style.maxHeight = ''; img.style.objectFit = 'contain'; img.style.width = 'auto'; img.style.maxWidth = '100%'; img.style.maxHeight = (sc.clientHeight) + 'px'; }
+      else { img.style.width = img.naturalWidth + 'px'; img.style.height = img.naturalHeight + 'px'; img.style.maxWidth = 'none'; img.style.maxHeight = 'none'; }
+      btn.textContent = full ? '100 %' : 'Celá fotka';
+      if (!full) { sc.scrollLeft = Math.max(0, (px == null ? .5 : px) * img.naturalWidth - sc.clientWidth / 2); sc.scrollTop = Math.max(0, (py == null ? .5 : py) * img.naturalHeight - sc.clientHeight / 2); }
+    };
+    ov._setMode = setMode;
+    btn.onclick = () => setMode(img.dataset.mode !== 'fit');
+    let last = 0;
+    img.addEventListener('click', e => {
+      const now = Date.now();
+      if (now - last < 320) { const r = img.getBoundingClientRect(); setMode(img.dataset.mode !== 'fit', (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height); last = 0; } else last = now;
+    });
+  }
+  ov.style.display = 'flex';
+  $('fvBusy').style.display = 'flex';
+  $('fvInfo').textContent = '';
+  await new Promise(r => setTimeout(r, 30));   // nechá prohlížeč vykreslit hlášku „Počítám…“
+  const keep = ED.export; ED.export = 'max';
+  let out = null;
+  try { out = await renderEditorCanvas(); } catch (e) { console.error(e); }
+  ED.export = keep;
+  if (!out) { ov.style.display = 'none'; showToast('Náhled v plném rozlišení se nepodařilo vykreslit.', 'error'); return; }
+  const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', 0.95));
+  if (!blob) { ov.style.display = 'none'; showToast('Náhled v plném rozlišení se nepodařilo vykreslit.', 'error'); return; }
+  if (_fullViewUrl) URL.revokeObjectURL(_fullViewUrl);
+  _fullViewUrl = URL.createObjectURL(blob);
+  const img = $('fvImg');
+  img.onload = () => {
+    $('fvBusy').style.display = 'none';
+    $('fvInfo').textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px · 100 % · dvojklep = celá fotka';
+    ov._setMode(false, fx, fy);
+  };
+  img.src = _fullViewUrl;
+}
+
+/* Klepnutí na fotku (ne tažení, ne ořez) otevře náhled v plném rozlišení.
+   Spoléhá na událost „click“ (funguje na myši, iPadu i telefonu); pointerdown jen zaznamená, jestli nešlo o tažení nebo štípnutí. */
+(function bindFullViewTap() {
+  const pv = document.getElementById('editPreview');
+  if (!pv || pv.dataset.fvReady) return;
+  pv.dataset.fvReady = '1';
+  let down = null, pointers = 0, multi = false;
+  pv.addEventListener('pointerdown', e => {
+    pointers++;
+    if (pointers > 1) multi = true;
+    down = { x: e.clientX, y: e.clientY, t: Date.now() };
+  }, true);
+  const up = () => { pointers = Math.max(0, pointers - 1); if (!pointers) setTimeout(() => { multi = false; }, 350); };
+  pv.addEventListener('pointerup', up, true);
+  pv.addEventListener('pointercancel', up, true);
+  pv.addEventListener('click', e => {
+    if (!ED.img || ED.crop !== 'free' || multi || !down) return;
+    const im = document.getElementById('editImg'), ir = im.getBoundingClientRect();
+    if (e.target !== im && e.target !== pv) return;
+    if (e.clientX < ir.left || e.clientX > ir.right || e.clientY < ir.top || e.clientY > ir.bottom) return;
+    if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8 || Date.now() - down.t > 600) return;
+    openFullView(Math.min(1, Math.max(0, (e.clientX - ir.left) / ir.width)), Math.min(1, Math.max(0, (e.clientY - ir.top) / ir.height)));
+  });
+})();
