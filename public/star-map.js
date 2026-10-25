@@ -270,11 +270,14 @@ function typeInto(txt){
 }
 function fitCard(){
     var p=card.querySelector('p'),ph=$('#cPh'),lim=mobile?VH*.66+1:VH-150,fs=mobile?16:(innerWidth*.0135<17?17:Math.min(20,innerWidth*.0135));
-    p.style.fontSize='';ph.style.display='';
+    p.style.fontSize='';ph.style.display='';ph.querySelectorAll('img').forEach(function(im){im.style.height=''});
     while(card.scrollHeight>lim&&fs>(mobile?13:14.5)){fs-=.5;p.style.fontSize=fs+'px'}
-    if(card.scrollHeight>lim&&ph.children.length)ph.style.display='none';
+    if(card.scrollHeight>lim&&ph.children.length){
+      var imgs=ph.querySelectorAll('img'),hh=imgs[0]?imgs[0].getBoundingClientRect().height||110:110;
+      while(card.scrollHeight>lim&&hh>64){hh-=6;for(var k=0;k<imgs.length;k++)imgs[k].style.height=hh+'px'}
+    }
     while(card.scrollHeight>lim&&fs>12.5){fs-=.5;p.style.fontSize=fs+'px'}
-    var te=card.querySelector('.tele');te.style.display='';if(card.scrollHeight>lim)te.style.display='none';
+    var te=card.querySelector('.tele');te.style.display='';if(card.scrollHeight>lim)te.style.display='none';card.style.overflowY='auto';
   }
 function select(i,keep){root.classList.add('sel');
   sel=i;var m=M[i],z=mobile?Math.max(zoomHome*2.2,1.05):Math.max(zoomHome*1.45,.85);if(!keep)lockT=0;
@@ -289,7 +292,7 @@ function select(i,keep){root.classList.add('sel');
   $('#tDist').textContent=m.now?'Latest signal':(m.yr-M[0].yr).toFixed(1)+' ly';
   $('#tMag').textContent=new Array(m.s+1).join('●')+new Array(6-m.s).join('○');
   var lk=$('#cLink');lk.style.display=m.link?'':'none';if(m.link)lk.href='/article?id='+encodeURIComponent(m.link);
-  var ph=$('#cPh');ph.innerHTML='';m.photos.slice(0,3).forEach(function(u){var im=document.createElement('img');im.src=u;im.alt='';im.loading='lazy';im.onclick=function(){if(window.openLightbox)window.openLightbox(u)};ph.appendChild(im)});
+  var ph=$('#cPh');ph.innerHTML='';m.photos.slice(0,3).forEach(function(u){var im=document.createElement('img');im.src=u;im.alt='';im.decoding='async';im.onclick=function(){if(window.openLightbox)window.openLightbox(u)};ph.appendChild(im)});
   var sh=$('#cSh');sh.innerHTML='';
   var surl=location.origin+'/timeline/?m='+encodeURIComponent(m.id)+'#milestone-'+encodeURIComponent(m.id),stxt=m.title+' — Moje diagnóza, můj vesmír';
   function mkb(label,fn){var b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=function(){fn(b)};sh.appendChild(b);return b}
