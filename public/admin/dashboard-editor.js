@@ -333,6 +333,7 @@ async function openEditor(id) {
   ED.stats = null;
   ED.presetIntensity = 100;
   ED.filterHistory = [];
+  ED.redoStack = [];
   const intensitySlider = $('presetIntensitySlider');
   if (intensitySlider) intensitySlider.value = 100;
   const intensityLabel = $('presetIntensityVal');
@@ -610,11 +611,10 @@ function snapshotFilters() {
   ED.filterHistory = ED.filterHistory || [];
   ED.filterHistory.push(JSON.stringify({ filters: ED.filters, preset: ED.activePreset }));
   if (ED.filterHistory.length > 25) ED.filterHistory.shift();
+  ED.redoStack = [];   // nová úprava ruší „Znovu“
 }
 
-function undoFilterChange() {
-  if (!ED.filterHistory || !ED.filterHistory.length) { showToast('Není co vrátit zpět.', 'info'); return; }
-  const prev = JSON.parse(ED.filterHistory.pop());
+function _restoreFilterState(prev) {
   ED.filters = prev.filters;
   ED.activePreset = prev.preset || '';
   syncFilterSlidersFromState();
@@ -622,6 +622,27 @@ function undoFilterChange() {
   scheduleToneRegeneration();
   applyFilters();
   document.querySelectorAll('.preset-swatch').forEach(b => b.classList.toggle('active', b.dataset.preset === ED.activePreset));
+}
+function undoFilterChange() {
+  if (!ED.filterHistory || !ED.filterHistory.length) { showToast('Není co vrátit zpět.', 'info'); return; }
+  ED.redoStack = ED.redoStack || [];
+  ED.redoStack.push(JSON.stringify({ filters: ED.filters, preset: ED.activePreset }));
+  _restoreFilterState(JSON.parse(ED.filterHistory.pop()));
+}
+function redoFilterChange() {
+  if (!ED.redoStack || !ED.redoStack.length) { showToast('Není co vrátit znovu.', 'info'); return; }
+  ED.filterHistory.push(JSON.stringify({ filters: ED.filters, preset: ED.activePreset }));
+  _restoreFilterState(JSON.parse(ED.redoStack.pop()));
+}
+
+/* Předchozí / další fotka v galerii bez návratu do galerie (hlavně na telefonu). */
+function editorStep(dir) {
+  if (!ED.photo || !G.photos) return;
+  const i = G.photos.findIndex(x => x.id === ED.photo.id), n = G.photos[i + dir];
+  if (!n) return;
+  const dirty = (ED.filterHistory && ED.filterHistory.length) || ED.rotate || ED.straighten;
+  if (dirty && !confirm('Zahodit neuložené úpravy této fotky?')) return;
+  openEditor(n.id);
 }
 
 /* === PŘEDVOLBY (jako styly ve Photoshopu) === */
