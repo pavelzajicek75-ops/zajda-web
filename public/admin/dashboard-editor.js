@@ -1389,7 +1389,10 @@ async function saveEditor(mode) {
   if (!ED.img) return;
   const out = await renderEditorCanvas();
   if (!out) return;
-  const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+  /* Ukládá se JPEG (ne PNG): PNG v plném rozlišení má desítky MB a na řadě telefonů se ve fotogalerii a v článcích nenačte. */
+  const q = Math.max(0.88, Math.min(0.97, (typeof getUploadSettings === 'function' ? getUploadSettings().quality : 0.9) || 0.9));
+  const blob = await new Promise(r => out.toBlob(r, 'image/jpeg', q));
+  if (!blob) { showToast('Fotku se nepodařilo převést na JPEG.', 'error'); return; }
 
   // Náhled se kreslí ze STEJNÉHO už upraveného plátna (out) — má tedy
   // všechny filtry/ořez už hotové, ne jen zmenšeninu originálu před
@@ -1408,7 +1411,7 @@ async function saveEditor(mode) {
   }
 
   const fd = new FormData();
-  fd.append('file', blob, ED.photo.name || 'edited.png');
+  fd.append('file', blob, ((ED.photo.name || 'edited').replace(/\.[^.]+$/, '')) + '.jpg');
   fd.append('galleryId', 'main');
   fd.append('oldKey', ED.photo.key);
   fd.append('mode', mode);

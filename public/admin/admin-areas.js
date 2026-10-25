@@ -44,6 +44,7 @@
       { g: 'Provoz a bezpečnost', k: 'errors', i: '🐞', n: 'Hlášené chyby', a: BOX, t: 'tools', b: 'errorsBox', cnt: 'errors' },
       { g: 'Provoz a bezpečnost', k: 'selftest', i: '🩺', n: 'Diagnostika', a: BOX, t: 'tools', b: 'selftestBox' },
       { g: 'Provoz a bezpečnost', k: 'linkcheck', i: '🔎', n: 'Kontrola odkazů', a: BOX, t: 'tools', b: 'linkcheckBox' },
+      { g: 'Provoz a bezpečnost', k: 'weight', i: '🏋️', n: 'Těžké fotky', a: BOX, t: 'tools', b: 'weightBox' },
       { g: 'Provoz a bezpečnost', k: 'thumbs', i: '🖼️', n: 'Náhledy fotek', a: BOX, t: 'tools', b: 'thumbsBox' },
       { g: 'Provoz a bezpečnost', k: 'geo', i: '📍', n: 'Doplnit polohy', a: BOX, t: 'tools', b: 'geoFillBox' },
       { g: 'Provoz a bezpečnost', k: 'checklist', i: '✅', n: 'Testovací den', a: BOX, t: 'tools', b: 'checklistBox' },
