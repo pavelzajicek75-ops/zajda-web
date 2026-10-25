@@ -8,10 +8,10 @@
    • tah prstem vlevo/vpravo po fotce mění vybraný posuvník (Světlo, Barva, Efekty); klepnutím na řádek se vybere jiný
    • dva prsty: přiblížení a posun fotky
    • dvojklep na posuvník ho vrátí na výchozí hodnotu
-   Na počítači a na telefonu naležato se nic nemění. Načíst AŽ PO dashboard-editor.js. */
+   Na počítači s myší a na telefonu naležato se nic nemění. Načíst AŽ PO dashboard-editor.js. */
 (function () {
   'use strict';
-  var MQ = '(max-width: 900px) and (min-height: 501px)';
+  var MQ = '((max-width: 900px) or (pointer: coarse)) and (min-height: 501px)';   // telefon, iPad na výšku i naležato (dotykové zařízení)
   var TOOLS = [
     { k: 'auto', i: '✨', n: 'Auto', p: ['Automaticky'] },
     { k: 'style', i: '🎞️', n: 'Styly', p: ['Předvolby'] },
@@ -69,6 +69,12 @@
       '#editorModal.me-mobile .me-sheet.on{display:flex}' +
       '.me-sheet button{min-height:48px;padding:0 18px;border:0;border-radius:10px;background:var(--surface-2,#1a2338);color:#fff;font:600 15px var(--font-body,inherit);text-align:left;cursor:pointer}' +
       '.me-sheet button.go{background:#1f9d74}' +
+      '@media (min-width:901px){#editorModal.me-mobile .editor-sidebar{max-height:34dvh;max-height:34vh;padding:.5rem 1.2rem}#editorModal.me-mobile .editor-panel-body{max-width:760px;margin:0 auto;width:100%}}' +
+      '#editorModal .me-only{display:none}#editorModal.me-mobile .me-only{display:flex;flex-direction:column;gap:8px}' +
+      '.me-save-title{font:700 13px var(--font-display,inherit);color:var(--gold,#ffc857);margin-top:4px}' +
+      '.me-big{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:56px;padding:10px 14px;border:1px solid var(--border,#263252);border-radius:12px;background:var(--surface-2,#1a2338);color:#fff;font:600 15px var(--font-body,inherit);text-align:left;cursor:pointer;touch-action:manipulation}' +
+      '.me-big small{font:400 12px var(--font-body,inherit);color:var(--text-muted,#92a0bc)}' +
+      '.me-big.go{background:rgba(31,157,116,.2);border-color:rgba(52,211,153,.55)}.me-big.warn{background:rgba(255,93,122,.1);border-color:rgba(255,93,122,.45)}' +
       '.me-sheet small{color:var(--text-muted,#92a0bc);font-size:12px;padding:0 4px}';
     document.head.appendChild(s);
   }
@@ -262,12 +268,12 @@
   function watch() {
     new MutationObserver(function () {
       var open = !modal.classList.contains('hidden');
-      if (open && !wasOpen) { sync(); if (isMobile()) setTool(tool || 'auto'); }
+      if (open && !wasOpen) { sync(); if (isMobile()) { setTool(tool || 'auto'); if (typeof fitImageToPreview === 'function') fitImageToPreview(); } }   // fotka se po změně rozvržení znovu vměstná do náhledu
       else if (open) sync();
       if (!open) { sheet && sheet.classList.remove('on'); }
       wasOpen = open;
     }).observe(modal, { attributes: true, attributeFilter: ['class'] });
-    if (mql && mql.addEventListener) mql.addEventListener('change', function () { sync(); if (!modal.classList.contains('hidden') && isMobile()) setTool(tool); });
+    if (mql && mql.addEventListener) mql.addEventListener('change', function () { sync(); if (!modal.classList.contains('hidden')) { if (isMobile()) setTool(tool); if (typeof fitImageToPreview === 'function') fitImageToPreview(); } });
     // při přepnutí na jinou fotku (‹ ›) se jen obnoví stav tlačítek
     var img = $('editImg'); if (img) new MutationObserver(sync).observe(img, { attributes: true, attributeFilter: ['src'] });
   }

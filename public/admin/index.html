@@ -808,6 +808,12 @@
               <button class="btn btn-sm" id="ex-2000" onclick="setExport('2000')">2000 px</button>
               <button class="btn btn-sm" id="ex-fullhd" onclick="setExport('fullhd')">Full HD</button>
             </div>
+            <p style="font-size:11.5px;color:var(--text-faint);margin:0"><b>Max</b> = původní rozlišení · <b>2000 px</b> = delší strana 2000 px · <b>Full HD</b> = nejvýš 1920 × 1080.</p>
+            <div class="me-only me-save-choice">
+              <div class="me-save-title">Jak uložit?</div>
+              <button class="me-big go" onclick="saveEditor('new')"><b>💾 Uložit jako novou</b><small>Originál v galerii zůstane, přibude upravená kopie.</small></button>
+              <button class="me-big warn" onclick="if(confirm('Přepsat originál? Nejde to vrátit.'))saveEditor('replace')"><b>♻️ Přepsat originál</b><small>Nahradí původní fotku upravenou. Nejde vrátit.</small></button>
+            </div>
           </div>
         </details>
 
@@ -846,8 +852,8 @@
 </div>
 
 <script src="dashboard-core.js?v=20261014"></script>
-<script src="dashboard-editor.js?v=20261045"></script>
-<script src="mobile-photo-editor.js?v=1"></script>
+<script src="dashboard-editor.js?v=20261046"></script>
+<script src="mobile-photo-editor.js?v=5"></script>
 <script src="/share-card.js?v=2"></script>
 <script src="gallery-ribbon-ui.js?v=20260910"></script>
 <script src="article-map-picker.js?v=20261011"></script>
