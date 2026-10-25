@@ -87,10 +87,10 @@
         var photos = (m.photos && m.photos.length) ? m.photos : (m.photoUrl ? [m.photoUrl] : []);
         var photoHtml = '';
         if (photos.length === 1) {
-          photoHtml = '<img src="' + escapeHtml(photos[0]) + '" alt="" loading="lazy">';
+          photoHtml = '<img src="' + escapeHtml(photos[0]) + '" alt="" loading="eager" decoding="async">';
         } else if (photos.length > 1) {
           photoHtml = '<div class="timeline-photo-grid" style="--tl-photo-count:' + photos.length + '">' +
-            photos.map(function (u) { return '<img src="' + escapeHtml(u) + '" alt="" loading="lazy">'; }).join('') +
+            photos.map(function (u) { return '<img src="' + escapeHtml(u) + '" alt="" loading="eager" decoding="async">'; }).join('') +
             '</div>';
         }
         var textHtml = m.text ? '<p>' + escapeHtml(m.text).replace(/\n/g, '<br>') + '</p>' : '';

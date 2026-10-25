@@ -183,7 +183,7 @@
   </div>
 
   <script src="/shared.js?v=20261040"></script>
-  <script src="/timeline-core.js?v=20261024"></script>
+  <script src="/timeline-core.js?v=20261025"></script>
   <script src="/star-map.js?v=5"></script>
   <script>
     function openLightbox(src) {
@@ -271,7 +271,7 @@
           var wanted = qs.get('m') || (h.indexOf('#milestone-') === 0 ? decodeURIComponent(h.slice(11)) : '');
           var sm = StarMap.open(tlData, {
             selectId: wanted,
-            onList: function () { sm.hide(); document.body.classList.remove('map-on'); window.scrollTo(0, 0); }
+            onList: function () { sm.hide(); document.body.classList.remove('map-on'); window.scrollTo(0, 0); document.querySelectorAll('#timelineTrack img').forEach(function (im) { var s = im.getAttribute('src'); if (s && !(im.complete && im.naturalWidth)) { im.removeAttribute('src'); im.setAttribute('src', s); } }); }
           });
           if (sm) {
             document.body.classList.add('has-map', 'map-on');
