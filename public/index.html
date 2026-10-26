@@ -134,6 +134,25 @@
     .latest-item small { color: var(--mist-dim); font-size: 11.5px; display: block; margin-top: 3px; letter-spacing: 0.2px; }
     .latest-empty { color: var(--mist-dim); font-size: 13px; padding: 0.5rem 0; font-style: italic; }
 
+
+    .top-grid { grid-template-columns: 1fr !important; }
+    .tl-strip {
+      position: relative; z-index: 10; display: flex; flex-direction: column; gap: 8px;
+      max-width: 1200px; margin: 14px auto 0; padding: 14px 20px 12px;
+      width: calc(100% - 40px); box-sizing: border-box; text-decoration: none; color: var(--parchment);
+      border-radius: 16px; border: 1px solid rgba(255,122,69,0.4);
+      background: linear-gradient(90deg, rgba(255,122,69,0.10), rgba(140,150,255,0.06));
+    }
+    .tl-strip:hover, .tl-strip:focus-visible { border-color: var(--ember); }
+    .tl-head { display: flex; justify-content: space-between; align-items: center; }
+    .tl-strip-t { font: 700 12.5px 'Space Grotesk', sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+    .tl-arrow { font-weight: 700; color: var(--ember); }
+    .tl-line { position: relative; display: block; height: 22px; }
+    .tl-line::before { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 2px; background: linear-gradient(90deg, rgba(255,122,69,.15), var(--ember)); border-radius: 2px; }
+    .tl-line i { position: absolute; top: 6.5px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: #fff; opacity: .75; box-shadow: 0 0 6px rgba(255,255,255,.6); }
+    .tl-line i.last { top: 3px; width: 16px; height: 16px; margin-left: -8px; opacity: 1; background: radial-gradient(circle, #fff 0%, var(--ember) 55%, transparent 75%); box-shadow: 0 0 14px var(--ember); }
+    .tl-strip-s { font-size: 13.5px; color: var(--mist); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .intro-bottom { position: relative; z-index: 10; max-width: 1200px; margin: 10px auto 0; padding: 0 20px; }
     .intro-text {
       border-left: 3px solid var(--ember);
       color: var(--mist); font-size: 15.5px; line-height: 1.7; text-align: left; font-weight: 300;
@@ -634,8 +653,12 @@
       <h3>Poslední aktuality</h3>
       <div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>
     </div>
-    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div><div class="site-status" id="siteStatus" hidden></div><a class="pinned-card" id="pinnedCard" href="#" hidden></a> <a class="site-status" id="writeMe" href="/napis-mi" hidden>✉️ Napiš mi</a></div>
   </div>
+  <a class="tl-strip" href="/timeline/" aria-label="Hvězdná mapa milníků">
+    <span class="tl-head"><span class="tl-strip-t">✦ Hvězdná mapa</span><span class="tl-arrow">→</span></span>
+    <span class="tl-line" id="tlLine" aria-hidden="true"></span>
+    <span class="tl-strip-s" id="tlLatest">milníky mého příběhu</span>
+  </a>
   <div class="qotd" id="quoteOfDay" hidden></div>
   <div class="search-panel">
     <input type="text" id="siteSearchInput" aria-label="Hledat v článcích" placeholder="🔍 Hledat v článcích…" autocomplete="off">
@@ -647,13 +670,16 @@
     <div class="search-results" id="searchResults"></div>
     <div style="text-align:center;margin-top:12px" id="savedLinkWrap"></div>
     <div class="fun-actions-row">
-      <a class="fun-action-btn" href="/timeline/">✦ Hvězdná mapa</a>
       <a class="fun-action-btn" href="/citaty">✦ Citáty</a>
       <button type="button" class="fun-action-btn" id="statsModalTrigger">🌌 Moje čísla</button>
       <button type="button" class="fun-action-btn" id="surpriseMeBtn">🎲 Překvap mě</button>
     </div>
   </div>
   <div class="sections-container" id="sectionsContainer" tabindex="-1"></div>
+
+  <div class="intro-bottom">
+    <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div><div class="site-status" id="siteStatus" hidden></div><a class="pinned-card" id="pinnedCard" href="#" hidden></a> <a class="site-status" id="writeMe" href="/napis-mi" hidden>✉️ Napiš mi</a></div>
+  </div>
 
   <footer class="site-footer">
     <a href="/citaty" id="quoteTvLink">✦ Citáty</a> · <a href="/rss.xml">📡 RSS feed</a> · © <span id="footerYear"></span> Zajda
@@ -967,6 +993,29 @@
         }
       } catch (e) { /* karta je jen bonus — chyba nesmí rozbít aktuality */ }
       box.innerHTML = html;
+    }
+
+    async function loadTimelineCard() {
+      var el = document.getElementById('tlLatest');
+      if (!el) return;
+      try {
+        var r = await fetch('/api/timeline/list');
+        if (!r.ok) return;
+        var d = await r.json();
+        if (!Array.isArray(d) || !d.length) return;
+        var m = d[d.length - 1];
+        var dt = ''; try { dt = new Date(m.date).toLocaleDateString('cs', { day: 'numeric', month: 'long', year: 'numeric' }) + ' · '; } catch (e) {}
+        el.textContent = d.length + ' milníků · naposled ' + dt + (m.title || '');
+        var line = document.getElementById('tlLine');
+        if (line) {
+          var ts = d.map(function (x) { return new Date(x.date).getTime() || 0; });
+          var mn = Math.min.apply(null, ts), mx = Math.max.apply(null, ts), span = (mx - mn) || 1;
+          line.innerHTML = d.map(function (x, i) {
+            var pos = d.length === 1 ? 100 : 3 + ((ts[i] - mn) / span) * 94;
+            return '<i' + (i === d.length - 1 ? ' class="last"' : '') + ' style="left:' + pos.toFixed(1) + '%"></i>';
+          }).join('');
+        }
+      } catch (e) { }
     }
 
     async function loadLatestTimelineNote() {
@@ -1758,6 +1807,7 @@
     loadMainSections().then(function() {
       loadLatest();
       loadLatestTimelineNote();
+      loadTimelineCard();
       buildSections();
     });
     initSiteSearch();
