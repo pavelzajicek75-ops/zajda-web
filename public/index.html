@@ -115,6 +115,7 @@
       box-shadow: 0 20px 50px rgba(0,0,0,0.45);
       height: 100%;
     }
+    .latest-panel { min-height: 232px; }
     .latest-panel h3 {
       font-family: 'Space Grotesk', sans-serif; font-weight: 600;
       color: var(--parchment); font-size: 17px; margin-bottom: 0.9rem;
@@ -379,6 +380,7 @@
       text-decoration: none; color: var(--parchment); border: 1px solid var(--panel-border);
       background: radial-gradient(120% 120% at 20% 0%, rgba(143,107,255,.35), rgba(12,8,28,.9)); box-shadow: 0 14px 44px rgba(0,0,0,.45); transition: transform .3s, box-shadow .3s, border-color .3s; }
     .story-hero[hidden] { display: none; }
+    .story-hero.skel { pointer-events: none; background: var(--panel); border: 1px solid var(--panel-border); }
     .story-hero:hover, .story-hero:focus-visible { transform: translateY(-3px); border-color: var(--ember); box-shadow: 0 18px 54px rgba(255,122,69,.22); }
     .story-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.05) brightness(.8); transition: transform .8s, filter .4s; }
     .story-hero:hover img { transform: scale(1.04); filter: saturate(1.15) brightness(.9); }
@@ -670,7 +672,7 @@
       <span class="ms-dot"></span><span class="ms-l">MET</span><b id="msT">T+0D</b><span class="ms-sep"></span><span class="ms-l">Distance</span><b id="msKm">0 km</b>
     </a>
   </div>
-  <a class="story-hero" id="storyHero" href="#" hidden></a>
+  <a class="story-hero skel" id="storyHero" href="#" aria-hidden="true" tabindex="-1"></a>
   <div class="top-grid">
     <div class="latest-panel" id="latestPanel">
       <h3>Poslední aktuality</h3>
@@ -987,7 +989,7 @@
       sh.addEventListener('click', doShare);
       sh.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') doShare(e); });
       el.appendChild(sh);
-      el.hidden = false;
+      el.hidden = false; el.classList.remove('skel'); el.removeAttribute('aria-hidden'); el.removeAttribute('tabindex');
     }
 
     async function loadLatest() {
@@ -995,7 +997,8 @@
       if (!box) return;
       var articles = await getAllArticles();
       var sorted = sortArticles(articles, 'newest');
-      try { renderStoryHero(sorted[0]); } catch (e) {}
+      var heroEl = document.getElementById('storyHero');
+      if (!sorted.length) { if (heroEl) heroEl.hidden = true; } else { try { renderStoryHero(sorted[0]); } catch (e) { if (heroEl) heroEl.hidden = true; } }
       var latest = sorted.slice(1, 4); // 0 je ve velké kartě nahoře — neopakovat
       if (!latest.length) {
         box.innerHTML = '<h3>Poslední aktuality</h3><div class="latest-empty">Zatím žádné články</div>';
