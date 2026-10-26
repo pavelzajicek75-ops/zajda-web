@@ -38,6 +38,7 @@
       { g: 'Provoz a bezpečnost', k: 'traffic', i: '👣', n: 'Návštěvnost', a: BOX, t: 'overview', b: 'trafficBox' },
       { g: 'Provoz a bezpečnost', k: 'weekly', i: '🗓️', n: 'Týdenní souhrn', a: BOX, t: 'overview', b: 'weeklyBox' },
       { g: 'Provoz a bezpečnost', k: 'kv', i: '☁️', n: 'Spotřeba KV', a: BOX, t: 'overview', b: 'kvMetricsBox' },
+      { g: 'Provoz a bezpečnost', k: 'fullbackup', i: '🧳', n: 'Záloha všeho na disk', a: BOX, t: 'tools', b: 'fullBackupBox' },
       { g: 'Provoz a bezpečnost', k: 'backup', i: '💾', n: 'Zálohy', a: BOX, t: 'tools', b: 'autoBackupBox' },
       { g: 'Provoz a bezpečnost', k: 'restore', i: '♻️', n: 'Obnova', a: BOX, t: 'tools', b: 'restoreBox' },
       { g: 'Provoz a bezpečnost', k: 'users', i: '👥', n: 'Přístupy a uživatelé', a: BOX, t: 'admin', b: '_rest', load: true },

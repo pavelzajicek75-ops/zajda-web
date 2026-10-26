@@ -6,7 +6,7 @@
   var LAYOUT = {
     adminBoxes: ['siteBox', 'commentsBox', 'messagesBox', 'ideasBox', 'featuredBox', 'pushBox', 'shareBox'],
     overviewBoxes: ['kvMetricsBox', 'trafficBox', 'weeklyBox', 'moodBox'],
-    toolsBoxes: ['selftestBox', 'autoBackupBox', 'restoreBox', 'linkcheckBox', 'thumbsBox', 'weightBox', 'geoFillBox', 'errorsBox', 'checklistBox', 'guideBox']
+    toolsBoxes: ['selftestBox', 'autoBackupBox', 'fullBackupBox', 'restoreBox', 'linkcheckBox', 'thumbsBox', 'weightBox', 'geoFillBox', 'errorsBox', 'checklistBox', 'guideBox']
   };
 
   function place(box, targetId) {
