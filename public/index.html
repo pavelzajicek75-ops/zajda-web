@@ -714,6 +714,7 @@
       <a class="fun-action-btn" href="/rss.xml">📡 RSS</a>
       <a class="fun-action-btn" href="/sleduj">Další možnosti</a>
     </div>
+    <p class="follow-msg" id="installTip" hidden></p>
     <p class="follow-msg" id="pushMsg" role="status"></p>
   </div>
 
@@ -768,7 +769,7 @@
 
   <script src="/shared.js?v=20261040"></script>
   <script src="/photo-speed.js?v=1"></script>
-  <script src="/push-subscribe.js?v=1"></script>
+  <script src="/push-subscribe.js?v=2"></script>
   <script>
   /* „Nové od poslední návštěvy“ — jen v prohlížeči čtenáře (localStorage), žádné zápisy na server. */
   (function () {
@@ -1850,10 +1851,11 @@
         if (window.PushSub) window.PushSub.mount(document.getElementById('pushBtn'), document.getElementById('pushMsg'));
         var ib = document.getElementById('installBtn'), im = document.getElementById('pushMsg'), defI = null;
         var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
-        var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        var ios = window.PushSub ? window.PushSub.isIOS() : /iPhone|iPad|iPod/i.test(navigator.userAgent);
         if (!standalone) {
           ib.hidden = false;
           window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); defI = e; });
+          if (ios) { var tip = document.getElementById('installTip'); if (tip) { tip.hidden = false; tip.innerHTML = '<b>Na iPhonu a iPadu:</b> klepni dole (nebo nahoře) na <b>Sdílet</b> ⬆︎ → <b>Přidat na plochu</b>. Pak web otevři z plochy a půjde zapnout i upozornění 🔔.'; } }
           ib.onclick = function () {
             if (defI) { defI.prompt(); defI.userChoice.finally(function () { defI = null; ib.hidden = true; }); }
             else im.textContent = ios ? 'V Safari klepni na Sdílet (čtvereček se šipkou) a vyber „Přidat na plochu“.' : 'V menu prohlížeče (⋮) vyber „Přidat na plochu“ nebo „Nainstalovat aplikaci“.';

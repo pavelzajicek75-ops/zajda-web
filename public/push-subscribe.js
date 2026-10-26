@@ -2,6 +2,7 @@
    na iPhonu jen když je blog přidaný na plochu). Nic se neposílá, dokud čtenář nepovolí. */
 (function () {
   'use strict';
+  function isIOS() { return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1); }
   function supported() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
   function u8(b64) {
     var s = (b64 + '===='.slice(0, (4 - b64.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/');
@@ -28,7 +29,7 @@
 
   async function mount(btn, msg) {
     if (!btn) return;
-    if (!supported()) { btn.hidden = true; if (msg) msg.textContent = /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Na iPhonu nejdřív přidej blog na plochu (viz níže) a otevři ho odtamtud.' : 'Tenhle prohlížeč upozornění nepodporuje.'; return; }
+    if (!supported()) { btn.hidden = true; if (msg) msg.textContent = isIOS() ? 'Na iPhonu a iPadu nejdřív přidej blog na plochu (Sdílet → Přidat na plochu) a otevři ho odtamtud, pak půjdou upozornění zapnout.' : 'Tenhle prohlížeč upozornění nepodporuje.'; return; }
     async function paint() {
       var sub = await current(), denied = Notification.permission === 'denied';
       btn.hidden = false; btn.disabled = false;
@@ -44,5 +45,5 @@
     };
     paint();
   }
-  window.PushSub = { mount: mount, supported: supported };
+  window.PushSub = { mount: mount, supported: supported, isIOS: isIOS };
 })();
