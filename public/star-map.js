@@ -296,6 +296,7 @@ function select(i,keep){root.classList.add('sel');
   var sh=$('#cSh');sh.innerHTML='';
   var surl=location.origin+'/timeline/?m='+encodeURIComponent(m.id)+'#milestone-'+encodeURIComponent(m.id),stxt=m.title+' — Moje diagnóza, můj vesmír';
   function mkb(label,fn){var b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=function(){fn(b)};sh.appendChild(b);return b}
+  mkb('⤢ Celé',function(){openFull(i)});
   if(navigator.share)mkb('📤 Sdílet',function(b){if(window.shareMilestone)window.shareMilestone(stxt,surl,b)});
   else{var wa=document.createElement('a');wa.href='https://wa.me/?text='+encodeURIComponent(stxt+' '+surl);wa.target='_blank';wa.rel='noopener';wa.textContent='WhatsApp';sh.appendChild(wa)}
   mkb('🔗 Odkaz',function(b){if(window.copyMilestoneLink)window.copyMilestoneLink(b,surl)});
@@ -307,6 +308,46 @@ function select(i,keep){root.classList.add('sel');
   if(!keep)typeInto(m.text);fitCard();
   var tl=document.querySelectorAll('#tl button');for(var k=0;k<tl.length;k++)tl[k].classList.toggle('sel',k===i);
   hideHint();
+}
+
+/* ── Milník na celou obrazovku: fotky se přejíždějí prstem, text se dá číst bez omezení výškou karty ── */
+var fullEl=null;
+function closeFull(){if(fullEl){fullEl.remove();fullEl=null;document.documentElement.style.overflow=''}}
+function openFull(i){
+  closeFull();
+  var m=M[i];if(!m)return;
+  var ov=document.createElement('div');fullEl=ov;
+  ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');
+  ov.style.cssText='position:fixed;inset:0;z-index:200;background:#05030f;color:#cfeee9;display:flex;flex-direction:column;font-family:Space Grotesk,system-ui,sans-serif';
+  var ph=(m.photos||[]).slice(0,6);
+  var h='<div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top))">'+
+    '<span style="font:600 12px var(--mono,inherit);letter-spacing:.14em;text-transform:uppercase;color:#7f9a98">'+(i+1)+' / '+N+'</span>'+
+    '<button type="button" data-x aria-label="Zavřít" style="all:unset;cursor:pointer;font-size:22px;min-width:44px;min-height:44px;text-align:center;line-height:44px">✕</button></div>';
+  h+='<div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch">';
+  if(ph.length){
+    h+='<div data-pg style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:min(62vh,640px)">'+
+      ph.map(function(u){return '<div style="flex:none;width:100%;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:0 8px;box-sizing:border-box"><img src="'+u.replace(/"/g,'&quot;')+'" alt="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:6px"></div>'}).join('')+'</div>';
+    if(ph.length>1)h+='<div data-dots style="display:flex;gap:6px;justify-content:center;padding:10px 0">'+ph.map(function(_,k){return '<i style="width:7px;height:7px;border-radius:50%;background:'+(k?'#35504f':'#5ff0dc')+'"></i>'}).join('')+'</div>';
+  }
+  var title=document.createElement('div');title.textContent=m.title||'';
+  var txt=document.createElement('div');txt.textContent=m.text||'';
+  h+='<div style="max-width:720px;margin:0 auto;padding:12px 20px 24px"><div style="font:600 12px var(--mono,inherit);letter-spacing:.16em;color:#7f9a98;margin-bottom:6px">'+(m.d||'').replace(/</g,'&lt;')+'</div>'+
+    '<h2 style="margin:0 0 12px;font-size:26px;line-height:1.2;color:#fff">'+title.innerHTML+'</h2>'+
+    '<div style="font-size:17px;line-height:1.7;color:#b9d0ce;white-space:pre-wrap">'+txt.innerHTML+'</div>'+
+    (m.link?'<a href="/article?id='+encodeURIComponent(m.link)+'" style="display:inline-block;margin-top:16px;color:#f2b8ff;font-size:16px;text-decoration:none">O týhle cestě víc píšu tady →</a>':'')+'</div></div>';
+  h+='<div style="flex:none;display:flex;gap:10px;padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom));border-top:1px solid #1f3234">'+
+    '<button type="button" data-p '+(i===0?'disabled':'')+' style="flex:1;min-height:46px;border:1px solid #2b3a3a;background:none;color:#cfeee9;border-radius:6px;font:600 14px inherit;opacity:'+(i===0?.35:1)+'">← Dříve</button>'+
+    '<button type="button" data-n '+(i===N-1?'disabled':'')+' style="flex:1;min-height:46px;border:1px solid #2b3a3a;background:none;color:#cfeee9;border-radius:6px;font:600 14px inherit;opacity:'+(i===N-1?.35:1)+'">Později →</button></div>';
+  ov.innerHTML=h;
+  document.body.appendChild(ov);document.documentElement.style.overflow='hidden';
+  ov.querySelector('[data-x]').onclick=closeFull;
+  var pb=ov.querySelector('[data-p]'),nb=ov.querySelector('[data-n]');
+  pb.onclick=function(){if(i>0){select(i-1);openFull(i-1)}};
+  nb.onclick=function(){if(i<N-1){select(i+1);openFull(i+1)}};
+  var pg=ov.querySelector('[data-pg]'),dots=ov.querySelectorAll('[data-dots] i');
+  if(pg&&dots.length)pg.addEventListener('scroll',function(){var k=Math.round(pg.scrollLeft/pg.clientWidth);for(var d=0;d<dots.length;d++)dots[d].style.background=d===k?'#5ff0dc':'#35504f'},{passive:true});
+  ov.addEventListener('keydown',function(e){if(e.key==='Escape')closeFull()});
+  ov.tabIndex=-1;ov.focus();
 }
 function home(){root.classList.remove('sel');
   sel=-1;card.classList.remove('on');clearInterval(tm);

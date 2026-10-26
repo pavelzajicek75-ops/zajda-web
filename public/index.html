@@ -152,6 +152,10 @@
     .tl-line i { position: absolute; top: 6.5px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: #fff; opacity: .75; box-shadow: 0 0 6px rgba(255,255,255,.6); }
     .tl-line i.last { top: 3px; width: 16px; height: 16px; margin-left: -8px; opacity: 1; background: radial-gradient(circle, #fff 0%, var(--ember) 55%, transparent 75%); box-shadow: 0 0 14px var(--ember); }
     .tl-strip-s { font-size: 13.5px; color: var(--mist); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .follow-box { position: relative; z-index: 10; max-width: 1200px; margin: 28px auto 0; padding: 0 20px; text-align: center; }
+    .follow-t { font: 600 12.5px 'Space Grotesk', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--mist-dim); margin-bottom: 10px; }
+    .follow-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .follow-msg { margin-top: 8px; font-size: 13px; color: var(--mist); min-height: 1em; }
     .intro-bottom { position: relative; z-index: 10; max-width: 1200px; margin: 10px auto 0; padding: 0 20px; }
     .intro-text {
       border-left: 3px solid var(--ember);
@@ -630,6 +634,25 @@
       .section-modal-box { max-height: 88vh; }
     }
   </style>
+<script>
+/* Stejná data (články, milníky, sekce, info) si úvodní stránka dřív stahovala víckrát — teď jen jednou. */
+(function () {
+  var f = window.fetch, memo = {}, ok = /^\/api\/(articles\/list|timeline\/list|sections\/list|site\/info)$/;
+  if (!f || !window.Promise) return;
+  window.fetch = function (u, o) {
+    try {
+      var url = typeof u === 'string' ? u : (u && u.url) || '', m = !o || !o.method || o.method === 'GET';
+      var path = new URL(url, location.origin).pathname;
+      if (m && ok.test(path) && !(o && o.cache)) {
+        var hit = memo[path];
+        if (!hit || Date.now() - hit.t > 60000) { hit = memo[path] = { t: Date.now(), p: f.call(window, u, o) }; hit.p.catch(function () { delete memo[path]; }); }
+        return hit.p.then(function (r) { return r.clone(); });
+      }
+    } catch (e) {}
+    return f.call(window, u, o);
+  };
+})();
+</script>
 <script src="/theme.js?v=2"></script>
   <script src="/motion.js?v=1" defer></script>
   <script src="/error-report.js?v=3"></script>
@@ -676,6 +699,16 @@
     </div>
   </div>
   <div class="sections-container" id="sectionsContainer" tabindex="-1"></div>
+
+  <div class="follow-box" id="followBox">
+    <div class="follow-t">📲 Mít to po ruce</div>
+    <div class="follow-btns">
+      <button type="button" class="fun-action-btn" id="pushBtn" hidden>🔔 <span>Upozornit mě na nové články</span></button>
+      <button type="button" class="fun-action-btn" id="installBtn" hidden>📲 <span>Přidat na plochu</span></button>
+      <a class="fun-action-btn" href="/sleduj">📡 Další možnosti</a>
+    </div>
+    <p class="follow-msg" id="pushMsg" role="status"></p>
+  </div>
 
   <div class="intro-bottom">
     <div class="intro-text"><span class="intro-highlight">Jsem Zajda.</span> Trochu cvok a občasný zapisovatel vlastního života. Tohle je místo, kam si odkládám vzpomínky z cest, příběhy z míst, kde byl občas pořádný rachot...<div class="intro-timeline-note" id="introTimelineNote"></div><div class="site-status" id="siteStatus" hidden></div><a class="pinned-card" id="pinnedCard" href="#" hidden></a> <a class="site-status" id="writeMe" href="/napis-mi" hidden>✉️ Napiš mi</a></div>
@@ -732,6 +765,7 @@
 
   <script src="/shared.js?v=20261040"></script>
   <script src="/photo-speed.js?v=1"></script>
+  <script src="/push-subscribe.js?v=1"></script>
   <script>
   /* „Nové od poslední návštěvy“ — jen v prohlížeči čtenáře (localStorage), žádné zápisy na server. */
   (function () {
@@ -1808,6 +1842,20 @@
       loadLatest();
       loadLatestTimelineNote();
       loadTimelineCard();
+      try {
+        if (window.PushSub) window.PushSub.mount(document.getElementById('pushBtn'), document.getElementById('pushMsg'));
+        var ib = document.getElementById('installBtn'), im = document.getElementById('pushMsg'), defI = null;
+        var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+        var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (!standalone) {
+          ib.hidden = false;
+          window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); defI = e; });
+          ib.onclick = function () {
+            if (defI) { defI.prompt(); defI.userChoice.finally(function () { defI = null; ib.hidden = true; }); }
+            else im.textContent = ios ? 'V Safari klepni na Sdílet (čtvereček se šipkou) a vyber „Přidat na plochu“.' : 'V menu prohlížeče (⋮) vyber „Přidat na plochu“ nebo „Nainstalovat aplikaci“.';
+          };
+        }
+      } catch (e) {}
       buildSections();
     });
     initSiteSearch();
