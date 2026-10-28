@@ -152,7 +152,12 @@
     .tl-line::before { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 2px; background: linear-gradient(90deg, rgba(255,122,69,.15), var(--ember)); border-radius: 2px; }
     .tl-line i { position: absolute; top: 6.5px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: #fff; opacity: .75; box-shadow: 0 0 6px rgba(255,255,255,.6); }
     .tl-line i.last { top: 3px; width: 16px; height: 16px; margin-left: -8px; opacity: 1; background: radial-gradient(circle, #fff 0%, var(--ember) 55%, transparent 75%); box-shadow: 0 0 14px var(--ember); }
-    .tl-strip-s { font-size: 13.5px; color: var(--mist); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tl-strip-s { font-size: 13.5px; line-height: 1.45; color: var(--mist); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .tl-live { display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 10px var(--ember); vertical-align: 1px; }
+    .tl-body { display: flex; gap: 12px; align-items: center; min-height: 72px; }
+    .tl-img { width: 72px; height: 72px; flex: none; object-fit: cover; border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,.45); }
+    .tl-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .tl-txt b { font: 700 16.5px/1.3 'Space Grotesk', sans-serif; color: var(--parchment); }
     .follow-box { position: relative; z-index: 10; max-width: 1200px; margin: 28px auto 0; padding: 0 20px; text-align: center; }
     .follow-t { font: 600 12.5px 'Space Grotesk', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--mist-dim); margin-bottom: 10px; }
     .follow-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
@@ -679,10 +684,10 @@
       <div class="loading-skeleton"><div class="sk-line w80"></div><div class="sk-line"></div><div class="sk-line w60"></div></div>
     </div>
   </div>
-  <a class="tl-strip" href="/timeline/" aria-label="Hvězdná mapa milníků">
-    <span class="tl-head"><span class="tl-strip-t">✦ Hvězdná mapa</span><span class="tl-arrow">→</span></span>
+  <a class="tl-strip" id="tlStrip" href="/timeline/" aria-label="Nejnovější milník na hvězdné mapě">
+    <span class="tl-head"><span class="tl-strip-t"><span class="tl-live"></span>Nově na hvězdné mapě</span><span class="tl-arrow">Mapa →</span></span>
+    <span class="tl-body"><img class="tl-img" id="tlImg" alt="" hidden><span class="tl-txt"><b id="tlTitle">Milníky mého příběhu</b><span class="tl-strip-s" id="tlLatest"></span></span></span>
     <span class="tl-line" id="tlLine" aria-hidden="true"></span>
-    <span class="tl-strip-s" id="tlLatest">milníky mého příběhu</span>
   </a>
   <div class="qotd" id="quoteOfDay" hidden></div>
   <div class="search-panel">
@@ -1043,8 +1048,14 @@
         var d = await r.json();
         if (!Array.isArray(d) || !d.length) return;
         var m = d[d.length - 1];
-        var dt = ''; try { dt = new Date(m.date).toLocaleDateString('cs', { day: 'numeric', month: 'long', year: 'numeric' }) + ' · '; } catch (e) {}
-        el.textContent = d.length + ' milníků · naposled ' + dt + (m.title || '');
+        var days = Math.floor((Date.now() - new Date(m.date).getTime()) / 86400000), when = '';
+        if (days >= 0) when = days === 0 ? 'dnes' : days === 1 ? 'včera' : days < 5 ? 'před ' + days + ' dny' : days < 31 ? 'před ' + days + ' dny' : new Date(m.date).toLocaleDateString('cs', { month: 'long', year: 'numeric' });
+        document.getElementById('tlTitle').textContent = m.title || 'Nový milník';
+        var txt = String(m.text || '').replace(/\s+/g, ' ').trim();
+        el.textContent = (when ? when + (txt ? ' · ' : '') : '') + txt;
+        document.getElementById('tlStrip').href = '/timeline/?m=' + encodeURIComponent(m.id);
+        var ph = (m.photos && m.photos[0]) || m.photoUrl;
+        if (ph) { var im = document.getElementById('tlImg'); im.src = (typeof deriveThumbUrl === 'function' ? deriveThumbUrl(ph) : ph); im.onerror = function () { im.onerror = null; im.src = ph; }; im.hidden = false; }
         var line = document.getElementById('tlLine');
         if (line) {
           var ts = d.map(function (x) { return new Date(x.date).getTime() || 0; });
