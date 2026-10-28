@@ -132,7 +132,7 @@
 
       track.querySelectorAll('img').forEach(function (img) {
         img.addEventListener('click', function () {
-          if (typeof window.openLightbox === 'function') window.openLightbox(this.src);
+          if (typeof window.openLightbox === 'function') window.openLightbox(this.src, this);
         });
       });
 

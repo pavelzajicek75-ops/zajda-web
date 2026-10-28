@@ -183,10 +183,21 @@
   </div>
 
   <script src="/shared.js?v=20261040"></script>
-  <script src="/timeline-core.js?v=20261025"></script>
-  <script src="/star-map.js?v=7"></script>
+  <script src="/timeline-core.js?v=20261026"></script>
+  <script src="/photo-viewer.js?v=1"></script>
+  <script src="/star-map.js?v=8"></script>
   <script>
-    function openLightbox(src) {
+    function openLightbox(src, el) {
+      if (window.PhotoViewer) {
+        var list = [src], i = 0;
+        var card = el && el.closest && el.closest('.timeline-card');
+        if (card) {
+          list = Array.prototype.map.call(card.querySelectorAll('img'), function (im) { return im.currentSrc || im.src; });
+          i = Array.prototype.indexOf.call(card.querySelectorAll('img'), el);
+        }
+        window.PhotoViewer.open(list, Math.max(0, i));
+        return;
+      }
       var overlay = document.getElementById('lightboxOverlay');
       if (!overlay) return;
       overlay.innerHTML = '<img src="' + src + '" alt="">';
