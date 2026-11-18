@@ -56,6 +56,16 @@
     .vy-tip { background: rgba(8,8,15,.92); border: 1px solid rgba(255,122,69,.5); color: var(--parchment); border-radius: 8px; font: 600 12.5px 'Space Grotesk', sans-serif; padding: 5px 9px; box-shadow: none; }
     .vy-tip::before { display: none; }
     .tl-item.flash .tl-card { border-color: var(--ember); box-shadow: 0 0 0 2px rgba(255,122,69,.5), 0 14px 36px rgba(0,0,0,.4); }
+    .vy-legend { display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px 4px; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+    .vy-chip { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px 6px 8px; border-radius: 22px; border: 1px solid var(--panel-border); background: var(--panel-solid); color: var(--parchment); font: 600 13px 'Space Grotesk', sans-serif; cursor: pointer; }
+    .vy-chip i { font-style: normal; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--c, var(--ember)); color: var(--c, var(--ember)); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+    .vy-chip.on { border-color: var(--c, var(--ember)); box-shadow: 0 0 0 1px var(--c, var(--ember)); }
+    .vy-chip.vy-all { padding: 6px 14px; color: var(--mist); }
+    .vy-flag { font: 800 11px 'Space Grotesk', sans-serif; letter-spacing: .08em; padding: 3px 8px; border-radius: 6px; text-align: center; color: #0b0b1a; }
+    .vy-start { background: #9be15d; } .vy-goal { background: #ff7a9c; }
+    .vy-arr { font-size: 15px; line-height: 16px; text-align: center; text-shadow: 0 0 4px #000; }
+    .vy-link { margin: 0 0 10px; padding: 7px 12px; border-left: 3px solid var(--c, var(--ember)); background: rgba(255,255,255,.04); border-radius: 0 10px 10px 0; font: 600 13px 'Space Grotesk', sans-serif; color: var(--mist); }
+    .vy-link-no { --c: #888; color: #a89fbf; font-weight: 500; }
     .vy-mapnote { text-align: center; color: var(--mist); font-size: 12.5px; margin-top: 8px; }
     .empty { text-align: center; color: var(--mist); padding: 40px 0; }
     @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } .tl-card img { height: 170px; } }
@@ -79,6 +89,7 @@
   </div>
   <section class="vy-map-wrap" id="vyMapWrap" hidden aria-label="Mapa výletu se zastávkami">
     <div id="vyMap"></div>
+    <div class="vy-legend" id="vyLegend"></div>
     <p class="vy-mapnote" id="vyMapNote"></p>
   </section>
   <main class="wrap" id="vyMain" tabindex="-1"><div class="tl" id="tl"><div class="empty">Načítám…</div></div></main>
@@ -96,52 +107,112 @@
 
     function validPt(s) { return s && typeof s.lat === 'number' && isFinite(s.lat) && typeof s.lng === 'number' && isFinite(s.lng); }
     function km(a, b) { var R = 6371, r = Math.PI / 180, dl = (b[0] - a[0]) * r, dn = (b[1] - a[1]) * r, h = Math.sin(dl / 2) * Math.sin(dl / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dn / 2) * Math.sin(dn / 2); return 2 * R * Math.asin(Math.sqrt(h)); }
+    var PAL = ['#ff7a45', '#2fe6c9', '#8f6bff', '#ffd36b', '#ff7a9c', '#7fd6ff', '#9be15d'];
+    function col(i) { return PAL[i % PAL.length]; }
+    function bearing(a, b) { var r = Math.PI / 180, y = Math.sin((b[1] - a[1]) * r) * Math.cos(b[0] * r), x = Math.cos(a[0] * r) * Math.sin(b[0] * r) - Math.sin(a[0] * r) * Math.cos(b[0] * r) * Math.cos((b[1] - a[1]) * r); return Math.atan2(y, x) / r; }
+    function legsOf(list) {
+      return list.map(function (a) {
+        var st = (Array.isArray(a.stops) && a.stops.length >= 2) ? a.stops : [{ lat: a.lat, lng: a.lng, place: a.place }];
+        return st.filter(validPt).map(function (p) { return { ll: [p.lat, p.lng], place: p.place || '' }; });
+      });
+    }
+    /* Spojnice mezi díly do seznamu: „🛣️ 120 km dál → České Budějovice“ — ať je vidět, jak na sebe díly navazují. */
+    function addLinks(list, legs) {
+      var prevI = -1;
+      legs.forEach(function (g, i) {
+        var el = document.getElementById('vy-' + i); if (!el) return;
+        if (!g.length) { var nm = document.createElement('div'); nm.className = 'vy-link vy-link-no'; nm.textContent = 'Tenhle díl nemá zadanou zastávku, na mapě chybí.'; el.insertBefore(nm, el.firstChild); return; }
+        if (prevI >= 0) {
+          var from = legs[prevI][legs[prevI].length - 1], to = g[0], d = km(from.ll, to.ll);
+          var l = document.createElement('div'); l.className = 'vy-link'; l.style.setProperty('--c', col(i));
+          l.textContent = d < 0.5 ? '📍 Navazuje přímo: ' + (to.place || list[i].title) : '🛣️ ' + (from.place || 'předchozí zastávka') + ' → ' + (to.place || list[i].title) + ' · ' + Math.round(d) + ' km';
+          el.insertBefore(l, el.firstChild);
+        }
+        prevI = i;
+      });
+    }
     function drawMap(list) {
       if (typeof L === 'undefined') return;
-      var legs = list.map(function (a) {
-        var st = (Array.isArray(a.stops) && a.stops.length >= 2) ? a.stops : [{ lat: a.lat, lng: a.lng, place: a.place }];
-        return st.filter(validPt);
-      });
-      var all = []; legs.forEach(function (g) { g.forEach(function (p) { all.push([p.lat, p.lng]); }); });
+      var legs = legsOf(list);
+      var all = []; legs.forEach(function (g) { g.forEach(function (p) { all.push(p.ll); }); });
+      addLinks(list, legs);
+      legs.forEach(function (g, i) { var d = document.querySelector('#vy-' + i + ' .tl-dot'); if (d) { d.style.borderColor = col(i); d.style.color = col(i); d.style.boxShadow = '0 0 12px ' + col(i) + '88'; } });
       if (!all.length) return;
       var wrap = document.getElementById('vyMapWrap'); wrap.hidden = false;
       var map = L.map('vyMap', { scrollWheelZoom: false, zoomControl: true, tap: true });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19, subdomains: 'abc' }).addTo(map);
-      var pins = [], prev = null, total = 0, lastIdx = -1;
-      legs.forEach(function (g, i) { if (g.length) lastIdx = i; });
+      var lines = [], segs = [], prev = null, total = 0, firstIdx = -1, lastIdx = -1, kmLeg = [];
+      legs.forEach(function (g, i) { if (g.length) { if (firstIdx < 0) firstIdx = i; lastIdx = i; } });
       function go(i) {
         var el = document.getElementById('vy-' + i); if (!el) return;
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         el.classList.add('flash'); setTimeout(function () { el.classList.remove('flash'); }, 2200);
+        focus(i);
+      }
+      function focus(i) {
+        var pts = []; if (legs[i]) legs[i].forEach(function (p) { pts.push(p.ll); });
+        if (i > 0 && legs[i].length) { for (var q = i - 1; q >= 0; q--) if (legs[q].length) { pts.push(legs[q][legs[q].length - 1].ll); break; } }
+        if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 12 }); else if (pts.length) map.setView(pts[0], 11);
+        document.querySelectorAll('#vyLegend .vy-chip').forEach(function (c) { c.classList.toggle('on', +c.getAttribute('data-i') === i); });
       }
       legs.forEach(function (g, i) {
         if (!g.length) return;
-        var pts = g.map(function (p) { return [p.lat, p.lng]; });
+        var c = col(i), pts = g.map(function (p) { return p.ll; }), dist = 0;
         if (prev && km(prev, pts[0]) > 0.05) {
-          L.polyline([prev, pts[0]], { color: '#ff7a45', weight: 3, opacity: .55, dashArray: '6 8' }).addTo(map);
-          total += km(prev, pts[0]);
+          L.polyline([prev, pts[0]], { color: c, weight: 3, opacity: .7, dashArray: '6 8' }).addTo(map);
+          segs.push([prev, pts[0], c]); dist += km(prev, pts[0]);
         }
         if (pts.length > 1) {
-          L.polyline(pts, { color: '#ff7a45', weight: 4, opacity: .95 }).addTo(map);
-          for (var k = 1; k < pts.length; k++) total += km(pts[k - 1], pts[k]);
+          L.polyline(pts, { color: c, weight: 4.5, opacity: .95 }).addTo(map);
+          for (var k = 1; k < pts.length; k++) { dist += km(pts[k - 1], pts[k]); segs.push([pts[k - 1], pts[k], c]); }
         }
+        total += dist; kmLeg[i] = dist;
         g.forEach(function (p, k) {
-          if (k > 0) {
-            L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: '<div class="vy-sub"></div>', iconSize: [9, 9], iconAnchor: [5, 5] }), keyboard: false })
-              .bindTooltip(p.place || (list[i].title || ''), { className: 'vy-tip', direction: 'top', offset: [0, -6] }).addTo(map).on('click', function () { go(i); });
-          }
+          if (k > 0) L.marker(p.ll, { icon: L.divIcon({ className: '', html: '<div class="vy-sub" style="background:' + c + '"></div>', iconSize: [9, 9], iconAnchor: [5, 5] }), keyboard: false })
+            .bindTooltip(p.place || (list[i].title || ''), { className: 'vy-tip', direction: 'top', offset: [0, -6] }).addTo(map).on('click', function () { go(i); });
         });
-        var first = g[0];
-        var m = L.marker([first.lat, first.lng], { icon: L.divIcon({ className: '', html: '<div class="vy-pin' + (i === lastIdx && lastIdx > 0 ? ' end' : '') + '">' + (i + 1) + '</div>', iconSize: [28, 28], iconAnchor: [14, 14] }), title: list[i].title || '' })
-          .bindTooltip((i + 1) + ' · ' + (list[i].title || 'Bez názvu') + (first.place ? ' — ' + first.place : ''), { className: 'vy-tip', direction: 'top', offset: [0, -14] }).addTo(map);
+        var isEnd = (i === lastIdx && lastIdx !== firstIdx);
+        var m = L.marker(g[0].ll, { icon: L.divIcon({ className: '', html: '<div class="vy-pin" style="border-color:' + c + ';color:' + c + ';box-shadow:0 0 14px ' + c + '99">' + (i + 1) + '</div>', iconSize: [28, 28], iconAnchor: [14, 14] }), title: list[i].title || '', zIndexOffset: 100 })
+          .bindTooltip((i + 1) + ' · ' + (list[i].title || 'Bez názvu') + (g[0].place ? ' — ' + g[0].place : ''), { className: 'vy-tip', direction: 'top', offset: [0, -14] }).addTo(map);
         m.on('click', function () { go(i); });
-        pins.push(m);
         prev = pts[pts.length - 1];
       });
-      if (all.length === 1) map.setView(all[0], 9); else map.fitBounds(L.latLngBounds(all), { padding: [34, 34] });
-      setTimeout(function () { map.invalidateSize(); if (all.length > 1) map.fitBounds(L.latLngBounds(all), { padding: [34, 34] }); }, 250);
+      /* START a CÍL — celá cesta má jasný začátek a konec. */
+      var A = all[0], Z = all[all.length - 1];
+      if (all.length > 1) {
+        L.marker(A, { icon: L.divIcon({ className: '', html: '<div class="vy-flag vy-start">START</div>', iconSize: [52, 20], iconAnchor: [26, 36] }), interactive: false, zIndexOffset: 300 }).addTo(map);
+        L.marker(Z, { icon: L.divIcon({ className: '', html: '<div class="vy-flag vy-goal">CÍL</div>', iconSize: [40, 20], iconAnchor: [20, 36] }), interactive: false, zIndexOffset: 300 }).addTo(map);
+      }
+      /* Šipky ve směru jízdy. */
+      var arrows = L.layerGroup().addTo(map);
+      function drawArrows() {
+        arrows.clearLayers();
+        segs.forEach(function (sg) {
+          var p1 = map.latLngToLayerPoint(sg[0]), p2 = map.latLngToLayerPoint(sg[1]);
+          if (p1.distanceTo(p2) < 70) return;
+          var mid = L.latLng((sg[0][0] + sg[1][0]) / 2, (sg[0][1] + sg[1][1]) / 2);
+          var ang = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
+          L.marker(mid, { icon: L.divIcon({ className: '', html: '<div class="vy-arr" style="color:' + sg[2] + ';transform:rotate(' + ang + 'deg)">➤</div>', iconSize: [16, 16], iconAnchor: [8, 8] }), interactive: false, keyboard: false }).addTo(arrows);
+        });
+      }
+      map.on('zoomend', drawArrows);
+      function fit() { if (all.length === 1) map.setView(all[0], 9); else map.fitBounds(L.latLngBounds(all), { padding: [44, 44] }); }
+      fit(); drawArrows();
+      setTimeout(function () { map.invalidateSize(); fit(); drawArrows(); }, 250);
+      /* Legenda: jedna „etapa“ na díl — Díl 1: Praha → Tábor · 62 km. Klepnutí přiblíží daný úsek. */
+      var lg = document.getElementById('vyLegend'); lg.textContent = '';
+      legs.forEach(function (g, i) {
+        if (!g.length) return;
+        var chip = document.createElement('button'); chip.type = 'button'; chip.className = 'vy-chip'; chip.setAttribute('data-i', i); chip.style.setProperty('--c', col(i));
+        var a = g[0].place, b = g[g.length - 1].place;
+        chip.innerHTML = '<i>' + (i + 1) + '</i><span></span>';
+        chip.lastChild.textContent = (a && b && a !== b ? a + ' → ' + b : (a || list[i].title || 'Díl ' + (i + 1))) + (kmLeg[i] > 1 ? ' · ' + Math.round(kmLeg[i]) + ' km' : '');
+        chip.onclick = function () { focus(i); };
+        lg.appendChild(chip);
+      });
+      var all_ = document.createElement('button'); all_.type = 'button'; all_.className = 'vy-chip vy-all'; all_.textContent = '⤢ Celá cesta'; all_.onclick = function () { fit(); document.querySelectorAll('#vyLegend .vy-chip').forEach(function (c) { c.classList.remove('on'); }); }; lg.appendChild(all_);
       var n = legs.filter(function (g) { return g.length; }).length;
-      document.getElementById('vyMapNote').textContent = n + ' ' + (n === 1 ? 'zastávka' : n < 5 ? 'zastávky' : 'zastávek') + (total > 1 ? ' • přibližně ' + Math.round(total) + ' km' : '') + ' • klepni na číslo a skočíš na příslušný díl';
+      document.getElementById('vyMapNote').textContent = n + ' ' + (n === 1 ? 'zastávka' : n < 5 ? 'zastávky' : 'zastávek') + (total > 1 ? ' • přibližně ' + Math.round(total) + ' km celkem' : '') + ' • čísla na mapě odpovídají dílům pod ní';
     }
     var arts = [];
     try { var r = await fetch('/api/articles/list'); arts = r.ok ? await r.json() : []; } catch (e) {}
