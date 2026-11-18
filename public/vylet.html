@@ -11,6 +11,10 @@
   <meta name="description" content="Celý výlet jako příběh v čase — díl po dílu.">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/shared.css?v=20261035">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     .nav-bar { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; }
@@ -37,6 +41,22 @@
     .tl-take { margin-top: 12px; padding: 10px 14px; border-left: 3px solid var(--nova); background: rgba(47,230,201,.07); border-radius: 0 10px 10px 0; font: 500 15.5px/1.5 'Space Grotesk', sans-serif; color: var(--parchment); }
     .tl-take small { display: block; font: 600 11px 'Space Grotesk', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--nova); margin-bottom: 3px; }
     .tl-cta { display: inline-block; margin-top: 12px; color: var(--ember); font: 700 14px 'Space Grotesk', sans-serif; }
+    .vy-map-wrap { position: relative; z-index: 10; max-width: 1000px; margin: 0 auto 26px; padding: 0 20px; }
+    .vy-map-wrap[hidden] { display: none; }
+    #vyMap { width: 100%; height: clamp(280px, 46vh, 460px); border-radius: 16px; border: 1px solid var(--panel-border); overflow: hidden; background: #0b0b1a; box-shadow: 0 14px 40px rgba(0,0,0,.4); }
+    #vyMap .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.7); }
+    #vyMap .leaflet-control-attribution { background: rgba(8,8,15,.7) !important; color: var(--mist) !important; font-size: 10px; }
+    #vyMap .leaflet-control-attribution a { color: var(--mist) !important; }
+    #vyMap .leaflet-control-zoom a { background: rgba(14,14,28,.92) !important; color: var(--parchment) !important; border-color: rgba(255,255,255,.18) !important; }
+    .vy-pin { width: 28px; height: 28px; border-radius: 50%; background: #0b0b1a; border: 2px solid var(--ember); color: var(--ember); font: 700 13px 'Space Grotesk', sans-serif; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px rgba(255,122,69,.65); cursor: pointer; }
+    .vy-pin.on { background: var(--ember); color: #0b0b1a; }
+    .vy-pin.end { border-color: var(--nova); color: var(--nova); box-shadow: 0 0 14px rgba(47,230,201,.6); }
+    .vy-pin.end.on { background: var(--nova); color: #0b0b1a; }
+    .vy-sub { width: 9px; height: 9px; border-radius: 50%; background: var(--ember); border: 2px solid #0b0b1a; box-shadow: 0 0 8px rgba(255,122,69,.8); }
+    .vy-tip { background: rgba(8,8,15,.92); border: 1px solid rgba(255,122,69,.5); color: var(--parchment); border-radius: 8px; font: 600 12.5px 'Space Grotesk', sans-serif; padding: 5px 9px; box-shadow: none; }
+    .vy-tip::before { display: none; }
+    .tl-item.flash .tl-card { border-color: var(--ember); box-shadow: 0 0 0 2px rgba(255,122,69,.5), 0 14px 36px rgba(0,0,0,.4); }
+    .vy-mapnote { text-align: center; color: var(--mist); font-size: 12.5px; margin-top: 8px; }
     .empty { text-align: center; color: var(--mist); padding: 40px 0; }
     @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } .tl-card img { height: 170px; } }
   </style>
@@ -57,6 +77,10 @@
     <h1 class="page-title" id="vyTitle">Výlet</h1>
     <p class="page-subtitle" id="vySub"></p>
   </div>
+  <section class="vy-map-wrap" id="vyMapWrap" hidden aria-label="Mapa výletu se zastávkami">
+    <div id="vyMap"></div>
+    <p class="vy-mapnote" id="vyMapNote"></p>
+  </section>
   <main class="wrap" id="vyMain" tabindex="-1"><div class="tl" id="tl"><div class="empty">Načítám…</div></div></main>
 
   <script src="/shared.js?v=20261040"></script>
@@ -69,6 +93,56 @@
     function ts(a) { if (a.date) { var t = new Date(a.date).getTime(); if (!isNaN(t)) return t; } return typeof a.created === 'number' ? a.created : 0; }
     function plain(a) { return (a.excerpt && a.excerpt.trim()) ? a.excerpt.trim() : String(a.content || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220); }
     function fmt(d) { try { return new Date(d).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' }); } catch (e) { return ''; } }
+
+    function validPt(s) { return s && typeof s.lat === 'number' && isFinite(s.lat) && typeof s.lng === 'number' && isFinite(s.lng); }
+    function km(a, b) { var R = 6371, r = Math.PI / 180, dl = (b[0] - a[0]) * r, dn = (b[1] - a[1]) * r, h = Math.sin(dl / 2) * Math.sin(dl / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dn / 2) * Math.sin(dn / 2); return 2 * R * Math.asin(Math.sqrt(h)); }
+    function drawMap(list) {
+      if (typeof L === 'undefined') return;
+      var legs = list.map(function (a) {
+        var st = (Array.isArray(a.stops) && a.stops.length >= 2) ? a.stops : [{ lat: a.lat, lng: a.lng, place: a.place }];
+        return st.filter(validPt);
+      });
+      var all = []; legs.forEach(function (g) { g.forEach(function (p) { all.push([p.lat, p.lng]); }); });
+      if (!all.length) return;
+      var wrap = document.getElementById('vyMapWrap'); wrap.hidden = false;
+      var map = L.map('vyMap', { scrollWheelZoom: false, zoomControl: true, tap: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19, subdomains: 'abc' }).addTo(map);
+      var pins = [], prev = null, total = 0, lastIdx = -1;
+      legs.forEach(function (g, i) { if (g.length) lastIdx = i; });
+      function go(i) {
+        var el = document.getElementById('vy-' + i); if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('flash'); setTimeout(function () { el.classList.remove('flash'); }, 2200);
+      }
+      legs.forEach(function (g, i) {
+        if (!g.length) return;
+        var pts = g.map(function (p) { return [p.lat, p.lng]; });
+        if (prev && km(prev, pts[0]) > 0.05) {
+          L.polyline([prev, pts[0]], { color: '#ff7a45', weight: 3, opacity: .55, dashArray: '6 8' }).addTo(map);
+          total += km(prev, pts[0]);
+        }
+        if (pts.length > 1) {
+          L.polyline(pts, { color: '#ff7a45', weight: 4, opacity: .95 }).addTo(map);
+          for (var k = 1; k < pts.length; k++) total += km(pts[k - 1], pts[k]);
+        }
+        g.forEach(function (p, k) {
+          if (k > 0) {
+            L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: '<div class="vy-sub"></div>', iconSize: [9, 9], iconAnchor: [5, 5] }), keyboard: false })
+              .bindTooltip(p.place || (list[i].title || ''), { className: 'vy-tip', direction: 'top', offset: [0, -6] }).addTo(map).on('click', function () { go(i); });
+          }
+        });
+        var first = g[0];
+        var m = L.marker([first.lat, first.lng], { icon: L.divIcon({ className: '', html: '<div class="vy-pin' + (i === lastIdx && lastIdx > 0 ? ' end' : '') + '">' + (i + 1) + '</div>', iconSize: [28, 28], iconAnchor: [14, 14] }), title: list[i].title || '' })
+          .bindTooltip((i + 1) + ' · ' + (list[i].title || 'Bez názvu') + (first.place ? ' — ' + first.place : ''), { className: 'vy-tip', direction: 'top', offset: [0, -14] }).addTo(map);
+        m.on('click', function () { go(i); });
+        pins.push(m);
+        prev = pts[pts.length - 1];
+      });
+      if (all.length === 1) map.setView(all[0], 9); else map.fitBounds(L.latLngBounds(all), { padding: [34, 34] });
+      setTimeout(function () { map.invalidateSize(); if (all.length > 1) map.fitBounds(L.latLngBounds(all), { padding: [34, 34] }); }, 250);
+      var n = legs.filter(function (g) { return g.length; }).length;
+      document.getElementById('vyMapNote').textContent = n + ' ' + (n === 1 ? 'zastávka' : n < 5 ? 'zastávky' : 'zastávek') + (total > 1 ? ' • přibližně ' + Math.round(total) + ' km' : '') + ' • klepni na číslo a skočíš na příslušný díl';
+    }
     var arts = [];
     try { var r = await fetch('/api/articles/list'); arts = r.ok ? await r.json() : []; } catch (e) {}
     arts = (Array.isArray(arts) ? arts : []).filter(function (a) { return a && a.published !== false && !a.unlisted && String(a.subsectionId || '') === sub && (!sec || String(a.sectionId || '') === sec); })
@@ -96,8 +170,9 @@
       var ex = plain(a); if (ex) { var p = document.createElement('p'); p.className = 'tl-ex'; p.textContent = ex; b.appendChild(p); }
       if (a.takeaway && String(a.takeaway).trim()) { var t = document.createElement('div'); t.className = 'tl-take'; var sm = document.createElement('small'); sm.textContent = '💭 Co se mnou ta cesta udělala'; t.appendChild(sm); t.appendChild(document.createTextNode(String(a.takeaway).trim())); b.appendChild(t); }
       var cta = document.createElement('span'); cta.className = 'tl-cta'; cta.textContent = 'Číst díl →'; b.appendChild(cta);
-      c.appendChild(b); it.appendChild(dot); it.appendChild(c); tl.appendChild(it);
+      c.appendChild(b); it.id = 'vy-' + i; it.appendChild(dot); it.appendChild(c); tl.appendChild(it);
     });
+    try { drawMap(arts); } catch (e) { /* mapa je bonus — karty fungují i bez ní */ }
   });
   </script>
 </body>
