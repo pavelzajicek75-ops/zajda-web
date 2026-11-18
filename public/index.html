@@ -262,6 +262,23 @@
     .sub-block.collapsed .sub-title::after { transform: rotate(-90deg); }
     .sub-articles { max-height: 200px; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s; opacity: 1; }
     .sub-block.collapsed .sub-articles { max-height: 0; opacity: 0; overflow: hidden; }
+    /* Podsekce s víc články = „výlet“: vlastní barva, počet dílů a mapa. Po najetí (nebo klepnutí na šipku) se ukážou články. */
+    .sub-block.trip { --sc: var(--ember); border-left: 3px solid var(--sc); border-radius: 0 8px 8px 0; margin: 6px 0; background: color-mix(in srgb, var(--sc) 7%, transparent); }
+    .sub-block.trip .sub-title { color: var(--sc); gap: 8px; border-bottom: 0; padding: 9px 8px; }
+    .sub-block.trip .sub-title::after { display: none; }
+    .sub-block.trip .sub-name { flex: 1; min-width: 0; font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sub-block.trip .sub-count { flex: none; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 12px; border: 1px solid var(--sc); color: var(--sc); }
+    .sub-block.trip .sub-mapbtn { flex: none; font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: var(--sc); color: #0b0b1a; white-space: nowrap; }
+    .sub-block.trip .sub-chev { all: unset; flex: none; cursor: pointer; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; color: var(--sc); font-size: 13px; transition: transform .25s; border-radius: 50%; }
+    .sub-block.trip .sub-chev:hover, .sub-block.trip .sub-chev:focus-visible { background: rgba(255,255,255,.08); }
+    .sub-block.trip.collapsed .sub-chev { transform: rotate(-90deg); }
+    .sub-block.trip .sub-articles { padding-left: 4px; }
+    .sub-block.trip.open .sub-articles { max-height: 280px; opacity: 1; overflow-y: auto; }
+    @media (hover: hover) { .sub-block.trip.collapsed:hover .sub-articles { max-height: 280px; opacity: 1; overflow-y: auto; } .sub-block.trip.collapsed:hover .sub-chev { transform: none; } }
+    .trip-box { max-width: 900px !important; height: 88vh; max-height: 88vh !important; }
+    .trip-open { color: var(--nova); font: 600 13px 'Space Grotesk', sans-serif; text-decoration: none; margin-left: auto; margin-right: 10px; white-space: nowrap; }
+    #tripFrame { flex: 1; width: 100%; border: 0; background: transparent; min-height: 0; }
+    @media (max-width: 700px) { #tripOverlay { padding: 0; } .trip-box { max-width: none !important; width: 100%; height: 100dvh; max-height: 100dvh !important; border-radius: 0; } }
     .article-link {
       display: block; padding: 6px 8px 6px 14px; color: #d6d7e8; text-decoration: none;
       font-size: 12px; border-left: 2px solid rgba(140,150,255,0.25); transition: all 0.25s;
@@ -784,6 +801,16 @@
     </div>
   </div>
 
+  <div class="section-modal-overlay" id="tripOverlay" aria-hidden="true">
+    <div class="section-modal-box trip-box" role="dialog" aria-modal="true" aria-labelledby="tripTitle">
+      <div class="section-modal-header">
+        <h2 id="tripTitle"></h2>
+        <a class="trip-open" id="tripOpen" href="#">Celá stránka ↗</a>
+        <button class="section-modal-close" id="tripClose" aria-label="Zavřít">✕</button>
+      </div>
+      <iframe id="tripFrame" title="Mapa výletu a jeho články"></iframe>
+    </div>
+  </div>
   <div class="section-modal-overlay" id="sectionModalOverlay">
     <div class="section-modal-box">
       <div class="section-modal-header">
@@ -1206,6 +1233,57 @@
       } catch(e) { return []; }
     }
 
+    var SUB_PAL = ['#ff7a45', '#2fe6c9', '#8f6bff', '#ffd36b', '#ff7a9c', '#7fd6ff', '#9be15d'];
+    function dilu(n) { return n + ' ' + (n === 1 ? 'díl' : (n < 5 ? 'díly' : 'dílů')); }
+    /* Podsekce s víc články vypadá jako „výlet“ (barva, počet dílů, mapa); s jedním článkem zůstává jako dřív. */
+    function subBlockHtml(sub, arts, order, idx, secId, withCount) {
+      var name = sub.name || '';
+      if (arts.length < 2) {
+        return '<div class="sub-block"><div class="sub-title">' + escapeHtml(name) + (withCount ? ' (' + arts.length + ')' : '') + '</div>' +
+          '<div class="sub-articles">' + renderArticleList(arts, order) + '</div></div>';
+      }
+      var c = SUB_PAL[idx % SUB_PAL.length];
+      return '<div class="sub-block trip collapsed" style="--sc:' + c + '" data-sec="' + escapeHtml(String(secId)) + '" data-sub="' + escapeHtml(String(sub.id || '')) + '" data-name="' + escapeHtml(name) + '">' +
+        '<div class="sub-title" role="button" tabindex="0" title="Klepni: mapa výletu">' +
+        '<span class="sub-name">🧭 ' + escapeHtml(name) + '</span><span class="sub-count">' + dilu(arts.length) + '</span><span class="sub-mapbtn">🗺️ Mapa</span>' +
+        '<button type="button" class="sub-chev" aria-label="Ukázat články">▾</button></div>' +
+        '<div class="sub-articles">' + renderArticleList(arts, order) + '</div></div>';
+    }
+    function openTrip(secId, subId, name) {
+      var ov = document.getElementById('tripOverlay'), fr = document.getElementById('tripFrame');
+      if (!ov || !fr) return;
+      var url = '/vylet?s=' + encodeURIComponent(secId) + '&sub=' + encodeURIComponent(subId);
+      document.getElementById('tripTitle').textContent = '🧭 ' + (name || 'Výlet');
+      document.getElementById('tripOpen').href = url;
+      fr.src = url + '&embed=1';
+      ov.classList.add('open'); ov.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden';
+    }
+    function closeTrip() {
+      var ov = document.getElementById('tripOverlay'); if (!ov || !ov.classList.contains('open')) return;
+      ov.classList.remove('open'); ov.setAttribute('aria-hidden', 'true');
+      var fr = document.getElementById('tripFrame'); if (fr) fr.src = 'about:blank';
+      document.body.style.overflow = '';
+    }
+    (function () {
+      var c = document.getElementById('tripClose'); if (c) c.addEventListener('click', closeTrip);
+      var ov = document.getElementById('tripOverlay'); if (ov) ov.addEventListener('click', function (e) { if (e.target === ov) closeTrip(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTrip(); });
+    })();
+    /* Klepnutí na název výletu otevře mapu, šipka jen rozbalí/sbalí seznam článků. */
+    function wireSubBlocks(rootEl) {
+      rootEl.querySelectorAll('.sub-block').forEach(function (blk) {
+        var t = blk.querySelector('.sub-title'); if (!t) return;
+        var trip = blk.classList.contains('trip');
+        function act(e) {
+          e.stopPropagation(); e.preventDefault();
+          if (trip && !(e.target.closest && e.target.closest('.sub-chev'))) openTrip(blk.getAttribute('data-sec'), blk.getAttribute('data-sub'), blk.getAttribute('data-name'));
+          else { blk.classList.toggle('collapsed'); blk.classList.toggle('open', trip && !blk.classList.contains('collapsed')); }
+        }
+        t.addEventListener('click', act);
+        t.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') act(e); });
+      });
+    }
+
     function renderArticleList(articles, order) {
       if (!articles.length) return '<div class="no-articles">Žádné články</div>';
       var sorted = sortArticles(articles, order);
@@ -1307,21 +1385,13 @@
           });
           if (!subArticles.length) continue;
           var subOrder = modalSortOverridden ? currentModalSortOrder : (sub.sortOrder || 'newest');
-          html += '<div class="sub-block">' +
-            '<div class="sub-title">' + escapeHtml(subName) + ' (' + subArticles.length + ')</div>' +
-            '<div class="sub-articles">' + renderArticleList(subArticles, subOrder) + '</div>' +
-            '</div>';
+          html += subBlockHtml(sub, subArticles, subOrder, i, sectionId, true);
         }
         if (!html) html = '<div class="no-articles">Žádné články</div>';
       }
 
       scrollEl.innerHTML = html;
-      scrollEl.querySelectorAll('.sub-title').forEach(function(titleEl2) {
-        titleEl2.addEventListener('click', function() {
-          var block = this.parentElement;
-          if (block) block.classList.toggle('collapsed');
-        });
-      });
+      wireSubBlocks(scrollEl);
       var travelLinkInModal = scrollEl.querySelector('.travel-map-link');
       if (travelLinkInModal) {
         travelLinkInModal.addEventListener('click', function(e) {
@@ -1840,10 +1910,7 @@
                   });
                   totalCount += subArticles.length;
                   var subOrder = visitorOverride || sub.sortOrder || order;
-                  html += '<div class="sub-block">' +
-                    '<div class="sub-title">' + escapeHtml(subName) + '</div>' +
-                    '<div class="sub-articles">' + renderArticleList(subArticles, subOrder) + '</div>' +
-                    '</div>';
+                  html += subBlockHtml(sub, subArticles, subOrder, i, sec.id, false);
                 }
               }
 
@@ -1853,14 +1920,7 @@
 
               scroll.innerHTML = html;
 
-              scroll.querySelectorAll('.sub-title').forEach(function(titleEl) {
-                titleEl.addEventListener('click', function(e) {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  var block = this.parentElement;
-                  if (block) block.classList.toggle('collapsed');
-                });
-              });
+              wireSubBlocks(scroll);
 
               var showAllEl = scroll.querySelector('.show-all-link');
               if (showAllEl) {

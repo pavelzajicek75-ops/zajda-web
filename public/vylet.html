@@ -67,6 +67,10 @@
     .vy-link { margin: 0 0 10px; padding: 7px 12px; border-left: 3px solid var(--c, var(--ember)); background: rgba(255,255,255,.04); border-radius: 0 10px 10px 0; font: 600 13px 'Space Grotesk', sans-serif; color: var(--mist); }
     .vy-link-no { --c: #888; color: #a89fbf; font-weight: 500; }
     .vy-mapnote { text-align: center; color: var(--mist); font-size: 12.5px; margin-top: 8px; }
+    html.embed body { background: transparent; }
+    html.embed .nav-bar, html.embed .bg, html.embed .stars, html.embed .skip-link { display: none !important; }
+    html.embed .page-header { padding-top: 16px; }
+    html.embed .page-kicker { display: none; }
     .empty { text-align: center; color: var(--mist); padding: 40px 0; }
     @media (max-width: 640px) { .nav-bar { padding: 14px 16px; } .wrap { padding: 0 14px 50px; } .tl-card img { height: 170px; } }
   </style>
@@ -96,8 +100,10 @@
 
   <script src="/shared.js?v=20261040"></script>
   <script>
+  var EMBED = /[?&]embed=1/.test(location.search);
+  if (EMBED) document.documentElement.classList.add('embed');
   document.addEventListener('DOMContentLoaded', async function () {
-    if (typeof initStarfield === 'function') initStarfield(120);
+    if (typeof initStarfield === 'function' && !EMBED) initStarfield(120);
     var q = new URLSearchParams(location.search);
     var sec = q.get('s') || '', sub = q.get('sub') || '';
     var tl = document.getElementById('tl');
@@ -244,6 +250,7 @@
       c.appendChild(b); it.id = 'vy-' + i; it.appendChild(dot); it.appendChild(c); tl.appendChild(it);
     });
     try { drawMap(arts); } catch (e) { /* mapa je bonus — karty fungují i bez ní */ }
+    if (EMBED) document.querySelectorAll('a.tl-card').forEach(function (x) { x.target = '_top'; });
   });
   </script>
 </body>
