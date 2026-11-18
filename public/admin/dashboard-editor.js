@@ -3103,7 +3103,7 @@ async function bulkPublishArticles(publish) {
 async function bulkDeleteArticles() {
   const ids = Array.from(document.querySelectorAll('.article-check:checked')).map(c => c.dataset.id);
   if (!ids.length) return;
-  if (!(await showConfirm(`Opravdu smazat ${ids.length} článků?`, { danger: true, confirmText: 'Smazat' }))) return;
+  if (!(await showConfirm(`Smazat ${ids.length} článků? Zůstanou 30 dní v Koši.`, { danger: true, confirmText: 'Smazat' }))) return;
   for (const id of ids) {
     try {
       await fetch('/api/articles/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
@@ -3147,7 +3147,7 @@ async function duplicateArticle(id) {
 }
 
 async function deleteArticle(id) {
-  if (!(await showConfirm('Opravdu smazat tento článek?', { danger: true, confirmText: 'Smazat' }))) return;
+  if (!(await showConfirm('Smazat tento článek? Zůstane 30 dní v Koši, odkud ho jde obnovit.', { danger: true, confirmText: 'Smazat' }))) return;
   try {
     const r = await fetch('/api/articles/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
     if (!r.ok) throw new Error('Chyba mazání');
@@ -3606,6 +3606,7 @@ async function loadSubsections() {
       <td data-label="Akce">
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
           <button onclick="pickSubsectionCover('${s.id}')" class="btn btn-blue btn-sm">Změnit cover</button>
+          <button onclick="editSubsectionDesc('${s.id}')" class="btn btn-sm" title="Krátký popis výletu / podsekce (ukáže se na stránce výletu)">${s.description ? '✎ Popis' : '+ Popis'}</button>
           <button onclick="deleteSubsection('${s.id}')" class="btn btn-red btn-sm">Smazat</button>
         </div>
       </td>
@@ -3698,6 +3699,18 @@ async function pickSubsectionCover(id) {
     title: 'Cover podsekce',
     onSelect: url => saveSubsectionCover(id, url)
   });
+}
+
+async function editSubsectionDesc(id) {
+  let cur = '';
+  try { const r = await fetch('/api/subsections/list'); if (r.ok) { const a = await r.json(); cur = ((Array.isArray(a) ? a : []).find(x => String(x.id) === String(id)) || {}).description || ''; } } catch {}
+  const v = prompt('Krátký popis výletu / podsekce (zobrazí se na stránce výletu a ve sdílení; prázdné = smazat):', cur);
+  if (v === null) return;
+  try {
+    await fetch('/api/subsections/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, description: v.trim().slice(0, 600) }) });
+    showToast('Popis uložen', 'success');
+  } catch { showToast('Chyba uložení popisu', 'error'); }
+  loadSubsections();
 }
 
 async function saveSubsectionCover(id, url) {

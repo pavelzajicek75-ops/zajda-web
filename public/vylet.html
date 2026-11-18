@@ -67,6 +67,18 @@
     .vy-link { margin: 0 0 10px; padding: 7px 12px; border-left: 3px solid var(--c, var(--ember)); background: rgba(255,255,255,.04); border-radius: 0 10px 10px 0; font: 600 13px 'Space Grotesk', sans-serif; color: var(--mist); }
     .vy-link-no { --c: #888; color: #a89fbf; font-weight: 500; }
     .vy-mapnote { text-align: center; color: var(--mist); font-size: 12.5px; margin-top: 8px; }
+    .vy-hero { max-width: 760px; margin: 0 auto 14px; }
+    .vy-cover { display: block; width: 100%; max-height: 240px; object-fit: cover; border-radius: 16px; border: 1px solid var(--panel-border); margin: 0 auto 16px; box-shadow: 0 14px 36px rgba(0,0,0,.4); }
+    .vy-desc { max-width: 640px; margin: 12px auto 0; color: #d8d6e8; font-size: 15.5px; line-height: 1.6; }
+    .vy-play { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 16px; border-radius: 22px; border: 1px solid var(--ember); background: rgba(255,122,69,.16); color: var(--parchment); font: 700 13px 'Space Grotesk', sans-serif; cursor: pointer; }
+    .vy-play.on { background: var(--ember); color: #0b0b1a; }
+    .vy-car { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid var(--ember); box-shadow: 0 0 0 4px rgba(255,122,69,.35), 0 0 18px var(--ember); }
+    .vy-pop { min-width: 150px; max-width: 230px; font-family: 'Space Grotesk', sans-serif; }
+    .vy-pop b { display: block; font-size: 14px; margin-bottom: 2px; }
+    .vy-pop small { display: block; color: #555; margin-bottom: 6px; }
+    .vy-pop .ph { display: flex; gap: 4px; margin-bottom: 6px; }
+    .vy-pop .ph img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; cursor: zoom-in; }
+    .vy-pop button { border: 0; background: #ff7a45; color: #0b0b1a; font: 700 12px 'Space Grotesk', sans-serif; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
     html.embed body { background: transparent; }
     html.embed .nav-bar, html.embed .bg, html.embed .stars, html.embed .skip-link { display: none !important; }
     html.embed .page-header { padding-top: 16px; }
@@ -89,7 +101,9 @@
   <div class="page-header">
     <div class="page-kicker">🧭 Celý výlet</div>
     <h1 class="page-title" id="vyTitle">Výlet</h1>
+    <div class="vy-hero"><img class="vy-cover" id="vyCover" alt="" hidden></div>
     <p class="page-subtitle" id="vySub"></p>
+    <p class="vy-desc" id="vyDesc" hidden></p>
   </div>
   <section class="vy-map-wrap" id="vyMapWrap" hidden aria-label="Mapa výletu se zastávkami">
     <div id="vyMap"></div>
@@ -98,6 +112,8 @@
   </section>
   <main class="wrap" id="vyMain" tabindex="-1"><div class="tl" id="tl"><div class="empty">Načítám…</div></div></main>
 
+  <script src="/photo-stops.js?v=1"></script>
+  <script src="/photo-viewer.js?v=1"></script>
   <script src="/shared.js?v=20261040"></script>
   <script>
   var EMBED = /[?&]embed=1/.test(location.search);
@@ -149,6 +165,19 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19, subdomains: 'abc' }).addTo(map);
       var lines = [], segs = [], prev = null, total = 0, firstIdx = -1, lastIdx = -1, kmLeg = [];
       legs.forEach(function (g, i) { if (g.length) { if (firstIdx < 0) firstIdx = i; lastIdx = i; } });
+      var stopMk = {};
+      function popupFor(i, k, p) {
+        var a = list[i], el = document.createElement('div'); el.className = 'vy-pop';
+        var b = document.createElement('b'); b.textContent = (i + 1) + ' · ' + (a.title || 'Bez názvu'); el.appendChild(b);
+        if (p.place) { var sm = document.createElement('small'); sm.textContent = '📍 ' + p.place; el.appendChild(sm); }
+        var ph = []; try { ph = window.PhotoStops ? PhotoStops.photosForStop(a, k, 3) : []; } catch (e) {}
+        if (!ph.length && k === 0 && a.coverUrl) ph = [a.coverUrl];
+        if (ph.length) { var row = document.createElement('div'); row.className = 'ph';
+          ph.forEach(function (u, n) { var im = document.createElement('img'); im.src = u; im.alt = ''; im.loading = 'lazy'; im.onclick = function () { if (window.PhotoViewer) PhotoViewer.open(ph, n); }; row.appendChild(im); });
+          el.appendChild(row); }
+        var bt = document.createElement('button'); bt.type = 'button'; bt.textContent = 'Přejít na díl ↓'; bt.onclick = function () { map.closePopup(); go(i); }; el.appendChild(bt);
+        return el;
+      }
       function go(i) {
         var el = document.getElementById('vy-' + i); if (!el) return;
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -174,13 +203,13 @@
         }
         total += dist; kmLeg[i] = dist;
         g.forEach(function (p, k) {
-          if (k > 0) L.marker(p.ll, { icon: L.divIcon({ className: '', html: '<div class="vy-sub" style="background:' + c + '"></div>', iconSize: [9, 9], iconAnchor: [5, 5] }), keyboard: false })
-            .bindTooltip(p.place || (list[i].title || ''), { className: 'vy-tip', direction: 'top', offset: [0, -6] }).addTo(map).on('click', function () { go(i); });
+          if (k > 0) stopMk[i + ':' + k] = L.marker(p.ll, { icon: L.divIcon({ className: '', html: '<div class="vy-sub" style="background:' + c + '"></div>', iconSize: [9, 9], iconAnchor: [5, 5] }), keyboard: false })
+            .bindTooltip(p.place || (list[i].title || ''), { className: 'vy-tip', direction: 'top', offset: [0, -6] }).addTo(map).bindPopup(popupFor(i, k, p), { closeButton: true, autoPanPadding: [30, 30] });
         });
         var isEnd = (i === lastIdx && lastIdx !== firstIdx);
         var m = L.marker(g[0].ll, { icon: L.divIcon({ className: '', html: '<div class="vy-pin" style="border-color:' + c + ';color:' + c + ';box-shadow:0 0 14px ' + c + '99">' + (i + 1) + '</div>', iconSize: [28, 28], iconAnchor: [14, 14] }), title: list[i].title || '', zIndexOffset: 100 })
           .bindTooltip((i + 1) + ' · ' + (list[i].title || 'Bez názvu') + (g[0].place ? ' — ' + g[0].place : ''), { className: 'vy-tip', direction: 'top', offset: [0, -14] }).addTo(map);
-        m.on('click', function () { go(i); });
+        m.bindPopup(popupFor(i, 0, g[0]), { closeButton: true, autoPanPadding: [30, 30] }); stopMk[i + ':0'] = m;
         prev = pts[pts.length - 1];
       });
       /* START a CÍL — celá cesta má jasný začátek a konec. */
@@ -216,6 +245,38 @@
         chip.onclick = function () { focus(i); };
         lg.appendChild(chip);
       });
+      /* ▶ Přehrát cestu: značka projede všechny zastávky, u každé se na chvíli zastaví a ukáže fotky. */
+      var route = [];
+      legs.forEach(function (g, i) { g.forEach(function (p, k) { route.push({ ll: p.ll, i: i, k: k }); }); });
+      if (route.length > 1) {
+        var pb = document.createElement('button'); pb.type = 'button'; pb.className = 'vy-play'; pb.textContent = '▶ Přehrát cestu';
+        var playing = false, token = 0, car = null, reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        function stopPlay() { playing = false; token++; pb.classList.remove('on'); pb.textContent = '▶ Přehrát cestu'; if (car) { map.removeLayer(car); car = null; } map.closePopup(); }
+        function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+        function tween(a, b, ms, my) { return new Promise(function (res) {
+          var t0 = performance.now();
+          (function f(now) { if (my !== token) return res(false);
+            var t = Math.min(1, (now - t0) / ms), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            car.setLatLng([a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]); map.panTo(car.getLatLng(), { animate: false });
+            if (t < 1) requestAnimationFrame(f); else res(true); })(t0); }); }
+        pb.onclick = async function () {
+          if (playing) { stopPlay(); return; }
+          playing = true; var my = ++token; pb.classList.add('on'); pb.textContent = '⏸ Zastavit';
+          document.querySelectorAll('#vyLegend .vy-chip').forEach(function (c) { c.classList.remove('on'); });
+          car = L.marker(route[0].ll, { icon: L.divIcon({ className: '', html: '<div class="vy-car"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, zIndexOffset: 900 }).addTo(map);
+          map.setView(route[0].ll, 8, { animate: false });
+          for (var n = 0; n < route.length; n++) {
+            if (my !== token) return;
+            if (n > 0) { map.closePopup(); var d = km(route[n - 1].ll, route[n].ll), ms = reduce ? 50 : Math.max(900, Math.min(3200, d * 14));
+              if (!(await tween(route[n - 1].ll, route[n].ll, ms, my))) return; }
+            var mk = stopMk[route[n].i + ':' + route[n].k]; if (mk) mk.openPopup();
+            await sleep(reduce ? 500 : 1700); if (my !== token) return;
+          }
+          stopPlay(); fit();
+        };
+        map.on('dragstart', function () { if (playing) stopPlay(); });
+        lg.insertBefore(pb, lg.firstChild);
+      }
       var all_ = document.createElement('button'); all_.type = 'button'; all_.className = 'vy-chip vy-all'; all_.textContent = '⤢ Celá cesta'; all_.onclick = function () { fit(); document.querySelectorAll('#vyLegend .vy-chip').forEach(function (c) { c.classList.remove('on'); }); }; lg.appendChild(all_);
       var n = legs.filter(function (g) { return g.length; }).length;
       document.getElementById('vyMapNote').textContent = n + ' ' + (n === 1 ? 'zastávka' : n < 5 ? 'zastávky' : 'zastávek') + (total > 1 ? ' • přibližně ' + Math.round(total) + ' km celkem' : '') + ' • čísla na mapě odpovídají dílům pod ní';
@@ -227,7 +288,9 @@
     if (!sub || !arts.length) { tl.innerHTML = '<div class="empty">Tenhle výlet jsem nenašel.</div>'; return; }
     var name = 'Výlet';
     try { var rs = await fetch('/api/subsections/by-section?sectionId=' + encodeURIComponent(sec || arts[0].sectionId || '')); var subs = rs.ok ? await rs.json() : [];
-      var s = (Array.isArray(subs) ? subs : []).filter(function (x) { return String(x.id) === String(sub); })[0]; if (s && s.name) name = s.name; } catch (e) {}
+      var s = (Array.isArray(subs) ? subs : []).filter(function (x) { return String(x.id) === String(sub); })[0]; if (s && s.name) name = s.name;
+      if (s && s.description) { var de = document.getElementById('vyDesc'); de.textContent = s.description; de.hidden = false; }
+      if (s && s.coverUrl) { var cv = document.getElementById('vyCover'); cv.src = s.coverUrl; cv.hidden = false; cv.onerror = function () { cv.hidden = true; }; } } catch (e) {}
     document.getElementById('vyTitle').textContent = name;
     document.title = name + ' — Moje diagnóza, můj vesmír';
     var places = {}; arts.forEach(function (a) { if (a.place) places[a.place] = 1; });

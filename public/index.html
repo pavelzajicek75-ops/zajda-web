@@ -2127,5 +2127,29 @@
   }).catch(function () {});
 })();
 </script>
+<script>
+/* „Pokračovat ve čtení“ — rozečtený článek (ukládá reading-aids.js) jako plovoucí lišta dole, bez posunu stránky. */
+(function () {
+  try {
+    var d = JSON.parse(localStorage.getItem('readPos') || 'null');
+    if (!d || !d.id || d.pct < 8 || d.pct >= 94 || Date.now() - d.ts > 30 * 864e5) return;
+    var dismissed = sessionStorage.getItem('resumeX'); if (dismissed === String(d.id)) return;
+    var st = document.createElement('style');
+    st.textContent = '.resume-bar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:900;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 24px);border-radius:16px;background:rgba(14,14,28,.96);border:1px solid var(--ember,#ff7a45);box-shadow:0 10px 30px rgba(0,0,0,.5)}' +
+      '.resume-bar a{display:block;padding:10px 6px 10px 16px;color:var(--parchment,#f8f5ef);text-decoration:none;font:600 14px "Space Grotesk",sans-serif;min-width:0}.resume-bar a small{display:block;font:600 11px "Space Grotesk",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--nova,#2fe6c9)}' +
+      '.resume-bar a b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw;font-weight:600}.resume-bar button{border:0;background:transparent;color:var(--mist,#9aa3c0);font-size:16px;padding:12px 14px;cursor:pointer}';
+    document.head.appendChild(st);
+    var bar = document.createElement('div'); bar.className = 'resume-bar'; bar.id = 'resumeBar';
+    var a = document.createElement('a'); a.href = '/article?id=' + encodeURIComponent(d.id);
+    var sm = document.createElement('small'); sm.textContent = '📖 Pokračovat ve čtení · ' + d.pct + ' %' + (d.trip ? ' · ' + d.trip : '');
+    var b = document.createElement('b'); b.textContent = d.title || 'Rozečtený článek';
+    a.appendChild(sm); a.appendChild(b);
+    var x = document.createElement('button'); x.type = 'button'; x.setAttribute('aria-label', 'Skrýt'); x.textContent = '✕';
+    x.onclick = function () { bar.remove(); try { sessionStorage.setItem('resumeX', String(d.id)); } catch (e) {} };
+    bar.appendChild(a); bar.appendChild(x);
+    document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(bar); });
+  } catch (e) {}
+})();
+</script>
 </body>
 </html>

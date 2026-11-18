@@ -350,8 +350,8 @@
 
   window.deleteTimelineMilestone = async function (id) {
     var ok = typeof showConfirm === 'function'
-      ? await showConfirm('Opravdu smazat tento milník?', { danger: true, confirmText: 'Smazat' })
-      : confirm('Opravdu smazat tento milník?');
+      ? await showConfirm('Smazat tento milník? Zůstane 30 dní v Koši.', { danger: true, confirmText: 'Smazat' })
+      : confirm('Smazat tento milník? Zůstane 30 dní v Koši.');
     if (!ok) return;
     try {
       var r = await fetch('/api/timeline/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });

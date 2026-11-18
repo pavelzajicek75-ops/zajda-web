@@ -10,6 +10,7 @@ export async function onRequestPost(context) {
   const data = JSON.parse(existing);
   if (body.name !== undefined) data.name = body.name;
   if (body.coverUrl !== undefined) data.coverUrl = body.coverUrl;
+  if (body.description !== undefined) data.description = String(body.description).slice(0, 600);
   if (body.order !== undefined) data.order = body.order;
   if (body.sortOrder !== undefined) data.sortOrder = body.sortOrder;
   await env.SUBSECTIONS.put(key, JSON.stringify(data));

@@ -1,7 +1,7 @@
 import { edgeCached } from '../_edge-cache.js';
 import { listIndexed } from '../_kv-index.js';
 async function handleGet(context) {
-  const { env } = context;
+  const { env, request } = context;
   const { searchParams } = new URL(request.url);
   const sectionId = searchParams.get('sectionId');
   
