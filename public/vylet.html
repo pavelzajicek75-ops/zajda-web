@@ -44,7 +44,7 @@
     .vy-map-wrap { position: relative; z-index: 10; max-width: 1000px; margin: 0 auto 26px; padding: 0 20px; }
     .vy-map-wrap[hidden] { display: none; }
     #vyMap { width: 100%; height: clamp(280px, 46vh, 460px); border-radius: 16px; border: 1px solid var(--panel-border); overflow: hidden; background: #0b0b1a; box-shadow: 0 14px 40px rgba(0,0,0,.4); }
-    #vyMap .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.7); }
+    #vyMap .leaflet-tile-pane { will-change: transform; transform: translateZ(0); filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.7); }
     #vyMap .leaflet-control-attribution { background: rgba(8,8,15,.7) !important; color: var(--mist) !important; font-size: 10px; }
     #vyMap .leaflet-control-attribution a { color: var(--mist) !important; }
     #vyMap .leaflet-control-zoom a { background: rgba(14,14,28,.92) !important; color: var(--parchment) !important; border-color: rgba(255,255,255,.18) !important; }
@@ -161,8 +161,8 @@
       legs.forEach(function (g, i) { var d = document.querySelector('#vy-' + i + ' .tl-dot'); if (d) { d.style.borderColor = col(i); d.style.color = col(i); d.style.boxShadow = '0 0 12px ' + col(i) + '88'; } });
       if (!all.length) return;
       var wrap = document.getElementById('vyMapWrap'); wrap.hidden = false;
-      var map = L.map('vyMap', { scrollWheelZoom: false, zoomControl: true, tap: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19, subdomains: 'abc' }).addTo(map);
+      var map = L.map('vyMap', { scrollWheelZoom: false, zoomControl: true, tap: true, preferCanvas: true, fadeAnimation: false, zoomSnap: 0.5, wheelPxPerZoomLevel: 90 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19, subdomains: 'abc', updateWhenZooming: false, keepBuffer: 4 }).addTo(map);
       var lines = [], segs = [], prev = null, total = 0, firstIdx = -1, lastIdx = -1, kmLeg = [];
       legs.forEach(function (g, i) { if (g.length) { if (firstIdx < 0) firstIdx = i; lastIdx = i; } });
       var stopMk = {};
@@ -257,7 +257,7 @@
           var t0 = performance.now();
           (function f(now) { if (my !== token) return res(false);
             var t = Math.min(1, (now - t0) / ms), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-            car.setLatLng([a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]); map.panTo(car.getLatLng(), { animate: false });
+            car.setLatLng([a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e]); if (!map.getBounds().pad(-0.25).contains(car.getLatLng())) map.panTo(car.getLatLng(), { animate: true, duration: 0.6, easeLinearity: 1 });
             if (t < 1) requestAnimationFrame(f); else res(true); })(t0); }); }
         pb.onclick = async function () {
           if (playing) { stopPlay(); return; }

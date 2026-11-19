@@ -864,7 +864,6 @@
   })();
   </script>
   <script src="/photo-stops.js?v=1"></script>
-  <script src="/travel-map-core.js?v=20261010"></script>
   <script>
   /* === LÍNÉ NAČTENÍ LEAFLETU ===
      Mapa cest je schovaná za tlačítkem v modalu — dřív se ale Leaflet.js
@@ -1599,7 +1598,21 @@
       document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTravelMapModal(); });
     }
 
+    /* travel-map-core.js (34 KB) se stahuje až při prvním otevření mapy, ne s úvodní stránkou. */
+    var _tmcPromise = null;
+    function loadTravelMapCore() {
+      if (window.TravelMapCore) return Promise.resolve();
+      if (_tmcPromise) return _tmcPromise;
+      _tmcPromise = new Promise(function (res, rej) {
+        var sc = document.createElement('script'); sc.src = '/travel-map-core.js?v=20261010';
+        sc.onload = res; sc.onerror = function () { _tmcPromise = null; rej(new Error('Nepodařilo se načíst mapu')); };
+        document.head.appendChild(sc);
+      });
+      return _tmcPromise;
+    }
+
     async function buildTravelMapModalContent() {
+      await loadTravelMapCore();
       var map = await TravelMapCore.render({
         mapId: 'travelMapModalMap',
         legendId: 'travelMapModalLegend',
