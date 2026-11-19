@@ -1,4 +1,5 @@
 import { requireAdmin, json } from '../_auth-utils.js';
+import { cleanMapNotes } from '../_map-notes.js';
 import { normTags } from './_tags.js';
 import { purgeEdge } from '../_edge-cache.js';
 import { newShareToken } from './_publish.js';
@@ -48,6 +49,7 @@ export async function onRequestPost(context) {
     stops: stops.length >= 2 ? stops : [],
     // 📷 zastávka, kam patří fotky z výletu (index v poli stops); jinak se odhadne
     photoStop: (stops.length >= 2 && Number.isInteger(body.photoStop) && body.photoStop >= 0 && body.photoStop < stops.length) ? body.photoStop : null,
+    mapNotes: cleanMapNotes(body.mapNotes),
     tags: normTags(body.tags),
     excerpt: body.excerpt || '',
     takeaway: String(body.takeaway || '').slice(0, 220),

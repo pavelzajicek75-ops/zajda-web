@@ -48,6 +48,10 @@
         const isArticleWrite = /\/api\/articles\/(create|update)(\?|$)/.test(urlStr) && (method === 'POST' || method === 'PUT');
         if (isArticleWrite && init && typeof init.body === 'string') {
           const body = JSON.parse(init.body);
+          /* Jen plné uložení z editoru (má obsah). Hromadné publikování / skrytí / připnutí posílá
+             jen {id, published…} — to nesmí přepsat trasu článku trasou z právě otevřeného editoru. */
+          const editId = $('artEditor') && $('artEditor').dataset ? $('artEditor').dataset.editId : '';
+          if (typeof body.content !== 'string' || (method === 'PUT' && String(body.id) !== String(editId))) return originalFetch(input, init);
           const valid = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
           // posíláme jen {place,lat,lng} — příznak photos je čistě pro editor
           body.stops = valid.length >= 2 ? valid.map(s => ({ place: s.place || '', lat: s.lat, lng: s.lng })) : [];
@@ -71,6 +75,9 @@
       return originalFetch(input, init);
     };
   })();
+
+  /* Pro map-notes.js: zastávky s platnými souřadnicemi (stejné pořadí jako se ukládají). */
+  window.ArticleMapStops = function () { return stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng)).map(s => ({ place: s.place || '', lat: s.lat, lng: s.lng })); };
 
   let mapInstance = null;
   let markers = [];

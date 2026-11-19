@@ -1,4 +1,5 @@
 import { requireAdmin, json } from '../_auth-utils.js';
+import { cleanMapNotes } from '../_map-notes.js';
 import { newShareToken } from './_publish.js';
 import { normTags } from './_tags.js';
 import { purgeEdge } from '../_edge-cache.js';
@@ -15,6 +16,7 @@ export async function onRequestPut(context) {
   // jinak by je starý obsah editoru mohl přepsat.
   const { shareToken: _ignored, likes: _l, views: _v, viewsByWeek: _w, refs: _r, ...safeBody } = body;
   const updated = { ...existing, ...safeBody, id: existing.id, updated: Date.now() };
+  if (Object.prototype.hasOwnProperty.call(body, 'mapNotes')) updated.mapNotes = cleanMapNotes(body.mapNotes);
   if ('takeaway' in safeBody) updated.takeaway = String(safeBody.takeaway || '').slice(0, 220);
   if ('tags' in safeBody) updated.tags = normTags(safeBody.tags);
   if (updated.unlisted === true) {

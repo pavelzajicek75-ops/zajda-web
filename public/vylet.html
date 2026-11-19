@@ -79,6 +79,11 @@
     .vy-pop .ph { display: flex; gap: 4px; margin-bottom: 6px; }
     .vy-pop .ph img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; cursor: zoom-in; }
     .vy-pop button { border: 0; background: #ff7a45; color: #0b0b1a; font: 700 12px 'Space Grotesk', sans-serif; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+    .vy-note { width: 30px; height: 30px; border-radius: 50% 50% 50% 4px; background: #fff7e0; border: 2px solid #ffd36b; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.45); }
+    .vy-ntip { background: #fff7e0 !important; color: #2a2230 !important; border: 1px solid #ffd36b !important; font: 600 12px 'Space Grotesk', sans-serif !important; max-width: 190px; white-space: normal !important; }
+    .vy-ntip:before { display: none !important; }
+    .vy-notes { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+    .vy-notes span { font-size: 13px; padding: 4px 10px; border-radius: 14px; background: rgba(255,211,107,.14); border: 1px solid rgba(255,211,107,.4); color: #ffe9b0; }
     html.embed body { background: transparent; }
     html.embed .nav-bar, html.embed .bg, html.embed .stars, html.embed .skip-link { display: none !important; }
     html.embed .page-header { padding-top: 16px; }
@@ -245,6 +250,24 @@
         chip.onclick = function () { focus(i); };
         lg.appendChild(chip);
       });
+      /* 💬 Vlastní poznámky autora (článek.mapNotes): bublinka u zastávky nebo uprostřed úseku cesty. */
+      var nCount = 0; list.forEach(function (a) { nCount += (Array.isArray(a.mapNotes) ? a.mapNotes.length : 0); });
+      legs.forEach(function (g, i) {
+        var ns = Array.isArray(list[i].mapNotes) ? list[i].mapNotes : []; if (!g.length) return;
+        var slot = {};
+        ns.forEach(function (n) {
+          if (!n || !n.text) return;
+          var k = Math.min(Math.max(+n.k || 0, 0), g.length - 1), ll;
+          if (n.at === 'leg' && k > 0) ll = [(g[k - 1].ll[0] + g[k].ll[0]) / 2, (g[k - 1].ll[1] + g[k].ll[1]) / 2]; else ll = g[k].ll;
+          var key = n.at + k, c = slot[key] = (slot[key] || 0) + 1;   /* víc poznámek na jednom místě: lehce poodsadit */
+          if (c > 1) ll = [ll[0] - 0.012 * (c - 1), ll[1] + 0.012 * (c - 1)];
+          var mk = L.marker(ll, { icon: L.divIcon({ className: '', html: '<div class="vy-note"></div>', iconSize: [30, 30], iconAnchor: [15, 30] }), zIndexOffset: 400, keyboard: false }).addTo(map);
+          mk.getElement().firstChild.textContent = n.icon || '💬';
+          mk.bindTooltip(n.text, { className: 'vy-ntip', direction: 'right', offset: [12, -14], permanent: nCount <= 6 });
+          mk.bindPopup(function () { var d = document.createElement('div'); d.className = 'vy-pop'; var b = document.createElement('b'); b.textContent = (n.icon || '💬') + ' ' + n.text; d.appendChild(b); var sm = document.createElement('small'); sm.textContent = (i + 1) + ' · ' + (list[i].title || ''); d.appendChild(sm); return d; });
+        });
+      });
+
       /* ▶ Přehrát cestu: značka projede všechny zastávky, u každé se na chvíli zastaví a ukáže fotky. */
       var route = [];
       legs.forEach(function (g, i) { g.forEach(function (p, k) { route.push({ ll: p.ll, i: i, k: k }); }); });
@@ -307,6 +330,9 @@
       var m = document.createElement('div'); m.className = 'tl-meta'; m.textContent = [fmt(a.date || a.created), a.place ? '📍 ' + a.place : ''].filter(Boolean).join(' • ');
       var h = document.createElement('div'); h.className = 'tl-title'; h.textContent = a.title || 'Bez názvu';
       b.appendChild(m); b.appendChild(h);
+      if (Array.isArray(a.mapNotes) && a.mapNotes.length) { var nw = document.createElement('div'); nw.className = 'vy-notes';
+        a.mapNotes.forEach(function (n) { if (!n || !n.text) return; var sp = document.createElement('span'); sp.textContent = (n.icon || '💬') + ' ' + n.text; nw.appendChild(sp); });
+        if (nw.childNodes.length) b.appendChild(nw); }
       var ex = plain(a); if (ex) { var p = document.createElement('p'); p.className = 'tl-ex'; p.textContent = ex; b.appendChild(p); }
       if (a.takeaway && String(a.takeaway).trim()) { var t = document.createElement('div'); t.className = 'tl-take'; var sm = document.createElement('small'); sm.textContent = '💭 Co se mnou ta cesta udělala'; t.appendChild(sm); t.appendChild(document.createTextNode(String(a.takeaway).trim())); b.appendChild(t); }
       var cta = document.createElement('span'); cta.className = 'tl-cta'; cta.textContent = 'Číst díl →'; b.appendChild(cta);
