@@ -139,8 +139,8 @@
     function bearing(a, b) { var r = Math.PI / 180, y = Math.sin((b[1] - a[1]) * r) * Math.cos(b[0] * r), x = Math.cos(a[0] * r) * Math.sin(b[0] * r) - Math.sin(a[0] * r) * Math.cos(b[0] * r) * Math.cos((b[1] - a[1]) * r); return Math.atan2(y, x) / r; }
     function legsOf(list) {
       return list.map(function (a) {
-        var st = (Array.isArray(a.stops) && a.stops.length >= 2) ? a.stops : [{ lat: a.lat, lng: a.lng, place: a.place }];
-        return st.filter(validPt).map(function (p) { return { ll: [p.lat, p.lng], place: p.place || '' }; });
+        var st = (Array.isArray(a.stops) && a.stops.length >= 2) ? a.stops : [{ lat: a.lat, lng: a.lng, place: a.place, note: a.placeNote }];
+        return st.filter(validPt).map(function (p) { return { ll: [p.lat, p.lng], place: p.place || '', note: String(p.note || '').trim() }; });
       });
     }
     /* Spojnice mezi díly do seznamu: „🛣️ 120 km dál → České Budějovice“ — ať je vidět, jak na sebe díly navazují. */
@@ -175,6 +175,7 @@
         var a = list[i], el = document.createElement('div'); el.className = 'vy-pop';
         var b = document.createElement('b'); b.textContent = (i + 1) + ' · ' + (a.title || 'Bez názvu'); el.appendChild(b);
         if (p.place) { var sm = document.createElement('small'); sm.textContent = '📍 ' + p.place; el.appendChild(sm); }
+        if (p.note) { var nt = document.createElement('div'); nt.style.cssText = 'margin:0 0 6px;font-size:13px;line-height:1.4;color:#2a2230'; nt.textContent = '💬 ' + p.note; el.appendChild(nt); }
         var ph = []; try { ph = window.PhotoStops ? PhotoStops.photosForStop(a, k, 3) : []; } catch (e) {}
         if (!ph.length && k === 0 && a.coverUrl) ph = [a.coverUrl];
         if (ph.length) { var row = document.createElement('div'); row.className = 'ph';
@@ -250,6 +251,17 @@
         chip.onclick = function () { focus(i); };
         lg.appendChild(chip);
       });
+      /* 💬 Poznámka k zastávce („co se tu dělo“): bublinka u pinu. */
+      var sCount = 0; legs.forEach(function (g) { g.forEach(function (p) { if (p.note) sCount++; }); });
+      legs.forEach(function (g, i) {
+        g.forEach(function (p, k) {
+          if (!p.note) return;
+          var mk = L.marker([p.ll[0], p.ll[1]], { icon: L.divIcon({ className: '', html: '<div class="vy-note">💬</div>', iconSize: [30, 30], iconAnchor: [-2, 40] }), zIndexOffset: 400, keyboard: false }).addTo(map);
+          mk.bindTooltip(p.note, { className: 'vy-ntip', direction: 'right', offset: [34, -14], permanent: sCount <= 6 });
+          mk.on('click', function () { var s2 = stopMk[i + ':' + k]; if (s2) s2.openPopup(); });
+        });
+      });
+
       /* 💬 Vlastní poznámky autora (článek.mapNotes): bublinka u zastávky nebo uprostřed úseku cesty. */
       var nCount = 0; list.forEach(function (a) { nCount += (Array.isArray(a.mapNotes) ? a.mapNotes.length : 0); });
       legs.forEach(function (g, i) {
@@ -330,6 +342,8 @@
       var m = document.createElement('div'); m.className = 'tl-meta'; m.textContent = [fmt(a.date || a.created), a.place ? '📍 ' + a.place : ''].filter(Boolean).join(' • ');
       var h = document.createElement('div'); h.className = 'tl-title'; h.textContent = a.title || 'Bez názvu';
       b.appendChild(m); b.appendChild(h);
+      var snotes = []; if (Array.isArray(a.stops) && a.stops.length >= 2) a.stops.forEach(function (p) { if (p && p.note) snotes.push((p.place ? p.place + ': ' : '') + p.note); }); else if (a.placeNote) snotes.push(a.placeNote);
+      if (snotes.length) { var sw = document.createElement('div'); sw.className = 'vy-notes'; snotes.forEach(function (t) { var sp = document.createElement('span'); sp.textContent = '💬 ' + t; sw.appendChild(sp); }); b.appendChild(sw); }
       if (Array.isArray(a.mapNotes) && a.mapNotes.length) { var nw = document.createElement('div'); nw.className = 'vy-notes';
         a.mapNotes.forEach(function (n) { if (!n || !n.text) return; var sp = document.createElement('span'); sp.textContent = (n.icon || '💬') + ' ' + n.text; nw.appendChild(sp); });
         if (nw.childNodes.length) b.appendChild(nw); }

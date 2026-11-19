@@ -30,6 +30,7 @@ export async function onRequestPost(context) {
     ? body.stops
         .map(s => ({
           place: (s && s.place) || '',
+          note: String((s && s.note) || '').trim().slice(0, 200),
           lat: Number(s && s.lat),
           lng: Number(s && s.lng)
         }))
@@ -50,6 +51,7 @@ export async function onRequestPost(context) {
     // 📷 zastávka, kam patří fotky z výletu (index v poli stops); jinak se odhadne
     photoStop: (stops.length >= 2 && Number.isInteger(body.photoStop) && body.photoStop >= 0 && body.photoStop < stops.length) ? body.photoStop : null,
     mapNotes: cleanMapNotes(body.mapNotes),
+    placeNote: String(body.placeNote || '').trim().slice(0, 200),
     tags: normTags(body.tags),
     excerpt: body.excerpt || '',
     takeaway: String(body.takeaway || '').slice(0, 220),

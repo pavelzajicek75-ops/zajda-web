@@ -31,7 +31,7 @@
    ========================================================= */
 (function () {
   function $(id) { return document.getElementById(id); }
-  function emptyStop() { return { place: '', lat: null, lng: null }; }
+  function emptyStop() { return { place: '', lat: null, lng: null, note: '' }; }
 
   /* stops[i] = { place, lat, lng }. Vždy aspoň jeden řádek (i prázdný),
      ať je UI o co zachytit. Do KV se posílá jen to, co má platné
@@ -54,7 +54,8 @@
           if (typeof body.content !== 'string' || (method === 'PUT' && String(body.id) !== String(editId))) return originalFetch(input, init);
           const valid = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng));
           // posíláme jen {place,lat,lng} — příznak photos je čistě pro editor
-          body.stops = valid.length >= 2 ? valid.map(s => ({ place: s.place || '', lat: s.lat, lng: s.lng })) : [];
+          body.stops = valid.length >= 2 ? valid.map(s => ({ place: s.place || '', lat: s.lat, lng: s.lng, note: (s.note || '').trim().slice(0, 200) })) : [];
+          body.placeNote = valid.length === 1 ? (valid[0].note || '').trim().slice(0, 200) : '';
           const photoIdx = valid.findIndex(s => s.photos);
           body.photoStop = (valid.length >= 2 && photoIdx >= 0) ? photoIdx : null;
           if (valid.length) {
@@ -186,6 +187,9 @@
     renderStopsOnMap();
   };
 
+  window.updateArticleStopNote = function (i, value) {
+    if (stops[i]) stops[i].note = value;
+  };
   window.updateArticleStopPlace = function (i, value) {
     if (stops[i]) stops[i].place = value;
   };
@@ -246,7 +250,7 @@
         : '— zatím bez souřadnic —';
       const activeStyle = i === activeStopIndex ? 'border-color:var(--nova,#2fe6c9)' : '';
       return '' +
-        '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;padding:4px 6px;border:1px solid var(--border-soft,#263252);border-radius:8px;' + activeStyle + '">' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px;padding:4px 6px;border:1px solid var(--border-soft,#263252);border-radius:8px;' + activeStyle + '">' +
         '<span style="flex:0 0 auto;font-weight:700;color:var(--text-faint);width:1.4em">' + (i + 1) + '.</span>' +
         '<input type="text" value="' + (s.place || '').replace(/"/g, '&quot;') + '" placeholder="Název místa (' + (i === 0 ? 'start' : 'zastávka') + ')" ' +
         'class="form-input" style="flex:1;min-width:0" ' +
@@ -257,6 +261,8 @@
         (stops.length > 1 ? '<button type="button" class="btn btn-sm" onclick="setArticlePhotoStop(' + i + ')" title="' + (s.photos ? 'Fotky z výletu patří sem (kliknutím zrušíš)' : 'Fotky z výletu patří sem') + '" style="flex:0 0 auto;' + (s.photos ? 'background:var(--nova,#2fe6c9);color:#08080f' : 'opacity:.55') + '">📷</button>' : '') +
         '<span style="flex:0 0 auto;font-size:11px;color:var(--text-faint);white-space:nowrap;min-width:110px">' + coordText + '</span>' +
         (stops.length > 1 ? '<button type="button" class="btn btn-sm" onclick="removeArticleStop(' + i + ')" title="Odebrat zastávku" style="flex:0 0 auto">✕</button>' : '') +
+        '<input type="text" maxlength="200" value="' + (s.note || '').replace(/"/g, '&quot;') + '" placeholder="💬 Co se tu dělo? (lilo, idiotský kamion, blbá pumpa…) — ukáže se na mapě výletu" ' +
+        'class="form-input" style="flex:1 1 100%;min-width:0;font-size:13px" oninput="updateArticleStopNote(' + i + ', this.value)">' +
         '</div>';
     }).join('') +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">' +
@@ -343,9 +349,9 @@
           const a = await r.json();
           injectUI();
           if (Array.isArray(a.stops) && a.stops.length >= 2) {
-            stops = a.stops.map((s, si) => ({ place: s.place || '', lat: s.lat, lng: s.lng, photos: si === a.photoStop }));
+            stops = a.stops.map((s, si) => ({ place: s.place || '', lat: s.lat, lng: s.lng, note: s.note || '', photos: si === a.photoStop }));
           } else if (Number.isFinite(a.lat) && Number.isFinite(a.lng)) {
-            stops = [{ place: a.place || '', lat: a.lat, lng: a.lng }];
+            stops = [{ place: a.place || '', lat: a.lat, lng: a.lng, note: a.placeNote || '' }];
           } else {
             stops = [emptyStop()];
           }

@@ -16,6 +16,8 @@ export async function onRequestPut(context) {
   // jinak by je starý obsah editoru mohl přepsat.
   const { shareToken: _ignored, likes: _l, views: _v, viewsByWeek: _w, refs: _r, ...safeBody } = body;
   const updated = { ...existing, ...safeBody, id: existing.id, updated: Date.now() };
+  if (Array.isArray(updated.stops)) updated.stops = updated.stops.map(s => (s && typeof s === 'object') ? { ...s, ...(s.note !== undefined ? { note: String(s.note || '').trim().slice(0, 200) } : {}) } : s);
+  if (updated.placeNote !== undefined) updated.placeNote = String(updated.placeNote || '').trim().slice(0, 200);
   if (Object.prototype.hasOwnProperty.call(body, 'mapNotes')) updated.mapNotes = cleanMapNotes(body.mapNotes);
   if ('takeaway' in safeBody) updated.takeaway = String(safeBody.takeaway || '').slice(0, 220);
   if ('tags' in safeBody) updated.tags = normTags(safeBody.tags);
